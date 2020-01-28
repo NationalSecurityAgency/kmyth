@@ -198,7 +198,9 @@ If you get a communication failure OR you had to install trousers and tpm-tools,
 
     sudo tcsd start
 
-Then, again, run:  
+If your machine does not have a TPM, you will need to emulate one with a TPM simulator. There are several open source options available, including the [SIMP TPM 1.2 Simulator](https://github.com/simp/simp-tpm12-simulator) and the [Microsoft TPM 2.0 Simulator](https://github.com/Microsoft/ms-tpm-20-ref/tree/master/TPMCmd/Simulator). For one example on setting up and using a TPM simulator, see [Setting up the SIMP TPM 1.2 Simulator](https://github.com/NationalSecurityAgency/kmyth/wiki/Setting-up-the-SIMP-TPM-1.2-Simulator) in the wiki.
+
+Once the TPM is active, the command:
 
     tpm_version
 
