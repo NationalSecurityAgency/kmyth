@@ -1,5 +1,4 @@
 #include "tls_util.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_global.h"
 

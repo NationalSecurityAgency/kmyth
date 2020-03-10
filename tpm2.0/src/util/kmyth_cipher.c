@@ -3,8 +3,8 @@
  * @brief Implements the Kmyth cipher utility library for TPM 2.0.
  */
 
+#include "tpm2_kmyth_global.h"
 #include "kmyth_cipher.h"
-#include "kmyth_log.h"
 #include "aes_keywrap_5649pad.h"
 #include "aes_keywrap_3394nopad.h"
 #include "aes_gcm.h"

@@ -5,9 +5,8 @@
  */
 
 #include "aes_gcm.h"
-
-#include "kmyth_log.h"
 #include "tpm2_kmyth_misc.h"
+#include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>
 #include <openssl/evp.h>

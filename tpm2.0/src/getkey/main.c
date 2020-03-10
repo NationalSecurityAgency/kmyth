@@ -8,10 +8,10 @@
  */
 
 #include "tls_util.h"
+#include "tpm2_kmyth_global.h"
 #include "tpm2_kmyth_io.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_seal.h"
-#include "kmyth_log.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -69,6 +69,11 @@ int main(int argc, char **argv)
     usage(argv[0]);
     return 0;
   }
+
+  // Configure logging messages
+  set_app_name(KMYTH_APP_NAME);
+  set_app_version(KMYTH_VERSION);
+  set_applog_path(KMYTH_APPLOG_PATH);
 
   // Info passed through command line inputs
   char *inPath = NULL;

@@ -7,7 +7,6 @@
  */
 
 #include "tpm2_kmyth_key.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_session.h"
 #include "tpm2_kmyth_object.h"
 #include "tpm2_kmyth_global.h"

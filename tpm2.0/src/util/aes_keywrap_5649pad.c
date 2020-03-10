@@ -5,7 +5,7 @@
  */
 
 #include "aes_keywrap_5649pad.h"
-#include "kmyth_log.h"
+#include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>
 #include <openssl/evp.h>

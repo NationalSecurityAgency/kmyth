@@ -5,8 +5,8 @@
  */
 
 #include "tpm2_kmyth_seal.h"
+#include "tpm2_kmyth_global.h"
 #include "kmyth_cipher.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_session.h"
 #include "tpm2_kmyth_io.h"

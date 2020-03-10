@@ -6,7 +6,6 @@
  */
 
 #include "tpm2_kmyth_mu.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>
