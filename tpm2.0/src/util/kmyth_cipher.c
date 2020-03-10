@@ -115,7 +115,7 @@ size_t get_key_len_from_cipher(cipher_t cipher)
   key_len_string = strpbrk(key_len_string + 1, "/") + 1;
   if (key_len_string == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "Unable to extract key length from cipher");
+    kmyth_log(LOG_ERR, "Unable to extract key length from cipher");
     return 0;
   }
 

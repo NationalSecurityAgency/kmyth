@@ -47,16 +47,14 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
       storage_key_private_blob->size == 0 ||
       sealed_key_public_blob->size == 0 || sealed_key_private_blob->size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "input structures to be packed NULL or empty ... exiting");
+    kmyth_log(LOG_ERR, "input structs to be packed NULL or empty ... exiting");
     return 1;
   }
 
   // Marshal (pack) TPM PCR selection list struct
   if (*pcr_selection_struct_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error allocating memory for PCR select list data ... exiting");
+    kmyth_log(LOG_ERR, "unallocated PCR select list data ... exiting");
     return 1;
   }
   if (tpm2_pack_pcr(pcr_selection_struct,
@@ -64,15 +62,14 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                     *pcr_selection_struct_data_size,
                     pcr_selection_struct_data_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error packing PCR select struct ... exiting");
+    kmyth_log(LOG_ERR, "error packing PCR select struct ... exiting");
     return 1;
   }
 
   // Marshal (pack) public data buffer for storage key (SK)
   if (*storage_key_public_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error allocating memory for SK public byte array ... exiting");
+    kmyth_log(LOG_ERR, "unallocated SK public byte array ... exiting");
     return 1;
   }
   if (tpm2_pack_public(storage_key_public_blob,
@@ -80,15 +77,14 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        *storage_key_public_data_size,
                        storage_key_public_data_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error packing SK public blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing SK public blob ... exiting");
     return 1;
   }
 
   // Marshal (pack) private data buffer for storage key (SK)
   if (*storage_key_private_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error allocating memory for SK private byte array ... exiting");
+    kmyth_log(LOG_ERR, "unallocated SK private byte array ... exiting");
     return 1;
   }
   if (tpm2_pack_private(storage_key_private_blob,
@@ -96,15 +92,14 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                         *storage_key_private_data_size,
                         storage_key_private_data_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error packing SK private blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing SK private blob ... exiting");
     return 1;
   }
 
   // Marshal (pack) public data buffer for sealed wrapping key
   if (*sealed_key_public_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "malloc error for sealed key public byte array ... exiting");
+    kmyth_log(LOG_ERR, "unallocated sealed key public byte array ... exiting");
     return 1;
   }
   if (tpm2_pack_public(sealed_key_public_blob,
@@ -112,16 +107,14 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        *sealed_key_public_data_size,
                        sealed_key_public_data_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error packing sealed key public blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing sealed key public blob ... exiting");
     return 1;
   }
 
   // Marshal (pack) private data buffer for sealed wrapping key
   if (*sealed_key_private_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "malloc error for sealed key private byte array ... exiting");
+    kmyth_log(LOG_ERR, "unalloc'd sealed key private byte array ... exiting");
     return 1;
   }
 
@@ -130,8 +123,7 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                         *sealed_key_private_data_size,
                         sealed_key_private_data_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error packing sealed key private blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing sealed key private blob ... exiting");
     return 1;
   }
 
@@ -212,7 +204,7 @@ int tpm2_pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
                                                packed_data_out_size,
                                                &packed_data_out_offset)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X ... exiting", rc);
     return 1;
   }
@@ -235,7 +227,7 @@ int tpm2_unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
                                                  &packed_data_in_offset,
                                                  pcr_select_out)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x ... exiting", rc);
     return 1;
   }
@@ -258,7 +250,7 @@ int tpm2_pack_public(TPM2B_PUBLIC * public_blob_in,
                                          packed_data_out_size,
                                          &packed_data_out_offset)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_PUBLIC_Marshal(): 0x%08X ... exiting", rc);
     return 1;
   }
@@ -281,7 +273,7 @@ int tpm2_unpack_public(TPM2B_PUBLIC * public_blob_out,
                                            &packed_data_in_offset,
                                            public_blob_out)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_PUBLIC_Unmarshal(): 0x%08x ... exiting", rc);
     return 1;
   }
@@ -305,7 +297,7 @@ int tpm2_pack_private(TPM2B_PRIVATE * private_blob_in,
                                           packed_data_out_size,
                                           &packed_data_out_offset)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_PRIVATE_Marshal(): 0x%08X ... exiting", rc);
     return 1;
   }
@@ -329,7 +321,7 @@ int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
                                             &packed_data_in_offset,
                                             private_blob_out)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_PRIVATE_Unmarshal(): 0x%08x ... exiting", rc);
     return 1;
   }

@@ -29,7 +29,7 @@ int verifyInputOutputPaths(char *input_path, char *output_path)
   // i.e. file must exist and we must have permission to read it. 
   if (verifyInputFilePath(input_path) == 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "input file verification failed ... exiting");
+    kmyth_log(LOG_ERR, "input file verification failed ... exiting");
     return 1;
   }
 
@@ -37,7 +37,7 @@ int verifyInputOutputPaths(char *input_path, char *output_path)
   // i.e., directory and filename must exist, be valid, and be writeable
   if (verifyOutputFilePath(output_path))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "output file verification failed ... exiting");
+    kmyth_log(LOG_ERR, "output file verification failed ... exiting");
     return 1;
   }
 
@@ -52,15 +52,14 @@ int verifyInputFilePath(char *path)
   // check that file exists
   if (access(path, F_OK) == -1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "input file (%s) not found ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) not found ... exiting", path);
     return 1;
   }
 
   // check that permission allow reading
   if (access(path, R_OK) == -1)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "input file (%s) not readable ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) not readable ... exiting", path);
     return 1;
   }
 
@@ -75,7 +74,7 @@ int verifyOutputFilePath(char *path)
   //  check for non-NULL output path
   if (path == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "NULL output path ... exiting");
+    kmyth_log(LOG_ERR, "NULL output path ... exiting");
     return 1;
   }
 
@@ -86,7 +85,7 @@ int verifyOutputFilePath(char *path)
   struct stat buffer = { 0 };
   if (stat(dirname(path_copy), &buffer))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "output path (%s) not found ... exiting", path);
+    kmyth_log(LOG_ERR, "output path (%s) not found ... exiting", path);
     free(path_copy);
     return 1;
   }
@@ -94,7 +93,7 @@ int verifyOutputFilePath(char *path)
   // check that specified output path directory is actually a directory
   if (!S_ISDIR(buffer.st_mode))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "output directory (%s) not valid ... exiting",
+    kmyth_log(LOG_ERR, "output directory (%s) not valid ... exiting",
               dirname(path_copy));
     free(path_copy);
     return 1;
@@ -106,8 +105,7 @@ int verifyOutputFilePath(char *path)
   {
     if (S_ISDIR(buffer.st_mode))
     {
-      kmyth_log(LOGINFO, LOG_ERR, "output path (%s) is directory ... exiting",
-                path);
+      kmyth_log(LOG_ERR, "output path (%s) is directory ... exiting", path);
       return 1;
     }
   }
@@ -117,8 +115,7 @@ int verifyOutputFilePath(char *path)
   {
     if (access(path, W_OK) == -1)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "output file (%s) not writeable ... exiting",
-                path);
+      kmyth_log(LOG_ERR, "output file (%s) not writeable ... exiting", path);
       return 1;
     }
   }
@@ -138,15 +135,14 @@ int read_arbitrary_file(char *input_path,
 
   if ((bio = BIO_new(BIO_s_file())) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to create BIO ... exiting");
+    kmyth_log(LOG_ERR, "unable to create BIO ... exiting");
     return 1;
   }
 
   // Assign the input file to the BIO 
   if (!BIO_read_filename(bio, input_path))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to open input file: %s ... exiting",
-              input_path);
+    kmyth_log(LOG_ERR, "error opening input file: %s ... exiting", input_path);
     BIO_free(bio);
     return 1;
   }
@@ -162,7 +158,7 @@ int read_arbitrary_file(char *input_path,
   *data_length = BIO_read(bio, *data, input_size);
   if (*data_length != input_size)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "file size = %d bytes, buffer size = %d bytes "
+    kmyth_log(LOG_ERR, "file size = %d bytes, buffer size = %d bytes "
               "... exiting", input_size, *data_length);
     BIO_free(bio);
     return 1;
@@ -190,19 +186,17 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   // validate that file path exists and can be written to and open for writing
   if (verifyOutputFilePath(output_path))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "invalid output file path (%s) ... exiting",
-              output_path);
+    kmyth_log(LOG_ERR, "invalid output path (%s) ... exiting", output_path);
     return 1;
   }
   FILE *file = fopen(output_path, "w");
 
   if (file == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to open file: %s ... exiting",
-              output_path);
+    kmyth_log(LOG_ERR, "unable to open file: %s ... exiting", output_path);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "opened file \"%s\" for writing", output_path);
+  kmyth_log(LOG_DEBUG, "opened file \"%s\" for writing", output_path);
 
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
@@ -244,8 +238,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
                                     &wk_priv_data,
                                     &wk_priv_size, wk_priv_offset))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Unable to marshal data for ski file ... exiting");
+    kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
     free(pcr_select_data);
     free(sk_pub_data);
     free(sk_priv_data);
@@ -270,7 +263,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
       strlen(cipher_string) == 0 ||
       encrypted_data == NULL || encrypted_data_size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "cannot write empty sections ... exiting");
+    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
     free(pcr_select_data);
     free(sk_pub_data);
     free(sk_priv_data);
@@ -294,8 +287,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(pcr_select_data,
                        pcr_select_size, &pcr64_select_data, &pcr64_select_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error base64 encoding storage key public ... exiting");
+    kmyth_log(LOG_ERR, "error base64 encoding storage key public ... exiting");
     free(pcr_select_data);
     free(sk_pub_data);
     free(sk_priv_data);
@@ -318,8 +310,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(sk_pub_data,
                        sk_pub_size, &sk64_pub_data, &sk64_pub_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error base64 encoding storage key public ... exiting");
+    kmyth_log(LOG_ERR, "error base64 encoding storage key public ... exiting");
     free(sk_pub_data);
     free(sk_priv_data);
     free(wk_pub_data);
@@ -340,8 +331,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(sk_priv_data,
                        sk_priv_size, &sk64_priv_data, &sk64_priv_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error base64 encoding SK encrypted private ... exiting");
+    kmyth_log(LOG_ERR, "error b64 encoding SK encrypted private ... exiting");
     free(sk_priv_data);
     free(wk_pub_data);
     free(wk_priv_data);
@@ -367,8 +357,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(wk_pub_data,
                        wk_pub_size, &wk64_pub_data, &wk64_pub_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error base64 encoding wrapping key public ... exiting");
+    kmyth_log(LOG_ERR, "error b64 encoding wrapping key public ... exiting");
     free(wk_pub_data);
     free(wk_priv_data);
     free(wk64_pub_data);
@@ -387,8 +376,8 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(wk_priv_data,
                        wk_priv_size, &wk64_priv_data, &wk64_priv_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error base64 encoding wrap key encrypted private ... exiting");
+    kmyth_log(LOG_ERR,
+              "error b64 encoding wrap key encrypted private ... exiting");
     free(wk_priv_data);
     free(wk64_priv_data);
     fclose(file);
@@ -406,8 +395,7 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   if (encodeBase64Data(encrypted_data,
                        encrypted_data_size, &enc64_data, &enc64_data_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error base64 encoding encrypted data "
-              "... exiting");
+    kmyth_log(LOG_ERR, "error base64 encoding encrypted data ... exiting");
     free(enc64_data);
     fclose(file);
     return 1;
@@ -441,7 +429,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   // validate that file exists and permissions allow reading
   if (verifyInputFilePath(input_path))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "invalid file ... exiting");
+    kmyth_log(LOG_ERR, "invalid file ... exiting");
     return 1;
   }
 
@@ -450,14 +438,14 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 
   if ((stat(input_path, &stats)))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "file stat() error ... exiting");
+    kmyth_log(LOG_ERR, "file stat() error ... exiting");
     return 1;
   }
   size_t size = stats.st_size;
 
   if (size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "empty file ... exiting");
+    kmyth_log(LOG_ERR, "empty file ... exiting");
     return 1;
   }
 
@@ -466,7 +454,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 
   if (file == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to open file ... exiting");
+    kmyth_log(LOG_ERR, "unable to open file ... exiting");
     return 1;
   }
 
@@ -475,8 +463,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 
   if (contents == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error allocating %lu bytes of memory "
-              "... exiting", size);
+    kmyth_log(LOG_ERR, "malloc error (%lu bytes) ... exiting", size);
     fclose(file);
     return 1;
   }
@@ -486,7 +473,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     fclose(file);
     free(contents);
-    kmyth_log(LOGINFO, LOG_ERR, "error reading file ... exiting");
+    kmyth_log(LOG_ERR, "error reading file ... exiting");
     return 1;
   }
   fclose(file);
@@ -504,7 +491,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_seal_input_fname_size,
                         KMYTH_DELIM_ORIGINAL_FILENAME))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get original filename error ... exiting");
+    kmyth_log(LOG_ERR, "get original filename error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     return 1;
@@ -520,7 +507,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_pcr_select_list_size,
                         KMYTH_DELIM_PCR_SELECTION_LIST))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get PCR selection list error ... exiting");
+    kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -536,7 +523,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_sk_pub_data,
                         &raw_sk_pub_size, KMYTH_DELIM_STORAGE_KEY_PUBLIC))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get storage key public error ... exiting");
+    kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -553,7 +540,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_sk_priv_data,
                         &raw_sk_priv_size, KMYTH_DELIM_STORAGE_KEY_PRIVATE))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get storage key private error ... exiting");
+    kmyth_log(LOG_ERR, "get storage key private error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -571,7 +558,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_cipher_str_data,
                         &raw_cipher_str_size, KMYTH_DELIM_CIPHER_SUITE))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get cipher string error ... exiting");
+    kmyth_log(LOG_ERR, "get cipher string error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -590,7 +577,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_sym_pub_data,
                         &raw_sym_pub_size, KMYTH_DELIM_SYM_KEY_PUBLIC))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get symmetric key public error ... exiting");
+    kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -610,7 +597,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &raw_sym_priv_data,
                         &raw_sym_priv_size, KMYTH_DELIM_SYM_KEY_PRIVATE))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get symmetric key private error ... exiting");
+    kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -630,7 +617,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &remaining,
                         &raw_enc_data, &raw_enc_size, KMYTH_DELIM_ENC_DATA))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "getting encrypted data error ... exiting");
+    kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -646,8 +633,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (strncmp(contents, KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE))
       || remaining != strlen(KMYTH_DELIM_END_FILE))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to find the end of file in %s",
-              input_path);
+    kmyth_log(LOG_ERR, "unable to find the end of file in %s", input_path);
     free(originalContents);
     free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
@@ -723,7 +709,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 
   if (retval)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "base64 decode error ... exiting");
+    kmyth_log(LOG_ERR, "base64 decode error ... exiting");
   }
   else
   {
@@ -746,7 +732,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
       kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
     if (cipher_struct->cipher_name == NULL)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "cipher_t init error ... exiting");
+      kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
       retval = 1;
     }
     else
@@ -773,7 +759,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                                                decoded_sym_priv_offset);
       if (retval)
       {
-        kmyth_log(LOGINFO, LOG_ERR, "unmarshal .ski object error ... exiting");
+        kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
       }
     }
   }
@@ -798,7 +784,7 @@ int encodeBase64Data(uint8_t * raw_data,
   // check that there is actually data to encode, return error if not
   if (raw_data == NULL || raw_data_size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no input data ... exiting");
+    kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
 
@@ -809,15 +795,14 @@ int encodeBase64Data(uint8_t * raw_data,
   // create a base64 encoding filter BIO
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create base64 filter BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create base64 filter BIO error ... exiting");
     return 1;
   }
 
   // create a 'sink' BIO to write to memory
   if ((bio_mem = BIO_new(BIO_s_mem())) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create read/write memory sink BIO error"
-              "... exiting");
+    kmyth_log(LOG_ERR, "create read/write memory sink BIO error" "... exiting");
     BIO_free_all(bio64);
     return 1;
   }
@@ -828,7 +813,7 @@ int encodeBase64Data(uint8_t * raw_data,
   // write the input 'raw data' to the BIO chain
   if (BIO_write(bio64, raw_data, raw_data_size) != raw_data_size)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "BIO_write() error ... exiting");
+    kmyth_log(LOG_ERR, "BIO_write() error ... exiting");
     BIO_free_all(bio64);
     return 1;
   }
@@ -836,7 +821,7 @@ int encodeBase64Data(uint8_t * raw_data,
   // ensure all written data is flushed all the way through chain
   if (!BIO_flush(bio64))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "BIO_flush() error ... exiting");
+    kmyth_log(LOG_ERR, "BIO_flush() error ... exiting");
     BIO_free_all(bio64);
     return 1;
   }
@@ -851,8 +836,7 @@ int encodeBase64Data(uint8_t * raw_data,
   *base64_data = (uint8_t *) malloc(*base64_data_size + 1);
   if (*base64_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error allocating memory (%lu bytes) ... exiting",
+    kmyth_log(LOG_ERR, "malloc error (%lu bytes) ... exiting",
               base64_data_size);
     BIO_free_all(bio64);
     return 1;
@@ -863,8 +847,7 @@ int encodeBase64Data(uint8_t * raw_data,
   memcpy(*base64_data, bioptr->data, (*base64_data_size) - 1);
   (*base64_data)[(*base64_data_size) - 1] = '\n';
   (*base64_data)[(*base64_data_size)] = '\0';
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "encoded %lu bytes into %lu base-64 symbols",
+  kmyth_log(LOG_DEBUG, "encoded %lu bytes into %lu base-64 symbols",
             raw_data_size, *base64_data_size - 1);
   // clean-up
   BIO_free_all(bio64);
@@ -881,14 +864,14 @@ int decodeBase64Data(uint8_t * base64_data,
   // check that there is actually data to decode, return error if not
   if (base64_data == NULL || base64_data_size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no input data ... exiting");
+    kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
 
   // check that size of input doesn't exceed limits, return error if it does
   if (base64_data_size > INT_MAX)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "encoded data length (%lu bytes) > max (%d bytes) ... exiting",
               base64_data_size, INT_MAX);
     return 1;
@@ -900,8 +883,7 @@ int decodeBase64Data(uint8_t * base64_data,
   *raw_data = (uint8_t *) malloc(base64_data_size);
   if (*raw_data == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error allocating memory (%lu bytes) for b64 decode ... exiting",
+    kmyth_log(LOG_ERR, "malloc error (%lu bytes) for b64 decode ... exiting",
               base64_data_size);
     return 1;
   }
@@ -909,14 +891,14 @@ int decodeBase64Data(uint8_t * base64_data,
   // create a base64 decoding filter BIO
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create base64 filter BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create base64 filter BIO error ... exiting");
     return 1;
   }
 
   // create a 'source' BIO to read from memory
   if ((bio_mem = BIO_new_mem_buf(base64_data, base64_data_size)) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create source BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create source BIO error ... exiting");
     BIO_free_all(bio64);
     return 1;
   }
@@ -944,7 +926,7 @@ int kmyth_getSkiBlock(char **contents,
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, strlen(delim)))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unexpected delimiter ... exiting");
+    kmyth_log(LOG_ERR, "unexpected delimiter ... exiting");
     return 1;
   }
   *contents += strlen(delim);
@@ -957,8 +939,7 @@ int kmyth_getSkiBlock(char **contents,
     size++;
     if (size >= *remaining)
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "unexpectedly reached end of .ski file " "... exiting");
+      kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
       return 1;
     }
   }
@@ -970,13 +951,13 @@ int kmyth_getSkiBlock(char **contents,
     // be OK if user specifies a destination - log this, though
     if (strncmp(delim, KMYTH_DELIM_ORIGINAL_FILENAME, strlen(delim)) == 0)
     {
-      kmyth_log(LOGINFO, LOG_INFO, "empty original filename .ski file block");
+      kmyth_log(LOG_INFO, "empty original filename .ski file block");
       *block = NULL;
     }
     // if any other block is empty, that is an error condition
     else
     {
-      kmyth_log(LOGINFO, LOG_ERR, "empty .ski block ... exiting");
+      kmyth_log(LOG_ERR, "empty .ski block ... exiting");
       return 1;
     }
   }
@@ -989,8 +970,7 @@ int kmyth_getSkiBlock(char **contents,
     *block = (uint8_t *) malloc(size);
     if (*block == NULL)
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "allocate memory (%d bytes) error ... exiting", size);
+      kmyth_log(LOG_ERR, "malloc (%d bytes) error ... exiting", size);
       return 1;
     }
 
@@ -1047,14 +1027,14 @@ int print_to_file(char *output_path, uint8_t * data, size_t data_size)
   //   - BIO_CLOSE flag - file will be closed when BIO is destroyed
   if ((bdata = BIO_new_fp(outfile_ptr, BIO_CLOSE)) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error creating output file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error creating output file BIO ... exiting");
     return 1;
   }
 
   // Write data to buffered BIO
   if (BIO_write(bdata, data, data_size) != data_size)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error writing data to file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error writing data to file BIO ... exiting");
     kmyth_clear_and_free(out_buf, BUFSIZ);
     BIO_free_all(bdata);
     return 1;
@@ -1063,7 +1043,7 @@ int print_to_file(char *output_path, uint8_t * data, size_t data_size)
   // Flush data to write to file
   if (BIO_flush(bdata) != 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error flushing output file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error flushing output file BIO ... exiting");
     kmyth_clear_and_free(out_buf, BUFSIZ);
     BIO_free_all(bdata);
     return 1;
@@ -1086,14 +1066,14 @@ int print_to_stdout(unsigned char *data, size_t data_size)
   //   - BIO_NOCLOSE flag - don't want to close stdout when BIO is destroyed
   if ((bdata = BIO_new_fd(STDOUT_FILENO, BIO_NOCLOSE)) == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error creating stdout file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error creating stdout file BIO ... exiting");
     return 1;
   }
 
   // Write out data
   if (BIO_write(bdata, data, data_size) != data_size)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error writing data to file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error writing data to file BIO ... exiting");
     BIO_free_all(bdata);
     return 1;
   }

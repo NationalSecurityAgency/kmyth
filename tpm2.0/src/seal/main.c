@@ -157,8 +157,7 @@ int main(int argc, char **argv)
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "no input path (file to be sealed) was specified ... exiting");
+    kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
     kmyth_clear(authString, strlen(authString));
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
@@ -168,8 +167,7 @@ int main(int argc, char **argv)
   // Verify input path exists with read permissions
   if (verifyInputFilePath(inPath))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "input path (%s) is not valid ... exiting", inPath);
+    kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", inPath);
     kmyth_clear(authString, strlen(authString));
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
@@ -201,8 +199,7 @@ int main(int argc, char **argv)
     // Make sure resultant default file name does not have empty basename
     if (outPath_size < 6)
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "invalid default filename derived from input path ... exiting");
+      kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
       free(temp_str);
       kmyth_clear(authString, strlen(authString));
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
@@ -212,8 +209,8 @@ int main(int argc, char **argv)
     struct stat st = { 0 };
     if (!stat(temp_str, &st) && !forceOverwrite)
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "default output filename (%s) already exists ... exiting\n",
+      kmyth_log(LOG_ERR,
+                "default output filename (%s) already exists ... exiting",
                 temp_str);
       free(temp_str);
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
@@ -223,15 +220,13 @@ int main(int argc, char **argv)
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, temp_str, outPath_size);
     free(temp_str);
-    kmyth_log(LOGINFO, LOG_WARNING,
-              "output file not specified, default = %s", outPath);
+    kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
   // Verify output path is valid
   if (verifyOutputFilePath(outPath))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "output path (%s) is not valid ... exiting", outPath);
+    kmyth_log(LOG_ERR, "output path (%s) is not valid ... exiting", outPath);
     free(outPath);
     kmyth_clear(authString, strlen(authString));
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
@@ -243,7 +238,7 @@ int main(int argc, char **argv)
                       outPath,
                       authString, pcrsString, ownerAuthPasswd, cipherString))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "kmyth-seal error ... exiting");
+    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     free(outPath);
     kmyth_clear(authString, strlen(authString));
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));

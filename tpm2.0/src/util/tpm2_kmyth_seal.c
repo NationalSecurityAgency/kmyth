@@ -41,13 +41,11 @@ int tpm2_kmyth_seal(char *input_path,
 
   if (tpm2_init_connection(&sapi_ctx))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "unable to init conn to TPM2 res mgr, check that it's running");
+    kmyth_log(LOG_ERR, "unable to init connection to TPM2 resource manager");
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "initialized connection to TPM 2.0 resource manager");
+  kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
   // Create 'cipher' struct to specify symmetric encryption of input data
   // based on 'cipher_string'
@@ -67,12 +65,11 @@ int tpm2_kmyth_seal(char *input_path,
 
   if (cipher.cipher_name == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "invalid cipher: %s ... exiting",
-              cipher_string);
+    kmyth_log(LOG_ERR, "invalid cipher: %s ... exiting", cipher_string);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "cipher: %s", cipher.cipher_name);
+  kmyth_log(LOG_DEBUG, "cipher: %s", cipher.cipher_name);
 
   // Create owner (storage) hierarchy authorization structure
   TPM2B_AUTH ownerAuth;
@@ -86,13 +83,12 @@ int tpm2_kmyth_seal(char *input_path,
   }
   if (ownerAuth.size > 0)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "user provided auth string for TPM's storage hierarchy");
+    kmyth_log(LOG_DEBUG, "TPM storage hierarchy auth string provided");
   }
   else if (ownerAuth.size == 0)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "using default (empty) auth string for TPM's storage hierarchy");
+    kmyth_log(LOG_DEBUG,
+              "using default (empty) auth string for TPM storage hierarchy");
   }
   else
   {
@@ -100,8 +96,8 @@ int tpm2_kmyth_seal(char *input_path,
     //   - zero that it was initialized to
     //   - strlen(owner_auth_password) value that is greater than zero
     // included this case for completeness
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "bad size: auth string for TPM's storage hierarchy ... exiting");
+    kmyth_log(LOG_DEBUG,
+              "bad size: auth string for TPM storage hierarchy ... exiting");
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
@@ -126,8 +122,7 @@ int tpm2_kmyth_seal(char *input_path,
 
   if (init_pcr_selection(sapi_ctx, pcrs_string, &objPcrList))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error parsing PCR string: %s ... exiting", pcrs_string);
+    kmyth_log(LOG_ERR, "error parsing PCR string: %s ... exiting", pcrs_string);
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -148,7 +143,7 @@ int tpm2_kmyth_seal(char *input_path,
   objAuthPolicy.size = 0;
   if (tpm2_kmyth_create_policy_digest(sapi_ctx, objPcrList, &objAuthPolicy))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "error creating policy digest for new Kmyth object ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
@@ -170,7 +165,7 @@ int tpm2_kmyth_seal(char *input_path,
 
   if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error obtaining handle for SRK ... exiting");
+    kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -178,8 +173,7 @@ int tpm2_kmyth_seal(char *input_path,
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "retrieved SRK handle (0x%08X)",
-            storageRootKey_handle);
+  kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
 
   // We create a storage key (SK) that we will use to seal a symmetric
   // wrapping key that we will create and use to encrypt the user input data.
@@ -198,7 +192,7 @@ int tpm2_kmyth_seal(char *input_path,
                            &storageKey_handle,
                            &storageKey_private, &storageKey_public))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "failed to create a storage key ... exiting");
+    kmyth_log(LOG_ERR, "failed to create a storage key ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -220,7 +214,7 @@ int tpm2_kmyth_seal(char *input_path,
                              &storageKey_private,
                              &storageKey_public, &storageKey_handle))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "failed to load storage key ... exiting");
+    kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -238,7 +232,7 @@ int tpm2_kmyth_seal(char *input_path,
   //   - The encryption uses the symmetric 'cipher' specified by the user.
   //   - The symmetric wrapping key used for encryption
   //     is created as part of the call to kmyth_wrap_input().
-  kmyth_log(LOGINFO, LOG_DEBUG, "wrapping input data");
+  kmyth_log(LOG_DEBUG, "wrapping input data");
   size_t wrapped_data_size = 0;
   unsigned char *wrapped_data = NULL;
   size_t wrapKey_size = get_key_len_from_cipher(cipher) / 8;
@@ -249,7 +243,7 @@ int tpm2_kmyth_seal(char *input_path,
                        &wrapped_data,
                        &wrapped_data_size, &wrapKey, &wrapKey_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "kmyth_wrap_input() call failed ... exiting");
+    kmyth_log(LOG_ERR, "kmyth_wrap_input() call failed ... exiting");
 
     // even though wrapping failed, overwrite wrap key before freeing
     // also free memory set aside for wrapped data before exiting early
@@ -261,7 +255,7 @@ int tpm2_kmyth_seal(char *input_path,
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "input data wrapped");
+  kmyth_log(LOG_DEBUG, "input data wrapped");
 
   // private and public blobs for sealed data object 
   TPM2B_PRIVATE sealedData_private;
@@ -283,7 +277,7 @@ int tpm2_kmyth_seal(char *input_path,
                            objAuthPolicy,
                            &sealedData_public, &sealedData_private))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to seal data ... exiting");
+    kmyth_log(LOG_ERR, "unable to seal data ... exiting");
     kmyth_clear_and_free(wrapKey, wrapKey_size);
     free(wrapped_data);
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -307,7 +301,7 @@ int tpm2_kmyth_seal(char *input_path,
                                 sealedData_public, sealedData_private,
                                 wrapped_data, wrapped_data_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error writing data to .ski file ... exiting");
+    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
     free(wrapped_data);
     tpm2_free_resources(&sapi_ctx);
     return 1;
@@ -334,13 +328,11 @@ int tpm2_kmyth_unseal(char *input_path,
 
   if (tpm2_init_connection(&sapi_ctx))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "unable to init conn to TPM2 res mgr, check that it's running");
+    kmyth_log(LOG_ERR, "unable to init connection to TPM2 resource manager");
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "initialized connection to TPM 2.0 resource manager");
+  kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
   // Create owner (storage) hierarchy authorization structure
   // to provide password session authorization criteria for use of:
@@ -352,8 +344,7 @@ int tpm2_kmyth_unseal(char *input_path,
   memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
   if (ownerAuth.size > 0)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "user-specified auth string for TPM's storage hierarchy");
+    kmyth_log(LOG_DEBUG, "auth string for TPM storage hierarchy specified");
   }
 
   // Create authorization value (authVal) to provide policy session
@@ -383,12 +374,11 @@ int tpm2_kmyth_unseal(char *input_path,
 
   if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error obtaining handle for SRK ... exiting");
+    kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "retrieved SRK handle (0x%08X)",
-            storageRootKey_handle);
+  kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
 
   // Read sealed data input from file
   TPML_PCR_SELECTION objPcrList = {.count = 0, };
@@ -409,8 +399,7 @@ int tpm2_kmyth_unseal(char *input_path,
                                &wk_public,
                                &wk_private, &enc_data, &enc_data_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error reading .ski file %s ... exiting", input_path);
+    kmyth_log(LOG_ERR, "error reading .ski file %s ... exiting", input_path);
     free(enc_data);
     tpm2_free_resources(&sapi_ctx);
     return 1;
@@ -429,13 +418,12 @@ int tpm2_kmyth_unseal(char *input_path,
                              &storageKey_private,
                              &storageKey_public, &storageKey_handle))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error loading storage key ... exiting");
+    kmyth_log(LOG_ERR, "error loading storage key ... exiting");
     free(enc_data);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "loaded storage key at handle = 0x%08X", storageKey_handle);
+  kmyth_log(LOG_DEBUG, "loaded SK at handle = 0x%08X", storageKey_handle);
 
   // Authorization for the use of all non-primary (other than SRK), Kmyth
   // TPM 2.0 objects utilizes policy-based enhanced authorization critera.
@@ -460,7 +448,7 @@ int tpm2_kmyth_unseal(char *input_path,
                              cipher,
                              enc_data, enc_data_size, output_data, output_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error unsealing data ... exiting");
+    kmyth_log(LOG_ERR, "error unsealing data ... exiting");
     free(enc_data);
     tpm2_free_resources(&sapi_ctx);
     return 1;
@@ -509,7 +497,7 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                                       sdo_authPolicy,
                                       &(sdo_template.publicArea)))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "error populating public template for data object ... exiting");
     return 1;
   }
@@ -520,8 +508,7 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (tpm2_kmyth_create_policy_auth_session(sapi_ctx, &sealData_session))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error starting auth policy session ... exiting");
+    kmyth_log(LOG_ERR, "error starting auth policy session ... exiting");
     return 1;
   }
 
@@ -536,10 +523,10 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                                sdo_pcrList,
                                (TPM2_HANDLE) 0, sdo_private, sdo_public))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "could not seal data ... exiting");
+    kmyth_log(LOG_ERR, "could not seal data ... exiting");
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "created sealed data (wrapping key) object");
+  kmyth_log(LOG_DEBUG, "created sealed data (wrapping key) object");
 
   // Clean-up: done with the policy authorization session setup to enable
   //           creation of the sealed data object, so flush it from the TPM
@@ -547,14 +534,14 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "Tss2_Sys_FlushContext(): rc = 0x%08X, %s",
+    kmyth_log(LOG_ERR, "Tss2_Sys_FlushContext(): rc = 0x%08X, %s",
               rc, tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "error flushing policy session (handle = 0x%08X) ... exiting",
               sealData_session.sessionHandle);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
+  kmyth_log(LOG_DEBUG,
             "flushed policy authorization session (handle = 0x%08X)",
             sealData_session.sessionHandle);
 
@@ -584,8 +571,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (tpm2_kmyth_create_policy_auth_session(sapi_ctx, &unsealData_session))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error starting auth policy session ... exiting");
+    kmyth_log(LOG_ERR, "error starting auth policy session ... exiting");
     return 1;
   }
 
@@ -598,10 +584,10 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                              sk_handle, authVal, pcrList, &sdo_private,
                              &sdo_public, &sdo_handle))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "load error: sealed data object ... exiting");
+    kmyth_log(LOG_ERR, "load error: sealed data object ... exiting");
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "loaded sealed data object at handle = 0x%08X",
+  kmyth_log(LOG_DEBUG, "loaded sealed data object at handle = 0x%08X",
             sdo_handle);
 
   // Unseal the data object just loaded into the TPM (e.g., sealed wrap key)
@@ -610,15 +596,14 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                                &unsealData_session,
                                sdo_handle, authVal, pcrList, &unseal_sensitive))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error unsealing ... exiting");
+    kmyth_log(LOG_ERR, "error unsealing ... exiting");
 
     // overwrite any potentially unsealed data before exiting early due
     // to failed unseal
     kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "unsealed data object (handle = 0x%08X)", sdo_handle);
+  kmyth_log(LOG_DEBUG, "unsealed data object (handle = 0x%08X)", sdo_handle);
 
   // Clean-up: done with the policy authorization session setup to enable
   //           loading and unsealing of the sealed data object, so
@@ -628,17 +613,16 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "Tss2_Sys_FlushContext(): rc = 0x%08X, %s",
               rc, tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "error flushing policy session (handle = 0x%08X) ... exiting",
               unsealData_session.sessionHandle);
     kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "flushed policy authorization session (handle = 0x%08X)",
+  kmyth_log(LOG_DEBUG, "flushed policy auth session (handle = 0x%08X)",
             unsealData_session.sessionHandle);
 
   // Perform symmetric decryption of the encrypted data using the unsealed
@@ -647,12 +631,12 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                             unseal_sensitive.size, encrypted_data,
                             encrypted_size, result_data, result_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "symmetric decryption error ... exiting");
+    kmyth_log(LOG_ERR, "symmetric decryption error ... exiting");
     kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "symmetric decryption complete");
+  kmyth_log(LOG_DEBUG, "symmetric decryption complete");
 
   // We are now done with the wrapping key, so we can erase it before exiting
   kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
@@ -674,15 +658,14 @@ int kmyth_wrap_input(char *inPath,
   unsigned char *data = NULL;
   size_t data_length;
 
-  kmyth_log(LOGINFO, LOG_DEBUG, "reading input file ...");
+  kmyth_log(LOG_DEBUG, "reading input file ...");
   if (read_arbitrary_file(inPath, &data, &data_length))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "seal input data file read error ... exiting");
+    kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
     free(data);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "read in %d bytes of data to be wrapped",
-            data_length);
+  kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_length);
 
   // encrypt (wrap) input data read in (e.g., client certificate private .pem)
   if (kmyth_encrypt_data(data,
@@ -690,7 +673,7 @@ int kmyth_wrap_input(char *inPath,
                          wrapCipher, outData, outData_len, key, key_len))
   {
     free(data);
-    kmyth_log(LOGINFO, LOG_ERR, "unable to encrypt (wrap) data ... exiting");
+    kmyth_log(LOG_ERR, "unable to encrypt (wrap) data ... exiting");
     return 1;
   }
 
@@ -712,18 +695,18 @@ int kmyth_encrypt_data(unsigned char *data,
 {
   if (cipher_spec.cipher_name == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "cipher structure uninitialized ... exiting");
+    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
     return 1;
   }
 
   // create symmetric key (wrapping key) of the desired size
   if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error creating %d-bit random symmetric key "
+    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key "
               "... exiting", *enc_key_size * 8);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "created %d-bit random symmetric key",
+  kmyth_log(LOG_DEBUG, "created %d-bit random symmetric key",
             *enc_key_size * 8);
 
   // perform encryption 
@@ -732,11 +715,10 @@ int kmyth_encrypt_data(unsigned char *data,
                              *enc_key_size,
                              data, data_size, enc_data, enc_data_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error encrypting data ... exiting");
+    kmyth_log(LOG_ERR, "error encrypting data ... exiting");
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "encrypted data with %s",
-            cipher_spec.cipher_name);
+  kmyth_log(LOG_DEBUG, "encrypted data with %s", cipher_spec.cipher_name);
 
   return 0;
 }

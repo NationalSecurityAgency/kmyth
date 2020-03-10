@@ -56,8 +56,7 @@
 /**
  * @brief macro used to specify common initial three kmyth_log() parameters
  */
-#define LOGINFO __FILE__, __func__, __LINE__
-#define kmyth_log(...) log_event(__VA_ARGS__)
+#define kmyth_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 /**
  * For TPM 2.0 Software Stack (TSS2) library calls where retries might be

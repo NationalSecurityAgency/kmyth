@@ -24,8 +24,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
   // TCTI context must be initialized first 
   if (*sapi_ctx != NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "SAPI context passed in must be NULL ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context passed in must be NULL ... exiting");
     return 1;
   }
 
@@ -34,8 +33,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   if (tpm2_init_tcti_abrmd(&tcti_ctx))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "unable to initialize TCTI context ... exiting");
+    kmyth_log(LOG_ERR, "unable to initialize TCTI context ... exiting");
     return 1;
   }
 
@@ -47,8 +45,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     //   - tcti_ctx must still be cleaned up
     Tss2_Tcti_Finalize(tcti_ctx);
     free(tcti_ctx);
-    kmyth_log(LOGINFO, LOG_ERR,
-              "unable to initialize SAPI context ... exiting");
+    kmyth_log(LOG_ERR, "unable to initialize SAPI context ... exiting");
     return 1;
   }
 
@@ -63,9 +60,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     free(*sapi_ctx);
     Tss2_Tcti_Finalize(tcti_ctx);
     free(tcti_ctx);
-    kmyth_log(LOGINFO, LOG_ERR,
-              "cannot determine TPM implementation type "
-              "(HW/emulator) ... exiting");
+    kmyth_log(LOG_ERR, "cannot determine TPM impl type (HW/emul) ... exiting");
     return 1;
   }
   else
@@ -79,19 +74,17 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
         free(*sapi_ctx);
         Tss2_Tcti_Finalize(tcti_ctx);
         free(tcti_ctx);
-        kmyth_log(LOGINFO, LOG_ERR, "unable to start TPM 2.0 ... exiting");
+        kmyth_log(LOG_ERR, "unable to start TPM 2.0 ... exiting");
         return 1;
       }
       else
       {
-        kmyth_log(LOGINFO, LOG_INFO,
-                  "initialized connection to TPM 2.0 emulator");
+        kmyth_log(LOG_INFO, "initialized connection to TPM 2.0 emulator");
       }
     }
     else
     {
-      kmyth_log(LOGINFO, LOG_INFO,
-                "initialized connection to TPM 2.0 device (hardware)");
+      kmyth_log(LOG_INFO, "initialized connection to TPM 2.0 device (HW)");
     }
   }
 
@@ -106,9 +99,7 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   // TCTI context must be passed in uninitialized (NULL)
   if (*tcti_ctx != NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "TCTI context must be passed in "
-              "unitialized (NULL) ... exiting");
+    kmyth_log(LOG_ERR, "TCTI context passed in not NULL ... exiting");
     return 1;
   }
 
@@ -120,11 +111,8 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   rc = Tss2_Tcti_Tabrmd_Init(NULL, &size, NULL);
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
               tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR,
-              "failed to get allocation size for TCTI context ... exiting");
     return 1;
   }
 
@@ -132,9 +120,7 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   *tcti_ctx = (TSS2_TCTI_CONTEXT *) calloc(1, size);
   if (*tcti_ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "memory allocation for resource manager TCTI context failed "
-              "... exiting");
+    kmyth_log(LOG_ERR, "calloc for res mgr TCTI context failed ... exiting");
     return 1;
   }
 
@@ -142,12 +128,8 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   rc = Tss2_Tcti_Tabrmd_Init(*tcti_ctx, &size, NULL);
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
               tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR,
-              "failed to initialize resource "
-              "manager TCTI context ... exiting");
     free(*tcti_ctx);
     return 1;
   }
@@ -163,22 +145,21 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
   // SAPI context passed in to be initialized must be empty (NULL)
   if (*sapi_ctx != NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "pointer to input SAPI context is not NULL ... exiting");
+    kmyth_log(LOG_ERR, "pointer to input SAPI context not NULL ... exiting");
     return 1;
   }
 
   // TCTI context should have already been initialized - must not be NULL
   if (tcti_ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "TCTI context is a NULL pointer ... exiting");
+    kmyth_log(LOG_ERR, "TCTI context is a NULL pointer ... exiting");
     return 1;
   }
 
   // Specify current Application Binary Interface (ABI) version
   TSS2_ABI_VERSION abi_version = TSS2_ABI_VERSION_CURRENT;
 
-  kmyth_log(LOGINFO, LOG_DEBUG, "ABI version is %d.%d.%d.%d",
+  kmyth_log(LOG_DEBUG, "ABI version is %d.%d.%d.%d",
             abi_version.tssCreator, abi_version.tssFamily, abi_version.tssLevel,
             abi_version.tssVersion);
 
@@ -190,15 +171,13 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 
   if (size == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "maximum size for SAPI context is zero ... exiting");
+    kmyth_log(LOG_ERR, "maximum size for SAPI context is zero ... exiting");
     return 1;
   }
   *sapi_ctx = (TSS2_SYS_CONTEXT *) calloc(1, size);
   if (*sapi_ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "memory allocation for SAPI context failed ... exiting");
+    kmyth_log(LOG_ERR, "memory allocation for SAPI context failed ... exiting");
     return 1;
   }
 
@@ -208,14 +187,12 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Tss2_Sys_Initialize(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_Sys_Initialize(): rc = 0x%08X, %s", rc,
               tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR, "error initializing SAPI context ... exiting");
     free(sapi_ctx);
     return 1;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "initialized SAPI context");
+  kmyth_log(LOG_DEBUG, "initialized SAPI context");
 
   return 0;
 }
@@ -235,7 +212,7 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   for (int i = 0; i < hSession.data.handles.count; i++)
   {
     Tss2_Sys_FlushContext(*sapi_ctx, hSession.data.handles.handle[i]);
-    kmyth_log(LOGINFO, LOG_DEBUG, "flushed HMAC handle 0x%08X",
+    kmyth_log(LOG_DEBUG, "flushed HMAC handle 0x%08X",
               hSession.data.handles.handle[i]);
   }
   TPMS_CAPABILITY_DATA pSession;
@@ -245,7 +222,7 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   for (int i = 0; i < pSession.data.handles.count; i++)
   {
     Tss2_Sys_FlushContext(*sapi_ctx, pSession.data.handles.handle[i]);
-    kmyth_log(LOGINFO, LOG_DEBUG, "flushed policy handle 0x%08X",
+    kmyth_log(LOG_DEBUG, "flushed policy handle 0x%08X",
               pSession.data.handles.handle[i]);
   }
 
@@ -255,10 +232,8 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Tss2_Sys_GetTctiContext(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_Sys_GetTctiContext(): rc = 0x%08X, %s", rc,
               tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR, "failed to get TCTI context from SAPI context");
     retval = 1;
   }
 
@@ -267,19 +242,19 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   {
     free(*sapi_ctx);
     free(tcti_ctx);
-    kmyth_log(LOGINFO, LOG_ERR, "NULL TCTI context - can't finalize");
+    kmyth_log(LOG_ERR, "NULL TCTI context - can't finalize");
     retval = 1;
   }
 
   // Clean up higher-level SAPI context, first
   Tss2_Sys_Finalize(*sapi_ctx);
   free(*sapi_ctx);
-  kmyth_log(LOGINFO, LOG_DEBUG, "cleaned up SAPI context");
+  kmyth_log(LOG_DEBUG, "cleaned up SAPI context");
 
   // Clean up TCTI context
   Tss2_Tcti_Finalize(tcti_ctx);
   free(tcti_ctx);
-  kmyth_log(LOGINFO, LOG_DEBUG, "cleaned up TCTI context");
+  kmyth_log(LOG_DEBUG, "cleaned up TCTI context");
 
   return retval;
 }
@@ -292,7 +267,7 @@ int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx)
   // make sure we can access the TPM SAPI
   if (*sapi_ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "SAPI context is not initialized ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context is not initialized ... exiting");
     return 1;
   }
 
@@ -305,19 +280,16 @@ int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   if (rc == TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG, "started TPM");
+    kmyth_log(LOG_DEBUG, "started TPM");
   }
   else if (rc == TPM2_RC_INITIALIZE)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "TPM startup not needed - already initialized");
+    kmyth_log(LOG_DEBUG, "TPM startup not needed - already initialized");
   }
   else
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Tss2_Sys_Startup(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_Sys_Startup(): rc = 0x%08X, %s", rc,
               tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR, "failed to startup TPM ... exiting");
     return 1;
   }
 
