@@ -28,7 +28,7 @@
 #define MAX_APP_NAME_LEN 32
 
 /**
- * @brief default name string identifying application being logged
+ * @brief default version string identifying application version being logged
  *
  * Note: this default value (and any user specified value) must comply with
  *       the string length restrictions imposed by MAX_APP_VERSION_LEN (below)
