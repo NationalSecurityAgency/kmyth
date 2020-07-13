@@ -31,7 +31,7 @@
  * @brief default name string identifying application being logged
  *
  * Note: this default value (and any user specified value) must comply with
- *       the string length restrictions imposed by MAX_APP_NAME_LEN (below)
+ *       the string length restrictions imposed by MAX_APP_VERSION_LEN (below)
  */
 #define DEFAULT_APP_VERSION "0.0.0"
 
