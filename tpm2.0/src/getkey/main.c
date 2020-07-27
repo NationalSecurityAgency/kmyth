@@ -233,7 +233,7 @@ int main(int argc, char **argv)
   size_t key_size = 0;
   unsigned char *key = NULL;
 
-  if (get_key_from_server(bio, message, message_length, &key, &key_size))
+  if (get_key_from_kmip_server(bio, message, message_length, &key, &key_size))
   {
     kmyth_log(LOGINFO, LOG_ERR, "error obtaining key from server ... exiting");
     BIO_ssl_shutdown(bio);

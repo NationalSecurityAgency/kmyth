@@ -25,6 +25,7 @@ LLIBS += -ltss2-sys#                     TPM 2.0 SAPI
 LLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
 LLIBS += -lssl#                          OpenSSL
 LLIBS += -lcrypto#                       libcrypto
+LLIBS += -lkmip#                         libkmip
 
 # Specify compiler flags
 CFLAGS = -Wall#                          enable all warnings
