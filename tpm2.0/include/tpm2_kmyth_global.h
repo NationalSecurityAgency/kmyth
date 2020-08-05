@@ -10,11 +10,6 @@
 #include <openssl/evp.h>
 
 /**
- * @brief Kmyth application name (e.g. for use in log messages)
- */
-#define KMYTH_APP_NAME "kmyth"
-
-/**
  * The version of a specific Kmyth release, library, and code
  *
  * @brief Kmyth version string
@@ -47,6 +42,11 @@
  * </UL>
  */
 #define KMYTH_VERSION "0.0.0"
+
+/**
+ * @brief Kmyth application name (e.g. for use in log messages)
+ */
+#define KMYTH_APP_NAME "kmyth"
 
 /**
  * @brief Path for Kmyth application log file

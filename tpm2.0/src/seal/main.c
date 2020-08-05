@@ -193,7 +193,7 @@ int main(int argc, char **argv)
     // '.'(s) removed, is treated as extension
     temp_str = strtok_r(temp_str, ".", &scratch);
     // Append .ski file extension
-    strncat(temp_str, ".ski", 4);
+    strncat(temp_str, ".ski", 5);
 
     outPath_size = strlen(temp_str) + 1;
     // Make sure resultant default file name does not have empty basename
