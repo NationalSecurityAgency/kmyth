@@ -19,6 +19,8 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 
+#include <kmyth_log.h>
+
 static void usage(const char *prog)
 {
   fprintf(stdout,

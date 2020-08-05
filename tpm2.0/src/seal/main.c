@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
+#include <kmyth_log.h>
+
 #include <tss2/tss2_sys.h>
 
 /**

@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
+#include <kmyth_log.h>
+
 static void usage(const char *prog)
 {
   fprintf(stdout,
