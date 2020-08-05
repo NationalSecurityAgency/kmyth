@@ -119,7 +119,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 // tpm2_kmyth_srk_check()
 //############################################################################
 int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool * isSRK)
+                         bool *isSRK)
 {
   // initialize 'isSRK' result to true - changed to false when SRK check fails
   *isSRK = true;

@@ -20,10 +20,11 @@
  * Note: this default value (and any user specified value) must comply with
  *       the string length restrictions imposed by MAX_APP_NAME_LEN (below)
  */
-#define DEFAULT_APP_NAME "default_app"
+#define DEFAULT_APP_NAME "kmyth"
 
 /**
  * @brief maximum length (in chars) of log name
+ *        (note: this does not include the string's null termination character)
  */
 #define MAX_APP_NAME_LEN 32
 
@@ -37,6 +38,7 @@
 
 /**
  * @brief maximum length (in chars) of application version string
+ *        (note: this does not include the string's null termination character)
  */
 #define MAX_APP_VERSION_LEN 16
 
@@ -46,10 +48,11 @@
  * Note: this default value (and any user specified value)  must comply with
  *       the string length restrictions imposed by MAX_APPLOG_PATH_LEN (below)
  */
-#define DEFAULT_APPLOG_PATH "/var/log/default_app.log"
+#define DEFAULT_APPLOG_PATH "/var/log/" DEFAULT_APP_NAME ".log"
 
 /**
  * @brief maximum length (in chars) of path string for the application log file
+ *        (note: this does not include the string's null termination character)
  */
 #define MAX_APPLOG_PATH_LEN 128
 
@@ -90,7 +93,7 @@
  * the log file destination will not be accessible and the user will see
  * the log entries on the console.
  */
-#define APPLOG_OUTPUT_MODE_DEFAULT 1
+#define KMYTH_APPLOG_OUTPUT_MODE_DEFAULT 1
 
 /**
  * @brief sets the default "severity threshold" for logging to the Kmyth
@@ -112,10 +115,11 @@
  * will be logged. When "verbose mode" is specified, the severity threshold
  * is reduced to the LOG_DEBUG (log any message) setting.
  */
-#define APPLOG_SEVERITY_THRESHOLD_DEFAULT LOG_INFO
+#define KMYTH_APPLOG_SEVERITY_THRESHOLD_DEFAULT LOG_INFO
 
 /**
  * @brief maximum message length of a log entry
+ *        (note: this does not include the string's null termination character)
  */
 #define MAX_LOG_MSG_LEN 128
 

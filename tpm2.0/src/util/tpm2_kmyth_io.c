@@ -127,7 +127,7 @@ int verifyOutputFilePath(char *path)
 // read_arbitrary_file()
 //############################################################################
 int read_arbitrary_file(char *input_path,
-                        unsigned char **data, size_t * data_length)
+                        unsigned char **data, size_t *data_length)
 {
 
   // Create a BIO for the input file
@@ -424,7 +424,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                              TPM2B_PUBLIC * sealed_wk_public,
                              TPM2B_PRIVATE * sealed_wk_private,
                              uint8_t ** encrypted_data,
-                             size_t * encrypted_data_size)
+                             size_t *encrypted_data_size)
 {
   // validate that file exists and permissions allow reading
   if (verifyInputFilePath(input_path))
@@ -779,7 +779,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 //############################################################################
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size,
-                     uint8_t ** base64_data, size_t * base64_data_size)
+                     uint8_t ** base64_data, size_t *base64_data_size)
 {
   // check that there is actually data to encode, return error if not
   if (raw_data == NULL || raw_data_size == 0)
@@ -859,7 +859,7 @@ int encodeBase64Data(uint8_t * raw_data,
 //############################################################################
 int decodeBase64Data(uint8_t * base64_data,
                      size_t base64_data_size,
-                     uint8_t ** raw_data, size_t * raw_data_size)
+                     uint8_t ** raw_data, size_t *raw_data_size)
 {
   // check that there is actually data to decode, return error if not
   if (base64_data == NULL || base64_data_size == 0)
@@ -920,8 +920,8 @@ int decodeBase64Data(uint8_t * base64_data,
 // kmyth_getSkiBlock()
 //############################################################################
 int kmyth_getSkiBlock(char **contents,
-                      size_t * remaining,
-                      uint8_t ** block, size_t * blocksize, char *delim)
+                      size_t *remaining,
+                      uint8_t ** block, size_t *blocksize, char *delim)
 {
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, strlen(delim)))

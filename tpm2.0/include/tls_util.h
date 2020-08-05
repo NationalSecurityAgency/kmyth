@@ -109,6 +109,6 @@ int tls_cleanup(void);
  */
 int get_key_from_server(BIO * bio,
                         char *message, size_t message_length,
-                        unsigned char **key, size_t * key_size);
+                        unsigned char **key, size_t *key_size);
 
 #endif

@@ -21,8 +21,8 @@ static struct log_params log_settings = {
   .app_version_len = strlen(DEFAULT_APP_VERSION),
   .applog_path = DEFAULT_APPLOG_PATH,
   .applog_path_len = strlen(DEFAULT_APPLOG_PATH),
-  .applog_output_mode = APPLOG_OUTPUT_MODE_DEFAULT,
-  .applog_severity_threshold = APPLOG_SEVERITY_THRESHOLD_DEFAULT,
+  .applog_output_mode = KMYTH_APPLOG_OUTPUT_MODE_DEFAULT,
+  .applog_severity_threshold = KMYTH_APPLOG_SEVERITY_THRESHOLD_DEFAULT,
   .syslog_facility = SYSLOG_FACILITY_DEFAULT,
   .syslog_severity_threshold = SYSLOG_SEVERITY_THRESHOLD_DEFAULT,
 };
@@ -33,10 +33,12 @@ static struct log_params log_settings = {
 void set_app_name(char *new_app_name)
 {
   bool truncated = false;
+  size_t temp_len = 0;
 
-  if (strlen(new_app_name) <= MAX_APP_NAME_LEN)
+  temp_len = strnlen(new_app_name, MAX_APP_NAME_LEN + 1);
+  if (temp_len <= MAX_APP_NAME_LEN)
   {
-    log_settings.app_name_len = strlen(new_app_name);
+    log_settings.app_name_len = temp_len;
   }
   else
   {
@@ -64,10 +66,12 @@ void set_app_name(char *new_app_name)
 void set_app_version(char *new_app_version)
 {
   bool truncated = false;
+  size_t temp_len = 0;
 
-  if (strlen(new_app_version) <= MAX_APP_VERSION_LEN)
+  temp_len = strnlen(new_app_version, MAX_APP_VERSION_LEN + 1);
+  if (temp_len <= MAX_APP_VERSION_LEN)
   {
-    log_settings.app_version_len = strlen(new_app_version);
+    log_settings.app_version_len = temp_len;
   }
   else
   {
@@ -95,9 +99,12 @@ void set_app_version(char *new_app_version)
 //############################################################################
 void set_applog_path(char *new_applog_path)
 {
-  if (strlen(new_applog_path) <= MAX_APPLOG_PATH_LEN)
+  size_t temp_len = 0;
+
+  temp_len = strnlen(new_applog_path, MAX_APPLOG_PATH_LEN + 1);
+  if (temp_len <= MAX_APPLOG_PATH_LEN)
   {
-    log_settings.applog_path_len = strlen(new_applog_path);
+    log_settings.applog_path_len = temp_len;
     strncpy(log_settings.applog_path,
             new_applog_path, log_settings.applog_path_len);
 
@@ -109,7 +116,7 @@ void set_applog_path(char *new_applog_path)
     // do nothing if path string is too long, but warn user
     fprintf(stderr, "set_applog_path(): ");
     fprintf(stderr, "input \"%s\" exceeds maximum length ", new_applog_path);
-    fprintf(stderr, "(%d) - application log directory ", MAX_APPLOG_PATH_LEN);
+    fprintf(stderr, "(%d) - application log path ", MAX_APPLOG_PATH_LEN);
     fprintf(stderr, "remains \"%s\"\n", log_settings.applog_path);
   }
 }
@@ -154,7 +161,9 @@ void set_applog_severity_threshold(int new_severity_threshold)
 
 //############################################################################
 // set_syslog_facility()
-//   - valid values: (0<<3) - ((LOG_NFACILITIES-1)<<3)
+//   - valid values: 0 - (LOG_NFACILITIES-1) << 3
+//                   Typically 0-23 << 3 (LOG_NFACILITIES = 24)
+//                   LOG_FAC(p) shifts p right 3 bits to undo the left shift
 //############################################################################
 void set_syslog_facility(int new_syslog_facility)
 {
@@ -224,7 +233,7 @@ void get_severity_str(int severity_val_in, char **severity_str_out)
     asprintf(severity_str_out, "DEBUG");
     break;
   default:
-    asprintf(severity_str_out, "CUSTOM(%d)", severity_val_in);
+    asprintf(severity_str_out, "INVALID SEVERITY (%d)", severity_val_in);
   }
 }
 
@@ -262,14 +271,16 @@ void log_event(const char *src_file,
                const int src_line, int severity, const char *message, ...)
 {
 
-  // Create the args string
-  char out[MAX_LOG_MSG_LEN];
+  // format log message (vsnprintf() count parameter includes null terminator)
+  char out[MAX_LOG_MSG_LEN + 1];
   va_list args;
 
   va_start(args, message);
-  vsnprintf(out, MAX_LOG_MSG_LEN - 1, message, args);
-  out[MAX_LOG_MSG_LEN - 1] = '\0';  // terminate string exceeding buffer length
+  vsnprintf(out, MAX_LOG_MSG_LEN + 1, message, args);
   va_end(args);
+
+  // force severity to a valid value by masking (only use three lowest bits)
+  severity = LOG_PRI(severity);
 
   // log to centralized syslog facility
   setlogmask(LOG_UPTO(log_settings.syslog_severity_threshold));
@@ -316,6 +327,7 @@ void log_event(const char *src_file,
         fclose(logfile);
       }
       break;
+
       // output mode 2:
       //   only print to log file (if possible), never to stddest (stdout/stderr)
     case 2:

@@ -321,7 +321,7 @@ int tpm2_kmyth_unseal(char *input_path,
                       char **default_out_path,
                       char *auth_string,
                       char *owner_auth_passwd,
-                      uint8_t ** output_data, size_t * output_size)
+                      uint8_t ** output_data, size_t *output_size)
 {
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
@@ -561,7 +561,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            cipher_t sym_cipher,
                            uint8_t * encrypted_data,
                            size_t encrypted_size, uint8_t ** result_data,
-                           size_t * result_size)
+                           size_t *result_size)
 {
   // Start a TPM 2.0 policy session that we will use to authorize the use of
   // storage key (SK) to:
@@ -650,8 +650,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 int kmyth_wrap_input(char *inPath,
                      cipher_t wrapCipher,
                      unsigned char **outData,
-                     size_t * outData_len,
-                     unsigned char **key, size_t * key_len)
+                     size_t *outData_len, unsigned char **key, size_t *key_len)
 {
 
   // read in the input data (from file) to be sealed
@@ -690,8 +689,8 @@ int kmyth_encrypt_data(unsigned char *data,
                        size_t data_size,
                        cipher_t cipher_spec,
                        unsigned char **enc_data,
-                       size_t * enc_data_size,
-                       unsigned char **enc_key, size_t * enc_key_size)
+                       size_t *enc_data_size,
+                       unsigned char **enc_key, size_t *enc_key_size)
 {
   if (cipher_spec.cipher_name == NULL)
   {
