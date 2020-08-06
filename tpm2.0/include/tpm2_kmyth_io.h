@@ -70,7 +70,7 @@ int verifyOutputFilePath(char *path);
  * @return 0 if success, 1 if error
  */
 int read_arbitrary_file(char *input_path, unsigned char **data,
-                        size_t * data_length);
+                        size_t *data_length);
 
 /**
  * @brief Writes sealed key meta-data to a .ski file.
@@ -204,7 +204,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                              TPM2B_PUBLIC * wrap_key_public,
                              TPM2B_PRIVATE * wrap_key_private,
                              uint8_t ** encrypted_data,
-                             size_t * encrypted_data_size);
+                             size_t *encrypted_data_size);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained
@@ -228,7 +228,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
  */
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size, uint8_t ** base64_data,
-                     size_t * base64_data_size);
+                     size_t *base64_data_size);
 
 /**
  * @brief Decodes a base-64 encoded data buffer into "raw" hex bytes.
@@ -251,7 +251,7 @@ int encodeBase64Data(uint8_t * raw_data,
  */
 int decodeBase64Data(unsigned char *base64_data,
                      size_t base64_data_size, unsigned char **raw_data,
-                     size_t * raw_data_size);
+                     size_t *raw_data_size);
 
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
@@ -285,8 +285,8 @@ int decodeBase64Data(unsigned char *base64_data,
  * @return
  */
 int kmyth_getSkiBlock(char **contents,
-                      size_t * remaining, unsigned char **block,
-                      size_t * blocksize, char *delim);
+                      size_t *remaining, unsigned char **block,
+                      size_t *blocksize, char *delim);
 
 /**
  * @brief Prints a string to the specified file.

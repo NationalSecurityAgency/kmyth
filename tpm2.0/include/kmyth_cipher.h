@@ -39,11 +39,11 @@
  *
  * @return 0 on success, 1 on error.
  */
-typedef int (*cipher) (unsigned char *key,
-                       size_t key_len,
-                       unsigned char *inData,
-                       size_t inData_len,
-                       unsigned char **outData, size_t * outData_len);
+typedef int (*cipher)(unsigned char *key,
+                      size_t key_len,
+                      unsigned char *inData,
+                      size_t inData_len,
+                      unsigned char **outData, size_t *outData_len);
 
 /**
  * cipher_t:

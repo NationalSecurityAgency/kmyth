@@ -52,7 +52,7 @@ int aes_gcm_encrypt(unsigned char *key,
                     size_t key_len,
                     unsigned char *inData,
                     size_t inData_len, unsigned char **outData,
-                    size_t * outData_len);
+                    size_t *outData_len);
 
 /**
  * @brief This function uses the AES-GCM implementation from OpenSSL to
@@ -82,6 +82,6 @@ int aes_gcm_decrypt(unsigned char *key,
                     size_t key_len,
                     unsigned char *inData,
                     size_t inData_len, unsigned char **outData,
-                    size_t * outData_len);
+                    size_t *outData_len);
 
 #endif

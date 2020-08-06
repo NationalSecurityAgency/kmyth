@@ -6,6 +6,7 @@
 #ifndef TPM2_KMYTH_GLOBAL_H
 #define TPM2_KMYTH_GLOBAL_H
 
+#include <kmyth_log.h>
 #include <openssl/evp.h>
 
 /**
@@ -41,6 +42,21 @@
  * </UL>
  */
 #define KMYTH_VERSION "0.0.0"
+
+/**
+ * @brief Kmyth application name (e.g. for use in log messages)
+ */
+#define KMYTH_APP_NAME "kmyth"
+
+/**
+ * @brief Path for Kmyth application log file
+ */
+#define KMYTH_APPLOG_PATH "/var/log/kmyth.log"
+
+/**
+ * @brief macro used to specify common initial three kmyth_log() parameters
+ */
+#define kmyth_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 /**
  * For TPM 2.0 Software Stack (TSS2) library calls where retries might be

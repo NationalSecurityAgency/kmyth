@@ -76,7 +76,7 @@ int tpm2_kmyth_unseal(char *input_path,
                       char **default_out_path,
                       char *auth_string,
                       char *owner_auth_passwd,
-                      uint8_t ** output_data, size_t * output_size);
+                      uint8_t ** output_data, size_t *output_size);
 
 /**
  * @brief Seal data using TPM 2.0.
@@ -195,7 +195,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            cipher_t sym_cipher,
                            uint8_t * encrypted_data,
                            size_t encrypted_size, uint8_t ** result_data,
-                           size_t * result_size);
+                           size_t *result_size);
 
 /**
  * @brief High-level function to read in and wrap (symmetrically encrypt)
@@ -224,8 +224,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 int kmyth_wrap_input(char *inPath,
                      cipher_t wrapCipher,
                      unsigned char **outData,
-                     size_t * outData_len,
-                     unsigned char **key, size_t * key_len);
+                     size_t *outData_len, unsigned char **key, size_t *key_len);
 
 /**
  * @brief Performs the symmetric encryption specified by the caller.
@@ -257,7 +256,7 @@ int kmyth_encrypt_data(unsigned char *data,
                        size_t data_size,
                        cipher_t enc_cipher,
                        unsigned char **enc_data,
-                       size_t * enc_data_size, unsigned char **enc_key,
-                       size_t * enc_key_size);
+                       size_t *enc_data_size, unsigned char **enc_key,
+                       size_t *enc_key_size);
 
 #endif /* TPM2_KMYTH_SEAL_H */
