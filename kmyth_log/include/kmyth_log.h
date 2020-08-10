@@ -10,152 +10,56 @@
 
 #include <syslog.h>
 #include <stdio.h>
+#include <string.h>
+
+//--------------------------Macros--------------------------------------------
 
 /**
- * @defgroup tabrmd_rc RCs for the TAB/RM interface
+ * @brief default name string identifying application being logged
  *
- * @brief These return code (RC) definitons are used to make sense of
- *        RCs received for the TPM 2.0 Access Broker (TAB) and Resource
- *        Manager (RM) API.
- *
- * Constants obtained from: tpm2-abrmd-2.0.2/src/tabrmd.h.
+ * Note: this default value (and any user specified value) must comply with
+ *       the string length restrictions imposed by MAX_APP_NAME_LEN (below)
  */
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Internal Error error code (implementation specific)
- */
-#define TSS2_RESMGR_RC_INTERNAL_ERROR (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER | \
-                         (1 << TSS2_LEVEL_IMPLEMENTATION_SPECIFIC_SHIFT))
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   SAPI Initialization error code (implementation specific)
- */
-#define TSS2_RESMGR_RC_SAPI_INIT      (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER | \
-                         (2 << TSS2_LEVEL_IMPLEMENTATION_SPECIFIC_SHIFT))
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Out of Memory error code (implementation specific)
- */
-#define TSS2_RESMGR_RC_OUT_OF_MEMORY  (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER | \
-                         (3 << TSS2_LEVEL_IMPLEMENTATION_SPECIFIC_SHIFT))
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Bad Value error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_BAD_VALUE       (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER | \
-                                                  TSS2_BASE_RC_BAD_VALUE)
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Not Permittted error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_NOT_PERMITTED   (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER | \
-                                              TSS2_BASE_RC_NOT_PERMITTED)
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Not Implemented error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_NOT_IMPLEMENTED (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER + \
-                                            TSS2_BASE_RC_NOT_IMPLEMENTED)
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   General Failure error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_GENERAL_FAILURE (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER + \
-                                            TSS2_BASE_RC_GENERAL_FAILURE)
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Object Memory error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_OBJECT_MEMORY   (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER + \
-                                                    TPM2_RC_OBJECT_MEMORY)
-
-/** 
- * @ingroup tabrmd_rc
- *
- * @brief   Session Memory error code (in the RESMGR layer)
- */
-#define TSS2_RESMGR_RC_SESSION_MEMORY  (TSS2_RC)(TSS2_RESMGR_TPM_RC_LAYER + \
-                                                   TPM2_RC_SESSION_MEMORY)
+#define DEFAULT_APP_NAME "kmyth"
 
 /**
- * @defgroup misc_resmgr_rc TPM 2.0 RCs from TAB/RM
- *
- * @brief These return code (RC) definitons are used to make sense of some
- *        additional response codes that may be received for the TPM 2.0
- *        Access Broker (TAB) / Resource Manager (RM) API.
- *
- * In the tpm2-abrmd-2.0.2 source code, there are several locations where
- * the resource manager simply returns a single or combination of TPM 2.0
- * return codes cast to type RM_RC (resource manager RC).
+ * @brief maximum length (in chars) of log name
+ *        (note: this does not include the string's null termination character)
  */
+#define MAX_APP_NAME_LEN 32
 
-/** 
- * @ingroup misc_resmgr_rc
+/**
+ * @brief default version string identifying application version being logged
  *
- * @brief   Memory error code (RM_RC (TPM2_RC_MEMORY))
- *
- * Found in tpm2-abrmd-2.0.2/src/access-broker.c, and is returned when
- * allocating a TPM2 response buffer fails.
+ * Note: this default value (and any user specified value) must comply with
+ *       the string length restrictions imposed by MAX_APP_VERSION_LEN (below)
  */
-#define RESMGR_TPM2_RC_MEMORY           (TSS2_RC) TSS2_RESMGR_TPM_RC_LAYER + \
-                                        TPM2_RC_MEMORY
+#define DEFAULT_APP_VERSION "0.0.0"
 
-/** 
- * @ingroup misc_resmgr_rc
- *
- * @brief   Insufficient error code (RM_RC (TPM2_RC_INSUFFICIENT))
- *
- * Found in tpm2-abrmd-2.0.2/src/tpm2-command.c, and is returned when the
- * command buffer's size is insufficient.
+/**
+ * @brief maximum length (in chars) of application version string
+ *        (note: this does not include the string's null termination character)
  */
-#define RESMGR_TPM2_RC_INSUFFICIENT     (TSS2_RC) TSS2_RESMGR_TPM_RC_LAYER + \
-                                       TPM2_RC_INSUFFICIENT
+#define MAX_APP_VERSION_LEN 16
 
-/** 
- * @ingroup misc_resmgr_rc
+/**
+ * @brief default path string for application log file
  *
- * @brief   Type error code (RM_RC (TPM2_RC_TYPE))
- *
- * Found in tpm2-abrmd-2.0.2/src/tpm2-command.c, and is returned when
- * tpm2_command_get_flush_handle is called with the wrong command.
+ * Note: this default value (and any user specified value)  must comply with
+ *       the string length restrictions imposed by MAX_APPLOG_PATH_LEN (below)
  */
-#define RESMGR_TPM2_RC_TYPE             (TSS2_RC) TSS2_RESMGR_TPM_RC_LAYER + \
-                                       TPM2_RC_TYPE
+#define DEFAULT_APPLOG_PATH "/var/log/" DEFAULT_APP_NAME ".log"
 
-/** 
- * @ingroup misc_resmgr_rc
- *
- * @brief   Handle error code (RM_RC (TPM2_RC_HANDLE + TPM2_RC_P + TPM2_RC_1))
- *
- * Found in tpm2-abrmd-2.0.2/src/resource-manager.c, and is returned when
- * a handle doesn't map to one that the resource manager is managing.
- * TPM2_RC_HANDLE indicates that the error is related to a handle,
- * TPM2_RC_P signifies that is is a parameter, and
- * TPM2_RC_1 specifies that it is the first parameter.
+/**
+ * @brief maximum length (in chars) of path string for the application log file
+ *        (note: this does not include the string's null termination character)
  */
-#define RESMGR_TPM2_RC_HANDLE_P_1       (TSS2_RC) TSS2_RESMGR_TPM_RC_LAYER + \
-                                        TPM2_RC_HANDLE+TPM2_RC_P+TPM2_RC_1
+#define MAX_APPLOG_PATH_LEN 128
 
 /**
  * @brief the syslog facility for kmyth
  */
-#define KMYTH_SYSLOG_FACILITY LOG_LOCAL1
+#define SYSLOG_FACILITY_DEFAULT LOG_LOCAL1
 
 /**
  * @brief sets the "severity threshold" for logging to the centralized
@@ -172,12 +76,7 @@
  *          <LI> LOG_EMERG </LI>
  *        </UL>
  */
-#define KMYTH_SYSLOG_SEVERITY_THRESHOLD_DEFAULT LOG_WARNING
-
-/**
- * @brief Kmyth log file destination
- */
-#define KMYTH_LOG_FILE "/var/log/kmyth.log"
+#define SYSLOG_SEVERITY_THRESHOLD_DEFAULT LOG_WARNING
 
 /**
  * @brief Kmyth logging "output mode" globally specifies the default logging
@@ -219,9 +118,55 @@
 #define KMYTH_APPLOG_SEVERITY_THRESHOLD_DEFAULT LOG_INFO
 
 /**
- * @brief macro used to specify common initial three kmyth_log() parameters
+ * @brief maximum message length of a log entry
+ *        (note: this does not include the string's null termination character)
  */
-#define LOGINFO __FILE__, __func__, __LINE__
+#define MAX_LOG_MSG_LEN 128
+
+//--------------------------Templates-----------------------------------------
+
+struct log_params
+{
+  char app_name[MAX_APP_NAME_LEN + 1];
+  size_t app_name_len;
+  char app_version[MAX_APP_VERSION_LEN + 1];
+  size_t app_version_len;
+  char applog_path[MAX_APPLOG_PATH_LEN + 1];
+  size_t applog_path_len;
+  int applog_output_mode;
+  int applog_severity_threshold;
+  int syslog_facility;
+  int syslog_severity_threshold;
+};
+
+//--------------------------Function Declarations-----------------------------
+
+/**
+ * @brief sets new name string to identify application being logged
+ *
+ * @param[in]  new_app_name  string specifying the application name
+ *
+ * @return None
+ */
+void set_app_name(char *new_app_name);
+
+/**
+ * @brief sets new version string for application being logged
+ *
+ * @param[in]  new_app_version  string specifying the application version
+ *
+ * @return None
+ */
+void set_app_version(char *new_app_version);
+
+/**
+ * @brief sets new path string for application log file
+ *
+ * @param[in]  new_applog_path  string specifying the application log file path
+ *
+ * @return None
+ */
+void set_applog_path(char *new_applog_path);
 
 /**
  * @brief sets "output mode" value for application logging
@@ -261,6 +206,15 @@ void set_applog_output_mode(int new_output_mode);
  * @return None
  */
 void set_applog_severity_threshold(int new_severity_threshold);
+
+/**
+ * @brief sets "facility" for syslog utility logging
+ *
+ * @param[in]  new_syslog_facility  
+ *
+ * @return None
+ */
+void set_applog_severity_threshold(int new_syslog_facility);
 
 /**
  * @brief sets "severity threshold" for syslog utility logging
@@ -362,7 +316,7 @@ FILE *get_stddest(int severity_val_in);
  *
  * @return None
  */
-void kmyth_log(const char *src_file,
+void log_event(const char *src_file,
                const char *src_func, const int src_line, int severity,
                const char *message, ...);
 

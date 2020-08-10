@@ -5,7 +5,6 @@
  */
 
 #include "tpm2_pcrManagement.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_global.h"
 #include "tpm2_info_tools.h"
 
@@ -22,16 +21,14 @@
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
                        TPML_PCR_SELECTION * pcrs_struct)
 {
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "creating PCR selection struct for "
-            "user input PCR selection string");
+  kmyth_log(LOG_DEBUG, "creating PCR select struct from user input string");
 
   // Get the total number of PCRs from the TPM
   int numPCRs = -1;
 
   if (tpm2_get_pcr_count(sapi_ctx, &numPCRs))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to retrieve PCR count ... exiting");
+    kmyth_log(LOG_ERR, "unable to retrieve PCR count ... exiting");
     return 1;
   }
 
@@ -45,13 +42,13 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
   {
     pcrs_struct->pcrSelections[0].pcrSelect[i] = 0;
   }
-  kmyth_log(LOGINFO, LOG_DEBUG, "initialized PCR struct with no PCRs selected");
+  kmyth_log(LOG_DEBUG, "initialized PCR struct with no PCRs selected");
 
   // If the user specified PCRs, update the empty PCR Selection
   // structure appropriately
   if (pcrs_string)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
+    kmyth_log(LOG_DEBUG,
               "converting user supplied PCR selection string = \"%s\"",
               pcrs_string);
 
@@ -87,7 +84,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
       // check that user entry specifies a valid PCR register
       if ((pcrIndex < 0) || (pcrIndex >= numPCRs))
       {
-        kmyth_log(LOGINFO, LOG_ERR,
+        kmyth_log(LOG_ERR,
                   "TPM PCR %d invalid, must be within range 0-%d ... exiting",
                   pcrIndex, numPCRs - 1);
         return 1;
@@ -102,7 +99,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
     free(pcrs_string_copy);
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
     {
-      kmyth_log(LOGINFO, LOG_DEBUG,
+      kmyth_log(LOG_DEBUG,
                 "PCR Selection List Mask (msb->lsb): 0x%02X%02X%02X",
                 pcrs_struct->pcrSelections[0].pcrSelect[2],
                 pcrs_struct->pcrSelections[0].pcrSelect[1],
@@ -125,14 +122,12 @@ int tpm2_get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
       (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
        &capData))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "error obtaining TPM2_PT_PCR_COUNT "
-              "property from TPM ... exiting");
+    kmyth_log(LOG_ERR, "error obtaining PCR count from TPM ... exiting");
     return 1;
   }
   *pcrCount = (int) capData.data.tpmProperties.tpmProperty[0].value;
-  kmyth_log(LOGINFO, LOG_DEBUG,
-            "count of available PCRs (TPM2_PT_PCR_COUNT) = %d", *pcrCount);
+  kmyth_log(LOG_DEBUG, "count of available PCRs (TPM2_PT_PCR_COUNT) = %d",
+            *pcrCount);
   return 0;
 }
 
