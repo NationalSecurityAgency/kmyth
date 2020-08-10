@@ -353,7 +353,7 @@ int get_key_from_kmip_server(BIO * bio,
   // validate input
   if (bio == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no valid BIO object ... exiting");
+    kmyth_log(LOG_ERR, "no valid BIO object ... exiting");
     return 1;
   }
 
@@ -363,7 +363,7 @@ int get_key_from_kmip_server(BIO * bio,
     message_len = (int) message_length;
   else
   {
-    kmyth_log(LOGINFO, LOG_ERR, "message length exceeds INT_MAX");
+    kmyth_log(LOG_ERR, "message length exceeds INT_MAX");
     return 1;
   }
 
@@ -385,8 +385,8 @@ int get_key_from_kmip_server(BIO * bio,
       // NOTE: There is more error information available on the KMIP context
       // that may be useful here (e.g., stack trace, string version of the
       // returned error code, etc).
-      kmyth_log(LOGINFO, LOG_ERR, "error retrieving key from KMIP server");
-      kmyth_log(LOGINFO, LOG_ERR, kmip_context.error_message);
+      kmyth_log(LOG_ERR, "error retrieving key from KMIP server");
+      kmyth_log(LOG_ERR, kmip_context.error_message);
       return result;
     }
   }
