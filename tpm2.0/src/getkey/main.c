@@ -137,22 +137,22 @@ int main(int argc, char **argv)
   // Validate presence of required command line input parameters
   if (inPath == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no path to kmyth-sealed key ... exiting");
+    kmyth_log(LOG_ERR, "no path to kmyth-sealed key ... exiting");
     return 1;
   }
   if (clientCertPath == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no path to client certificate ... exiting");
+    kmyth_log(LOG_ERR, "no path to client certificate ... exiting");
     return 1;
   }
   if (serverCertPath == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no path to server certificate ... exiting");
+    kmyth_log(LOG_ERR, "no path to server certificate ... exiting");
     return 1;
   }
   if (address == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "server address not specified ... exiting");
+    kmyth_log(LOG_ERR, "server address not specified ... exiting");
     return 1;
   }
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   {
     if (verifyInputOutputPaths(inPath, outPath))
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error verifying output path ... exiting");
+      kmyth_log(LOG_ERR, "error verifying output path ... exiting");
       return 1;
     }
   }
@@ -169,17 +169,17 @@ int main(int argc, char **argv)
   // Validate user-specified input paths
   if (verifyInputFilePath(inPath))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "verify error: input path ... exiting");
+    kmyth_log(LOG_ERR, "verify error: input path ... exiting");
     return 1;
   }
   if (verifyInputFilePath(clientCertPath))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "verify error: client cert path ... exiting");
+    kmyth_log(LOG_ERR, "verify error: client cert path ... exiting");
     return 1;
   }
   if (verifyInputFilePath(serverCertPath))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "verify error: server cert path ... exiting");
+    kmyth_log(LOG_ERR, "verify error: server cert path ... exiting");
     return 1;
   }
 
@@ -203,8 +203,7 @@ int main(int argc, char **argv)
                         &clientPrivateKey_data, &clientPrivateKey_size))
   {
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);
-    kmyth_log(LOGINFO, LOG_ERR,
-              "Unable to unseal the certificate's private key.");
+    kmyth_log(LOG_ERR, "Unable to unseal the certificate's private key.");
     return 1;
   }
 
@@ -217,7 +216,7 @@ int main(int argc, char **argv)
                             clientPrivateKey_size,
                             clientCertPath, serverCertPath, &bio, &ctx) == 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error creating TLS connection ... exiting");
+    kmyth_log(LOG_ERR, "error creating TLS connection ... exiting");
     BIO_ssl_shutdown(bio);
     tls_cleanup();
     BIO_free_all(bio);
@@ -235,12 +234,12 @@ int main(int argc, char **argv)
 
   if (get_key_from_kmip_server(bio, message, message_length, &key, &key_size))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error obtaining key from server ... exiting");
+    kmyth_log(LOG_ERR, "error obtaining key from server ... exiting");
     BIO_ssl_shutdown(bio);
     tls_cleanup();
     if (BIO_reset(bio) != 0)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error resetting TLS BIO");
+      kmyth_log(LOG_ERR, "error resetting TLS BIO");
     }
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -252,27 +251,27 @@ int main(int argc, char **argv)
   {
     if (print_to_stdout(key, key_size) != 0)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error printing to stdout ... exiting");
+      kmyth_log(LOG_ERR, "error printing to stdout ... exiting");
     }
   }
   else
   {
     if (print_to_file(outPath, key, key_size) != 0)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
     }
   }
 
   // Done with memory holding key, clear and free it
   kmyth_clear_and_free(key, key_size);
 
-  kmyth_log(LOGINFO, LOG_INFO, "retrieved key from %s", address);
+  kmyth_log(LOG_INFO, "retrieved key from %s", address);
 
   // Cleanup TLS connection
   BIO_ssl_shutdown(bio);
   if (BIO_reset(bio) != 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error resetting TLS BIO");
+    kmyth_log(LOG_ERR, "error resetting TLS BIO");
   }
   BIO_free_all(bio);
   SSL_CTX_free(ctx);
