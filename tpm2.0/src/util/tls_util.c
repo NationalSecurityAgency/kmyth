@@ -8,6 +8,9 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#include <kmip/kmip.h>
+#include <kmip/kmip_bio.h>
+
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.1 is a LTS version supported until 2023-09-11
 //   - OpenSSL v1.1.0 is not a supported version after 2019-09-11
@@ -335,6 +338,60 @@ int get_key_from_server(BIO * bio,
 
   buf = secure_memset(buf, 0, buf_size);
   free(buf);
+
+  return 0;
+}
+
+//############################################################################
+// get_key_from_kmip_server()
+//############################################################################
+
+int get_key_from_kmip_server(BIO * bio,
+                             char *message, size_t message_length,
+                             unsigned char **key, size_t *key_size)
+{
+  // validate input
+  if (bio == NULL)
+  {
+    kmyth_log(LOGINFO, LOG_ERR, "no valid BIO object ... exiting");
+    return 1;
+  }
+
+  int message_len = 0;
+
+  if (INT_MAX >= message_length)
+    message_len = (int) message_length;
+  else
+  {
+    kmyth_log(LOGINFO, LOG_ERR, "message length exceeds INT_MAX");
+    return 1;
+  }
+
+  KMIP kmip_context = { 0 };
+  kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+
+  int result = -1;
+  int key_len = 0;
+
+  // write message to server
+  if (message_length > 0)
+  {
+    result = kmip_bio_get_symmetric_key_with_context(&kmip_context,
+                                                     bio,
+                                                     message, message_len,
+                                                     key, &key_len);
+    if (0 > result)
+    {
+      // NOTE: There is more error information available on the KMIP context
+      // that may be useful here (e.g., stack trace, string version of the
+      // returned error code, etc).
+      kmyth_log(LOGINFO, LOG_ERR, "error retrieving key from KMIP server");
+      kmyth_log(LOGINFO, LOG_ERR, kmip_context.error_message);
+      return result;
+    }
+  }
+
+  *key_size = (size_t) key_len;
 
   return 0;
 }

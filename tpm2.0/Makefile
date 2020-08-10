@@ -25,6 +25,7 @@ LLIBS += -ltss2-sys#                     TPM 2.0 SAPI
 LLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
 LLIBS += -lssl#                          OpenSSL
 LLIBS += -lcrypto#                       libcrypto
+LLIBS += -lkmip#                         libkmip
 LLIBS += -lkmythlogger#                  kmyth logging utility shared library
 
 # Specify compiler flags
