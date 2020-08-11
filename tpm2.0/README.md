@@ -78,6 +78,163 @@ Table of Contents
 
 ### Building
 
+#### Building the Dependencies
+
+First, install as many of the above listed dependencies as you can.
+
+The following instructions will walk you through the build process for the
+various Kmyth dependencies, using the IBM TPM 2.0 Emulator in place of a
+hardware TPM. This guide builds upward from the bottom-level dependencies,
+starting with the ```tpm2-tss``` library, then the ```tpm2-tools``` utility
+library, and finally the ```tpm2-abrmd``` broker library. We wrap up by
+doing a simple build of the emulator. Note that build steps for later tools
+or libraries may require dependencies installed earlier in the sequence.
+
+These build instructions were developed and tested on CentOS 8.
+
+##### Building the tpm2-tss library
+
+1. Clone the ```tpm2-tss``` GitHub repository.
+
+```
+$ git clone https://github.com/tpm2-software/tpm2-tss.git
+$ cd tpm2-tss
+```
+
+2. Install dependencies from the PowerTools repository. You may need ```sudo``` permissions.
+
+```
+$ dnf --enablerepo=PowerTools install autoconf-archive json-c-devel
+```
+
+3. Install the remaining dependencies by using the existing upstream ```tpm2-tss``` package. Again, you may need ```sudo``` permissions.
+
+```
+$ dnf builddep tpm2-tss
+$ yum -y install libcurl-devel
+```
+
+4. Run the ```bootstrap``` and ```configure``` scripts. Note that you may need to change the ```udevrulesdir``` and ```udevrulesprefix``` configuration values for your system setup.
+
+```
+$ ./bootstrap
+$ ./configure --with-udevrulesdir=/etc/udev/rules.d --with-udevrulesprefix=80-
+```
+
+5. Build and install the ```tpm2-tss``` library. Again, you may need ```sudo``` permissions.
+
+```
+$ make -j$(nproc)
+$ make install
+```
+
+6. Update the system configuration. Like before, you may need ```sudo``` permissions.
+
+```
+$ udevadm control --reload-rules && udevadm trigger
+$ ldconfig
+```
+
+##### Building the tpm2-tools library
+
+1. Clone the ```tpm2-tools``` GitHub repository.
+
+```
+$ git clone https://github.com/tpm2-software/tpm2-tools.git
+$ cd tpm2-tools
+```
+
+2. Install dependencies by using the existing upsream ```tpm2-tools``` package. You may need ```sudo``` permissions.
+
+```
+$ dnf builddep tpm2-tools
+```
+
+3. Install additional dependencies. Again, you may need ```sudo``` permissions.
+
+```
+$ yum -y install automake libtool autoconf autoconf-archive libstdc++-devel gcc pkg-config uriparser-devel libgcrypt-devel dbus-devel glib2-devel libcurl-devel
+$ yum -y install libuuid-devel
+```
+
+4. Run the ```bootstrap``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
+
+```
+$ ./bootstrap
+$ PKG_CONFIG_PATh=/usr/local/lib/pkgconfig ./configure
+```
+
+5. Build and install the ```tpm2-tools``` library. Again, you may need ```sudo``` permissions.
+
+```
+$ make -j$(nproc)
+$ make install
+```
+
+6. Update the system configuration. Like before, you may need ```sudo``` permissions.
+
+```
+$ ldconfig
+```
+
+##### Building the tpm2-abrmd library
+
+1. Clone the ```tpm2-abrmd``` GitHub repository.
+
+```
+$ git clone https://github.com/tpm2-software/tpm2-abrmd.git
+$ cd tpm2-abrmd
+```
+
+2. Install dependencies. You may need ```sudo``` permissions.
+
+```
+$ yum -y install glib2-devel
+```
+
+3. Run the ```bootstrap``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
+
+```
+$ ./bootstrap
+$ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure
+```
+
+4. Build and install the ```tpm2-abrmd``` library. Again, you may need ```sudo``` permissions.
+
+```
+$ make
+$ make install
+```
+
+5. Update the system configuration. Like before, you may need ```sudo``` permissions.
+
+```
+$ ldconfig
+```
+
+##### Building the IBM TPM 2.0 Emulator
+
+1. Download the emulator package from SourceForge: ```https://sourceforge.net/projects/ibmswtpm2/```
+
+2. Unpack the emulator package. Note the package name may vary slightly depending on when you download it.
+
+```
+$ mkdir ibm-tpm2-emulator
+$ mv ~/Downloads/ibmtpm1628.tar.gz ibm-tmp2-emulator/.
+$ cd ibm-tpm2-emulator
+$ tar -xvf ibmtpm1628.tar.gz
+```
+
+3. Build the emulator.
+
+```
+$ make
+```
+
+4. The emulator executable can be found at: ```./src/tpm_server```
+
+##### Building Kmyth
+
 Once the dependencies are installed:
 
 1. Download the code
