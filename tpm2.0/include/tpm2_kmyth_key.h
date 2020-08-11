@@ -56,7 +56,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
  * @return 0 if success, 1 if error. 
  */
 int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool * isSRK);
+                         bool *isSRK);
 
 /**
  * @brief Re-derives SRK with configured public key and hash algorithms

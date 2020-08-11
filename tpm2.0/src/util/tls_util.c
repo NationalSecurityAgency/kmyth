@@ -1,5 +1,4 @@
 #include "tls_util.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_global.h"
 
@@ -8,6 +7,9 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+
+#include <kmip/kmip.h>
+#include <kmip/kmip_bio.h>
 
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.1 is a LTS version supported until 2023-09-11
@@ -55,7 +57,7 @@ static int tls_ctx_connect(char *server_ip, char *server_port,
   // set the list of ciphers available for negotiation with the server
   if (SSL_set_cipher_list(ssl, PREFERRED_CIPHERS) != 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "negotiate ciper list error: %s ... exiting",
+    kmyth_log(LOG_ERR, "negotiate ciper list error: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
@@ -67,7 +69,7 @@ static int tls_ctx_connect(char *server_ip, char *server_port,
   {
     if (SSL_get_verify_result(ssl) != X509_V_OK)
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error verifying peer ... exiting: %s",
+      kmyth_log(LOG_ERR, "error verifying peer ... exiting: %s",
                 ERR_error_string(ERR_get_error(), NULL));
       return 1;
     }
@@ -77,14 +79,14 @@ static int tls_ctx_connect(char *server_ip, char *server_port,
   // initiate IP socket connection with the server
   if (BIO_do_connect(*ssl_bio) <= 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "TCP/IP socket connection error ... exiting");
+    kmyth_log(LOG_ERR, "TCP/IP socket connection error ... exiting");
     return 1;
   }
 
   // initiate SSL/TLS handshake with the server
   if (BIO_do_handshake(*ssl_bio) <= 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "TLS connection error ... exiting");
+    kmyth_log(LOG_ERR, "TLS connection error ... exiting");
     return 1;
   }
 
@@ -102,19 +104,19 @@ int create_tls_connection(char **server_ip,
 {
   if (client_private_key == NULL || client_private_key_len == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no client private key ... exiting");
+    kmyth_log(LOG_ERR, "no client private key ... exiting");
     return 1;
   }
 
   if (client_cert_path == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no client cert path ... exiting");
+    kmyth_log(LOG_ERR, "no client cert path ... exiting");
     return 1;
   }
 
   if (ca_cert_path == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no CA cert path ... exiting");
+    kmyth_log(LOG_ERR, "no CA cert path ... exiting");
     return 1;
   }
 
@@ -122,7 +124,7 @@ int create_tls_connection(char **server_ip,
       (client_private_key, client_private_key_len, client_cert_path,
        ca_cert_path, tls_ctx) != 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error setting up TLS context ... exiting");
+    kmyth_log(LOG_ERR, "error setting up TLS context ... exiting");
     return 1;
   }
 
@@ -132,7 +134,7 @@ int create_tls_connection(char **server_ip,
   server_port = strpbrk(*server_ip, ":");
   if (server_port == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "null port (%s) ... exiting", *server_ip);
+    kmyth_log(LOG_ERR, "null port (%s) ... exiting", *server_ip);
     return 1;
   }
   *server_port = '\0';
@@ -140,7 +142,7 @@ int create_tls_connection(char **server_ip,
 
   if (tls_ctx_connect(*server_ip, server_port, *tls_ctx, tls_bio) != 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error connecting to server ... exiting");
+    kmyth_log(LOG_ERR, "error connecting to server ... exiting");
     return 1;
   }
   return 0;
@@ -168,13 +170,13 @@ int tls_set_context(unsigned char *client_private_key,
 {
   if (client_private_key == NULL || client_private_key_len == 0)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no client private key ... exiting");
+    kmyth_log(LOG_ERR, "no client private key ... exiting");
     return 1;
   }
 
   if (client_private_key_len > INT_MAX)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "client private key length (%lu bytes) "
+    kmyth_log(LOG_ERR, "client private key length (%lu bytes) "
               "exceeds maximum (%d bytes) ... exiting",
               client_private_key_len, INT_MAX);
     return 1;
@@ -182,13 +184,13 @@ int tls_set_context(unsigned char *client_private_key,
 
   if (client_cert_path == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no client cert path ... exiting");
+    kmyth_log(LOG_ERR, "no client cert path ... exiting");
     return 1;
   }
 
   if (ca_cert_path == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no CA cert path ... exiting");
+    kmyth_log(LOG_ERR, "no CA cert path ... exiting");
     return 1;
   }
 
@@ -202,7 +204,7 @@ int tls_set_context(unsigned char *client_private_key,
 
   if (*ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "%s", ERR_error_string(ERR_get_error(), NULL));
+    kmyth_log(LOG_ERR, "%s", ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
 
@@ -220,10 +222,10 @@ int tls_set_context(unsigned char *client_private_key,
     BIO_new_mem_buf(client_private_key, (int) client_private_key_len);
   if (private_key_mem == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create private key BIO error: %s ... exiting",
+    kmyth_log(LOG_ERR, "create private key BIO error: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     if (BIO_reset(private_key_mem) != 1)  // BIO_reset clears all data in BIO
-      kmyth_log(LOGINFO, LOG_ERR, "error clearing client private key BIO");
+      kmyth_log(LOG_ERR, "error clearing client private key BIO");
     BIO_free_all(private_key_mem);
     return 1;
   }
@@ -235,10 +237,10 @@ int tls_set_context(unsigned char *client_private_key,
     PEM_read_bio_PrivateKey(private_key_mem, NULL, 0, NULL);
   if (private_key_evp == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create private key error: %s ... exiting",
+    kmyth_log(LOG_ERR, "create private key error: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     if (BIO_reset(private_key_mem) != 1)  // BIO_reset clears all data in BIO
-      kmyth_log(LOGINFO, LOG_ERR, "error clearing client private key BIO");
+      kmyth_log(LOG_ERR, "error clearing client private key BIO");
     BIO_free_all(private_key_mem);
     return 1;
   }
@@ -247,7 +249,7 @@ int tls_set_context(unsigned char *client_private_key,
    * Done with client private key BIO, so clean it up - BIO_reset clears data
    */
   if (BIO_reset(private_key_mem) != 1)
-    kmyth_log(LOGINFO, LOG_ERR, "error clearing client private key BIO");
+    kmyth_log(LOG_ERR, "error clearing client private key BIO");
   BIO_free_all(private_key_mem);
 
   /*
@@ -257,7 +259,7 @@ int tls_set_context(unsigned char *client_private_key,
   if (SSL_CTX_use_certificate_file(*ctx, client_cert_path, SSL_FILETYPE_PEM) !=
       1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "SSL_CTX_use_certificate_file: %s ... exiting",
+    kmyth_log(LOG_ERR, "SSL_CTX_use_certificate_file: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     EVP_PKEY_free(private_key_evp); // EVP_PKEY_free also clears memory. 
     return 1;
@@ -265,7 +267,7 @@ int tls_set_context(unsigned char *client_private_key,
 
   if (SSL_CTX_use_PrivateKey(*ctx, private_key_evp) != 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "SSL_CTX_use_PrivateKey: %s ... exiting",
+    kmyth_log(LOG_ERR, "SSL_CTX_use_PrivateKey: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     EVP_PKEY_free(private_key_evp);
     return 1;
@@ -279,14 +281,14 @@ int tls_set_context(unsigned char *client_private_key,
 
   if (SSL_CTX_check_private_key(*ctx) != 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "private key / cert mismatch ... exiting");
+    kmyth_log(LOG_ERR, "private key / cert mismatch ... exiting");
     return 1;
   }
 
   /* pin CA certificate for client verification of server certificate */
   if (SSL_CTX_load_verify_locations(*ctx, ca_cert_path, NULL) != 1)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "trust store load error: %s ... exiting",
+    kmyth_log(LOG_ERR, "trust store load error: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
@@ -301,12 +303,12 @@ int tls_set_context(unsigned char *client_private_key,
 //############################################################################
 int get_key_from_server(BIO * bio,
                         char *message, size_t message_length,
-                        unsigned char **key, size_t * key_size)
+                        unsigned char **key, size_t *key_size)
 {
   // validate input
   if (bio == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no valid BIO object ... exiting");
+    kmyth_log(LOG_ERR, "no valid BIO object ... exiting");
     return 1;
   }
 
@@ -315,7 +317,7 @@ int get_key_from_server(BIO * bio,
   {
     BIO_write(bio, message, message_length);
     if (BIO_flush(bio) != 1)
-      kmyth_log(LOGINFO, LOG_ERR, "error flushing server message BIO");
+      kmyth_log(LOG_ERR, "error flushing server message BIO");
   }
   size_t buf_size = KMYTH_GETKEY_RX_BUFFER_SIZE;
   char *buf = calloc(buf_size, sizeof(char));
@@ -323,7 +325,7 @@ int get_key_from_server(BIO * bio,
 
   if (0 >= recv)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "no data received: %s ... exiting",
+    kmyth_log(LOG_ERR, "no data received: %s ... exiting",
               ERR_error_string(ERR_get_error(), NULL));
     free(buf);
     return 1;
@@ -336,6 +338,60 @@ int get_key_from_server(BIO * bio,
 
   buf = secure_memset(buf, 0, buf_size);
   free(buf);
+
+  return 0;
+}
+
+//############################################################################
+// get_key_from_kmip_server()
+//############################################################################
+
+int get_key_from_kmip_server(BIO * bio,
+                             char *message, size_t message_length,
+                             unsigned char **key, size_t *key_size)
+{
+  // validate input
+  if (bio == NULL)
+  {
+    kmyth_log(LOGINFO, LOG_ERR, "no valid BIO object ... exiting");
+    return 1;
+  }
+
+  int message_len = 0;
+
+  if (INT_MAX >= message_length)
+    message_len = (int) message_length;
+  else
+  {
+    kmyth_log(LOGINFO, LOG_ERR, "message length exceeds INT_MAX");
+    return 1;
+  }
+
+  KMIP kmip_context = { 0 };
+  kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+
+  int result = -1;
+  int key_len = 0;
+
+  // write message to server
+  if (message_length > 0)
+  {
+    result = kmip_bio_get_symmetric_key_with_context(&kmip_context,
+                                                     bio,
+                                                     message, message_len,
+                                                     key, &key_len);
+    if (0 > result)
+    {
+      // NOTE: There is more error information available on the KMIP context
+      // that may be useful here (e.g., stack trace, string version of the
+      // returned error code, etc).
+      kmyth_log(LOGINFO, LOG_ERR, "error retrieving key from KMIP server");
+      kmyth_log(LOGINFO, LOG_ERR, kmip_context.error_message);
+      return result;
+    }
+  }
+
+  *key_size = (size_t) key_len;
 
   return 0;
 }

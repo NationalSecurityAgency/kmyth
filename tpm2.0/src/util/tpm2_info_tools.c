@@ -7,7 +7,7 @@
  */
 
 #include "tpm2_info_tools.h"
-#include "kmyth_log.h"
+#include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -41,16 +41,16 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
                            &moreDataAvailable, capabilityData, 0);
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "Tss2_Get_Capability(): rc = 0x%08X, %s",
+    kmyth_log(LOG_ERR, "Tss2_Get_Capability(): rc = 0x%08X, %s",
               rc, tpm2_getErrorString(rc));
-    kmyth_log(LOGINFO, LOG_ERR, "unable to get capability = %u, property = %u,"
+    kmyth_log(LOG_ERR, "unable to get capability = %u, property = %u,"
               " count = %u ... exiting", capability, property, propertyCount);
     return 1;
   }
 
   if (moreDataAvailable)
   {
-    kmyth_log(LOGINFO, LOG_WARNING, "Tss2_Sys_GetCapability(): partial data");
+    kmyth_log(LOG_WARNING, "Tss2_Sys_GetCapability(): partial data");
   }
 
   return 0;
@@ -59,7 +59,7 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // tpm2_get_impl_type()
 //############################################################################
-int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator)
+int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 {
   TPMS_CAPABILITY_DATA capData;
 
@@ -67,7 +67,7 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator)
       (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_MANUFACTURER, TPM2_PT_GROUP,
        &capData))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "unable to get TPM2_PT_MANUFACTURER "
+    kmyth_log(LOG_ERR, "unable to get TPM2_PT_MANUFACTURER "
               "property from TPM ... exiting");
     return 1;
   }

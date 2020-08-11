@@ -1,10 +1,10 @@
 # Makefile for KMYTH using TPM 2.0
 
 # Choose OpenSSL 'base' path (header file and library path prefix)
-OPENSSL_DIR =
+OPENSSL_DIR = $(MY_OPENSSL_DIR)#         custom shell environment variable
 
-# Specify the 'libcrypto' library path
-LIBCRYPTO_PATH = ${OPENSSL_DIR}/lib
+# Specify the 'libkmythlogger' library path
+KMYTH_LOG_DIR = $(MY_KMYTH_LOG_DIR)#       custom shell environment variable
 
 # Specify source code path
 PREFIX = .#                              Makefile @ src root directory
@@ -25,18 +25,22 @@ LLIBS += -ltss2-sys#                     TPM 2.0 SAPI
 LLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
 LLIBS += -lssl#                          OpenSSL
 LLIBS += -lcrypto#                       libcrypto
+LLIBS += -lkmip#                         libkmip
+LLIBS += -lkmythlogger#                  kmyth logging utility shared library
 
 # Specify compiler flags
 CFLAGS = -Wall#                          enable all warnings
 CFLAGS += -c#                            compile, but do not link
-CFLAGS += $(DEBUG)#                      debugging options (above)
+CFLAGS += ${DEBUG}#                      debugging options (above)
 CFLAGS += -D_GNU_SOURCE#                 GNU/LINUX platform
 CFLAGS += -I${OPENSSL_DIR}/include#      OpenSSL header files
+CFLAGS += -I${KMYTH_LOG_DIR}/include#    kmyth logging utility header files
 
 # Specify linker flags
-LFLAGS = -L${OPENSSL_DIR}/lib#           OpenSSL shared library
-LFLAGS += -L$(LIBCRYPTO_PATH)#           libcrypto
-LFLAGS += -Wl,-rpath=${OPENSSL_DIR}/lib# runtime path for OpenSSL library
+LFLAGS = -L${OPENSSL_DIR}/lib#             OpenSSL shared library
+LFLAGS += -L${KMYTH_LOG_DIR}/lib#          libkmythlogger
+LFLAGS += -Wl,-rpath=${OPENSSL_DIR}/lib#   runtime path for OpenSSL library
+LFLAGS += -Wl,-rpath=${KMYTH_LOG_DIR}/lib# runtime path for libkmythlogger.so
 
 # Specify top-level source and target directories for build process
 INCLUDE_DIR = include

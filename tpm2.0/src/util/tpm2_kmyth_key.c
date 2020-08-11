@@ -7,7 +7,6 @@
  */
 
 #include "tpm2_kmyth_key.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_session.h"
 #include "tpm2_kmyth_object.h"
 #include "tpm2_kmyth_global.h"
@@ -25,7 +24,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
                               TPM2_HANDLE * srk_handle,
                               TPM2B_AUTH * storage_hierarchy_auth)
 {
-  kmyth_log(LOGINFO, LOG_DEBUG, "checking TPM persistent handles for SRK");
+  kmyth_log(LOG_DEBUG, "checking TPM persistent handles for SRK");
 
   // Set SRK handle value to zero (empty handle). If the SRK is not loaded,
   // we will return this value.
@@ -33,7 +32,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (sapi_ctx == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "SAPI context not initialized ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context not initialized ... exiting");
     return 1;
   }
 
@@ -50,7 +49,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
       (sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES,
        &capData))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "get persistent obj. info error ... exiting");
+    kmyth_log(LOG_ERR, "get persistent obj. info error ... exiting");
     return 1;
   }
   TPM2_HANDLE next_persistent_handle = 0;
@@ -73,12 +72,11 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   // Step 2 - searching the list for the SRK
   if (capData.data.handles.count == 0)
   {
-    kmyth_log(LOGINFO, LOG_DEBUG, "no existing persistent data handles found");
+    kmyth_log(LOG_DEBUG, "no existing persistent data handles found");
   }
   else
   {
-    kmyth_log(LOGINFO, LOG_DEBUG,
-              "checking %d existing persistent data handle(s) for SRK",
+    kmyth_log(LOG_DEBUG, "checking %d persistent data handle(s) for SRK",
               capData.data.handles.count);
   }
   for (int i = 0; i < capData.data.handles.count; i++)
@@ -87,7 +85,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 
     if (tpm2_kmyth_srk_check(sapi_ctx, capData.data.handles.handle[i], &isSRK))
     {
-      kmyth_log(LOGINFO, LOG_ERR,
+      kmyth_log(LOG_ERR,
                 "error checking if handle = 0x%08X references SRK ... exiting",
                 capData.data.handles.handle[i]);
       return 1;
@@ -95,7 +93,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
     if (isSRK)
     {
       *srk_handle = capData.data.handles.handle[i];
-      kmyth_log(LOGINFO, LOG_DEBUG, "SRK found ... done searching");
+      kmyth_log(LOG_DEBUG, "SRK found ... done searching");
       break;
     }
   }
@@ -109,7 +107,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
     *srk_handle = next_persistent_handle;
     if (tpm2_kmyth_derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error deriving SRK ... exiting");
+      kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
       return 1;
     }
   }
@@ -121,12 +119,12 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 // tpm2_kmyth_srk_check()
 //############################################################################
 int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool * isSRK)
+                         bool *isSRK)
 {
   // initialize 'isSRK' result to true - changed to false when SRK check fails
   *isSRK = true;
 
-  kmyth_log(LOGINFO, LOG_DEBUG, "checking handle %08X", handle);
+  kmyth_log(LOG_DEBUG, "checking handle %08X", handle);
 
   // Read the public info of the object referenced by the handle
   //
@@ -153,7 +151,7 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
 
   if (rc != TPM2_RC_SUCCESS)
   {
-    kmyth_log(LOGINFO, LOG_ERR, "Tss2_Sys_ReadPublic(): TPM rc = 0x%08X", rc);
+    kmyth_log(LOG_ERR, "Tss2_Sys_ReadPublic(): TPM rc = 0x%08X", rc);
     return 1;
   }
 
@@ -162,7 +160,7 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   {
     // persistent key has the wrong hash algorithm. 
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "wrong hash algorithm (ALG_ID=0x%08X)",
+    kmyth_log(LOG_DEBUG, "wrong hash algorithm (ALG_ID=0x%08X)",
               publicOut.publicArea.nameAlg);
   }
 
@@ -171,7 +169,7 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   {
     // persistent key has the wrong public key algorithm 
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "wrong public key algorithm (ALG_ID=0x%08X)",
+    kmyth_log(LOG_DEBUG, "wrong public key algorithm (ALG_ID=0x%08X)",
               publicOut.publicArea.type);
   }
 
@@ -184,14 +182,14 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   if (!(objAttr & TPMA_OBJECT_FIXEDTPM))
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "fixedTPM clear, should be set");
+    kmyth_log(LOG_DEBUG, "fixedTPM clear, should be set");
   }
 
   // fixedParent (bit 4) - should be set - SRK's parent may not be changed
   if (!(objAttr & TPMA_OBJECT_FIXEDPARENT))
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "fixedParent clear, should be set");
+    kmyth_log(LOG_DEBUG, "fixedParent clear, should be set");
   }
 
   // sensitiveDataOrigin (bit 5) - should be set - SRK should be generated
@@ -199,7 +197,7 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   if (!(objAttr & TPMA_OBJECT_SENSITIVEDATAORIGIN))
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "sensitiveDataOrigin clear, should be set");
+    kmyth_log(LOG_DEBUG, "sensitiveDataOrigin clear, should be set");
   }
 
   // noDA (bit 10) - should be clear - SRK authorization failures for the SRK
@@ -209,21 +207,21 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   if (objAttr & TPMA_OBJECT_NODA)
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "noDA set, should be clear");
+    kmyth_log(LOG_DEBUG, "noDA set, should be clear");
   }
 
   // restricted (bit 16) - must be set - SRK is a parent key
   if (!(objAttr & TPMA_OBJECT_RESTRICTED))
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "restricted bit clear, should be set");
+    kmyth_log(LOG_DEBUG, "restricted bit clear, should be set");
   }
 
   // decrypt (17) - must be set - SRK must be used to decrypt SKs 
   if (!(objAttr & TPMA_OBJECT_DECRYPT))
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "decrypt bit clear, should be set");
+    kmyth_log(LOG_DEBUG, "decrypt bit clear, should be set");
   }
 
   // Next, validate the object name value 
@@ -238,7 +236,7 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
 
   memcpy(name_buf, &srk_parent_handle, sizeof(TPM2_HANDLE));
   memcpy(name_buf + sizeof(TPM2_HANDLE), nameOut.name, nameOut.size);
-  kmyth_log(LOGINFO, LOG_DEBUG, "name: 0x%02X .. %02X", name_buf[0],
+  kmyth_log(LOG_DEBUG, "name: 0x%02X .. %02X", name_buf[0],
             name_buf[name_buf_len - 1]);
 
   // Hash name and verify that it matches qualified name
@@ -249,9 +247,9 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   memcpy(qname_buf, &qname_algID, sizeof(TPM2_ALG_ID));
   EVP_Digest(name_buf, name_buf_len, qname_buf + sizeof(TPM2_ALG_ID), NULL,
              KMYTH_OPENSSL_HASH, NULL);
-  kmyth_log(LOGINFO, LOG_DEBUG, "hashed name: 0x%02X..%02X", qname_buf[0],
+  kmyth_log(LOG_DEBUG, "hashed name: 0x%02X..%02X", qname_buf[0],
             qname_buf[qname_buf_len - 1]);
-  kmyth_log(LOGINFO, LOG_DEBUG, "qualified name: 0x%02X..%02X",
+  kmyth_log(LOG_DEBUG, "qualified name: 0x%02X..%02X",
             qualNameOut.name[0], qualNameOut.name[qualNameOut.size - 1]);
   bool srkNameMatch = true;
 
@@ -272,10 +270,10 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
   if (!srkNameMatch)
   {
     *isSRK = false;
-    kmyth_log(LOGINFO, LOG_DEBUG, "hashed name mismatches SRK qualified name");
+    kmyth_log(LOG_DEBUG, "hashed name mismatches SRK qualified name");
   }
 
-  kmyth_log(LOGINFO, LOG_DEBUG, "handle 0x%08X: isSRK = %s", handle,
+  kmyth_log(LOG_DEBUG, "handle 0x%08X: isSRK = %s", handle,
             (isSRK ? "true" : "false"));
 
   return 0;
@@ -287,13 +285,13 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
 int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
                           TPM2B_AUTH sps_auth)
 {
-  kmyth_log(LOGINFO, LOG_DEBUG, "deriving SRK ..");
+  kmyth_log(LOG_DEBUG, "deriving SRK ..");
 
   // Check that the handle passed in is within persistent range
   if ((srk_handle < TPM2_PERSISTENT_FIRST)
       || (srk_handle > TPM2_PERSISTENT_LAST))
   {
-    kmyth_log(LOGINFO, LOG_ERR,
+    kmyth_log(LOG_ERR,
               "SRK handle (0x%08X) out of persistent range ... exiting",
               srk_handle);
     return 1;
@@ -327,7 +325,7 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
   if (tpm2_init_kmyth_object_template
       (true, empty_policy_digest, &(srk_template.publicArea)))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "create SRK template error ... exiting");
+    kmyth_log(LOG_ERR, "create SRK template error ... exiting");
     return 1;
   }
 
@@ -344,7 +342,7 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
        srk_sensitive, srk_template, emptyPCRList, srk_handle, nullPrivateBlob,
        nullPublicBlob))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error deriving SRK ... exiting");
+    kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
     return 1;
   }
 
@@ -384,7 +382,7 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   if (tpm2_init_kmyth_object_template
       (true, sk_authPolicy, &(sk_template.publicArea)))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "SK create template error ... exiting");
+    kmyth_log(LOG_ERR, "SK create template error ... exiting");
     return 1;
   }
 
@@ -399,10 +397,10 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
        sk_sensitive, sk_template, sk_pcrList, unusedHandle, sk_private,
        sk_public))
   {
-    kmyth_log(LOGINFO, LOG_ERR, "error creating storage key ... exiting");
+    kmyth_log(LOG_ERR, "error creating storage key ... exiting");
     return 1;
   }
 
-  kmyth_log(LOGINFO, LOG_DEBUG, "storage key object created");
+  kmyth_log(LOG_DEBUG, "storage key object created");
   return 0;
 }

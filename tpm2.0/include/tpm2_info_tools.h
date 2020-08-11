@@ -48,7 +48,7 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator);
+int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)

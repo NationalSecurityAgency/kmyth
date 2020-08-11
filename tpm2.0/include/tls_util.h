@@ -109,6 +109,28 @@ int tls_cleanup(void);
  */
 int get_key_from_server(BIO * bio,
                         char *message, size_t message_length,
-                        unsigned char **key, size_t * key_size);
+                        unsigned char **key, size_t *key_size);
 
+/**
+ * <pre>
+ * This function takes an existing TLS connection (in the form of OpenSSL BIO and SSL_CTX
+ * structures) along with a message (the symmetric key ID), and sends the message to the
+ * KMIP server to retrieve the key.
+ * </pre>
+ *
+ * @param[in]  bio             OpenSSL BIO structure with the connection
+ *                             already instantiated
+ * @param[in]  message         the message (the symmetric key ID) to send the KMIP server
+ *
+ * @param[in]  message_length  length of the message
+ *
+ * @param[out] key             return message from server, expected to be a key
+ *
+ * @param[out] key_size        size of the returned message
+ *
+ * @return 0 if success, non-zero otherwise
+ */
+int get_key_from_kmip_server(BIO *bio,
+                             char *message, size_t message_length,
+                             unsigned char **key, size_t *key_size);
 #endif

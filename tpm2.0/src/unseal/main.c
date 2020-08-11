@@ -2,9 +2,9 @@
  * Kmyth Unsealing Interface - TPM 2.0
  */
 
+#include "tpm2_kmyth_global.h"
 #include "tpm2_kmyth_seal.h"
 #include "kmyth_cipher.h"
-#include "kmyth_log.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_io.h"
 
@@ -14,6 +14,8 @@
 #include <getopt.h>
 #include <stdbool.h>
 #include <sys/stat.h>
+
+#include <kmyth_log.h>
 
 static void usage(const char *prog)
 {
@@ -52,6 +54,11 @@ int main(int argc, char **argv)
     usage(argv[0]);
     return 0;
   }
+
+  // Configure logging messages
+  set_app_name(KMYTH_APP_NAME);
+  set_app_version(KMYTH_VERSION);
+  set_applog_path(KMYTH_APPLOG_PATH);
 
   // Initialize parameters that might be modified by command line options
   char *inPath = NULL;
@@ -103,16 +110,14 @@ int main(int argc, char **argv)
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL)
   {
-    kmyth_log(LOGINFO, LOG_ERR,
-              "no input path (sealed data file) was specified ... exiting");
+    kmyth_log(LOG_ERR, "no input (sealed data file) specified ... exiting");
     return 1;
   }
   else
   {
     if (verifyInputFilePath(inPath))
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "invalid input path (%s) specified ... exiting", inPath);
+      kmyth_log(LOG_ERR, "invalid input path (%s) ... exiting", inPath);
       return 1;
     }
   }
@@ -128,7 +133,7 @@ int main(int argc, char **argv)
   {
     free(default_outPath);
     kmyth_clear(outputData, outputSize);
-    kmyth_log(LOGINFO, LOG_ERR, "kmyth-unseal failed ... exiting");
+    kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     return 1;
   }
 
@@ -144,8 +149,7 @@ int main(int argc, char **argv)
     // Verify output path
     if (verifyOutputFilePath(outPath))
     {
-      kmyth_log(LOGINFO, LOG_ERR,
-                "kmyth-unseal encountered invalid outfile path");
+      kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
       free(default_outPath);
       return 1;
     }
@@ -157,8 +161,8 @@ int main(int argc, char **argv)
       struct stat st = { 0 };
       if (!stat(outPath, &st))
       {
-        kmyth_log(LOGINFO, LOG_ERR,
-                  "default output filename (%s) already exists ... exiting\n",
+        kmyth_log(LOG_ERR,
+                  "default output filename (%s) already exists ... exiting",
                   outPath);
         free(default_outPath);
         return 1;
@@ -170,19 +174,18 @@ int main(int argc, char **argv)
   {
     if (print_to_stdout(outputData, outputSize))
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error printing to stdout");
+      kmyth_log(LOG_ERR, "error printing to stdout");
     }
   }
   else
   {
     if (print_to_file(outPath, outputData, outputSize))
     {
-      kmyth_log(LOGINFO, LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
     }
     else
     {
-      kmyth_log(LOGINFO, LOG_INFO, "unsealed contents of %s to %s",
-                inPath, outPath);
+      kmyth_log(LOG_INFO, "unsealed contents of %s to %s", inPath, outPath);
     }
   }
 
