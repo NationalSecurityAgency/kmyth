@@ -225,7 +225,7 @@ void tpm2_kmyth_create_authVal(char *authStringIn, TPM2B_AUTH * authValOut)
                KMYTH_OPENSSL_HASH, NULL);
   }
   kmyth_log(LOG_DEBUG, "authVal: 0x%02X..%02X", authValOut->buffer[0],
-            authValOut[authValOut->size - 1]);
+            authValOut->buffer[authValOut->size - 1]);
 }
 
 //############################################################################
