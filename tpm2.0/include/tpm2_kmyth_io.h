@@ -282,11 +282,13 @@ int decodeBase64Data(unsigned char *base64_data,
  * @param[in]  delim        String value representing the expected delimiter (the
  *                          delimiter value for the block type being retrieved)
  *
+ * @param[in] next_delim    String value representing the next expected
+ *                          delimiter.
  * @return
  */
 int kmyth_getSkiBlock(char **contents,
                       size_t *remaining, unsigned char **block,
-                      size_t *blocksize, char *delim);
+                      size_t *blocksize, char *delim, char *next_delim);
 
 /**
  * @brief Prints a string to the specified file.

@@ -489,7 +489,8 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &remaining,
                         &raw_seal_input_fname_data,
                         &raw_seal_input_fname_size,
-                        KMYTH_DELIM_ORIGINAL_FILENAME))
+                        KMYTH_DELIM_ORIGINAL_FILENAME,
+                        KMYTH_DELIM_PCR_SELECTION_LIST))
   {
     kmyth_log(LOG_ERR, "get original filename error ... exiting");
     free(originalContents);
@@ -505,7 +506,8 @@ int tpm2_kmyth_read_ski_file(char *input_path,
                         &remaining,
                         &raw_pcr_select_list_data,
                         &raw_pcr_select_list_size,
-                        KMYTH_DELIM_PCR_SELECTION_LIST))
+                        KMYTH_DELIM_PCR_SELECTION_LIST,
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC))
   {
     kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
     free(originalContents);
@@ -521,7 +523,9 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
                         &raw_sk_pub_data,
-                        &raw_sk_pub_size, KMYTH_DELIM_STORAGE_KEY_PUBLIC))
+                        &raw_sk_pub_size,
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                        KMYTH_DELIM_STORAGE_KEY_PRIVATE))
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(originalContents);
@@ -538,7 +542,9 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
                         &raw_sk_priv_data,
-                        &raw_sk_priv_size, KMYTH_DELIM_STORAGE_KEY_PRIVATE))
+                        &raw_sk_priv_size,
+                        KMYTH_DELIM_STORAGE_KEY_PRIVATE,
+                        KMYTH_DELIM_CIPHER_SUITE))
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
     free(originalContents);
@@ -556,7 +562,8 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
                         &raw_cipher_str_data,
-                        &raw_cipher_str_size, KMYTH_DELIM_CIPHER_SUITE))
+                        &raw_cipher_str_size,
+                        KMYTH_DELIM_CIPHER_SUITE, KMYTH_DELIM_SYM_KEY_PUBLIC))
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
     free(originalContents);
@@ -575,7 +582,9 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
                         &raw_sym_pub_data,
-                        &raw_sym_pub_size, KMYTH_DELIM_SYM_KEY_PUBLIC))
+                        &raw_sym_pub_size,
+                        KMYTH_DELIM_SYM_KEY_PUBLIC,
+                        KMYTH_DELIM_SYM_KEY_PRIVATE))
   {
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free(originalContents);
@@ -595,7 +604,8 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
                         &raw_sym_priv_data,
-                        &raw_sym_priv_size, KMYTH_DELIM_SYM_KEY_PRIVATE))
+                        &raw_sym_priv_size,
+                        KMYTH_DELIM_SYM_KEY_PRIVATE, KMYTH_DELIM_ENC_DATA))
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free(originalContents);
@@ -615,7 +625,8 @@ int tpm2_kmyth_read_ski_file(char *input_path,
 
   if (kmyth_getSkiBlock(&contents,
                         &remaining,
-                        &raw_enc_data, &raw_enc_size, KMYTH_DELIM_ENC_DATA))
+                        &raw_enc_data, &raw_enc_size,
+                        KMYTH_DELIM_ENC_DATA, KMYTH_DELIM_END_FILE))
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free(originalContents);
@@ -921,7 +932,8 @@ int decodeBase64Data(uint8_t * base64_data,
 //############################################################################
 int kmyth_getSkiBlock(char **contents,
                       size_t *remaining,
-                      uint8_t ** block, size_t *blocksize, char *delim)
+                      uint8_t ** block, size_t *blocksize, char *delim,
+                      char *next_delim)
 {
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, strlen(delim)))
@@ -931,13 +943,19 @@ int kmyth_getSkiBlock(char **contents,
   }
   *contents += strlen(delim);
   (*remaining) -= strlen(delim);
-  // find the end of the block (start of the next delimiter
+
+  // find the end of the block 
   size_t size = 0;
 
-  while ((*contents)[size] != '-')
+  if (strlen(next_delim) > *remaining)
+  {
+    kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
+    return 1;
+  }
+  while (strncmp(*contents + size, next_delim, strlen(next_delim)))
   {
     size++;
-    if (size >= *remaining)
+    if (size + strlen(next_delim) > *remaining)
     {
       kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
       return 1;
