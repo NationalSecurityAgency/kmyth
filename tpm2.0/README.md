@@ -66,7 +66,7 @@ Table of Contents
 
 ```yum install openssl openssl-devel glibc gcc libffi-devel indent```
 
-```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel```
+```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel tpm2-abrmd-devel```
 
 #### Useful TPM 2.0 utilities (may be required for TPM configuration, etc):
 
@@ -82,17 +82,15 @@ Once the dependencies are installed:
 
 1. Download the code
 
-2. In your git working directory, checkout the *master2* branch.
-
-3. The documentation is built using *make doc*. The doxygen generated
+2. The documentation is built using *make doc*. The doxygen generated
    documentation is put in ./doc.
 
-4. In the KMYTH directory run *make* or  *make all* to create:
+3. In the KMYTH directory run *make* or  *make all* to create:
   * ./bin/kmyth-seal
   * ./bin/kmyth-unseal
   * ./bin/kmyth-getkey
 
-5. The existing build (executables, object files, and documentation) can be
+4. The existing build (executables, object files, and documentation) can be
    cleared away to support a fresh build by using *make clean*.
 
 
