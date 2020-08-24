@@ -1,25 +1,23 @@
-# Kmyth using TPM 2.0
+# Kmyth
 
-Kmyth is a project about distributed Key Management using cryptography and
-trusted hardware. The first objectives were to ease integration with the
-[Trusted Platform Module](https://en.wikipedia.org/wiki/Trusted_Platform_Module)
-(TPM) for users wanting to protect keys with trusted hardware. The current
-version of Kmyth reflects this by emphasizing access to the TPM. Specifically,
-we simplify the process of using a TPM to encrypt/decrypt a file through
-sealing and unsealing within the TPM. This version of Kmyth specifically targets
-TPM 2.0.
+Kmyth provides a simple mechanism for interacting with the TPM. The
+three core components are:
+* kmyth-seal: A tool that encrypts a file and protects the encryption
+  key by sealing it to the TPM
+* kmyth-unseal: A tool that reads a file (.ski) that has been
+  kmyth-sealed and produces the original content
+* kmyth-getkey: A tool that demonstrates the programatic api of
+  kmyth-seal and kmyth-unseal by protecting a certificate private key
+  used in a TLS connection
 
+In addition Kmyth provides a simple API which allows developers to use
+the TPM without having to become experts in the underlying TPM
+libraries.
 
 ----
 Table of Contents  
 
-  * [Requirements](#requirements)
-
-  * [Installation](#installation)
-
-    * [Dependencies](#dependencies)
-
-    * [Building](#building)
+  * [Building and Installation](#building-and-installation)
 
   * [Usage](#usage)
 
@@ -27,74 +25,9 @@ Table of Contents
 
   * [Random-Sources](#random-sources)
 
-----
-## Requirements
+## Building and Installation
 
-* TPM version 2.0.
-
-* TPM must be enabled.
-
-* TPM must be configured (see [Notes](#notes))
-
-----
-## Installation
-
-### Dependencies
-
-#### Required for building Kmyth:  
-
-* glibc (GNU implementation of standard C library)
-
-* libffi-devel (foreign function interface development library)
-
-* openssl (OpenSSL TLS/cryptography toolkit) version 1.1.1x
-  [currently supported OpenSSL versions](https://www.openssl.org/policies/releasestrat.html).
-
-* openssl-devel (development support files for OpenSSL library)
-
-* tpm2-abrmd (TPM 2.0 Access Broker and Resource Manager library)
-
-* tpm2-tss (TPM 2.0 Software Stack library)
-
-* tpm2-tss-devel (headers/libraries for building applications with tpm2-tss)
-
-* gcc (GNU compilers - contains necessary C compiler)
-
-* indent (GNU program for formatting C code)
-
-##### CentOS (Red Hat) Commands
-
-```yum install openssl openssl-devel glibc gcc libffi-devel indent```
-
-```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel```
-
-#### Useful TPM 2.0 utilities (may be required for TPM configuration, etc):
-
-* tpm2-tools (command line tools for TPM 2.0 based on tpm2-tss)
-
-##### CentOS (Red Hat) Commands
-
-```yum install tpm2-tools```
-
-### Building
-
-Once the dependencies are installed:
-
-1. Download the code
-
-2. In your git working directory, checkout the *master2* branch.
-
-3. The documentation is built using *make doc*. The doxygen generated
-   documentation is put in ./doc.
-
-4. In the KMYTH directory run *make* or  *make all* to create:
-  * ./bin/kmyth-seal
-  * ./bin/kmyth-unseal
-  * ./bin/kmyth-getkey
-
-5. The existing build (executables, object files, and documentation) can be
-   cleared away to support a fresh build by using *make clean*.
-
+For build and installation instructions see the [INSTALL](INSTALL.md) file.
 
 ----
 ## Usage
@@ -160,7 +93,7 @@ input. This includes:
 to recover the 'kmyth-sealed' secret
 * providing the recovered result to the user in the required format
 (e.g., a file)  
-
+```
     usage: ./bin/kmyth-unseal [options]
     
     options are: 
@@ -173,7 +106,7 @@ to recover the 'kmyth-sealed' secret
      -w or --owner_auth    TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.
      -v or --verbose       Enable detailed logging.
      -h or --help          Help (displays this usage).
-        
+```
 
 ### kmyth-getkey
 
@@ -189,7 +122,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
  _kmyth-seal_ along with a corresponding certificate.
 
 * The key server must be able to authenticate the client's certificate.
-
+```
     usage: ./bin/kmyth-getkey [options]
     
     options are:
@@ -214,7 +147,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
     Misc --
       -v or --verbose       Detailed logging mode to help with debugging.
       -h or --help          Help (displays this usage).
-
+```
 
 ---
 ## Notes
@@ -447,4 +380,5 @@ key accesible to processes that expect to read key material from a file. One
 option for limiting the exposure of sensitive material is to store it in a
 file in the ramfs RAM file system. We do not recommend the tmpfs RAM file
 system, because tmpfs may use swap space.
+
 
