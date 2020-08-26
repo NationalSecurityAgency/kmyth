@@ -379,7 +379,7 @@ int get_key_from_kmip_server(BIO * bio,
     result = kmip_bio_get_symmetric_key_with_context(&kmip_context,
                                                      bio,
                                                      message, message_len,
-                                                     key, &key_len);
+                                                     (char **) key, &key_len);
     if (0 > result)
     {
       // NOTE: There is more error information available on the KMIP context

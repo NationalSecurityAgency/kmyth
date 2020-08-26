@@ -130,7 +130,7 @@ int get_key_from_server(BIO * bio,
  *
  * @return 0 if success, non-zero otherwise
  */
-int get_key_from_kmip_server(BIO *bio,
+int get_key_from_kmip_server(BIO * bio,
                              char *message, size_t message_length,
                              unsigned char **key, size_t *key_size);
 #endif
