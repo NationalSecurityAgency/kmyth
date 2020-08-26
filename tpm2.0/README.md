@@ -25,6 +25,7 @@ Table of Contents
 
   * [Random-Sources](#random-sources)
 
+----
 ## Building and Installation
 
 For build and installation instructions see the [INSTALL](INSTALL.md) file.

@@ -80,11 +80,14 @@ int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
 
   // Initialize authorization policy digest for object to be created
   //
-  // If a non-empty policy digest was passed in, copy it to the public
-  // template's authPolicy buffer
-  if (auth_policy.size > 0)
+  // - Set the size (unsigned int) of the authorization policy digest passed in
+  //   (should be zero for an empty digest).
+  //
+  // - If a non-empty policy digest was passed in, copy it to the public
+  //   template's authPolicy buffer.
+  pubArea->authPolicy.size = auth_policy.size;
+  if (auth_policy.size != 0)
   {
-    pubArea->authPolicy.size = auth_policy.size;
     memcpy(pubArea->authPolicy.buffer, auth_policy.buffer, auth_policy.size);
     kmyth_log(LOG_DEBUG, "object authPolicy: 0x%02X..%02X",
               pubArea->authPolicy.buffer[0],
