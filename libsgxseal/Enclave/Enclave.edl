@@ -1,0 +1,23 @@
+enclave {
+
+    trusted {
+
+        public int enc_seal_data(
+                [in, size=in_size] const uint8_t *in_data,
+                uint32_t in_size,
+                [user_check] uint8_t *out_data,
+                uint32_t out_size);
+
+        public int enc_unseal_data(
+                [in, size=in_size] const uint8_t *in_data,
+                uint32_t in_size,
+                [user_check] uint8_t *out_data,
+                uint32_t out_size);
+
+        public int enc_get_sealed_size(
+                uint32_t in_size,
+                [out, count=1] uint32_t *size);
+
+    };
+
+};
