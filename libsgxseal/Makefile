@@ -76,7 +76,7 @@ SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++14
 
 ######## App Settings ########
 
-#App_Name := sgx-seal-test
+App_Name := demo
 Lib_Name := sgxseal
 
 Lib_Dir_Name := lib$(Lib_Name)
