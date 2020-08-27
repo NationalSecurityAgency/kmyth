@@ -103,7 +103,7 @@ $ sudo dnf --enablerepo=PowerTools
 $ sudo dnf install autoconf-archive json-c-devel
 ```
 
-Note that if PowerTools is already enabled, you can just run the install.  
+  Note that if PowerTools is already enabled, you can just run the install.  
 
 3. Install the remaining dependencies by using the existing upstream ```tpm2-tss``` package.
 
