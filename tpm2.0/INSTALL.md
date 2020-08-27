@@ -55,7 +55,7 @@ installed from source.
 
 ##### Ubuntu 20.04 Commands
 
-```apt install make indent gcc libssl libssl-dev libffi-dev```
+```apt install make indent gcc libssl1.1 libssl-dev libffi-dev```
 
 ```apt install libtss2 libtss2-dev libtss2-tcti-tabrmd-dev tpm2-abrmd```
 
@@ -96,17 +96,18 @@ $ git clone https://github.com/tpm2-software/tpm2-tss.git
 $ cd tpm2-tss
 ```
 
-2. Install dependencies from the PowerTools repository. You may need ```sudo``` permissions.
+2. Install dependencies from the PowerTools repository. Note that if PowerTools is already enabled, you can just run the install.
 
 ```
-$ dnf --enablerepo=PowerTools install autoconf-archive json-c-devel
+$ sudo dnf --enablerepo=PowerTools
+$ sudo dnf install autoconf-archive json-c-devel
 ```
 
-3. Install the remaining dependencies by using the existing upstream ```tpm2-tss``` package. Again, you may need ```sudo``` permissions.
+3. Install the remaining dependencies by using the existing upstream ```tpm2-tss``` package.
 
 ```
-$ dnf builddep tpm2-tss
-$ yum -y install libcurl-devel
+$ sudo dnf builddep tpm2-tss
+$ sudo yum -y install libcurl-devel
 ```
 
 4. Run the ```bootstrap``` and ```configure``` scripts. Note that you may need to change the ```udevrulesdir``` and ```udevrulesprefix``` configuration values for your system setup.
@@ -116,18 +117,18 @@ $ ./bootstrap
 $ ./configure --with-udevrulesdir=/etc/udev/rules.d --with-udevrulesprefix=80-
 ```
 
-5. Build and install the ```tpm2-tss``` library. Again, you may need ```sudo``` permissions.
+5. Build and install the ```tpm2-tss``` library.
 
 ```
 $ make -j$(nproc)
-$ make install
+$ sudo make install
 ```
 
-6. Update the system configuration. Like before, you may need ```sudo``` permissions.
+6. Update the system configuration.
 
 ```
-$ udevadm control --reload-rules && udevadm trigger
-$ ldconfig
+$ sudo udevadm control --reload-rules && udevadm trigger
+$ sudo ldconfig
 ```
 
 ##### Building the tpm2-tools library
@@ -139,17 +140,16 @@ $ git clone https://github.com/tpm2-software/tpm2-tools.git
 $ cd tpm2-tools
 ```
 
-2. Install dependencies by using the existing upsream ```tpm2-tools``` package. You may need ```sudo``` permissions.
+2. Install dependencies by using the existing upsream ```tpm2-tools``` package.
 
 ```
-$ dnf builddep tpm2-tools
+$ sudo dnf builddep tpm2-tools
 ```
 
-3. Install additional dependencies. Again, you may need ```sudo``` permissions.
+3. Install additional dependencies.
 
 ```
-$ yum -y install automake libtool autoconf autoconf-archive libstdc++-devel gcc pkg-config uriparser-devel libgcrypt-devel dbus-devel glib2-devel libcurl-devel
-$ yum -y install libuuid-devel
+$ sudo yum -y install automake libtool autoconf autoconf-archive libstdc++-devel gcc pkg-config uriparser-devel libgcrypt-devel dbus-devel glib2-devel libcurl-devel libuuid-devel
 ```
 
 4. Run the ```bootstrap``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
@@ -159,17 +159,17 @@ $ ./bootstrap
 $ PKG_CONFIG_PATh=/usr/local/lib/pkgconfig ./configure
 ```
 
-5. Build and install the ```tpm2-tools``` library. Again, you may need ```sudo``` permissions.
+5. Build and install the ```tpm2-tools``` library.
 
 ```
 $ make -j$(nproc)
-$ make install
+$ sudo make install
 ```
 
-6. Update the system configuration. Like before, you may need ```sudo``` permissions.
+6. Update the system configuration.
 
 ```
-$ ldconfig
+$ sudo ldconfig
 ```
 
 ##### Building the tpm2-abrmd library
@@ -181,10 +181,10 @@ $ git clone https://github.com/tpm2-software/tpm2-abrmd.git
 $ cd tpm2-abrmd
 ```
 
-2. Install dependencies. You may need ```sudo``` permissions.
+2. Install dependencies. 
 
 ```
-$ yum -y install glib2-devel
+$ sudo yum -y install glib2-devel
 ```
 
 3. Run the ```bootstrap``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
@@ -194,17 +194,17 @@ $ ./bootstrap
 $ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure
 ```
 
-4. Build and install the ```tpm2-abrmd``` library. Again, you may need ```sudo``` permissions.
+4. Build and install the ```tpm2-abrmd``` library.
 
 ```
 $ make
-$ make install
+$ sudo make install
 ```
 
-5. Update the system configuration. Like before, you may need ```sudo``` permissions.
+5. Update the system configuration. 
 
 ```
-$ ldconfig
+$ sudo ldconfig
 ```
 
 ##### Building the IBM TPM 2.0 Emulator
@@ -223,6 +223,7 @@ $ tar -xvf ibmtpm1628.tar.gz
 3. Build the emulator.
 
 ```
+$ cd src
 $ make
 ```
 
