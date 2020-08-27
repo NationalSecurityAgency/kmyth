@@ -160,7 +160,10 @@ int main(int argc, char **argv)
   if (inPath == NULL)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
-    kmyth_clear(authString, strlen(authString));
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
     return 1;
@@ -170,7 +173,10 @@ int main(int argc, char **argv)
   if (verifyInputFilePath(inPath))
   {
     kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", inPath);
-    kmyth_clear(authString, strlen(authString));
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
     return 1;
@@ -203,7 +209,10 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
       free(temp_str);
-      kmyth_clear(authString, strlen(authString));
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
@@ -230,7 +239,10 @@ int main(int argc, char **argv)
   {
     kmyth_log(LOG_ERR, "output path (%s) is not valid ... exiting", outPath);
     free(outPath);
-    kmyth_clear(authString, strlen(authString));
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
@@ -242,7 +254,10 @@ int main(int argc, char **argv)
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     free(outPath);
-    kmyth_clear(authString, strlen(authString));
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
