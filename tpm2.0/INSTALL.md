@@ -55,9 +55,9 @@ installed from source.
 
 ##### Ubuntu 20.04 Commands
 
-```apt install make indent gcc libssl1.1 libssl-dev libffi-dev```
+```apt install make indent gcc openssl libssl-dev libffi-dev```
 
-```apt install libtss2 libtss2-dev libtss2-tcti-tabrmd-dev tpm2-abrmd```
+```apt install tss2 libtss2-dev libtss2-tcti-tabrmd-dev tpm2-abrmd```
 
 #### Useful TPM 2.0 utilities (may be required for TPM configuration, etc):
 
