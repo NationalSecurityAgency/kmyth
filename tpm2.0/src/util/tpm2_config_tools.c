@@ -202,6 +202,12 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 //############################################################################
 int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 {
+  // If the input context is null there's nothing to do.
+  if ((sapi_ctx == NULL) || (*sapi_ctx == NULL))
+  {
+    return 0;
+  }
+
   int retval = 0;
 
   // flush any remaining loaded or active session handle values
