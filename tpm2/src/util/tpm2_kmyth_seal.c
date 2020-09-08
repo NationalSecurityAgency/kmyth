@@ -666,6 +666,7 @@ int kmyth_wrap_input(char *inPath,
   }
   kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_length);
   
+  // validate non-empty plaintext buffer specified
   if (data_length == 0)
   {
     kmyth_log(LOG_ERR, "no input data ... exiting");
