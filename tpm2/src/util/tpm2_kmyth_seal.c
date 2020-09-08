@@ -665,6 +665,13 @@ int kmyth_wrap_input(char *inPath,
     return 1;
   }
   kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_length);
+  
+  if (data_length == 0)
+  {
+    kmyth_log(LOG_ERR, "no input data ... exiting");
+    free(data);
+    return 1;
+  }
 
   // encrypt (wrap) input data read in (e.g., client certificate private .pem)
   if (kmyth_encrypt_data(data,
