@@ -103,6 +103,7 @@ OBJECT_DIRS += $(LOGGER_OBJ_DIR)
 DOC_DIRS = $(DOC_DIR)
 DOC_DIRS += $(LOGGER_DOC_DIR)
 
+.PHONY: all
 all: pre logger kmyth-seal kmyth-unseal kmyth-getkey
 
 logger: $(LOGGER_OBJECTS)
@@ -117,6 +118,7 @@ kmyth-unseal: $(UNSEAL_OBJECTS) $(UTIL_OBJECTS)
 kmyth-getkey: $(GETKEY_OBJECTS) $(UTIL_OBJECTS)
 	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LLIBS) $(LFLAGS)
 
+.PHONY: pre
 pre:
 	indent -bli0 -bap -bad -sob -cli0 -npcs -nbc -bls -blf -lp -ip0 -ts2 -nut -npsl -bbo -l80 src/*/*.c
 	indent -bli0 -bap -bad -sob -cli0 -npcs -nbc -bls -blf -lp -ip0 -ts2 -nut -npsl -bbo -l80 include/*.h
@@ -127,6 +129,7 @@ pre:
 	mkdir -p $(DOC_DIRS)
 	mkdir -p $(LOGGER_LIB_DIR)
 
+.PHONY: doc
 doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
 
