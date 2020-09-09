@@ -2,17 +2,19 @@
 
 #include "sgx_trts.h"
 #include "sgx_tseal.h"
+#include "sgx_lfence.h"
 
 #include "Enclave_t.h"
 
-static uint8_t *addl_data = NULL;
-static uint32_t addl_data_sz = 0;
+static const uint8_t *addl_data = NULL;
+static const uint32_t addl_data_sz = 0;
 
 static inline uint32_t calc_sealed_data_size(uint32_t in_size)
 {
     return sgx_calc_sealed_data_size(addl_data_sz, in_size);
 }
 
+// EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t *size)
 {
     *size = 0;
@@ -25,6 +27,8 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t *size)
     return 0;
 }
 
+// EDL checks that `in_data` is outside the enclave (speculative-safe)
+// `out_data` is user_check
 int enc_seal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data, uint32_t out_size)
 {
     if (!sgx_is_outside_enclave(out_data, out_size))
@@ -36,14 +40,15 @@ int enc_seal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data, u
     if (sealedsz > out_size)
         return SGX_ERROR_INVALID_PARAMETER;
 
-    //TODO sgx_lfence();
-
     int ret;
     int sgx_ret;
 
     sgx_sealed_data_t *buf = (sgx_sealed_data_t *)malloc(sealedsz);
     if (buf == NULL)
         return SGX_ERROR_OUT_OF_MEMORY;
+
+    // Retire validity check of `out_data` and checks in `malloc` against `sealedsz`, influenced by `in_size`
+    sgx_lfence();
 
     //XXX If a different key policy is desired (e.g., MRENCLAVE), must use sgx_seal_data_ex()
     sgx_ret = sgx_seal_data(addl_data_sz, addl_data, in_size, in_data, sealedsz, buf);
@@ -73,8 +78,6 @@ int enc_unseal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data,
     if (mac_len != addl_data_sz || plain_len > out_size || plain_len > in_size)
         return SGX_ERROR_INVALID_PARAMETER;
 
-    //TODO sgx_lfence();
-
     int ret;
     sgx_status_t sgx_ret;
 
@@ -84,7 +87,11 @@ int enc_unseal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data,
         goto Out;
     }
 
+    // Retire checks in `malloc` against `plain_len`, influenced by `sealed_blob`
+    sgx_lfence();
+
     //XXX If a different key policy is desired (e.g., MRENCLAVE), must use sgx_unseal_data_ex()
+    //tSeal checks the sgx_sealed_data_t `sealed_blob` (speculative-safe)
     sgx_ret = sgx_unseal_data(sealed_blob, NULL, &mac_len, plain_data, &plain_len);
     if (sgx_ret != SGX_SUCCESS) {
         ret = sgx_ret;
