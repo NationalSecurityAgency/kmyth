@@ -92,7 +92,6 @@ LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*h)
 LOGGER_LIB_NAME = kmythlogger
 LOGGER_LIB_SONAME = lib$(LOGGER_LIB_NAME).so
 LOGGER_LIB_LOCAL_DEST = $(LOGGER_LIB_DIR)/$(LOGGER_LIB_SONAME)
-LOGGER_LIB_INSTALL_DIR = $(PREFIX)/lib/
 
 # Consolidate created directories to simplify mkdir call for 'pre' target below
 OBJECT_DIRS = $(SEAL_OBJ_DIR)
@@ -118,6 +117,21 @@ kmyth-unseal: $(UNSEAL_OBJECTS) $(UTIL_OBJECTS)
 kmyth-getkey: $(GETKEY_OBJECTS) $(UTIL_OBJECTS)
 	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LLIBS) $(LFLAGS)
 
+$(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
+	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c | $(UTIL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
 .PHONY: pre
 pre:
 	indent -bli0 -bap -bad -sob -cli0 -npcs -nbc -bls -blf -lp -ip0 -ts2 -nut -npsl -bbo -l80 src/*/*.c
@@ -133,20 +147,23 @@ pre:
 doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
 
-$(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
-	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
+.PHONY: install
+install:
+	install -d $(DESTDIR)$(PREFIX)/lib
+	install -m 755 $(LOGGER_LIB_DIR)/libkmythlogger.so $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth/logger
+	install -m 644 $(LOGGER_INC_DIR)/*.h $(DESTDIR)$(PREFIX)/include/kmyth/logger
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN_DIR)/kmyth-seal $(DESTDIR)$(PREFIX)/bin/
+	install -m 755 $(BIN_DIR)/kmyth-unseal $(DESTDIR)$(PREFIX)/bin/
+	ldconfig
 
-$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c | $(UTIL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/lib/libkmythlogger.so	
+	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
+	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
+	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
 .PHONY: clean
 clean:
