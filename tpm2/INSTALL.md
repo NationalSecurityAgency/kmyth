@@ -47,9 +47,9 @@ these dependencies can likely be met using your package
 manager. [libkmip](https://github.com/OpenKMIP/libkmip) must be
 installed from source.
 
-##### CentOS 7 (Red Hat 7) Commands
+##### CentOS 8 (Red Hat 8) Commands
 
-```yum install openssl openssl-devel glibc gcc libffi-devel indent```
+```yum install openssl openssl-devel glibc gcc libffi-devel```
 
 ```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel tpm2-abrmd-devel```
 
@@ -63,7 +63,7 @@ installed from source.
 
 * tpm2-tools (command line tools for TPM 2.0 based on tpm2-tss)
 
-##### CentOS 7 (Red Hat 7) Commands
+##### CentOS 8 (Red Hat 8) Commands
 
 ```yum install tpm2-tools```
 
