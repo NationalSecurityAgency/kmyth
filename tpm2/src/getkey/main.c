@@ -12,6 +12,7 @@
 #include "tpm2_kmyth_io.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_seal.h"
+#include "kmyth.h"
 
 #include <stdio.h>
 #include <string.h>

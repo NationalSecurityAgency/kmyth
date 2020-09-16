@@ -7,6 +7,7 @@
 #include "kmyth_cipher.h"
 #include "tpm2_kmyth_misc.h"
 #include "tpm2_kmyth_io.h"
+#include "kmyth.h"
 
 #include <stdio.h>
 #include <stdint.h>
