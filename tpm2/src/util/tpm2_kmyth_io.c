@@ -170,6 +170,197 @@ int read_arbitrary_file(char *input_path,
 }
 
 //############################################################################
+// tpm2_kmyth_create_ski_string
+//############################################################################
+int tpm2_kmyth_create_ski_string(uint8_t ** output,
+                                 size_t *output_length,
+                                 char *filename,
+                                 size_t filename_length,
+                                 TPML_PCR_SELECTION pcr_selection_list,
+                                 TPM2B_PUBLIC storage_key_public,
+                                 TPM2B_PRIVATE storage_key_private,
+                                 char *cipher_string,
+                                 TPM2B_PUBLIC wrap_key_public,
+                                 TPM2B_PRIVATE wrap_key_private,
+                                 uint8_t * encrypted_data,
+                                 size_t encrypted_data_size)
+{
+  // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
+  // and structs (TPML_PCR_SELECTION)
+  // Note: must account for two extra bytes to include the buffer's size value
+  //       in the TPM2B_* sized buffer cases
+  size_t pcr_select_size = sizeof(pcr_selection_list);
+  size_t pcr_select_offset = 0;
+  uint8_t *pcr_select_data = calloc(pcr_select_size, sizeof(uint8_t));
+  size_t sk_pub_size = storage_key_public.size + 2;
+  size_t sk_pub_offset = 0;
+  uint8_t *sk_pub_data = malloc(sk_pub_size);
+  size_t sk_priv_size = storage_key_private.size + 2;
+  size_t sk_priv_offset = 0;
+  uint8_t *sk_priv_data = malloc(sk_priv_size);
+  size_t wk_pub_size = wrap_key_public.size + 2;
+  size_t wk_pub_offset = 0;
+  uint8_t *wk_pub_data = malloc(wk_pub_size);
+  size_t wk_priv_size = wrap_key_private.size + 2;
+  size_t wk_priv_offset = 0;
+  uint8_t *wk_priv_data = malloc(wk_priv_size);
+
+  if (tpm2_kmyth_marshal_skiObjects(&pcr_selection_list,
+                                    &pcr_select_data,
+                                    &pcr_select_size,
+                                    pcr_select_offset,
+                                    &storage_key_public,
+                                    &sk_pub_data,
+                                    &sk_pub_size,
+                                    sk_pub_offset,
+                                    &storage_key_private,
+                                    &sk_priv_data,
+                                    &sk_priv_size,
+                                    sk_priv_offset,
+                                    &wrap_key_public,
+                                    &wk_pub_data,
+                                    &wk_pub_size,
+                                    wk_pub_offset,
+                                    &wrap_key_private,
+                                    &wk_priv_data,
+                                    &wk_priv_size, wk_priv_offset))
+  {
+    kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
+    free(pcr_select_data);
+    free(sk_pub_data);
+    free(sk_priv_data);
+    free(wk_pub_data);
+    free(wk_priv_data);
+    return 1;
+  }
+
+  // validate that all data to be written is non-NULL and non-empty
+  if (pcr_select_data == NULL ||
+      pcr_select_size == 0 ||
+      sk_pub_data == NULL ||
+      sk_pub_size == 0 ||
+      sk_priv_data == NULL ||
+      sk_priv_size == 0 ||
+      wk_pub_data == NULL ||
+      wk_pub_size == 0 ||
+      wk_priv_data == NULL ||
+      wk_priv_size == 0 ||
+      cipher_string == NULL ||
+      strlen(cipher_string) == 0 ||
+      encrypted_data == NULL || encrypted_data_size == 0)
+  {
+    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
+    free(pcr_select_data);
+    free(sk_pub_data);
+    free(sk_priv_data);
+    free(wk_pub_data);
+    free(wk_priv_data);
+    return 1;
+  }
+
+//Encode each portion of the file in base64
+  uint8_t *pcr64_select_data = NULL;
+  size_t pcr64_select_size = 0;
+  uint8_t *sk64_pub_data = NULL;
+  size_t sk64_pub_size = 0;
+  uint8_t *sk64_priv_data = NULL;
+  size_t sk64_priv_size = 0;
+  uint8_t *wk64_pub_data = NULL;
+  size_t wk64_pub_size = 0;
+  uint8_t *wk64_priv_data = NULL;
+  size_t wk64_priv_size = 0;
+  uint8_t *enc64_data = NULL;
+  size_t enc64_data_size = 0;
+
+  if (encodeBase64Data
+      (pcr_select_data, pcr_select_size, &pcr64_select_data, &pcr64_select_size)
+      || encodeBase64Data(sk_pub_data, sk_pub_size, &sk64_pub_data,
+                          &sk64_pub_size)
+      || encodeBase64Data(sk_priv_data, sk_priv_size, &sk64_priv_data,
+                          &sk64_priv_size)
+      || encodeBase64Data(wk_pub_data, wk_pub_size, &wk64_pub_data,
+                          &wk64_pub_size)
+      || encodeBase64Data(wk_priv_data, wk_priv_size, &wk64_priv_data,
+                          &wk64_priv_size)
+      || encodeBase64Data(encrypted_data, encrypted_data_size, &enc64_data,
+                          &enc64_data_size))
+  {
+    kmyth_log(LOG_ERR, "error base64 encoding ski string ... exiting");
+    free(pcr_select_data);
+    free(sk_pub_data);
+    free(sk_priv_data);
+    free(wk_pub_data);
+    free(wk_priv_data);
+    free(pcr64_select_data);
+    free(sk64_pub_data);
+    free(sk64_priv_data);
+    free(wk64_pub_data);
+    free(wk64_priv_data);
+    free(enc64_data);
+    return 1;
+  }
+
+  free(pcr_select_data);
+  free(sk_pub_data);
+  free(sk_priv_data);
+  free(wk_pub_data);
+  free(wk_priv_data);
+
+  //At this point the data is all formatted, it's time to create the string
+
+  uint8_t *out = NULL;
+  size_t out_length = 0;
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_ORIGINAL_FILENAME,
+         strlen(KMYTH_DELIM_ORIGINAL_FILENAME));
+  concat(&out, &out_length, (uint8_t *) filename, filename_length);
+  concat(&out, &out_length, (uint8_t *) "\n", 1);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_PCR_SELECTION_LIST,
+         strlen(KMYTH_DELIM_PCR_SELECTION_LIST));
+  concat(&out, &out_length, pcr64_select_data, pcr64_select_size);
+  free(pcr64_select_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+         strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC));
+  concat(&out, &out_length, sk64_pub_data, sk64_pub_size);
+  free(sk64_pub_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_STORAGE_KEY_PRIVATE,
+         strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE));
+  concat(&out, &out_length, sk64_priv_data, sk64_priv_size);
+  free(sk64_priv_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_CIPHER_SUITE,
+         strlen(KMYTH_DELIM_CIPHER_SUITE));
+  concat(&out, &out_length, (uint8_t *) cipher_string, strlen(cipher_string));
+  concat(&out, &out_length, (uint8_t *) "\n", 1);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_SYM_KEY_PUBLIC,
+         strlen(KMYTH_DELIM_SYM_KEY_PUBLIC));
+  concat(&out, &out_length, wk64_pub_data, wk64_pub_size);
+  free(wk64_pub_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_SYM_KEY_PRIVATE,
+         strlen(KMYTH_DELIM_SYM_KEY_PRIVATE));
+  concat(&out, &out_length, wk64_priv_data, wk64_priv_size);
+  free(wk64_priv_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_ENC_DATA,
+         strlen(KMYTH_DELIM_ENC_DATA));
+  concat(&out, &out_length, enc64_data, enc64_data_size);
+  free(enc64_data);
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_END_FILE,
+         strlen(KMYTH_DELIM_END_FILE));
+
+  *output = out;
+  *output_length = out_length;
+
+  return 0;
+}
+
+//############################################################################
 // tpm2_kmyth_write_ski_file()
 //############################################################################
 int tpm2_kmyth_write_ski_file(char *output_path,
@@ -1099,4 +1290,37 @@ int print_to_stdout(unsigned char *data, size_t data_size)
   // Clean-up:
   BIO_free_all(bdata);
   return 0;
+}
+
+int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
+           size_t input_length)
+{
+  if (input == NULL || input_length == 0) //nothing to concat
+  {
+    return (0);
+  }
+
+  uint8_t *new_dest = NULL;
+  size_t new_dest_len = *dest_length + input_length;
+  size_t offset = *dest_length;
+
+	if(new_dest_len < *dest_length) //if we have an overflow
+	{
+		kmyth_log(LOG_ERR, "Maximum array size exceeded ... exiting");
+		return(1);
+	}
+
+  if ((new_dest = realloc(*dest, new_dest_len)) == 0)
+  {
+    kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
+    return (1);
+  }
+
+  for (size_t i = 0; i < input_length; i++)
+  {
+    new_dest[offset + i] = input[i];
+  }
+  *dest = new_dest;
+  *dest_length = new_dest_len;
+  return (0);
 }

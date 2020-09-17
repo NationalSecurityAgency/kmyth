@@ -247,11 +247,11 @@ int main(int argc, char **argv)
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
-
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal(inPath,
-                      outPath,
-                      authString, pcrsString, ownerAuthPasswd, cipherString))
+  if (tpm2_kmyth_seal_file(inPath,
+                           outPath,
+                           authString, pcrsString, ownerAuthPasswd,
+                           cipherString))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     free(outPath);
@@ -265,8 +265,7 @@ int main(int argc, char **argv)
 
   // Clean-up any remaining resources
   //   Note: authString and ownerAuthPasswd cleared after use in
-  //         tpm2_kmyth_seal(), which completed successfully at this point
+  //         tpm2_kmyth_seal_file(), which completed successfully at this point
   free(outPath);
-
   return 0;
 }

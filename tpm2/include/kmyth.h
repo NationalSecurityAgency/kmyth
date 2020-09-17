@@ -11,10 +11,18 @@
 /**
  * @brief High-level function implementing kmyth-seal
  *
- * @param[in]  input_path        Path to input data file
+ *        For the auth_string, pcrs_string, owner_auth_passwd, and
+ *        cipher_string, if NULL is provided, the function will default to
+ *        the same defaults kmyth-seal uses when these are not provided on the
+ *        command line.
  *
- * @param[in]  output_path       Path to .ski file where the kmyth-seal output
- *                               will be written
+ * @param[in]  input						 Raw data to be kmyth-sealed
+ *
+ * @param[in]  input_len				 The size of input in bytes
+ *
+ * @param[out] output			       The result of kmyth-seal in .ski format
+ *
+ * @param[out] output_len				 The size of the output data
  *
  * @param[in]  auth_string       Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
@@ -35,9 +43,10 @@
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_seal(char *input_path,
-                    char *output_path,
-                    char *auth_string, char *pcrs_string,
+int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
+                    uint8_t ** output, size_t *output_len,
+                    char *auth_string,
+                    char *pcrs_string,
                     char *owner_auth_passwd, char *cipher_string);
 
 /**

@@ -73,6 +73,82 @@ int read_arbitrary_file(char *input_path, unsigned char **data,
                         size_t *data_length);
 
 /**
+ * @brief Creates a string in the form a uint_8 containing all the information
+ *        needed by a .ski file
+ *
+ * @param[out] output                  Contains the output 'string' in .ski
+ *                                     format.
+ *
+ * @param[out] output_length           The length of output in # of bytes.
+ *
+ * @param[in] filename                 The filename originally read. If the
+ *                                     value is NULL, no filename will be
+ *                                     provided.
+ *
+ * @param[in] filename_length          The length of the filename.
+ *
+ * @param[in]  pcr_selection_list      Pointer to a TPM 2.0 struct used to
+ *                                     indicate which PCR are included in the
+ *                                     authorization policy applied to the
+ *                                     sealed data object. This data will be
+ *                                     written to the 'PCR SELECTION LIST'
+ *                                     block in the .ski file after it is
+ *                                     marshalled and base-64 encoded.
+ *
+ * @param[in]  storage_key_public      Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PUBLIC) holding the data to be
+ *                                     written to the 'STORAGE KEY PUBLIC'
+ *                                     block in the .ski file after it is
+ *                                     marshalled and base-64 encoded.
+ *
+ * @param[in]  storage_key_private     Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PRIVATE) holding the data to be
+ *                                     written to the 'STORAGE KEY ENC PRIVATE'
+ *                                     block in the .ski file after it is
+ *                                     marshalled and base-64 encoded.
+ *
+ * @param[in]  cipher_string           String specifying the symmetric
+ *                                     encryption method used to encrypt
+ *                                     (wrap) the input data. This string is
+ *                                     written to the 'CIPHER SUITE' block
+ *                                     of the .ski file.
+ *
+ * @param[in]  wrap_key_public         Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PUBLIC) holding the data to be
+ *                                     written to the 'SYM KEY PUBLIC'
+ *                                     block in the .ski file after it is
+ *                                     marshalled and base-64 encoded.
+ *
+ * @param[in]  wrap_key_private        Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PRIVATE) holding the data to be
+ *                                     written to the 'SYM KEY ENC PRIVATE'
+ *                                     block in the .ski file after it is
+ *                                     marshalled and base-64 encoded.
+ *
+ * @param[in]  encrypted_data          Symmetrically encrypted data - passed as
+ *                                     a pointer to the array containing the
+ *                                     encrypted data bytes to be written to
+ *                                     the 'ENC DATA' block of the .ski file.
+ *
+ * @param[in]  encrypted_data_size     Size, in bytes, of the encrypted data
+ *                                     to be written to the .ski file.
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_kmyth_create_ski_string(uint8_t ** output,
+                                 size_t *output_length,
+                                 char *filename,
+                                 size_t filename_length,
+                                 TPML_PCR_SELECTION pcr_selection_list,
+                                 TPM2B_PUBLIC storage_key_public,
+                                 TPM2B_PRIVATE storage_key_private,
+                                 char *cipher_string,
+                                 TPM2B_PUBLIC wrap_key_public,
+                                 TPM2B_PRIVATE wrap_key_private,
+                                 uint8_t * encrypted_data,
+                                 size_t encrypted_data_size);
+
+/**
  * @brief Writes sealed key meta-data to a .ski file.
  * 
  * @param[in]  output_path             String containing the path to the
@@ -328,5 +404,23 @@ int print_to_file(char *output_path, unsigned char *plain_text_data,
  */
 int print_to_stdout(unsigned char *plain_text_data,
                     size_t plain_text_data_size);
+
+/**
+ * @brief Concatinates two arrays of type uint8_t
+ *
+ * @param[in/out] dest          The first array, output contains the
+ *                              concatenated arrays
+ *
+ * @param[in/out] dest_length   Inputs the original length of dest,
+ *                              output contains the length of the new array
+ *
+ * @param[in]     input         The second array, concatenated to dest
+ *
+ * @param[out[    input_length  The length of the second array
+ *
+ * @return 0 if success, 1 if error
+ */
+int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
+           size_t input_length);
 
 #endif /* TPM2_KMYTH_IO_H */
