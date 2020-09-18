@@ -213,23 +213,41 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   // flush any remaining loaded or active session handle values
   TPMS_CAPABILITY_DATA hSession;
 
-  tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_HMAC_SESSION,
-                      TPM2_PT_ACTIVE_SESSIONS_MAX, &hSession);
-  for (int i = 0; i < hSession.data.handles.count; i++)
+  if (tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_HMAC_SESSION,
+                          TPM2_PT_ACTIVE_SESSIONS_MAX, &hSession))
   {
-    Tss2_Sys_FlushContext(*sapi_ctx, hSession.data.handles.handle[i]);
-    kmyth_log(LOG_DEBUG, "flushed HMAC handle 0x%08X",
-              hSession.data.handles.handle[i]);
+    kmyth_log(LOG_ERR, "unable to get TPM2_HR_HMAC_SESSION property from TPM");
+    kmyth_log(LOG_ERR, "unable to flush active HMAC sessions");
+    retval = 1;
   }
+  else
+  {
+    for (int i = 0; i < hSession.data.handles.count; i++)
+    {
+      Tss2_Sys_FlushContext(*sapi_ctx, hSession.data.handles.handle[i]);
+      kmyth_log(LOG_DEBUG, "flushed HMAC handle 0x%08X",
+                hSession.data.handles.handle[i]);
+    }
+  }
+
   TPMS_CAPABILITY_DATA pSession;
 
-  tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_POLICY_SESSION,
-                      TPM2_PT_ACTIVE_SESSIONS_MAX, &pSession);
-  for (int i = 0; i < pSession.data.handles.count; i++)
+  if (tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_POLICY_SESSION,
+                          TPM2_PT_ACTIVE_SESSIONS_MAX, &pSession))
   {
-    Tss2_Sys_FlushContext(*sapi_ctx, pSession.data.handles.handle[i]);
-    kmyth_log(LOG_DEBUG, "flushed policy handle 0x%08X",
-              pSession.data.handles.handle[i]);
+    kmyth_log(LOG_ERR,
+              "unable to get TPM2_HR_POLICY_SESSION property from TPM");
+    kmyth_log(LOG_ERR, "unable to flush active policy sessions");
+    retval = 1;
+  }
+  else
+  {
+    for (int i = 0; i < pSession.data.handles.count; i++)
+    {
+      Tss2_Sys_FlushContext(*sapi_ctx, pSession.data.handles.handle[i]);
+      kmyth_log(LOG_DEBUG, "flushed policy handle 0x%08X",
+                pSession.data.handles.handle[i]);
+    }
   }
 
   // Get the TCTI context from SAPI context. 
