@@ -79,7 +79,7 @@ int tpm2_kmyth_seal(char *input_path,
   {
     ownerAuth.size = strlen(owner_auth_passwd);
     memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
-    kmyth_clear(owner_auth_passwd, strlen(owner_auth_passwd));
+    kmyth_clear_and_free(owner_auth_passwd, strlen(owner_auth_passwd));
   }
   if (ownerAuth.size > 0)
   {
@@ -109,7 +109,7 @@ int tpm2_kmyth_seal(char *input_path,
   tpm2_kmyth_create_authVal(auth_string, &objAuthVal);
   if (auth_string != NULL)
   {
-    kmyth_clear(auth_string, strlen(auth_string));
+    kmyth_clear_and_free(auth_string, strlen(auth_string));
   }
 
   // Create a "PCR Selection" struct and populate it in accordance with
