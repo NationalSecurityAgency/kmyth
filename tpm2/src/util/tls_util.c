@@ -47,12 +47,55 @@ const char *PREFERRED_CIPHERS = "ECDHE-ECDSA-AES256-GCM-SHA384:"
 static int tls_ctx_connect(char *server_ip, char *server_port,
                            SSL_CTX * ctx, BIO ** ssl_bio)
 {
+  if (server_ip == NULL)
+  {
+    kmyth_log(LOG_ERR, "no server IP ... exiting");
+    return 1;
+  }
+  if (server_port == NULL)
+  {
+    kmyth_log(LOG_ERR, "no server port ... exiting");
+    return 1;
+  }
+  if (ctx == NULL)
+  {
+    kmyth_log(LOG_ERR, "no SSL context ... exiting");
+    return 1;
+  }
+  if (ssl_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "no BIO structure variable ... exiting");
+    return 1;
+  }
+
   *ssl_bio = BIO_new_ssl_connect(ctx);
+  if (*ssl_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "error getting new BIO chain: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
+
   SSL *ssl;
 
-  BIO_get_ssl(*ssl_bio, &ssl);
-  BIO_set_conn_address(*ssl_bio, server_ip);
-  BIO_set_conn_port(*ssl_bio, server_port);
+  if (BIO_get_ssl(*ssl_bio, &ssl) <= 0)
+  {
+    kmyth_log(LOG_ERR, "error retrieving the BIO SSL pointer: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
+  if (BIO_set_conn_address(*ssl_bio, server_ip) != 1)
+  {
+    kmyth_log(LOG_ERR, "error setting connection address: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
+  if (BIO_set_conn_port(*ssl_bio, server_port) != 1)
+  {
+    kmyth_log(LOG_ERR, "error setting connection port: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
 
   // set the list of ciphers available for negotiation with the server
   if (SSL_set_cipher_list(ssl, PREFERRED_CIPHERS) != 1)
@@ -102,6 +145,11 @@ int create_tls_connection(char **server_ip,
                           char *client_cert_path, char *ca_cert_path,
                           BIO ** tls_bio, SSL_CTX ** tls_ctx)
 {
+  if (server_ip == NULL)
+  {
+    kmyth_log(LOG_ERR, "no server IP variable ... exiting");
+    return 1;
+  }
   if (client_private_key == NULL || client_private_key_len == 0)
   {
     kmyth_log(LOG_ERR, "no client private key ... exiting");
@@ -117,6 +165,16 @@ int create_tls_connection(char **server_ip,
   if (ca_cert_path == NULL)
   {
     kmyth_log(LOG_ERR, "no CA cert path ... exiting");
+    return 1;
+  }
+  if (tls_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "no BIO structure variable ... exiting");
+    return 1;
+  }
+  if (tls_ctx == NULL)
+  {
+    kmyth_log(LOG_ERR, "no SSL context variable ... exiting");
     return 1;
   }
 
@@ -139,6 +197,13 @@ int create_tls_connection(char **server_ip,
   }
   *server_port = '\0';
   server_port++;
+
+  // Check the validity of the port string. Port 0 is technically valid.
+  if ((strncmp(server_port, "0\0", 2) != 0) && (atoi(server_port) == 0))
+  {
+    kmyth_log(LOG_ERR, "malformed IP string, invalid port ... exiting");
+    return 1;
+  }
 
   if (tls_ctx_connect(*server_ip, server_port, *tls_ctx, tls_bio) != 0)
   {
@@ -199,12 +264,27 @@ int tls_set_context(unsigned char *client_private_key,
    * a stub for later automatic building against 1.1.1 (current LTS
    * version) or newer. Other versions just error out.
    */
-  OPENSSL_init_ssl(0, NULL);
-  *ctx = SSL_CTX_new(TLS_client_method());
+  if (OPENSSL_init_ssl(0, NULL) == 0)
+  {
+    kmyth_log(LOG_ERR, "error initializing OpenSSL: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
 
+  const SSL_METHOD *ssl_method = TLS_client_method();
+
+  if (ssl_method == NULL)
+  {
+    kmyth_log(LOG_ERR, "error getting TLS method: %s ... exiting",
+              ERR_error_string(ERR_get_error(), NULL));
+    return 1;
+  }
+
+  *ctx = SSL_CTX_new(ssl_method);
   if (*ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "%s", ERR_error_string(ERR_get_error(), NULL));
+    kmyth_log(LOG_ERR, "error creating new SSL context: %s",
+              ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
 
@@ -315,12 +395,24 @@ int get_key_from_server(BIO * bio,
   // write message to server
   if (message_length > 0)
   {
-    BIO_write(bio, message, message_length);
+    if (BIO_write(bio, message, message_length) <= 0)
+    {
+      kmyth_log(LOG_ERR, "error writing message to server ... exiting");
+      return 1;
+    }
     if (BIO_flush(bio) != 1)
       kmyth_log(LOG_ERR, "error flushing server message BIO");
   }
   size_t buf_size = KMYTH_GETKEY_RX_BUFFER_SIZE;
   char *buf = calloc(buf_size, sizeof(char));
+
+  if (buf == NULL)
+  {
+    kmyth_log(LOG_ERR,
+              "error allocating memory for server response ... exiting");
+    return 1;
+  }
+
   int recv = BIO_read(bio, buf, buf_size);
 
   if (0 >= recv)
@@ -334,6 +426,13 @@ int get_key_from_server(BIO * bio,
   *key_size = recv;
 
   (*key) = malloc(recv);
+  if (*key == NULL)
+  {
+    kmyth_log(LOG_ERR, "error allocating fresh memory for key ... exiting");
+    buf = secure_memset(buf, 0, buf_size);
+    free(buf);
+    return 1;
+  }
   memcpy((*key), buf, recv);
 
   buf = secure_memset(buf, 0, buf_size);
@@ -387,6 +486,7 @@ int get_key_from_kmip_server(BIO * bio,
       // returned error code, etc).
       kmyth_log(LOG_ERR, "error retrieving key from KMIP server");
       kmyth_log(LOG_ERR, kmip_context.error_message);
+      kmip_destroy(&kmip_context);
       return result;
     }
   }
