@@ -109,15 +109,20 @@ size_t get_key_len_from_cipher(cipher_t cipher)
 
   char *key_len_string = NULL;
 
-  // The key length string is always after the 3rd delimiter.
-  key_len_string = strpbrk(cipher.cipher_name, "/");
-  key_len_string = strpbrk(key_len_string + 1, "/") + 1;
-  key_len_string = strpbrk(key_len_string + 1, "/") + 1;
+  // The key length string is always after the last delimiter.
+  key_len_string = strrchr(cipher.cipher_name, '/') + 1;
   if (key_len_string == NULL)
   {
     kmyth_log(LOG_ERR, "Unable to extract key length from cipher");
     return 0;
   }
 
-  return atoi(key_len_string);
+  int key_len = atoi(key_len_string);
+  if (key_len <= 0)
+  {
+    kmyth_log(LOG_ERR, "Unable to convert key length to a positive integer");
+    return 0;
+  }
+
+  return (size_t) key_len;
 }
