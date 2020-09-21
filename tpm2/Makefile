@@ -14,16 +14,16 @@ CC += -std=c11#                          use C11 standard
 DEBUG = -g#                              produce debugging information
 
 # Specify shared library information
-LLIBS = -ltss2-tcti-device#              TCTI for hardware TPM 2.0
-LLIBS += -ltss2-tcti-mssim#              TCTI for TPM 2.0 simulator
-LLIBS += -ltss2-tcti-tabrmd#             TPM 2.0 Access Broker/Resource Mgr.
-LLIBS += -ltss2-mu#                      TPM 2.0 marshal/unmarshal
-LLIBS += -ltss2-sys#                     TPM 2.0 SAPI
-LLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
-LLIBS += -lssl#                          OpenSSL
-LLIBS += -lcrypto#                       libcrypto
-LLIBS += -lkmip#                         libkmip
-LLIBS += -lkmyth#                        kmyth shared library
+LDLIBS = -ltss2-tcti-device#              TCTI for hardware TPM 2.0
+LDLIBS += -ltss2-tcti-mssim#              TCTI for TPM 2.0 simulator
+LDLIBS += -ltss2-tcti-tabrmd#             TPM 2.0 Access Broker/Resource Mgr.
+LDLIBS += -ltss2-mu#                      TPM 2.0 marshal/unmarshal
+LDLIBS += -ltss2-sys#                     TPM 2.0 SAPI
+LDLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
+LDLIBS += -lssl#                          OpenSSL
+LDLIBS += -lcrypto#                       libcrypto
+LDLIBS += -lkmip#                         libkmip
+LDLIBS += -lkmyth#                        kmyth shared library
 
 # Specify compiler flags
 CFLAGS = -Wall#                          enable all warnings
@@ -41,8 +41,8 @@ LOGGER_CFLAGS = $(CFLAGS)
 SOFLAGS = -shared#                          compile/link shared library
 
 # Specify linker flags
-LFLAGS += -Llib#                            libkmyth
-LFLAGS += -Wl,-rpath=lib#                   runtime path for libkmyth.so
+LDFLAGS += -Llib#                            libkmyth
+LDFLAGS += -Wl,-rpath=lib#                   runtime path for libkmyth.so
 
 # Specify top-level source and target directories for build process
 INCLUDE_DIR = include
@@ -109,13 +109,13 @@ kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS)
 	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST)
 
 kmyth-seal: $(SEAL_OBJECTS)
-	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LLIBS) $(LFLAGS)
+	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDLIBS) $(LDFLAGS)
 
 kmyth-unseal: $(UNSEAL_OBJECTS)
-	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LLIBS) $(LFLAGS)
+	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDLIBS) $(LDFLAGS)
 
 kmyth-getkey: $(GETKEY_OBJECTS)
-	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LLIBS) $(LFLAGS)
+	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDLIBS) $(LDFLAGS)
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
