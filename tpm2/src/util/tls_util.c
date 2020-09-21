@@ -393,5 +393,6 @@ int get_key_from_kmip_server(BIO * bio,
 
   *key_size = (size_t) key_len;
 
+  kmip_destroy(&kmip_context);
   return 0;
 }
