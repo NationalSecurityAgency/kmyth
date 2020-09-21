@@ -162,10 +162,13 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
     if (authString != NULL)
     {
-      kmyth_clear(authString, strlen(authString));
+      kmyth_clear_and_free(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    free(inPath);
     free(outPath);
+    free(pcrsString);
+    free(cipherString);
     return 1;
   }
 
@@ -175,10 +178,13 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", inPath);
     if (authString != NULL)
     {
-      kmyth_clear(authString, strlen(authString));
+      kmyth_clear_and_free(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    free(inPath);
     free(outPath);
+    free(pcrsString);
+    free(cipherString);
     return 1;
   }
 
@@ -190,6 +196,7 @@ int main(int argc, char **argv)
     char *temp_str = malloc((strlen(original_fn) + 5) * sizeof(char));
 
     strncpy(temp_str, original_fn, strlen(original_fn));
+    free(original_fn);
     // Remove any leading '.'s
     while (*temp_str == '.')
     {
@@ -200,6 +207,7 @@ int main(int argc, char **argv)
     // Everything beyond first '.' in original filename, with any leading
     // '.'(s) removed, is treated as extension
     temp_str = strtok_r(temp_str, ".", &scratch);
+    free(scratch);
     // Append .ski file extension
     strncat(temp_str, ".ski", 5);
 
@@ -211,9 +219,13 @@ int main(int argc, char **argv)
       free(temp_str);
       if (authString != NULL)
       {
-        kmyth_clear(authString, strlen(authString));
+        kmyth_clear_and_free(authString, strlen(authString));
       }
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      free(inPath);
+      free(outPath);
+      free(pcrsString);
+      free(cipherString);
       return 1;
     }
     // Make sure default filename we constructed doesn't already exist
@@ -224,7 +236,15 @@ int main(int argc, char **argv)
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
       free(temp_str);
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      if (authString != NULL)
+      {
+         kmyth_clear_and_free(authString, strlen(authString)); 
+      }
+      kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      free(inPath);
+      free(outPath);
+      free(pcrsString);
+      free(cipherString);
       return 1;
     }
     // Go ahead and make the default value the output path
@@ -238,12 +258,16 @@ int main(int argc, char **argv)
   if (verifyOutputFilePath(outPath))
   {
     kmyth_log(LOG_ERR, "output path (%s) is not valid ... exiting", outPath);
-    free(outPath);
+    
     if (authString != NULL)
     {
-      kmyth_clear(authString, strlen(authString));
+      kmyth_clear_and_free(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    free(inPath);
+    free(outPath);
+    free(pcrsString);
+    free(cipherString);
     return 1;
   }
 
@@ -253,19 +277,28 @@ int main(int argc, char **argv)
                       authString, pcrsString, ownerAuthPasswd, cipherString))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    free(outPath);
     if (authString != NULL)
     {
-      kmyth_clear(authString, strlen(authString));
+      kmyth_clear_and_free(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    free(inPath);
+    free(outPath);
+    free(pcrsString);
+    free(cipherString);
     return 1;
   }
 
   // Clean-up any remaining resources
   //   Note: authString and ownerAuthPasswd cleared after use in
   //         tpm2_kmyth_seal(), which completed successfully at this point
+  free(authString);
+  free(ownerAuthPasswd);
+  free(inPath);
   free(outPath);
+  free(pcrsString);
+  free(cipherString);
+  
 
   return 0;
 }
