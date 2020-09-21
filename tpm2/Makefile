@@ -1,13 +1,10 @@
 # Makefile for KMYTH using TPM 2.0
 
-# Choose OpenSSL 'base' path (header file and library path prefix)
-OPENSSL_DIR = $(MY_OPENSSL_DIR)#         custom shell environment variable
-
 # Specify the 'libkmythlogger' library path
-KMYTH_LOG_DIR = $(MY_KMYTH_LOG_DIR)#       custom shell environment variable
+LOGGER_DIR ?= logger#       		       Set a default path to the logger
 
 # Specify source code path
-PREFIX = .#                              Makefile @ src root directory
+PREFIX ?= /usr/local#                    Set a default install location 
 
 # Specify fundamental compiler parameters
 CC = gcc#                                invoke gcc compiler
@@ -33,14 +30,19 @@ CFLAGS = -Wall#                          enable all warnings
 CFLAGS += -c#                            compile, but do not link
 CFLAGS += ${DEBUG}#                      debugging options (above)
 CFLAGS += -D_GNU_SOURCE#                 GNU/LINUX platform
-CFLAGS += -I${OPENSSL_DIR}/include#      OpenSSL header files
-CFLAGS += -I${KMYTH_LOG_DIR}/include#    kmyth logging utility header files
+
+KMYTH_CFLAGS = $(CFLAGS)
+KMYTH_CFLAGS += -I${LOGGER_DIR}/include#    kmyth logging utility header files
+
+# Specify flags for the SO build of the logger
+LOGGER_CFLAGS = $(CFLAGS)
+LOGGER_CFLAGS += -fPIC#                     Generate position independent code
+
+SOFLAGS = -shared#                          compile/link shared library
 
 # Specify linker flags
-LFLAGS = -L${OPENSSL_DIR}/lib#             OpenSSL shared library
-LFLAGS += -L${KMYTH_LOG_DIR}/lib#          libkmythlogger
-LFLAGS += -Wl,-rpath=${OPENSSL_DIR}/lib#   runtime path for OpenSSL library
-LFLAGS += -Wl,-rpath=${KMYTH_LOG_DIR}/lib# runtime path for libkmythlogger.so
+LFLAGS += -L${LOGGER_DIR}/lib#          libkmythlogger
+LFLAGS += -Wl,-rpath=${LOGGER_DIR}/lib# runtime path for libkmythlogger.so
 
 # Specify top-level source and target directories for build process
 INCLUDE_DIR = include
@@ -48,6 +50,11 @@ OBJ_DIR = obj
 SRC_DIR = src
 BIN_DIR = bin
 DOC_DIR = doc
+LOGGER_INC_DIR = $(LOGGER_DIR)/include
+LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
+LOGGER_LIB_DIR = $(LOGGER_DIR)/lib
+LOGGER_SRC_DIR = $(LOGGER_DIR)/src
+LOGGER_DOC_DIR = $(LOGGER_DIR)/doc
 
 # Specify kmyth-seal main() source/object path/files
 SEAL_SRC_DIR = $(SRC_DIR)/seal
@@ -73,16 +80,33 @@ UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*c)
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), $(UTIL_OBJ_DIR), $(UTIL_SOURCES:%.c=%.o))
 
+# Specify logger source/object/header files
+LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*c)
+LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), $(LOGGER_OBJ_DIR), $(LOGGER_SOURCES:%.c=%.o))
+
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*h)
+LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*h)
 
-# Consolidate object directories to simplify mkdir call for 'pre' target below
+#Specify path for logger output of shared library
+LOGGER_LIB_NAME = kmythlogger
+LOGGER_LIB_SONAME = lib$(LOGGER_LIB_NAME).so
+LOGGER_LIB_LOCAL_DEST = $(LOGGER_LIB_DIR)/$(LOGGER_LIB_SONAME)
+
+# Consolidate created directories to simplify mkdir call for 'pre' target below
 OBJECT_DIRS = $(SEAL_OBJ_DIR)
 OBJECT_DIRS += $(UNSEAL_OBJ_DIR)
 OBJECT_DIRS += $(GETKEY_OBJ_DIR)
 OBJECT_DIRS += $(UTIL_OBJ_DIR)
+OBJECT_DIRS += $(LOGGER_OBJ_DIR)
+DOC_DIRS = $(DOC_DIR)
+DOC_DIRS += $(LOGGER_DOC_DIR)
 
-all: pre kmyth-seal kmyth-unseal kmyth-getkey
+.PHONY: all
+all: pre logger kmyth-seal kmyth-unseal kmyth-getkey
+
+logger: $(LOGGER_OBJECTS)
+	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) -o $(LOGGER_LIB_LOCAL_DEST)
 
 kmyth-seal: $(SEAL_OBJECTS) $(UTIL_OBJECTS)
 	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LLIBS) $(LFLAGS)
@@ -93,6 +117,22 @@ kmyth-unseal: $(UNSEAL_OBJECTS) $(UTIL_OBJECTS)
 kmyth-getkey: $(GETKEY_OBJECTS) $(UTIL_OBJECTS)
 	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LLIBS) $(LFLAGS)
 
+$(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
+	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c | $(UTIL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+.PHONY: pre
 pre:
 	indent -bli0 -bap -bad -sob -cli0 -npcs -nbc -bls -blf -lp -ip0 -ts2 -nut -npsl -bbo -l80 src/*/*.c
 	indent -bli0 -bap -bad -sob -cli0 -npcs -nbc -bls -blf -lp -ip0 -ts2 -nut -npsl -bbo -l80 include/*.h
@@ -100,25 +140,34 @@ pre:
 	rm -f include/*.h~
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJECT_DIRS)
-	mkdir -p $(DOC_DIR)
+	mkdir -p $(DOC_DIRS)
+	mkdir -p $(LOGGER_LIB_DIR)
 
-doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) Doxyfile
+.PHONY: doc
+doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
 
-$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $< -o $@
+.PHONY: install
+install:
+	install -d $(DESTDIR)$(PREFIX)/lib
+	install -m 755 $(LOGGER_LIB_DIR)/libkmythlogger.so $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth/logger
+	install -m 644 $(LOGGER_INC_DIR)/*.h $(DESTDIR)$(PREFIX)/include/kmyth/logger
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN_DIR)/kmyth-seal $(DESTDIR)$(PREFIX)/bin/
+	install -m 755 $(BIN_DIR)/kmyth-unseal $(DESTDIR)$(PREFIX)/bin/
+	ldconfig
 
-$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $< -o $@
-
-$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c | $(UTIL_OBJ_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $< -o $@
-
-$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $< -o $@
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/lib/libkmythlogger.so	
+	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
+	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
+	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
 .PHONY: clean
 clean:
-	rm -rf $(PREFIX)/$(BIN_DIR)
-	rm -rf $(PREFIX)/$(OBJ_DIR)
-	rm -rf $(PREFIX)/$(DOC_DIR)
+	rm -rf $(BIN_DIR)
+	rm -rf $(OBJECT_DIRS)
+	rm -rf $(DOC_DIRS)
+	rm -rf $(LOGGER_LIB_DIR)
