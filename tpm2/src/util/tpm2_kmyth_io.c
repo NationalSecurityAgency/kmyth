@@ -966,6 +966,7 @@ int tpm2_kmyth_read_ski_file(char *input_path,
     }
   }
 
+  free(raw_seal_input_fname_data);
   free(raw_cipher_str_data);
   free(decoded_pcr_select_list_data);
   free(decoded_sk_pub_data);
