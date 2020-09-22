@@ -149,6 +149,61 @@ int tpm2_kmyth_create_ski_string(uint8_t ** output,
                                  size_t encrypted_data_size);
 
 /**
+ * @brief Parses a string in the form of uint8_t* that represents valid
+ *        .ski data for use when kmyth-unsealing
+ *
+ * @param[in] input                    Contains the input 'string' in .ski
+ *                                     format.
+ *
+ * @param[in] input_length             The length of input in # of bytes.
+ *
+ * @param[out] seal_input_fname        The filename if .ski data came from
+ *                                     a file.
+ *
+ * @param[out]  pcr_select_list        Pointer to a TPM 2.0 struct used to
+ *                                     indicate which PCR are included in the
+ *                                     authorization policy applied to the
+ *                                     sealed data object.
+ *
+ * @param[out]  storage_key_public     Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PUBLIC) holding the public
+ *                                     storage key.
+ *
+ * @param[out]  storage_key_private    Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PRIVATE) holding the private
+ *                                     storage key.
+*
+ * @param[out]  cipher_struct          String specifying the symmetric
+ *                                     encryption method used to encrypt
+ *                                     (wrap) the input data.
+ *
+ * @param[out]  sealed_wk_public       Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PUBLIC) holding the public
+ *                                     sealed wrapping key.
+ *
+ * @param[out]  sealed_wk_private      Pointer to a TPM 2.0 sized buffer
+ *                                     (TPM2B_PRIVATE) holding the private
+ *                                     sealed wrapping key.
+ *
+ * @param[out]  encrypted_data         Symmetrically encrypted data
+ *
+ * @param[out]  encrypted_data_size    Size, in bytes, of the encrypted data
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_kmyth_parse_ski_string(uint8_t * input,
+                                size_t input_length,
+                                char **seal_input_fname,
+                                TPML_PCR_SELECTION * pcr_select_list,
+                                TPM2B_PUBLIC * storage_key_public,
+                                TPM2B_PRIVATE * storage_key_private,
+                                cipher_t * cipher_struct,
+                                TPM2B_PUBLIC * sealed_wk_public,
+                                TPM2B_PRIVATE * sealed_wk_private,
+                                uint8_t ** encrypted_data,
+                                size_t *encrypted_data_size);
+
+/**
  * @brief Writes sealed key meta-data to a .ski file.
  * 
  * @param[in]  output_path             String containing the path to the

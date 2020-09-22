@@ -128,9 +128,10 @@ int main(int argc, char **argv)
   uint8_t *outputData = NULL;
   size_t outputSize = 0;
 
-  if (tpm2_kmyth_unseal(inPath,
-                        &default_outPath,
-                        authString, ownerAuthPasswd, &outputData, &outputSize))
+  if (tpm2_kmyth_unseal_file(inPath,
+                             &default_outPath,
+                             authString, ownerAuthPasswd, &outputData,
+                             &outputSize))
   {
     free(default_outPath);
     kmyth_clear(outputData, outputSize);

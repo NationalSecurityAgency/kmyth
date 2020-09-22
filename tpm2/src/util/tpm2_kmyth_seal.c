@@ -28,7 +28,7 @@
 extern const cipher_t cipher_list[];
 
 //############################################################################
-// tpm2_kmyth_seal_file()
+// tpm2_kmyth_seal()
 //############################################################################
 int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
                     uint8_t ** output, size_t *output_length,
@@ -307,6 +307,158 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
 }
 
 //############################################################################
+// tpm2_kmyth_unseal()
+//############################################################################
+int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
+                      uint8_t ** output, size_t *output_len,
+                      char *auth_string, char *owner_auth_passwd)
+{
+  // Initialize connection to TPM 2.0 resource manager
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  if (tpm2_init_connection(&sapi_ctx))
+  {
+    kmyth_log(LOG_ERR, "unable to init connection to TPM2 resource manager");
+    tpm2_free_resources(&sapi_ctx);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
+
+  // Create owner (storage) hierarchy authorization structure
+  // to provide password session authorization criteria for use of:
+  //   - Storage Root Key (SRK)
+  //   - Storage Primary Seed (SPS), if necessary to re-derive SRK
+  TPM2B_AUTH ownerAuth;
+
+  ownerAuth.size = 0;
+  if (owner_auth_passwd != NULL && strlen(owner_auth_passwd) > 0)
+  {
+    ownerAuth.size = strlen(owner_auth_passwd);
+    memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
+    kmyth_clear(owner_auth_passwd, strlen(owner_auth_passwd));
+  }
+
+  if (ownerAuth.size > 0)
+  {
+    kmyth_log(LOG_DEBUG, "auth string for TPM storage hierarchy specified");
+  }
+  // Create authorization value (authVal) to provide policy session
+  // authorization criteria for use of:
+  //   - Storage Key (SK) TPM object
+  //   - Sealed Data (wrapping key) TPM object
+  // The authVal is set to:
+  //   - all-zero digest (like TPM 1.2 well-known secret) by default
+  //   - hash of input authorization string if one is specified
+  TPM2B_AUTH objAuthValue;
+
+  tpm2_kmyth_create_authVal(auth_string, &objAuthValue);
+  if (auth_string != NULL)
+  {
+    kmyth_clear(auth_string, strlen(auth_string));
+  }
+
+  // The storage root key (SRK) is the primary key for the storage hierarchy
+  // in the TPM.  We will first check to see if it is already loaded in
+  // persistent storage. We do this by getting the loaded persistent handle
+  // values, inspecting each of their their public structures, and comparing
+  // these public area parameters against those for the SRK. None of these
+  // activities require authorization. If the key is not already loaded,
+  // though, it must be re-derived using the storage hierarchy's primary
+  // seed (SPS). Use of the SPS requires owner hierarchy authorization.
+  TPM2_HANDLE storageRootKey_handle = 0;
+
+  if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
+  {
+    kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
+    tpm2_free_resources(&sapi_ctx);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
+
+  // Read sealed data input from file
+  TPML_PCR_SELECTION objPcrList = {.count = 0, };
+  TPM2B_PUBLIC storageKey_public = {.size = 0, };
+  TPM2B_PRIVATE storageKey_private = {.size = 0, };
+  cipher_t cipher;
+  TPM2B_PUBLIC wk_public = {.size = 0, };
+  TPM2B_PRIVATE wk_private = {.size = 0, };
+  uint8_t *enc_data = NULL;
+  size_t enc_data_size = 0;
+  char *orig_file_name = NULL;
+
+  if (tpm2_kmyth_parse_ski_string(input,
+                                  input_len,
+                                  &orig_file_name,
+                                  &objPcrList,
+                                  &storageKey_public,
+                                  &storageKey_private,
+                                  &cipher,
+                                  &wk_public,
+                                  &wk_private, &enc_data, &enc_data_size))
+  {
+    kmyth_log(LOG_ERR, "error parsing ski string ... exiting");
+    free(enc_data);
+    tpm2_free_resources(&sapi_ctx);
+    return 1;
+  }
+
+  // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
+  // We have obtained its public and encrypted private blobs from
+  // the input .ski file and will now load the SK into the TPM.
+  TPM2_HANDLE storageKey_handle = 0;
+  TPML_PCR_SELECTION emptyPcrList = {.count = 0, };
+  if (tpm2_kmyth_load_object(sapi_ctx,
+                             (SESSION *) NULL,
+                             storageRootKey_handle,
+                             ownerAuth,
+                             emptyPcrList,
+                             &storageKey_private,
+                             &storageKey_public, &storageKey_handle))
+  {
+    kmyth_log(LOG_ERR, "error loading storage key ... exiting");
+    free(enc_data);
+    tpm2_free_resources(&sapi_ctx);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "loaded SK at handle = 0x%08X", storageKey_handle);
+
+  // Authorization for the use of all non-primary (other than SRK), Kmyth
+  // TPM 2.0 objects utilizes policy-based enhanced authorization critera.
+  // Therefore, we will calculate the authorization policy digest that
+  // results from applying the steps of our selected authorization policy.
+  // We pass this result to the kmyth_unseal_data() function where it is
+  // used in theinto the objects we create as the
+  // authorization policy digest value that must be regenerated to authorize
+  // use of these objects.
+  TPM2B_DIGEST objAuthPolicy;
+
+  objAuthPolicy.size = 0;
+
+  // Perform "unseal" to recover data
+  if (tpm2_kmyth_unseal_data(sapi_ctx,
+                             storageKey_handle,
+                             wk_public,
+                             wk_private,
+                             objAuthValue,
+                             objPcrList,
+                             objAuthPolicy,
+                             cipher,
+                             enc_data, enc_data_size, output, output_len))
+  {
+    kmyth_log(LOG_ERR, "error unsealing data ... exiting");
+    free(enc_data);
+    tpm2_free_resources(&sapi_ctx);
+    return 1;
+  }
+
+  // done, so free any allocated resources that remain
+  free(enc_data);
+  tpm2_free_resources(&sapi_ctx);
+
+  return 0;
+}
+
+//############################################################################
 // tpm2_kmyth_seal_file()
 //############################################################################
 int tpm2_kmyth_seal_file(char *input_path,
@@ -433,7 +585,7 @@ int tpm2_kmyth_seal_file(char *input_path,
   }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
-  // in the TPM.  We will first check to see if it is already loaded in 
+  // in the TPM.  We will first check to see if it is already loaded in
   // persistent storage. We do this by getting the loaded persistent handle
   // values, inspecting each of their their public structures, and comparing
   // these public area parameters against those for the SRK. None of these
@@ -594,13 +746,13 @@ int tpm2_kmyth_seal_file(char *input_path,
 }
 
 //############################################################################
-// tpm2_kmyth_unseal()
+// tpm2_kmyth_unseal_file()
 //############################################################################
-int tpm2_kmyth_unseal(char *input_path,
-                      char **default_out_path,
-                      char *auth_string,
-                      char *owner_auth_passwd,
-                      uint8_t ** output_data, size_t *output_size)
+int tpm2_kmyth_unseal_file(char *input_path,
+                           char **default_out_path,
+                           char *auth_string,
+                           char *owner_auth_passwd,
+                           uint8_t ** output_data, size_t *output_size)
 {
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
@@ -642,7 +794,7 @@ int tpm2_kmyth_unseal(char *input_path,
   }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
-  // in the TPM.  We will first check to see if it is already loaded in 
+  // in the TPM.  We will first check to see if it is already loaded in
   // persistent storage. We do this by getting the loaded persistent handle
   // values, inspecting each of their their public structures, and comparing
   // these public area parameters against those for the SRK. None of these

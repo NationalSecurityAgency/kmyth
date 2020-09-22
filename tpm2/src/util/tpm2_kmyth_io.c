@@ -361,6 +361,332 @@ int tpm2_kmyth_create_ski_string(uint8_t ** output,
 }
 
 //############################################################################
+// tpm2_kmyth_read_ski_file()
+//############################################################################
+int tpm2_kmyth_parse_ski_string(uint8_t * input,
+                                size_t input_length,
+                                char **seal_input_fname,
+                                TPML_PCR_SELECTION * pcr_select_list,
+                                TPM2B_PUBLIC * storage_key_public,
+                                TPM2B_PRIVATE * storage_key_private,
+                                cipher_t * cipher_struct,
+                                TPM2B_PUBLIC * sealed_wk_public,
+                                TPM2B_PRIVATE * sealed_wk_private,
+                                uint8_t ** encrypted_data,
+                                size_t *encrypted_data_size)
+{
+  size_t remaining = input_length;
+
+  // save pointer to 'original' contents so we can free this memory when done
+  char *originalInput = (char *) input;
+
+  // read in (parse out) original filename block - input filename when sealed
+  uint8_t *raw_seal_input_fname_data = NULL;
+  size_t raw_seal_input_fname_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_seal_input_fname_data,
+                        &raw_seal_input_fname_size,
+                        KMYTH_DELIM_ORIGINAL_FILENAME,
+                        KMYTH_DELIM_PCR_SELECTION_LIST))
+  {
+    kmyth_log(LOG_ERR, "get original filename error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    return 1;
+  }
+
+  // read in (parse out) 'raw' (encoded) PCR selection list block
+  uint8_t *raw_pcr_select_list_data = NULL;
+  size_t raw_pcr_select_list_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_pcr_select_list_data,
+                        &raw_pcr_select_list_size,
+                        KMYTH_DELIM_PCR_SELECTION_LIST,
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC))
+  {
+    kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    return 1;
+  }
+
+  // read in (parse out) 'raw' (encoded) public data block for the storage key
+  uint8_t *raw_sk_pub_data = NULL;
+  size_t raw_sk_pub_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_sk_pub_data,
+                        &raw_sk_pub_size,
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                        KMYTH_DELIM_STORAGE_KEY_PRIVATE))
+  {
+    kmyth_log(LOG_ERR, "get storage key public error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    return 1;
+  }
+
+  // read in (parse out) 'raw' (encoded) private data block for the storage key
+  uint8_t *raw_sk_priv_data = NULL;
+  size_t raw_sk_priv_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_sk_priv_data,
+                        &raw_sk_priv_size,
+                        KMYTH_DELIM_STORAGE_KEY_PRIVATE,
+                        KMYTH_DELIM_CIPHER_SUITE))
+  {
+    kmyth_log(LOG_ERR, "get storage key private error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    return 1;
+  }
+
+  // read in (parse out) cipher suite string data block for the storage key
+  uint8_t *raw_cipher_str_data = NULL;
+  size_t raw_cipher_str_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_cipher_str_data,
+                        &raw_cipher_str_size,
+                        KMYTH_DELIM_CIPHER_SUITE, KMYTH_DELIM_SYM_KEY_PUBLIC))
+  {
+    kmyth_log(LOG_ERR, "get cipher string error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    free(raw_cipher_str_data);
+    return 1;
+  }
+
+  // read in (parse out) 'raw' (encoded) public data block for the wrapping key
+  uint8_t *raw_sym_pub_data = NULL;
+  size_t raw_sym_pub_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_sym_pub_data,
+                        &raw_sym_pub_size,
+                        KMYTH_DELIM_SYM_KEY_PUBLIC,
+                        KMYTH_DELIM_SYM_KEY_PRIVATE))
+  {
+    kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    free(raw_cipher_str_data);
+    free(raw_sym_pub_data);
+    return 1;
+  }
+
+  // read in (parse out) raw (encoded) private data block for the wrapping key
+  unsigned char *raw_sym_priv_data = NULL;
+  size_t raw_sym_priv_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_sym_priv_data,
+                        &raw_sym_priv_size,
+                        KMYTH_DELIM_SYM_KEY_PRIVATE, KMYTH_DELIM_ENC_DATA))
+  {
+    kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    free(raw_cipher_str_data);
+    free(raw_sym_pub_data);
+    free(raw_sym_priv_data);
+    return 1;
+  }
+
+  // read in (parse out) raw (encoded) encrypted data block
+  unsigned char *raw_enc_data = NULL;
+  size_t raw_enc_size = 0;
+
+  if (kmyth_getSkiBlock((char **) &input,
+                        &remaining,
+                        &raw_enc_data, &raw_enc_size,
+                        KMYTH_DELIM_ENC_DATA, KMYTH_DELIM_END_FILE))
+  {
+    kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    free(raw_cipher_str_data);
+    free(raw_sym_pub_data);
+    free(raw_sym_priv_data);
+    free(raw_enc_data);
+    return 1;
+  }
+
+  if (strncmp
+      ((char *) input, KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE))
+      || remaining != strlen(KMYTH_DELIM_END_FILE))
+  {
+    kmyth_log(LOG_ERR, "unable to find the end delimiter ... exiting");
+    free(originalInput);
+    free(raw_seal_input_fname_data);
+    free(raw_pcr_select_list_data);
+    free(raw_sk_pub_data);
+    free(raw_sk_priv_data);
+    free(raw_cipher_str_data);
+    free(raw_sym_pub_data);
+    free(raw_sym_priv_data);
+    free(raw_enc_data);
+    return 1;
+  }
+
+  // done parsing contents, can free its memory now
+  free(originalInput);
+
+  int retval = 0;
+
+  // decode PCR selection list struct
+  uint8_t *decoded_pcr_select_list_data = NULL;
+  size_t decoded_pcr_select_list_size = 0;
+  size_t decoded_pcr_select_list_offset = 0;
+
+  retval |= decodeBase64Data(raw_pcr_select_list_data,
+                             raw_pcr_select_list_size,
+                             &decoded_pcr_select_list_data,
+                             &decoded_pcr_select_list_size);
+  free(raw_pcr_select_list_data);
+
+  // decode public data block for storage key
+  uint8_t *decoded_sk_pub_data = NULL;
+  size_t decoded_sk_pub_size = 0;
+  size_t decoded_sk_pub_offset = 0;
+
+  retval |= decodeBase64Data(raw_sk_pub_data,
+                             raw_sk_pub_size,
+                             &decoded_sk_pub_data, &decoded_sk_pub_size);
+  free(raw_sk_pub_data);
+
+  // decode encrypted private data block for storage key
+  uint8_t *decoded_sk_priv_data = NULL;
+  size_t decoded_sk_priv_size = 0;
+  size_t decoded_sk_priv_offset = 0;
+
+  retval |= decodeBase64Data(raw_sk_priv_data,
+                             raw_sk_priv_size,
+                             &decoded_sk_priv_data, &decoded_sk_priv_size);
+  free(raw_sk_priv_data);
+
+  // decode public data block for symmetric wrapping key
+  uint8_t *decoded_sym_pub_data = NULL;
+  size_t decoded_sym_pub_size = 0;
+  size_t decoded_sym_pub_offset = 0;
+
+  retval |= decodeBase64Data(raw_sym_pub_data,
+                             raw_sym_pub_size,
+                             &decoded_sym_pub_data, &decoded_sym_pub_size);
+  free(raw_sym_pub_data);
+
+  // decode encrypted private data block for symmetric wrapping key
+  uint8_t *decoded_sym_priv_data = NULL;
+  size_t decoded_sym_priv_size = 0;
+  size_t decoded_sym_priv_offset = 0;
+
+  retval |= decodeBase64Data(raw_sym_priv_data,
+                             raw_sym_priv_size,
+                             &decoded_sym_priv_data, &decoded_sym_priv_size);
+  free(raw_sym_priv_data);
+
+  // decode the encrypted data block
+  retval |= decodeBase64Data(raw_enc_data,
+                             raw_enc_size, encrypted_data, encrypted_data_size);
+  free(raw_enc_data);
+
+  if (retval)
+  {
+    kmyth_log(LOG_ERR, "base64 decode error ... exiting");
+  }
+  else
+  {
+    // create original filename string
+    if (raw_seal_input_fname_size > 0)
+    {
+      raw_seal_input_fname_data[raw_seal_input_fname_size - 1] = '\0';
+      *seal_input_fname = malloc(raw_seal_input_fname_size * sizeof(char));
+      memcpy(*seal_input_fname, raw_seal_input_fname_data,
+             raw_seal_input_fname_size);
+    }
+    else
+    {
+      *seal_input_fname = NULL;
+    }
+
+    // create cipher suite struct
+    raw_cipher_str_data[raw_cipher_str_size - 1] = '\0';
+    *cipher_struct =
+      kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
+    if (cipher_struct->cipher_name == NULL)
+    {
+      kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
+      retval = 1;
+    }
+    else
+    {
+      retval = tpm2_kmyth_unmarshal_skiObjects(pcr_select_list,
+                                               decoded_pcr_select_list_data,
+                                               decoded_pcr_select_list_size,
+                                               decoded_pcr_select_list_offset,
+                                               storage_key_public,
+                                               decoded_sk_pub_data,
+                                               decoded_sk_pub_size,
+                                               decoded_sk_pub_offset,
+                                               storage_key_private,
+                                               decoded_sk_priv_data,
+                                               decoded_sk_priv_size,
+                                               decoded_sk_priv_offset,
+                                               sealed_wk_public,
+                                               decoded_sym_pub_data,
+                                               decoded_sym_pub_size,
+                                               decoded_sym_pub_offset,
+                                               sealed_wk_private,
+                                               decoded_sym_priv_data,
+                                               decoded_sym_priv_size,
+                                               decoded_sym_priv_offset);
+      if (retval)
+      {
+        kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
+      }
+    }
+  }
+
+  free(raw_seal_input_fname_data);
+  free(raw_cipher_str_data);
+  free(decoded_pcr_select_list_data);
+  free(decoded_sk_pub_data);
+  free(decoded_sk_priv_data);
+  free(decoded_sym_pub_data);
+  free(decoded_sym_priv_data);
+
+  return retval;
+}
+
+//############################################################################
 // tpm2_kmyth_write_ski_file()
 //############################################################################
 int tpm2_kmyth_write_ski_file(char *output_path,
@@ -1305,11 +1631,11 @@ int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
   size_t new_dest_len = *dest_length + input_length;
   size_t offset = *dest_length;
 
-	if(new_dest_len < *dest_length) //if we have an overflow
-	{
-		kmyth_log(LOG_ERR, "Maximum array size exceeded ... exiting");
-		return(1);
-	}
+  if (new_dest_len < *dest_length)  //if we have an overflow
+  {
+    kmyth_log(LOG_ERR, "Maximum array size exceeded ... exiting");
+    return (1);
+  }
 
   if ((new_dest = realloc(*dest, new_dest_len)) == 0)
   {

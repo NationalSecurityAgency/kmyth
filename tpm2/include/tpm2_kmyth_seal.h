@@ -45,6 +45,40 @@ int tpm2_kmyth_seal_file(char *input_path,
                          char *owner_auth_passwd, char *cipher_string);
 
 /**
+ * @brief High-level function implementing kmyth-unseal for files
+ *
+ * @param[in]  input_path        Path to input .ski file
+ *                               (passed as a string)
+ *
+ * @param[in]  default_out_path  Original filename for sealed data contents
+ *                               (passed as a pointer to a string - can be
+ *                               used in determining a default output path
+ *                               for the unsealed result)
+ *
+ * @param[in]  auth_string       Authorization string to be applied to the
+ *                               Kmyth TPM objects (i.e, storage key and sealed
+ *                               data) created by kmyth-seal
+ *
+ * @param[in]  owner_auth_passwd TPM owner (storage) hierarchy password.
+ *                               EmptyAuth by default, but, if it has been
+ *                               changed (e.g., by tpm2_takeownership), user
+ *                               must provide via this parameter. (passed as
+ *                               a string)
+ *
+ * @param[out] output_data       Decrypted result (pointer to a byte buffer)
+ *
+ * @param[out] output_size       Size (in bytes) of decrypted result
+ *                               (passed as pointer to size value)
+ *
+ * @return 0 on success, 1 on error
+ */
+int tpm2_kmyth_unseal_file(char *input_path,
+                           char **default_out_path,
+                           char *auth_string,
+                           char *owner_auth_passwd,
+                           uint8_t ** output_data, size_t *output_size);
+
+/**
  * @brief Seal data using TPM 2.0.
  *
  * Sealing both encrypts the data and binds the ability to later unseal it

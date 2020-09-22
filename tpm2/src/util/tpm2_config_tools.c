@@ -79,12 +79,12 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
       }
       else
       {
-        kmyth_log(LOG_INFO, "initialized connection to TPM 2.0 emulator");
+        kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 emulator");
       }
     }
     else
     {
-      kmyth_log(LOG_INFO, "initialized connection to TPM 2.0 device (HW)");
+      kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 device (HW)");
     }
   }
 

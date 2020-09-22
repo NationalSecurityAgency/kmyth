@@ -39,6 +39,7 @@ KMYTH_CFLAGS += -I${LOGGER_DIR}/include#    kmyth logging utility header files
 LOGGER_CFLAGS = $(CFLAGS)
 
 SOFLAGS = -shared#                          compile/link shared library
+SOFLAGS += -fPIC#                           Generate position independent code
 
 # Specify linker flags
 LFLAGS += -Llib#                            libkmyth
