@@ -113,10 +113,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no input (sealed data file) specified ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString, strlen(authString)); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    free(outPath);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   else
@@ -127,11 +126,9 @@ int main(int argc, char **argv)
       
       if (authString != NULL)
       {
-        kmyth_clear_and_free(authString, strlen(authString)); 
+        kmyth_clear(authString, strlen(authString)); 
       }
-      kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-      free(inPath);
-      free(outPath);
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
   }
@@ -146,15 +143,13 @@ int main(int argc, char **argv)
                         authString, ownerAuthPasswd, &outputData, &outputSize))
   {
     free(default_outPath);
-    kmyth_clear_and_free(outputData, outputSize);
+    kmyth_clear(outputData, outputSize);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString, strlen(authString)); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    free(inPath);
-    free(outPath);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
 
@@ -172,14 +167,12 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
       free(default_outPath);
-      kmyth_clear_and_free(outputData, outputSize);
+      kmyth_clear(outputData, outputSize);
       if (authString != NULL)
       {
-         kmyth_clear_and_free(authString, strlen(authString)); 
+         kmyth_clear(authString, strlen(authString)); 
       }
-      kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-      free(inPath);
-      free(outPath);
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
 
@@ -194,14 +187,12 @@ int main(int argc, char **argv)
                   "default output filename (%s) already exists ... exiting",
                   outPath);
         free(default_outPath);
-        kmyth_clear_and_free(outputData, outputSize);
+        kmyth_clear(outputData, outputSize);
         if (authString != NULL)
         {
-          kmyth_clear_and_free(authString, strlen(authString)); 
+          kmyth_clear(authString, strlen(authString)); 
         }
-        kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-        free(inPath);
-        free(outPath);
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
         return 1;
       }
     }
@@ -227,14 +218,12 @@ int main(int argc, char **argv)
   }
 
   free(default_outPath);
-  kmyth_clear_and_free(outputData, outputSize);
+  kmyth_clear(outputData, outputSize);
   if (authString != NULL)
   {
-    kmyth_clear_and_free(authString, strlen(authString)); 
+    kmyth_clear(authString, strlen(authString)); 
   }
-  kmyth_clear_and_free(ownerAuthPasswd, strlen(ownerAuthPasswd));
-  free(inPath);
-  free(outPath);
+  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
   return 0;
 }
