@@ -213,6 +213,7 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
       free(temp_str);
+      temp_str = NULL;
       if (authString != NULL)
       {
         kmyth_clear(authString, strlen(authString));
@@ -228,6 +229,7 @@ int main(int argc, char **argv)
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
       free(temp_str);
+      temp_str = NULL;
       if (authString != NULL)
       {
          kmyth_clear(authString, strlen(authString)); 
@@ -241,6 +243,7 @@ int main(int argc, char **argv)
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, temp_str, outPath_size);
     free(temp_str);
+    temp_str = NULL;
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
