@@ -231,7 +231,6 @@ int main(int argc, char **argv)
          kmyth_clear(authString, strlen(authString)); 
       }
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-      free(outPath);
       return 1;
     }
     // Go ahead and make the default value the output path
