@@ -290,7 +290,7 @@ int main(int argc, char **argv)
   }
 
   // Clean-up any remaining resources
-  //   Note: authString and ownerAuthPasswd cleared after use in
+  //   Note: authString and ownerAuthPasswd cleared and freed after use in
   //         tpm2_kmyth_seal(), which completed successfully at this point
   free(inPath);
   free(outPath);
