@@ -166,7 +166,6 @@ int main(int argc, char **argv)
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
-    outPath = NULL;
     return 1;
   }
 
@@ -180,7 +179,6 @@ int main(int argc, char **argv)
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
-    outPath = NULL;
     return 1;
   }
 
@@ -213,7 +211,6 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
       free(temp_str);
-      temp_str = NULL;
       if (authString != NULL)
       {
         kmyth_clear(authString, strlen(authString));
@@ -229,21 +226,18 @@ int main(int argc, char **argv)
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
       free(temp_str);
-      temp_str = NULL;
       if (authString != NULL)
       {
          kmyth_clear(authString, strlen(authString)); 
       }
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       free(outPath);
-      outPath = NULL;
       return 1;
     }
     // Go ahead and make the default value the output path
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, temp_str, outPath_size);
     free(temp_str);
-    temp_str = NULL;
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
@@ -258,7 +252,6 @@ int main(int argc, char **argv)
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
-    outPath = NULL;
     return 1;
   }
 
@@ -274,7 +267,6 @@ int main(int argc, char **argv)
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
-    outPath = NULL;
     return 1;
   }
 
@@ -282,7 +274,6 @@ int main(int argc, char **argv)
   //   Note: authString and ownerAuthPasswd cleared and freed after use in
   //         tpm2_kmyth_seal(), which completed successfully at this point
   free(outPath);
-  outPath = NULL;
   
 
   return 0;
