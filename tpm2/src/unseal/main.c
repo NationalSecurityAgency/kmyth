@@ -143,7 +143,7 @@ int main(int argc, char **argv)
                         authString, ownerAuthPasswd, &outputData, &outputSize))
   {
     free(default_outPath);
-    kmyth_clear(outputData, outputSize);
+    kmyth_clear_and_free(outputData, outputSize);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     if (authString != NULL)
     {
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
       free(default_outPath);
-      kmyth_clear(outputData, outputSize);
+      kmyth_clear_and_free(outputData, outputSize);
       if (authString != NULL)
       {
          kmyth_clear(authString, strlen(authString)); 
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
                   "default output filename (%s) already exists ... exiting",
                   outPath);
         free(default_outPath);
-        kmyth_clear(outputData, outputSize);
+        kmyth_clear_and_free(outputData, outputSize);
         if (authString != NULL)
         {
           kmyth_clear(authString, strlen(authString)); 
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
   }
 
   free(default_outPath);
-  kmyth_clear(outputData, outputSize);
+  kmyth_clear_and_free(outputData, outputSize);
   if (authString != NULL)
   {
     kmyth_clear(authString, strlen(authString)); 
