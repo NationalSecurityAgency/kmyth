@@ -147,15 +147,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to kmyth-sealed key ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
   if (clientCertPath == NULL)
@@ -163,15 +157,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to client certificate ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
   if (serverCertPath == NULL)
@@ -179,15 +167,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to server certificate ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
   if (address == NULL)
@@ -195,15 +177,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "server address not specified ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -215,15 +191,9 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR, "error verifying output path ... exiting");
       if (authString != NULL)
       {
-        kmyth_clear_and_free(authString); 
+        kmyth_clear(authString); 
       }
-      kmyth_clear_and_free(ownerAuthPasswd);
-      free(inPath);
-      free(outPath);
-      free(clientCertPath);
-      free(serverCertPath);
-      free(message);
-      free(address);
+      kmyth_clear(ownerAuthPasswd);
       return 1;
     }
   }
@@ -234,15 +204,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: input path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
   if (verifyInputFilePath(clientCertPath))
@@ -250,15 +214,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: client cert path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
   if (verifyInputFilePath(serverCertPath))
@@ -266,15 +224,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: server cert path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -302,15 +254,9 @@ int main(int argc, char **argv)
     free(sdo_orig_fn);
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -332,15 +278,9 @@ int main(int argc, char **argv)
     free(sdo_orig_fn);
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -366,15 +306,9 @@ int main(int argc, char **argv)
     kmyth_clear_and_free(key, key_size);
     if (authString != NULL)
     {
-       kmyth_clear_and_free(authString); 
+       kmyth_clear(authString); 
     }
-    kmyth_clear_and_free(ownerAuthPasswd);
-    free(inPath);
-    free(outPath);
-    free(clientCertPath);
-    free(serverCertPath);
-    free(message);
-    free(address);
+    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -408,15 +342,9 @@ int main(int argc, char **argv)
   SSL_CTX_free(ctx);
   if (authString != NULL)
   {
-     kmyth_clear_and_free(authString); 
+     kmyth_clear(authString); 
   }
-  kmyth_clear_and_free(ownerAuthPasswd);
-  free(inPath);
-  free(outPath);
-  free(clientCertPath);
-  free(serverCertPath);
-  free(message);
-  free(address);
+  kmyth_clear(ownerAuthPasswd);
 
   return 0;
 }
