@@ -79,7 +79,6 @@ int tpm2_kmyth_seal(char *input_path,
   {
     ownerAuth.size = strlen(owner_auth_passwd);
     memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
-    kmyth_clear(owner_auth_passwd, strlen(owner_auth_passwd));
   }
   if (ownerAuth.size > 0)
   {
@@ -107,10 +106,6 @@ int tpm2_kmyth_seal(char *input_path,
   //   - hash of input authorization string if one is specified  
   TPM2B_AUTH objAuthVal = {.size = 0, };
   tpm2_kmyth_create_authVal(auth_string, &objAuthVal);
-  if (auth_string != NULL)
-  {
-    kmyth_clear(auth_string, strlen(auth_string));
-  }
 
   // Create a "PCR Selection" struct and populate it in accordance with
   // the PCR values specified in user input "PCR Selection" string, if any
@@ -357,10 +352,6 @@ int tpm2_kmyth_unseal(char *input_path,
   TPM2B_AUTH objAuthValue;
 
   tpm2_kmyth_create_authVal(auth_string, &objAuthValue);
-  if (auth_string != NULL)
-  {
-    kmyth_clear(auth_string, strlen(auth_string));
-  }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in 
