@@ -66,8 +66,10 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
  * 
  * @param[out] str_repr   String representation output -
  *                        passed as pointer to the string
+ *
+ * @return 0 if success, 1 if error
  */
-void tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
+int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
 
 /**
  * @brief Translates error string from hex into human readable.
