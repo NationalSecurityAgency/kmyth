@@ -270,10 +270,12 @@ int main(int argc, char **argv)
   }
 
   // Clean-up any remaining resources
-  //   Note: authString and ownerAuthPasswd cleared after use in
-  //         tpm2_kmyth_seal(), which completed successfully at this point
+  if (authString != NULL)
+  {
+    kmyth_clear(authString, strlen(authString));
+  }
+  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
   free(outPath);
   
-
   return 0;
 }
