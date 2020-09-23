@@ -152,6 +152,13 @@ int main(int argc, char **argv)
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
+  
+  // We are done with authString and ownerAuthPasswd, so clear them
+  if (authString != NULL)
+  {
+     kmyth_clear(authString, strlen(authString)); 
+  }
+  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
   // If output to be written to file - validate that path
   if (stdout_flag == false)
@@ -168,11 +175,6 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
       free(default_outPath);
       kmyth_clear_and_free(outputData, outputSize);
-      if (authString != NULL)
-      {
-         kmyth_clear(authString, strlen(authString)); 
-      }
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
 
@@ -188,11 +190,6 @@ int main(int argc, char **argv)
                   outPath);
         free(default_outPath);
         kmyth_clear_and_free(outputData, outputSize);
-        if (authString != NULL)
-        {
-          kmyth_clear(authString, strlen(authString)); 
-        }
-        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
         return 1;
       }
     }
@@ -219,11 +216,6 @@ int main(int argc, char **argv)
 
   free(default_outPath);
   kmyth_clear_and_free(outputData, outputSize);
-  if (authString != NULL)
-  {
-    kmyth_clear(authString, strlen(authString)); 
-  }
-  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
   return 0;
 }
