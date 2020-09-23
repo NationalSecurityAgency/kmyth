@@ -259,6 +259,15 @@ int main(int argc, char **argv)
     kmyth_clear(ownerAuthPasswd);
     return 1;
   }
+  
+  free(sdo_orig_fn);
+  
+  // We no longer need authString and ownerAuthPasswd, so clear them
+  if (authString != NULL)
+  {
+    kmyth_clear(authString); 
+  }
+  kmyth_clear(ownerAuthPasswd);
 
   // Create TLS connection to the key server, using the CAPK
   BIO *bio = NULL;
@@ -275,18 +284,11 @@ int main(int argc, char **argv)
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);
-    free(sdo_orig_fn);
-    if (authString != NULL)
-    {
-       kmyth_clear(authString); 
-    }
-    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
   // Done with unsealed key buffer, so clear and free this memory
   kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);
-  free(sdo_orig_fn);
 
   // Now that we have a secure connection to the key server, retrieve the key
   size_t key_size = 0;
@@ -304,11 +306,6 @@ int main(int argc, char **argv)
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
     kmyth_clear_and_free(key, key_size);
-    if (authString != NULL)
-    {
-       kmyth_clear(authString); 
-    }
-    kmyth_clear(ownerAuthPasswd);
     return 1;
   }
 
@@ -340,11 +337,6 @@ int main(int argc, char **argv)
   }
   BIO_free_all(bio);
   SSL_CTX_free(ctx);
-  if (authString != NULL)
-  {
-     kmyth_clear(authString); 
-  }
-  kmyth_clear(ownerAuthPasswd);
 
   return 0;
 }
