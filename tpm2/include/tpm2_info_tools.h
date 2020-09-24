@@ -13,6 +13,11 @@
 #include <tss2/tss2_sys.h>
 
 /**
+ * @brief Array of manufacturer strings known to identify software TPM simulators.
+ */
+extern const char *simulator_manufacturers[];
+
+/**
  * @brief Get specified TPM 2.0 property value(s).
  *
  * @param[in]  sapi_ctx       System API (SAPI) context, must be initialized -
