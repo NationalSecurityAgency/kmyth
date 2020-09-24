@@ -147,9 +147,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to kmyth-sealed key ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   if (clientCertPath == NULL)
@@ -157,9 +157,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to client certificate ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   if (serverCertPath == NULL)
@@ -167,9 +167,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no path to server certificate ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   if (address == NULL)
@@ -177,9 +177,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "server address not specified ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
 
@@ -191,9 +191,9 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR, "error verifying output path ... exiting");
       if (authString != NULL)
       {
-        kmyth_clear(authString); 
+        kmyth_clear(authString, strlen(authString)); 
       }
-      kmyth_clear(ownerAuthPasswd);
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
   }
@@ -204,9 +204,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: input path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   if (verifyInputFilePath(clientCertPath))
@@ -214,9 +214,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: client cert path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   if (verifyInputFilePath(serverCertPath))
@@ -224,9 +224,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "verify error: server cert path ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
 
@@ -254,9 +254,9 @@ int main(int argc, char **argv)
     free(sdo_orig_fn);
     if (authString != NULL)
     {
-       kmyth_clear(authString); 
+       kmyth_clear(authString, strlen(authString)); 
     }
-    kmyth_clear(ownerAuthPasswd);
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   
@@ -265,9 +265,9 @@ int main(int argc, char **argv)
   // We no longer need authString and ownerAuthPasswd, so clear them
   if (authString != NULL)
   {
-    kmyth_clear(authString); 
+    kmyth_clear(authString, strlen(authString)); 
   }
-  kmyth_clear(ownerAuthPasswd);
+  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
   // Create TLS connection to the key server, using the CAPK
   BIO *bio = NULL;
