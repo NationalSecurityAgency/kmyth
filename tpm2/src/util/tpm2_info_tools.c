@@ -14,6 +14,17 @@
 #include <string.h>
 #include <tss2/tss2_sys.h>
 #include <tss2/tss2_rc.h>
+
+/*
+ * These are known to be manufacturer strings for software TPM simulators.
+ * Note that the list must be NULL terminated.
+ */
+const char *simulator_manufacturers[] = { "IBM",  // https://sourceforge.net/projects/ibmswtpm2/
+  "StWa",                       // https://github.com/stwagnr/tpm2simulator/
+  "MSFT",                       // https://github.com/Microsoft/ms-tpm-20-ref/
+  NULL
+};
+
 //############################################################################
 // tpm2_get_properties()
 //############################################################################
@@ -73,23 +84,28 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
   }
 
   // obtain string representation of TPM2_PT_MANUFACTURER property
-  char *vendor_str;
+  char *manufacturer_str;
 
   tpm2_unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
-                            &vendor_str);
+                            &manufacturer_str);
 
-  // if vendor string is "IBM", assume that this is the TPM 2.0 emulator
-  if (strncmp(vendor_str, "IBM", 3) == 0)
+  // Check the manufacturer string against the known simulator manufacturer strings.
+  size_t i = 0;
+
+  *isEmulator = false;
+  while ((simulator_manufacturers[i] != NULL) && (*isEmulator == false))
   {
-    *isEmulator = true;
-  }
-  else
-  {
-    *isEmulator = false;
+    if (strncmp
+        (manufacturer_str, simulator_manufacturers[i],
+         strlen(simulator_manufacturers[i])) == 0)
+    {
+      *isEmulator = true;
+    }
+    i++;
   }
 
-  // finished with vendor_str
-  free(vendor_str);
+  // finished with manufacturer_str
+  free(manufacturer_str);
 
   return 0;
 }
