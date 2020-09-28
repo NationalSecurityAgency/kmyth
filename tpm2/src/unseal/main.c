@@ -112,6 +112,11 @@ int main(int argc, char **argv)
   if (inPath == NULL)
   {
     kmyth_log(LOG_ERR, "no input (sealed data file) specified ... exiting");
+    if (authString != NULL)
+    {
+       kmyth_clear(authString, strlen(authString)); 
+    }
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
   else
@@ -119,6 +124,12 @@ int main(int argc, char **argv)
     if (verifyInputFilePath(inPath))
     {
       kmyth_log(LOG_ERR, "invalid input path (%s) ... exiting", inPath);
+      
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString)); 
+      }
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
     }
   }
@@ -134,10 +145,22 @@ int main(int argc, char **argv)
                              &outputSize))
   {
     free(default_outPath);
-    kmyth_clear(outputData, outputSize);
+    kmyth_clear_and_free(outputData, outputSize);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
+    if (authString != NULL)
+    {
+       kmyth_clear(authString, strlen(authString)); 
+    }
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
+  
+  // We are done with authString and ownerAuthPasswd, so clear them
+  if (authString != NULL)
+  {
+     kmyth_clear(authString, strlen(authString)); 
+  }
+  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
   // If output to be written to file - validate that path
   if (stdout_flag == false)
@@ -153,6 +176,7 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
       free(default_outPath);
+      kmyth_clear_and_free(outputData, outputSize);
       return 1;
     }
 
@@ -167,6 +191,7 @@ int main(int argc, char **argv)
                   "default output filename (%s) already exists ... exiting",
                   outPath);
         free(default_outPath);
+        kmyth_clear_and_free(outputData, outputSize);
         return 1;
       }
     }
@@ -183,7 +208,7 @@ int main(int argc, char **argv)
   {
     if (print_to_file(outPath, outputData, outputSize))
     {
-      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "error writing file: %s", outPath);    
     }
     else
     {
