@@ -11,7 +11,13 @@
 /**
  * @brief High-level function implementing kmyth-seal
  *
- * @param[in]  input_path        Path to input data file
+ * @param[in]  input             Raw bytes to be kmyth-sealed
+ *
+ * @param[in]  input_len         Number of bytes in input
+ *
+ * @param[out] output            Bytes in ski format of sealed data
+ *
+ * @param[out] output_len        Number of bytes in output
  *
  * @param[in]  output_path       Path to .ski file where the kmyth-seal output
  *                               will be written
@@ -68,4 +74,5 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
 int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                       uint8_t ** output, size_t *output_len,
                       char *auth_string, char *owner_auth_passwd);
+
 #endif /* KMYTH_H */
