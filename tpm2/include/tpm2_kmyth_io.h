@@ -471,7 +471,7 @@ int print_to_stdout(unsigned char *plain_text_data,
  *
  * @param[in]     input         The second array, concatenated to dest
  *
- * @param[out[    input_length  The length of the second array
+ * @param[out]    input_length  The length of the second array
  *
  * @return 0 if success, 1 if error
  */
