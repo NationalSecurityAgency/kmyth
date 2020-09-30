@@ -191,7 +191,7 @@ int main(int argc, char **argv)
     char *temp_str = malloc((strlen(original_fn) + 5) * sizeof(char));
 
     strncpy(temp_str, original_fn, strlen(original_fn));
-    
+
     // Remove any leading '.'s
     while (*temp_str == '.')
     {
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
     // Everything beyond first '.' in original filename, with any leading
     // '.'(s) removed, is treated as extension
     temp_str = strtok_r(temp_str, ".", &scratch);
-    
+
     // Append .ski file extension
     strncat(temp_str, ".ski", 5);
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
       free(temp_str);
       if (authString != NULL)
       {
-         kmyth_clear(authString, strlen(authString)); 
+        kmyth_clear(authString, strlen(authString));
       }
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
@@ -245,7 +245,7 @@ int main(int argc, char **argv)
   if (verifyOutputFilePath(outPath))
   {
     kmyth_log(LOG_ERR, "output path (%s) is not valid ... exiting", outPath);
-    
+
     if (authString != NULL)
     {
       kmyth_clear(authString, strlen(authString));
@@ -254,11 +254,11 @@ int main(int argc, char **argv)
     free(outPath);
     return 1;
   }
-
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal(inPath,
-                      outPath,
-                      authString, pcrsString, ownerAuthPasswd, cipherString))
+  if (tpm2_kmyth_seal_file(inPath,
+                           outPath,
+                           authString, pcrsString, ownerAuthPasswd,
+                           cipherString))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     if (authString != NULL)
@@ -277,6 +277,6 @@ int main(int argc, char **argv)
   }
   kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
   free(outPath);
-  
+
   return 0;
 }

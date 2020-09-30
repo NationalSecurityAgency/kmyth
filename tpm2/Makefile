@@ -23,7 +23,6 @@ LDLIBS += -ltss2-rc#                      TPM 2.0 Return Code Utilities
 LDLIBS += -lssl#                          OpenSSL
 LDLIBS += -lcrypto#                       libcrypto
 LDLIBS += -lkmip#                         libkmip
-LDLIBS += -lkmyth#                        kmyth shared library
 
 # Specify compiler flags
 CFLAGS = -Wall#                          enable all warnings
@@ -107,16 +106,16 @@ DOC_DIRS += $(LOGGER_DOC_DIR)
 all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
 
 kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS)
-	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST)
+	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
 
 kmyth-seal: $(SEAL_OBJECTS)
-	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDLIBS) $(LDFLAGS)
+	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-unseal: $(UNSEAL_OBJECTS)
-	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDLIBS) $(LDFLAGS)
+	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-getkey: $(GETKEY_OBJECTS)
-	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDLIBS) $(LDFLAGS)
+	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@

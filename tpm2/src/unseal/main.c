@@ -114,7 +114,7 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no input (sealed data file) specified ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString, strlen(authString)); 
+      kmyth_clear(authString, strlen(authString));
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
@@ -124,10 +124,10 @@ int main(int argc, char **argv)
     if (verifyInputFilePath(inPath))
     {
       kmyth_log(LOG_ERR, "invalid input path (%s) ... exiting", inPath);
-      
+
       if (authString != NULL)
       {
-        kmyth_clear(authString, strlen(authString)); 
+        kmyth_clear(authString, strlen(authString));
       }
       kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
       return 1;
@@ -139,25 +139,26 @@ int main(int argc, char **argv)
   uint8_t *outputData = NULL;
   size_t outputSize = 0;
 
-  if (tpm2_kmyth_unseal(inPath,
-                        &default_outPath,
-                        authString, ownerAuthPasswd, &outputData, &outputSize))
+  if (tpm2_kmyth_unseal_file(inPath,
+                             &default_outPath,
+                             authString, ownerAuthPasswd, &outputData,
+                             &outputSize))
   {
     free(default_outPath);
     kmyth_clear_and_free(outputData, outputSize);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     if (authString != NULL)
     {
-       kmyth_clear(authString, strlen(authString)); 
+      kmyth_clear(authString, strlen(authString));
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     return 1;
   }
-  
+
   // We are done with authString and ownerAuthPasswd, so clear them
   if (authString != NULL)
   {
-     kmyth_clear(authString, strlen(authString)); 
+    kmyth_clear(authString, strlen(authString));
   }
   kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
@@ -207,7 +208,7 @@ int main(int argc, char **argv)
   {
     if (print_to_file(outPath, outputData, outputSize))
     {
-      kmyth_log(LOG_ERR, "error writing file: %s", outPath);    
+      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
     }
     else
     {

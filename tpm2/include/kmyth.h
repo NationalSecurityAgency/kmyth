@@ -11,7 +11,13 @@
 /**
  * @brief High-level function implementing kmyth-seal
  *
- * @param[in]  input_path        Path to input data file
+ * @param[in]  input             Raw bytes to be kmyth-sealed
+ *
+ * @param[in]  input_len         Number of bytes in input
+ *
+ * @param[out] output            Bytes in ski format of sealed data
+ *
+ * @param[out] output_len        Number of bytes in output
  *
  * @param[in]  output_path       Path to .ski file where the kmyth-seal output
  *                               will be written
@@ -35,21 +41,23 @@
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_seal(char *input_path,
-                    char *output_path,
-                    char *auth_string, char *pcrs_string,
+int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
+                    uint8_t ** output, size_t *output_len,
+                    char *auth_string,
+                    char *pcrs_string,
                     char *owner_auth_passwd, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal
  *
- * @param[in]  input_path        Path to input .ski file
- *                               (passed as a string)
  *
- * @param[in]  default_out_path  Original filename for sealed data contents
- *                               (passed as a pointer to a string - can be
- *                               used in determining a default output path
- *                               for the unsealed result)
+ * @param[in]  input             Raw data to be kmyth-sealed
+ *
+ * @param[in]  input_len         The size of input in bytes
+ *
+ * @param[out] output            The result of kmyth-seal in .ski format
+ *
+ * @param[out] output_len        The size of the output data
  *
  * @param[in]  auth_string       Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
@@ -61,17 +69,10 @@ int tpm2_kmyth_seal(char *input_path,
  *                               must provide via this parameter. (passed as
  *                               a string)
  *
- * @param[out] output_data       Decrypted result (pointer to a byte buffer)
- *
- * @param[out] output_size       Size (in bytes) of decrypted result
- *                               (passed as pointer to size value)
- *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_unseal(char *input_path,
-                      char **default_out_path,
-                      char *auth_string,
-                      char *owner_auth_passwd,
-                      uint8_t ** output_data, size_t *output_size);
+int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
+                      uint8_t ** output, size_t *output_len,
+                      char *auth_string, char *owner_auth_passwd);
 
 #endif /* KMYTH_H */
