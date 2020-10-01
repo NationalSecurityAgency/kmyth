@@ -191,7 +191,7 @@ int tpm2_kmyth_create_ski_string(uint8_t ** output,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_parse_ski_string(uint8_t * input,
+/*int tpm2_kmyth_parse_ski_string(uint8_t * input,
                                 size_t input_length,
                                 char **seal_input_fname,
                                 TPML_PCR_SELECTION * pcr_select_list,
@@ -202,7 +202,7 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input,
                                 TPM2B_PRIVATE * sealed_wk_private,
                                 uint8_t ** encrypted_data,
                                 size_t *encrypted_data_size);
-
+*/
 /**
  * @brief Writes sealed key meta-data to a .ski file.
  * 

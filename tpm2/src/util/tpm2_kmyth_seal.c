@@ -15,6 +15,7 @@
 #include "tpm2_kmyth_object.h"
 #include "tpm2_config_tools.h"
 #include "tpm2_info_tools.h"
+#include "ski.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -375,8 +376,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   }
   kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
 
+  Ski ski = get_default_ski();
+
   // Read sealed data input from file
-  TPML_PCR_SELECTION objPcrList = {.count = 0, };
+/*  TPML_PCR_SELECTION objPcrList = {.count = 0, };
   TPM2B_PUBLIC storageKey_public = {.size = 0, };
   TPM2B_PRIVATE storageKey_private = {.size = 0, };
   cipher_t cipher;
@@ -385,7 +388,8 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   uint8_t *enc_data = NULL;
   size_t enc_data_size = 0;
   char *orig_file_name = NULL;
-
+*/
+/*
   if (tpm2_kmyth_parse_ski_string(input,
                                   input_len,
                                   &orig_file_name,
@@ -395,12 +399,36 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                                   &cipher,
                                   &wk_public,
                                   &wk_private, &enc_data, &enc_data_size))
+*/
+  printf("New parser!\n");
+  if (tpm2_kmyth_parse_ski_string(input, input_len, &ski))
   {
     kmyth_log(LOG_ERR, "error parsing ski string ... exiting");
-    free(enc_data);
+    free_ski(&ski);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
+
+  TPML_PCR_SELECTION objPcrList = ski.pcr_list;
+  TPM2B_PUBLIC storageKey_public = ski.sk_pub;
+  TPM2B_PRIVATE storageKey_private = ski.sk_priv;
+  cipher_t cipher = ski.cipher_struct;
+  TPM2B_PUBLIC wk_public = ski.wk_pub;
+  TPM2B_PRIVATE wk_private = ski.wk_priv;
+
+  uint8_t *enc_data = (uint8_t *) malloc(ski.encrypted_data_size);
+
+  memcpy(enc_data, ski.encrypted_data, ski.encrypted_data_size);
+  size_t enc_data_size = ski.encrypted_data_size;
+  char *orig_file_name = NULL;
+
+  if (ski.original_filename != NULL && strlen(ski.original_filename) > 0)
+  {
+    orig_file_name = (char *) malloc(strlen(ski.original_filename));
+    memcpy(orig_file_name, ski.original_filename,
+           strlen(ski.original_filename));
+  }
+  free_ski(&ski);
 
   // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
   // We have obtained its public and encrypted private blobs from

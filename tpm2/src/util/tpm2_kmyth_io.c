@@ -363,6 +363,7 @@ int tpm2_kmyth_create_ski_string(uint8_t ** output,
 //############################################################################
 // tpm2_kmyth_read_ski_file()
 //############################################################################
+/*
 int tpm2_kmyth_parse_ski_string(uint8_t * input,
                                 size_t input_length,
                                 char **seal_input_fname,
@@ -685,7 +686,7 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input,
 
   return retval;
 }
-
+*/
 //############################################################################
 // tpm2_kmyth_write_ski_file()
 //############################################################################
