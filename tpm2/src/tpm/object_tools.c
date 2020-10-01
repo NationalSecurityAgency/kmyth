@@ -18,11 +18,17 @@
 //############################################################################
 // tpm2_init_kmyth_object_sensitive()
 //############################################################################
-void tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
-                                      uint8_t * object_data,
-                                      size_t object_dataSize,
-                                      TPM2B_SENSITIVE_CREATE * sensitiveArea)
+int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+                                     uint8_t * object_data,
+                                     size_t object_dataSize,
+                                     TPM2B_SENSITIVE_CREATE * sensitiveArea)
 {
+  if (sensitiveArea == NULL)
+  {
+    kmyth_log(LOG_ERR, "no sensitiveArea data ... exiting");
+    return 1;
+  }
+
   // The userAuth field in a TPM2B_SENSITIVE_CREATE struct is used to hold
   // the authorization value (authVal) for the object to be created.
   sensitiveArea->sensitive.userAuth.size = object_auth.size;
@@ -34,6 +40,9 @@ void tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
   // For data, the data buffer size cannot be zero - we must populate the
   // buffer with data to be sealed and set the size to its length in bytes.
   sensitiveArea->sensitive.data.size = object_dataSize;
+  // TODO: Calling memcpy with either source or dest addresses set to NULL
+  // is technically undefined behavior. However, object_data is expected
+  // to be NULL in certain conditions.
   memcpy(&sensitiveArea->sensitive.data.buffer, object_data,
          sensitiveArea->sensitive.data.size);
   if (object_dataSize > 0)
@@ -50,6 +59,8 @@ void tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
     sensitiveArea->sensitive.userAuth.size +
     sensitiveArea->sensitive.data.size + 4;
   kmyth_log(LOG_DEBUG, "set size of sensitive area = %d", sensitiveArea->size);
+
+  return 0;
 }
 
 //############################################################################
@@ -58,6 +69,12 @@ void tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
 int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
                                     TPMT_PUBLIC * pubArea)
 {
+  if (pubArea == NULL)
+  {
+    kmyth_log(LOG_ERR, "no pubArea data ... exiting");
+    return 1;
+  }
+
   // Initialize public key algorithm (object type) for object to be created
   //   - for SRK or SK, use Kmyth configured default for keys
   //   - for sealed data, use Kmyth configured default for data
@@ -75,7 +92,11 @@ int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
   kmyth_log(LOG_DEBUG, "object hash ALG_ID = 0x%02X", KMYTH_HASH_ALG);
 
   // Initialize attributes for object to be created
-  tpm2_init_kmyth_object_attributes(isKey, &pubArea->objectAttributes);
+  if (tpm2_init_kmyth_object_attributes(isKey, &pubArea->objectAttributes))
+  {
+    kmyth_log(LOG_ERR, "error setting attributes for new object ... exiting");
+    return 1;
+  }
   kmyth_log(LOG_DEBUG, "object attributes = 0x%08X", pubArea->objectAttributes);
 
   // Initialize authorization policy digest for object to be created
@@ -118,8 +139,14 @@ int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
 //############################################################################
 // tpm2_init_kmyth_object_attributes()
 //############################################################################
-void tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
+int tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
 {
+  if (objectAttrib == NULL)
+  {
+    kmyth_log(LOG_ERR, "no objectAttrib data ... exiting");
+    return 1;
+  }
+
   // Start by forcing all object attributes to zero - blank slate
   // Then, confingure the "usage" attributes appropriatedly
   //   For a Kmyth decrypt key (SRK and SKs only), set:
@@ -140,6 +167,8 @@ void tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
   *objectAttrib |= TPMA_OBJECT_USERWITHAUTH;
   *objectAttrib |= TPMA_OBJECT_FIXEDTPM;
   *objectAttrib |= TPMA_OBJECT_FIXEDPARENT;
+
+  return 0;
 }
 
 //############################################################################
@@ -148,6 +177,12 @@ void tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
 int tpm2_init_kmyth_object_parameters(TPMI_ALG_PUBLIC objectType,
                                       TPMU_PUBLIC_PARMS * objectParams)
 {
+  if (objectParams == NULL)
+  {
+    kmyth_log(LOG_ERR, "no objectParams data ... exiting");
+    return 1;
+  }
+
   // Configure the algorithm-specific settings based on the type of object
   // being created.
   switch (objectType)
@@ -245,6 +280,12 @@ int tpm2_init_kmyth_object_parameters(TPMI_ALG_PUBLIC objectType,
 int tpm2_init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
                                   TPMU_PUBLIC_ID * objectUnique)
 {
+  if (objectUnique == NULL)
+  {
+    kmyth_log(LOG_ERR, "no objectUnique data ... exiting");
+    return 1;
+  }
+
   // The TPMU_PUBLIC_ID struct (unique field of a public blob) is type specific
   // Set the element(s) within the TPMU_PUBLIC_ID struct format for the type
   // of object we want to create to zero. The TPM will then replace this value.
@@ -328,10 +369,14 @@ int tpm2_kmyth_create_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // Set up NULL password authorization session for TPM commands used to
     // create the primary object (Tss2_Sys_CreatePrimary()) and load it at
     // a persistent handle (Tss2_Sys_EvictControl())
-    tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                      parent_auth,
-                                      &createObjectCmdAuths,
-                                      &createObjectRspAuths);
+    if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
+                                          parent_auth,
+                                          &createObjectCmdAuths,
+                                          &createObjectRspAuths))
+    {
+      kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
+      return 1;
+    }
     kmyth_log(LOG_DEBUG,
               "setup auth structs for TPM commands to create/load SRK");
 
@@ -383,10 +428,14 @@ int tpm2_kmyth_create_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a NULL authorization session (indicating password authorization)
       // was passed in, the object being created is a storage key (SK)
       //   - TPM owner (storage) auth is required for use of the SRK to seal
-      tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                        parent_auth,
-                                        &createObjectCmdAuths,
-                                        &createObjectRspAuths);
+      if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
+                                            parent_auth,
+                                            &createObjectCmdAuths,
+                                            &createObjectRspAuths))
+      {
+        kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
+        return 1;
+      }
       kmyth_log(LOG_DEBUG,
                 "setup authorization structs for TPM command to create SK");
     }
@@ -659,9 +708,14 @@ int tpm2_kmyth_load_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a NULL authorization session (indicating password authorization)
     // was passed in, the object being loaded is a storage key (SK)
     //   - TPM owner (storage) auth is required to load under the SRK
-    tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                      parent_auth,
-                                      &loadObjectCmdAuths, &loadObjectRspAuths);
+    if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
+                                          parent_auth,
+                                          &loadObjectCmdAuths,
+                                          &loadObjectRspAuths))
+    {
+      kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
+      return 1;
+    }
     kmyth_log(LOG_DEBUG, "setup auth structs for TPM command to create SK");
   }
   else
