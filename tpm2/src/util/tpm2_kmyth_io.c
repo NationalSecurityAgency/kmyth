@@ -687,6 +687,7 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input,
   return retval;
 }
 */
+
 //############################################################################
 // tpm2_kmyth_write_ski_file()
 //############################################################################
@@ -1644,10 +1645,7 @@ int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
     return (1);
   }
 
-  for (size_t i = 0; i < input_length; i++)
-  {
-    new_dest[offset + i] = input[i];
-  }
+  memcpy(&new_dest[offset], input, input_length);
   *dest = new_dest;
   *dest_length = new_dest_len;
   return (0);

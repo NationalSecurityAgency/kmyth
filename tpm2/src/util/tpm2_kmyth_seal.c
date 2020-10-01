@@ -378,29 +378,6 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 
   Ski ski = get_default_ski();
 
-  // Read sealed data input from file
-/*  TPML_PCR_SELECTION objPcrList = {.count = 0, };
-  TPM2B_PUBLIC storageKey_public = {.size = 0, };
-  TPM2B_PRIVATE storageKey_private = {.size = 0, };
-  cipher_t cipher;
-  TPM2B_PUBLIC wk_public = {.size = 0, };
-  TPM2B_PRIVATE wk_private = {.size = 0, };
-  uint8_t *enc_data = NULL;
-  size_t enc_data_size = 0;
-  char *orig_file_name = NULL;
-*/
-/*
-  if (tpm2_kmyth_parse_ski_string(input,
-                                  input_len,
-                                  &orig_file_name,
-                                  &objPcrList,
-                                  &storageKey_public,
-                                  &storageKey_private,
-                                  &cipher,
-                                  &wk_public,
-                                  &wk_private, &enc_data, &enc_data_size))
-*/
-  printf("New parser!\n");
   if (tpm2_kmyth_parse_ski_string(input, input_len, &ski))
   {
     kmyth_log(LOG_ERR, "error parsing ski string ... exiting");

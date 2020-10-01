@@ -11,7 +11,13 @@
 /**
  * @brief High-level function implementing kmyth-seal
  *
- * @param[in]  input_path        Path to input data file
+ * @param[in]  input             Raw bytes to be kmyth-sealed
+ *
+ * @param[in]  input_len         Number of bytes in input
+ *
+ * @param[out] output            Bytes in ski format of sealed data
+ *
+ * @param[out] output_len        Number of bytes in output
  *
  * @param[in]  output_path       Path to .ski file where the kmyth-seal output
  *                               will be written
