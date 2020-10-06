@@ -205,9 +205,11 @@ int main(int argc, char **argv)
   }
   else
   {
-    if (print_to_file(outPath, outputData, outputSize))
+    FILE *file = fopen(outPath, "w");
+
+    if (fwrite(outputData, sizeof(uint8_t), outputSize, file) != outputSize)
     {
-      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
     }
     else
     {

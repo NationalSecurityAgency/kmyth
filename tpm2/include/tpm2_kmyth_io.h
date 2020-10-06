@@ -237,33 +237,6 @@ int kmyth_getSkiBlock(char **contents,
                       size_t *blocksize, char *delim, char *next_delim);
 
 /**
- * @brief Prints a string to the specified file.
- *
- * @param[in]  file      File handle for file to print to
- *
- * @param[in]  string    String value to be printed to file
- *
- * @param[in]  len       Size (length) of string value to be printed to file
- *
- * @return number of characters "printed" to file
- */
-int printStringToFile(FILE * file, unsigned char *string, size_t len);
-
-/**
- * @brief Prints raw bytes to a file.
- * 
- * @param[in] output_path     The destination file being written
- *
- * @param[in] plain_text_data The data being written
- *
- * @param[in] data_size       The size (# of bytes) of plain_text_data
- *
- * @return 0 if success, 1 if error
- */
-int print_to_file(char *output_path, unsigned char *plain_text_data,
-                  size_t data_size);
-
-/**
  * @brief Prints raw bytes to standard out.
  * 
  * @param[in] plain_text_data      The data being printed to stdout

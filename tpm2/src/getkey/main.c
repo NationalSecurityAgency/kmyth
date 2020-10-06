@@ -318,9 +318,11 @@ int main(int argc, char **argv)
   }
   else
   {
-    if (print_to_file(outPath, key, key_size) != 0)
+    FILE *file = fopen(outPath, "w");
+
+    if (fwrite(key, sizeof(uint8_t), key_size, file) != key_size)
     {
-      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
     }
   }
 
