@@ -187,7 +187,7 @@ int main(int argc, char **argv)
   // If configured to write to an output file, verify that path
   if (outPath != NULL)
   {
-    if (verifyInputOutputPaths(inPath, outPath))
+    if (verifyOutputFilePath(outPath))
     {
       kmyth_log(LOG_ERR, "error verifying output path ... exiting");
       if (authString != NULL)

@@ -17,20 +17,6 @@
 #include "kmyth_cipher.h"
 
 /**
- * @brief Checks both input and output paths to make sure that the output
- *        directories exist and the input file can be accessed.
- * 
- * @param[in]  input_path  String representing the path to the
- *                         input file being checked
- *
- * @param[in]  output_path String representing the path to the
- *                         destination for the output
- *
- * @return 0 if success, 1 if error
-  */
-int verifyInputOutputPaths(char *input_path, char *output_path);
-
-/**
  * @brief Checks a path to an input file to make sure that it exists and that
  *        the user has read access to the file.
  * 
@@ -86,70 +72,6 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
  */
 int write_bytes_to_file(char *output_path,
                         uint8_t * bytes, size_t bytes_length);
-
-/**
- * @brief Reads Kmyth sealing meta-data from a .ski file.
- * 
- * @param[in]  input_path              String containing the path to the
- *                                     input .ski file to be read from.
- *
- * @param[out] pcr_select_list         Pointer to a TPM 2.0 PCR selection list
- *                                     structure (TPML_PCR_SELECTION) where the
- *                                     data from the 'PCR SELECTION LIST' block
- *                                     in the .ski file will be placed after it
- *                                     is base-64 decoded and unmarshalled.
- *
- * @param[out] storage_key_public      Pointer to a TPM 2.0 sized buffer
- *                                     (TPM2B_PUBLIC) where the data from the
- *                                     'STORAGE KEY PUBLIC' block in the
- *                                     .ski file will be placed after it is
- *                                     base-64 decoded and unmarshalled.
- *
- * @param[out] storage_key_private     Pointer to a TPM 2.0 sized buffer
- *                                     (TPM2B_PRIVATE) where the data from
- *                                     the 'STORAGE KEY ENC PRIVATE' block in
- *                                     the .ski file will be placed
- *                                     after it is base-64 decoded and
- *                                     unmarshalled.
- *
- * @param[out] cipher_struct           cipher_t struct specifying the
- *                                     symmetric encryption method used to
- *                                     encrypt (wrap) the input data. It is
- *                                     constructed based on the string read
- *                                     from the 'CIPHER SUITE' block of the
- *                                     .ski file.
- *
- * @param[out] wrap_key_public         Pointer to a TPM 2.0 sized buffer
- *                                     (TPM2B_PUBLIC) where the data from the
- *                                     'SYM KEY PUBLIC' block in the .ski file
- *                                     will be placed after it is base-64
- *                                     decoded and unmarshalled.
- *
- * @param[out] wrap_key_private        Pointer to a TPM 2.0 sized buffer
- *                                     (TPM2B_PRIVATE) where the data from the
- *                                     'SYM KEY ENC PRIVATE' block in the .ski
- *                                     file will be placed after it is base-64
- *                                     decoded and unmarshalled.
- *
- * @param[out] encrypted_data          Symmetrically encrypted data - passed as
- *                                     a pointer to the array containing the
- *                                     encrypted data bytes read from the
- *                                     'ENC DATA' block of the .ski file.
- *
- * @param[out] encrypted_data_size     Size, in bytes, of the encrypted data -
- *                                     passed as a pointer to the length value
- *
- * @return 0 if success, 1 if error
- */
-int tpm2_kmyth_read_ski_file(char *input_path,
-                             TPML_PCR_SELECTION * pcr_select_list,
-                             TPM2B_PUBLIC * storage_key_public,
-                             TPM2B_PRIVATE * storage_key_private,
-                             cipher_t * cipher_struct,
-                             TPM2B_PUBLIC * wrap_key_public,
-                             TPM2B_PRIVATE * wrap_key_private,
-                             uint8_t ** encrypted_data,
-                             size_t *encrypted_data_size);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained
