@@ -101,8 +101,8 @@ to recover the 'kmyth-sealed' secret
     
      -a or --auth_string   String used to create 'authVal' digest. Defaults to empty string (all-zero digest).
      -i or --input         Path to file containing data the to be unsealed
-     -o or --output        Destination path for unsealed file. If none given, will attempt to use the base
-                           input filename with a .out extension as default.
+     -o or --output        Destination path for unsealed file. This or -s must be specified. Will not overwrite any
+                           existing files unless the 'force' option is selected.
      -s or --stdout        Output unencrypted result to stdout instead of file.
      -w or --owner_auth    TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.
      -v or --verbose       Enable detailed logging.
