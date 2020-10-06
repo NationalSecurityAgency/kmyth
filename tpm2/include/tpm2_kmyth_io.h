@@ -121,43 +121,6 @@ int decodeBase64Data(unsigned char *base64_data,
                      size_t *raw_data_size);
 
 /**
- * @brief Retrieves the contents of the next "block" in the data read from a 
- *        .ski file, if the delimiter for the current file block matches the
- *        expected delimiter value.
- *
- * A .ski file is partitioned into "blocks" by delimiters and this function
- * uses that structure to parse a requested block from a data buffer
- * containing the contents (full or remaining) of the data read from a .ski
- * file.
- *
- * @param[in/out] contents  Data buffer containing the contents (or partial
- *                          contents of a .ski file - passed as a pointer
- *                          to the address of the data buffer (updated by
- *                          this function)
- *
- * @param[in/out] remaining Count of bytes remaining in data buffer -
- *                          passed as a pointer to the count value (updated by
- *                          this function)
- *
- * @param[out] block        Data buffer for the .ski file "block"
- *                          retrieved - passed as a pointer to the
- *                          address of the output buffer
- *
- * @param[out] blocksize    Size, in bytes, of the .ski file "block" retrieved -
- *                          passed as a pointer to the length value
- *
- * @param[in]  delim        String value representing the expected delimiter (the
- *                          delimiter value for the block type being retrieved)
- *
- * @param[in] next_delim    String value representing the next expected
- *                          delimiter.
- * @return
- */
-int kmyth_getSkiBlock(char **contents,
-                      size_t *remaining, unsigned char **block,
-                      size_t *blocksize, char *delim, char *next_delim);
-
-/**
  * @brief Prints raw bytes to standard out.
  * 
  * @param[in] plain_text_data      The data being printed to stdout
