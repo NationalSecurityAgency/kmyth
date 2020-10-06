@@ -49,20 +49,22 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   }
   kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
+  Ski ski = get_default_ski();
+
   //obtain cipher function
   if (cipher_string == NULL)
   {
     cipher_string = KMYTH_DEFAULT_CIPHER;
   }
-  cipher_t cipher = kmyth_get_cipher_t_from_string(cipher_string);
+  ski.cipher = kmyth_get_cipher_t_from_string(cipher_string);
 
-  if (cipher.cipher_name == NULL)
+  if (ski.cipher.cipher_name == NULL)
   {
     kmyth_log(LOG_ERR, "invalid cipher: %s ... exiting", cipher_string);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "cipher: %s", cipher.cipher_name);
+  kmyth_log(LOG_DEBUG, "cipher: %s", ski.cipher.cipher_name);
 
   // Create owner (storage) hierarchy authorization structure
   TPM2B_AUTH ownerAuth;
@@ -111,9 +113,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   // will specify that no PCRs were selected by the user - all-zero mask)
   // This PCR Selection struct will be used in the authorization policy for
   // new, non-primary Kmyth objects.
-  TPML_PCR_SELECTION objPcrList = {.count = 0, };
-
-  if (init_pcr_selection(sapi_ctx, pcrs_string, &objPcrList))
+  if (init_pcr_selection(sapi_ctx, pcrs_string, &ski.pcr_list))
   {
     kmyth_log(LOG_ERR, "error parsing PCR string: %s ... exiting", pcrs_string);
 
@@ -134,7 +134,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   TPM2B_DIGEST objAuthPolicy;
 
   objAuthPolicy.size = 0;
-  if (tpm2_kmyth_create_policy_digest(sapi_ctx, objPcrList, &objAuthPolicy))
+  if (tpm2_kmyth_create_policy_digest(sapi_ctx, ski.pcr_list, &objAuthPolicy))
   {
     kmyth_log(LOG_ERR,
               "error creating policy digest for new Kmyth object ... exiting");
@@ -171,19 +171,14 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   // We create a storage key (SK) that we will use to seal a symmetric
   // wrapping key that we will create and use to encrypt the user input data.
   // This storage key will be sealed to the SRK (its parent is the SRK).
-  TPM2B_PRIVATE storageKey_private;
-  TPM2B_PUBLIC storageKey_public;
   TPM2_HANDLE storageKey_handle = 0;
 
-  storageKey_private.size = 0;
-  storageKey_public.size = 0;
   if (tpm2_kmyth_create_sk(sapi_ctx,
                            storageRootKey_handle,
                            ownerAuth,
                            objAuthVal,
-                           objPcrList, objAuthPolicy,
-                           &storageKey_handle,
-                           &storageKey_private, &storageKey_public))
+                           ski.pcr_list, objAuthPolicy,
+                           &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
   {
     kmyth_log(LOG_ERR, "failed to create a storage key ... exiting");
 
@@ -204,8 +199,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
                              storageRootKey_handle,
                              ownerAuth,
                              emptyPcrList,
-                             &storageKey_private,
-                             &storageKey_public, &storageKey_handle))
+                             &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
 
@@ -226,9 +220,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   //   - The symmetric wrapping key used for encryption
   //     is created as part of the call to kmyth_wrap_input().
   kmyth_log(LOG_DEBUG, "wrapping input data");
-  size_t wrapped_data_size = 0;
-  unsigned char *wrapped_data = NULL;
-  size_t wrapKey_size = get_key_len_from_cipher(cipher) / 8;
+  size_t wrapKey_size = get_key_len_from_cipher(ski.cipher) / 8;
   unsigned char *wrapKey = calloc(wrapKey_size, sizeof(unsigned char));
 
   // validate non-empty plaintext buffer specified
@@ -240,7 +232,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
 
   // encrypt (wrap) input data read in (e.g., client certificate private .pem)
   if (kmyth_encrypt_data(input, input_length,
-                         cipher, &wrapped_data, &wrapped_data_size,
+                         ski.cipher, &ski.enc_data, &ski.enc_data_size,
                          &wrapKey, &wrapKey_size))
   {
     kmyth_log(LOG_ERR, "unable to encrypt (wrap) data ... exiting");
@@ -249,29 +241,19 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
 
   kmyth_log(LOG_DEBUG, "input data wrapped");
 
-  // private and public blobs for sealed data object
-  TPM2B_PRIVATE sealedData_private;
-  TPM2B_PUBLIC sealedData_public;
-
-  // init private and public blobs to empty
-  sealedData_private.size = 0;
-  sealedData_public.size = 0;
-
   // Seal the wrapping key to the TPM using the Storage Key (SK)
   if (tpm2_kmyth_seal_data(sapi_ctx,
                            wrapKey,
                            wrapKey_size,
                            storageKey_handle,
                            objAuthVal,
-                           objPcrList,
+                           ski.pcr_list,
                            objAuthVal,
-                           objPcrList,
-                           objAuthPolicy,
-                           &sealedData_public, &sealedData_private))
+                           ski.pcr_list, objAuthPolicy, &ski.wk_pub,
+                           &ski.wk_priv))
   {
     kmyth_log(LOG_ERR, "unable to seal data ... exiting");
     kmyth_clear_and_free(wrapKey, wrapKey_size);
-    free(wrapped_data);
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
     tpm2_free_resources(&sapi_ctx);
     return 1;
@@ -283,25 +265,14 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   kmyth_clear_and_free(wrapKey, wrapKey_size);
   kmyth_clear(objAuthVal.buffer, objAuthVal.size);
 
-  if (tpm2_kmyth_create_ski_string(output,
-                                   output_length,
-                                   NULL,
-                                   0,
-                                   objPcrList,
-                                   storageKey_public,
-                                   storageKey_private,
-                                   cipher.cipher_name,
-                                   sealedData_public, sealedData_private,
-                                   wrapped_data, wrapped_data_size))
+  if (tpm2_kmyth_create_ski_string(ski, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski format ... exiting");
-    free(wrapped_data);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
 
   // done, so free any allocated resources that remain
-  free(wrapped_data);
   tpm2_free_resources(&sapi_ctx);
 
   return 0;
@@ -386,27 +357,6 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
     return 1;
   }
 
-  TPML_PCR_SELECTION objPcrList = ski.pcr_list;
-  TPM2B_PUBLIC storageKey_public = ski.sk_pub;
-  TPM2B_PRIVATE storageKey_private = ski.sk_priv;
-  cipher_t cipher = ski.cipher_struct;
-  TPM2B_PUBLIC wk_public = ski.wk_pub;
-  TPM2B_PRIVATE wk_private = ski.wk_priv;
-
-  uint8_t *enc_data = (uint8_t *) malloc(ski.encrypted_data_size);
-
-  memcpy(enc_data, ski.encrypted_data, ski.encrypted_data_size);
-  size_t enc_data_size = ski.encrypted_data_size;
-  char *orig_file_name = NULL;
-
-  if (ski.original_filename != NULL && strlen(ski.original_filename) > 0)
-  {
-    orig_file_name = (char *) malloc(strlen(ski.original_filename));
-    memcpy(orig_file_name, ski.original_filename,
-           strlen(ski.original_filename));
-  }
-  free_ski(&ski);
-
   // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
   // We have obtained its public and encrypted private blobs from
   // the input .ski file and will now load the SK into the TPM.
@@ -417,11 +367,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                              storageRootKey_handle,
                              ownerAuth,
                              emptyPcrList,
-                             &storageKey_private,
-                             &storageKey_public, &storageKey_handle))
+                             &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "error loading storage key ... exiting");
-    free(enc_data);
+    free_ski(&ski);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
@@ -442,22 +391,22 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   // Perform "unseal" to recover data
   if (tpm2_kmyth_unseal_data(sapi_ctx,
                              storageKey_handle,
-                             wk_public,
-                             wk_private,
+                             ski.wk_pub,
+                             ski.wk_priv,
                              objAuthValue,
-                             objPcrList,
+                             ski.pcr_list,
                              objAuthPolicy,
-                             cipher,
-                             enc_data, enc_data_size, output, output_len))
+                             ski.cipher,
+                             ski.enc_data, ski.enc_data_size, output,
+                             output_len))
   {
     kmyth_log(LOG_ERR, "error unsealing data ... exiting");
-    free(enc_data);
+    free_ski(&ski);
     tpm2_free_resources(&sapi_ctx);
     return 1;
   }
-
   // done, so free any allocated resources that remain
-  free(enc_data);
+  free_ski(&ski);
   tpm2_free_resources(&sapi_ctx);
 
   return 0;
