@@ -207,7 +207,7 @@ int main(int argc, char **argv)
     }
     else
     {
-      kmyth_log(LOG_INFO, "unsealed contents of %s to %s", inPath, outPath);
+      kmyth_log(LOG_DEBUG, "unsealed contents of %s to %s", inPath, outPath);
     }
   }
 
