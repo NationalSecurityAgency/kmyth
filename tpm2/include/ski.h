@@ -40,7 +40,7 @@ typedef struct Ski_s
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_parse_ski_string(uint8_t * input, size_t input_length,
+int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                                 Ski * output);
 
 /**
@@ -54,7 +54,7 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input, size_t input_length,
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_create_ski_string(Ski input, uint8_t ** output,
+int tpm2_kmyth_create_ski_bytes(Ski input, uint8_t ** output,
                                  size_t *output_length);
 
 /**

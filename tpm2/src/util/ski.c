@@ -24,9 +24,9 @@
 #include <openssl/rand.h>
 
 //############################################################################
-// tpm2_kmyth_parse_ski_string
+// tpm2_kmyth_parse_ski_bytes
 //############################################################################
-int tpm2_kmyth_parse_ski_string(uint8_t * input, size_t input_length,
+int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                                 Ski * output)
 {
   size_t remaining = input_length;
@@ -293,7 +293,10 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input, size_t input_length,
   return retval;
 }
 
-int tpm2_kmyth_create_ski_string(Ski input,
+//############################################################################
+// tpm2_kmyth_create_ski_bytes
+//############################################################################
+int tpm2_kmyth_create_ski_bytes(Ski input,
                                  uint8_t ** output, size_t *output_length)
 {
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
