@@ -245,7 +245,6 @@ int main(int argc, char **argv)
   size_t clientPrivateKey_size = 0;
 
   if (tpm2_kmyth_unseal_file(inPath,
-                             &sdo_orig_fn,
                              authString,
                              ownerAuthPasswd,
                              &clientPrivateKey_data, &clientPrivateKey_size))

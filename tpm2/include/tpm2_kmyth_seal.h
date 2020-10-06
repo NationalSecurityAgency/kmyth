@@ -17,9 +17,6 @@
  *
  * @param[in]  input_path        Path to input data file
  *
- * @param[in]  output_path       Path to .ski file where the kmyth-seal output
- *                               will be written
- *
  * @param[in]  auth_string       Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               wrapping key) created by kmyth-seal
@@ -37,23 +34,23 @@
  * @param[in]  cipher_string     String indicating the symmetric cipher to use
  *                               for encrypting the input data.
  *
+ * @param[out] output            The result of tpm2_kmyth_seal as bytes in
+ *                               .ski format
+ *
+ * @param[out] output_length     The length, in bytes, of output
+ *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_seal_file(char *input_path,
-                         char *output_path,
                          char *auth_string, char *pcrs_string,
-                         char *owner_auth_passwd, char *cipher_string);
+                         char *owner_auth_passwd, char *cipher_string,
+                         uint8_t ** output, size_t *output_length);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files
  *
  * @param[in]  input_path        Path to input .ski file
  *                               (passed as a string)
- *
- * @param[in]  default_out_path  Original filename for sealed data contents
- *                               (passed as a pointer to a string - can be
- *                               used in determining a default output path
- *                               for the unsealed result)
  *
  * @param[in]  auth_string       Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
@@ -73,7 +70,6 @@ int tpm2_kmyth_seal_file(char *input_path,
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal_file(char *input_path,
-                           char **default_out_path,
                            char *auth_string,
                            char *owner_auth_passwd,
                            uint8_t ** output_data, size_t *output_size);
@@ -196,35 +192,6 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            uint8_t * encrypted_data,
                            size_t encrypted_size, uint8_t ** result_data,
                            size_t *result_size);
-
-/**
- * @brief High-level function to read in and wrap (symmetrically encrypt)
- * user specified input data (i.e., CAPK contained in an input file)
- *
- * @param[in]  inPath        Filename and path for input data (i.e., CAPK)
- *
- * @param[in]  wrapCipher    Symmetric cipher specification (cipher_t struct)
- *                           for encryption of data (i.e., CAPK)
- *                           (passed in as a pointer to the struct)
- *
- * @param[out] outData       Buffer to hold result (output data) from wrap
- *                           operation
- *
- * @param[out] outData_len   Parameter to hold length, in bytes, of result
- *                           (passed as pointer to the size_t value)
- *
- * @param[out] key           Buffer to hold key value generated and used
- *                           to encrypt the input data (i.e., CAPK)
- *
- * @param[out] key_len       Parameter to hold length, in bytes, of key
- *                           (passed as pointer to the size_t value)
- * 
- * @return 0 on success, 1 on error
- */
-int kmyth_wrap_input(char *inPath,
-                     cipher_t wrapCipher,
-                     unsigned char **outData,
-                     size_t *outData_len, unsigned char **key, size_t *key_len);
 
 /**
  * @brief Performs the symmetric encryption specified by the caller.

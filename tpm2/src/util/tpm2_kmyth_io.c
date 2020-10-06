@@ -126,8 +126,7 @@ int verifyOutputFilePath(char *path)
 //############################################################################
 // read_arbitrary_file()
 //############################################################################
-int read_arbitrary_file(char *input_path,
-                        unsigned char **data, size_t *data_length)
+int read_arbitrary_file(char *input_path, uint8_t ** data, size_t *data_length)
 {
 
   // Create a BIO for the input file
@@ -172,16 +171,8 @@ int read_arbitrary_file(char *input_path,
 //############################################################################
 // tpm2_kmyth_write_ski_file()
 //############################################################################
-int tpm2_kmyth_write_ski_file(char *output_path,
-                              char *orig_filename,
-                              TPML_PCR_SELECTION pcr_selection_list,
-                              TPM2B_PUBLIC storage_key_public,
-                              TPM2B_PRIVATE storage_key_private,
-                              char *cipher_string,
-                              TPM2B_PUBLIC wrap_key_public,
-                              TPM2B_PRIVATE wrap_key_private,
-                              uint8_t * encrypted_data,
-                              size_t encrypted_data_size)
+int tpm2_kmyth_write_ski_bytes_to_file(char *output_path, uint8_t * ski_bytes,
+                                       size_t ski_bytes_length)
 {
   // validate that file path exists and can be written to and open for writing
   if (verifyOutputFilePath(output_path))
@@ -198,213 +189,12 @@ int tpm2_kmyth_write_ski_file(char *output_path,
   }
   kmyth_log(LOG_DEBUG, "opened file \"%s\" for writing", output_path);
 
-  // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
-  // and structs (TPML_PCR_SELECTION)
-  // Note: must account for two extra bytes to include the buffer's size value
-  //       in the TPM2B_* sized buffer cases
-  size_t pcr_select_size = sizeof(pcr_selection_list);
-  size_t pcr_select_offset = 0;
-  uint8_t *pcr_select_data = calloc(pcr_select_size, sizeof(uint8_t));
-  size_t sk_pub_size = storage_key_public.size + 2;
-  size_t sk_pub_offset = 0;
-  uint8_t *sk_pub_data = malloc(sk_pub_size);
-  size_t sk_priv_size = storage_key_private.size + 2;
-  size_t sk_priv_offset = 0;
-  uint8_t *sk_priv_data = malloc(sk_priv_size);
-  size_t wk_pub_size = wrap_key_public.size + 2;
-  size_t wk_pub_offset = 0;
-  uint8_t *wk_pub_data = malloc(wk_pub_size);
-  size_t wk_priv_size = wrap_key_private.size + 2;
-  size_t wk_priv_offset = 0;
-  uint8_t *wk_priv_data = malloc(wk_priv_size);
-
-  if (tpm2_kmyth_marshal_skiObjects(&pcr_selection_list,
-                                    &pcr_select_data,
-                                    &pcr_select_size,
-                                    pcr_select_offset,
-                                    &storage_key_public,
-                                    &sk_pub_data,
-                                    &sk_pub_size,
-                                    sk_pub_offset,
-                                    &storage_key_private,
-                                    &sk_priv_data,
-                                    &sk_priv_size,
-                                    sk_priv_offset,
-                                    &wrap_key_public,
-                                    &wk_pub_data,
-                                    &wk_pub_size,
-                                    wk_pub_offset,
-                                    &wrap_key_private,
-                                    &wk_priv_data,
-                                    &wk_priv_size, wk_priv_offset))
+  if (fwrite(ski_bytes, sizeof(uint8_t), ski_bytes_length, file) !=
+      ski_bytes_length)
   {
-    kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
-    free(pcr_select_data);
-    free(sk_pub_data);
-    free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    fclose(file);
+    kmyth_log(LOG_ERR, "Error writing file ... exiting");
     return 1;
   }
-
-  // validate that all data to be written is non-NULL and non-empty
-  if (pcr_select_data == NULL ||
-      pcr_select_size == 0 ||
-      sk_pub_data == NULL ||
-      sk_pub_size == 0 ||
-      sk_priv_data == NULL ||
-      sk_priv_size == 0 ||
-      wk_pub_data == NULL ||
-      wk_pub_size == 0 ||
-      wk_priv_data == NULL ||
-      wk_priv_size == 0 ||
-      cipher_string == NULL ||
-      strlen(cipher_string) == 0 ||
-      encrypted_data == NULL || encrypted_data_size == 0)
-  {
-    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
-    free(pcr_select_data);
-    free(sk_pub_data);
-    free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    fclose(file);
-    return 1;
-  }
-
-  // write the original (base) input filename string
-  fprintf(file, "%s", KMYTH_DELIM_ORIGINAL_FILENAME);
-  printStringToFile(file, (unsigned char *) orig_filename,
-                    strlen(orig_filename));
-  fprintf(file, "\n");
-
-  // write the PCR selection list block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_PCR_SELECTION_LIST);
-  uint8_t *pcr64_select_data = NULL;
-  size_t pcr64_select_size = 0;
-
-  if (encodeBase64Data(pcr_select_data,
-                       pcr_select_size, &pcr64_select_data, &pcr64_select_size))
-  {
-    kmyth_log(LOG_ERR, "error base64 encoding storage key public ... exiting");
-    free(pcr_select_data);
-    free(sk_pub_data);
-    free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(pcr64_select_data);
-    fclose(file);
-    return 1;
-  }
-  free(pcr_select_data);
-  printStringToFile(file,
-                    (unsigned char *) pcr64_select_data, pcr64_select_size);
-  free(pcr64_select_data);
-
-  // write the storage key public block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_STORAGE_KEY_PUBLIC);
-  uint8_t *sk64_pub_data = NULL;
-  size_t sk64_pub_size = 0;
-
-  if (encodeBase64Data(sk_pub_data,
-                       sk_pub_size, &sk64_pub_data, &sk64_pub_size))
-  {
-    kmyth_log(LOG_ERR, "error base64 encoding storage key public ... exiting");
-    free(sk_pub_data);
-    free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(sk64_pub_data);
-    fclose(file);
-    return 1;
-  }
-  free(sk_pub_data);
-  printStringToFile(file, (unsigned char *) sk64_pub_data, sk64_pub_size);
-  free(sk64_pub_data);
-
-  // write the storage key encrypted private block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_STORAGE_KEY_PRIVATE);
-  uint8_t *sk64_priv_data = NULL;
-  size_t sk64_priv_size = 0;
-
-  if (encodeBase64Data(sk_priv_data,
-                       sk_priv_size, &sk64_priv_data, &sk64_priv_size))
-  {
-    kmyth_log(LOG_ERR, "error b64 encoding SK encrypted private ... exiting");
-    free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(sk64_priv_data);
-    fclose(file);
-    return 1;
-  }
-  free(sk_priv_data);
-  printStringToFile(file, (unsigned char *) sk64_priv_data, sk64_priv_size);
-  free(sk64_priv_data);
-
-  // write the cipher suite block
-  fprintf(file, "%s", KMYTH_DELIM_CIPHER_SUITE);
-  printStringToFile(file, (unsigned char *) cipher_string,
-                    strlen(cipher_string));
-  fprintf(file, "\n");
-
-  // write the symmetric key public block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_SYM_KEY_PUBLIC);
-  uint8_t *wk64_pub_data = NULL;
-  size_t wk64_pub_size = 0;
-
-  if (encodeBase64Data(wk_pub_data,
-                       wk_pub_size, &wk64_pub_data, &wk64_pub_size))
-  {
-    kmyth_log(LOG_ERR, "error b64 encoding wrapping key public ... exiting");
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(wk64_pub_data);
-    fclose(file);
-    return 1;
-  }
-  free(wk_pub_data);
-  printStringToFile(file, (unsigned char *) wk64_pub_data, wk64_pub_size);
-  free(wk64_pub_data);
-
-  // write the wrapping key encrypted private block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_SYM_KEY_PRIVATE);
-  uint8_t *wk64_priv_data = NULL;
-  size_t wk64_priv_size = 0;
-
-  if (encodeBase64Data(wk_priv_data,
-                       wk_priv_size, &wk64_priv_data, &wk64_priv_size))
-  {
-    kmyth_log(LOG_ERR,
-              "error b64 encoding wrap key encrypted private ... exiting");
-    free(wk_priv_data);
-    free(wk64_priv_data);
-    fclose(file);
-    return 1;
-  }
-  free(wk_priv_data);
-  printStringToFile(file, (unsigned char *) wk64_priv_data, wk64_priv_size);
-  free(wk64_priv_data);
-
-  // write the encrypted data block (data is base64 encoded)
-  fprintf(file, "%s", KMYTH_DELIM_ENC_DATA);
-  uint8_t *enc64_data = NULL;
-  size_t enc64_data_size = 0;
-
-  if (encodeBase64Data(encrypted_data,
-                       encrypted_data_size, &enc64_data, &enc64_data_size))
-  {
-    kmyth_log(LOG_ERR, "error base64 encoding encrypted data ... exiting");
-    free(enc64_data);
-    fclose(file);
-    return 1;
-  }
-  printStringToFile(file, (unsigned char *) enc64_data, enc64_data_size);
-  free(enc64_data);
-
-  // write the file end delimiter
-  fprintf(file, "%s", KMYTH_DELIM_END_FILE);
 
   // close the output .ski file
   fclose(file);
@@ -416,7 +206,6 @@ int tpm2_kmyth_write_ski_file(char *output_path,
 // tpm2_kmyth_read_ski_file()
 //############################################################################
 int tpm2_kmyth_read_ski_file(char *input_path,
-                             char **seal_input_fname,
                              TPML_PCR_SELECTION * pcr_select_list,
                              TPM2B_PUBLIC * storage_key_public,
                              TPM2B_PRIVATE * storage_key_private,
@@ -481,23 +270,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   // save pointer to 'original' contents so we can free this memory when done
   char *originalContents = contents;
 
-  // read in (parse out) original filename block - input filename when sealed
-  uint8_t *raw_seal_input_fname_data = NULL;
-  size_t raw_seal_input_fname_size = 0;
-
-  if (kmyth_getSkiBlock(&contents,
-                        &remaining,
-                        &raw_seal_input_fname_data,
-                        &raw_seal_input_fname_size,
-                        KMYTH_DELIM_ORIGINAL_FILENAME,
-                        KMYTH_DELIM_PCR_SELECTION_LIST))
-  {
-    kmyth_log(LOG_ERR, "get original filename error ... exiting");
-    free(originalContents);
-    free(raw_seal_input_fname_data);
-    return 1;
-  }
-
   // read in (parse out) 'raw' (encoded) PCR selection list block
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
@@ -511,7 +283,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     return 1;
   }
@@ -529,7 +300,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     return 1;
@@ -548,7 +318,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -567,7 +336,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -588,7 +356,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -609,7 +376,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -630,7 +396,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -646,7 +411,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   {
     kmyth_log(LOG_ERR, "unable to find the end of file in %s", input_path);
     free(originalContents);
-    free(raw_seal_input_fname_data);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -724,19 +488,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
   }
   else
   {
-    // create original filename string
-    if (raw_seal_input_fname_size > 0)
-    {
-      raw_seal_input_fname_data[raw_seal_input_fname_size - 1] = '\0';
-      *seal_input_fname = malloc(raw_seal_input_fname_size * sizeof(char));
-      memcpy(*seal_input_fname, raw_seal_input_fname_data,
-             raw_seal_input_fname_size);
-    }
-    else
-    {
-      *seal_input_fname = NULL;
-    }
-
     // create cipher suite struct
     raw_cipher_str_data[raw_cipher_str_size - 1] = '\0';
     *cipher_struct =
@@ -775,7 +526,6 @@ int tpm2_kmyth_read_ski_file(char *input_path,
     }
   }
 
-  free(raw_seal_input_fname_data);
   free(raw_cipher_str_data);
   free(decoded_pcr_select_list_data);
   free(decoded_sk_pub_data);
@@ -966,19 +716,8 @@ int kmyth_getSkiBlock(char **contents,
   // check that the block is not empty
   if (size == 0)
   {
-    // if original filename block is empty, null default filename may
-    // be OK if user specifies a destination - log this, though
-    if (strncmp(delim, KMYTH_DELIM_ORIGINAL_FILENAME, strlen(delim)) == 0)
-    {
-      kmyth_log(LOG_INFO, "empty original filename .ski file block");
-      *block = NULL;
-    }
-    // if any other block is empty, that is an error condition
-    else
-    {
-      kmyth_log(LOG_ERR, "empty .ski block ... exiting");
-      return 1;
-    }
+    kmyth_log(LOG_ERR, "empty .ski block ... exiting");
+    return 1;
   }
 
   else

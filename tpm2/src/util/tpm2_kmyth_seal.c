@@ -218,7 +218,6 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   //     file is specified by the user.
   //   - The encryption uses the symmetric 'cipher' specified by the user.
   //   - The symmetric wrapping key used for encryption
-  //     is created as part of the call to kmyth_wrap_input().
   kmyth_log(LOG_DEBUG, "wrapping input data");
   size_t wrapKey_size = get_key_len_from_cipher(ski.cipher) / 8;
   unsigned char *wrapKey = calloc(wrapKey_size, sizeof(unsigned char));
@@ -416,280 +415,48 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 // tpm2_kmyth_seal_file()
 //############################################################################
 int tpm2_kmyth_seal_file(char *input_path,
-                         char *output_path,
                          char *auth_string,
                          char *pcrs_string,
-                         char *owner_auth_passwd, char *cipher_string)
+                         char *owner_auth_passwd, char *cipher_string,
+                         uint8_t ** output, size_t *output_length)
 {
-  // Initialize connection to TPM 2.0 resource manager
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-  if (tpm2_init_connection(&sapi_ctx))
+  // Verify input path exists with read permissions
+  if (verifyInputFilePath(input_path))
   {
-    kmyth_log(LOG_ERR, "unable to init connection to TPM2 resource manager");
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
-
-  // Create 'cipher' struct to specify symmetric encryption of input data
-  // based on 'cipher_string'
-  //   - Kmyth symmetric cipher configuration is implemented in
-  //     src/util/kmyth_cipher.c. Default cipher string is specified in
-  //     include/kmyth_cipher.h.
-  //   - If cipher_string is null, the user did not specify a cipher
-  //     as a command line option. In this case, we will use the default.
-  //   - Initialize cipher struct based on option specified by cipher_string
-  //   - As resulting cipher.cipher_name will be null if cipher_string invalid,
-  //     handle this error case
-  if (cipher_string == NULL)
-  {
-    cipher_string = KMYTH_DEFAULT_CIPHER;
-  }
-  cipher_t cipher = kmyth_get_cipher_t_from_string(cipher_string);
-
-  if (cipher.cipher_name == NULL)
-  {
-    kmyth_log(LOG_ERR, "invalid cipher: %s ... exiting", cipher_string);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "cipher: %s", cipher.cipher_name);
-
-  // Create owner (storage) hierarchy authorization structure
-  TPM2B_AUTH ownerAuth;
-
-  ownerAuth.size = 0;
-  if (strlen(owner_auth_passwd) > 0)
-  {
-    ownerAuth.size = strlen(owner_auth_passwd);
-    memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
-  }
-  if (ownerAuth.size > 0)
-  {
-    kmyth_log(LOG_DEBUG, "TPM storage hierarchy auth string provided");
-  }
-  else if (ownerAuth.size == 0)
-  {
-    kmyth_log(LOG_DEBUG,
-              "using default (empty) auth string for TPM storage hierarchy");
-  }
-  else
-  {
-    // should never reach this code - ownerAuth.size should be:
-    //   - zero that it was initialized to
-    //   - strlen(owner_auth_password) value that is greater than zero
-    // included this case for completeness
-    kmyth_log(LOG_DEBUG,
-              "bad size: auth string for TPM storage hierarchy ... exiting");
-    tpm2_free_resources(&sapi_ctx);
+    kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", input_path);
     return 1;
   }
 
-  // Create authorization value for new, non-primary Kmyth objects (objectAuth)
-  //   - all-zero digest (like TPM 1.2 well-known secret) by default
-  //   - hash of input authorization string if one is specified  
-  TPM2B_AUTH objAuthVal = {.size = 0, };
-  tpm2_kmyth_create_authVal(auth_string, &objAuthVal);
+  uint8_t *data = NULL;
+  size_t data_length = 0;
 
-  // Create a "PCR Selection" struct and populate it in accordance with
-  // the PCR values specified in user input "PCR Selection" string, if any
-  // (if the "PCR Selection" string is NULL, the "PCR Selection" struct created
-  // will specify that no PCRs were selected by the user - all-zero mask)
-  // This PCR Selection struct will be used in the authorization policy for
-  // new, non-primary Kmyth objects.
-  TPML_PCR_SELECTION objPcrList = {.count = 0, };
-
-  if (init_pcr_selection(sapi_ctx, pcrs_string, &objPcrList))
+  kmyth_log(LOG_DEBUG, "reading input file ...");
+  if (read_arbitrary_file(input_path, &data, &data_length))
   {
-    kmyth_log(LOG_ERR, "error parsing PCR string: %s ... exiting", pcrs_string);
+    kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
+    free(data);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_length);
 
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    tpm2_free_resources(&sapi_ctx);
+  // validate non-empty plaintext buffer specified
+  if (data_length == 0 || data == NULL)
+  {
+    kmyth_log(LOG_ERR, "no input data ... exiting");
+    free(data);
     return 1;
   }
 
-  // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
-  // create, we will assign TPM 2.0 policy-based enhanced authorization
-  // critera. Therefore, we will calculate the authorization policy digest that
-  // results from applying the steps of our selected authorization policy. We
-  // can then incorporate this result into the objects we create as the
-  // authorization policy digest value that must be regenerated to authorize
-  // use of these objects.
-  TPM2B_DIGEST objAuthPolicy;
-
-  objAuthPolicy.size = 0;
-  if (tpm2_kmyth_create_policy_digest(sapi_ctx, objPcrList, &objAuthPolicy))
+  if (tpm2_kmyth_seal(data, data_length,
+                      output, output_length,
+                      auth_string,
+                      pcrs_string, owner_auth_passwd, cipher_string))
   {
-    kmyth_log(LOG_ERR,
-              "error creating policy digest for new Kmyth object ... exiting");
-
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
+    kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
+    free(output);
+    return (1);
   }
-
-  // The storage root key (SRK) is the primary key for the storage hierarchy
-  // in the TPM.  We will first check to see if it is already loaded in
-  // persistent storage. We do this by getting the loaded persistent handle
-  // values, inspecting each of their their public structures, and comparing
-  // these public area parameters against those for the SRK. None of these
-  // activities require authorization. If the key is not already loaded,
-  // though, it must be re-derived using the storage hierarchy's primary
-  // seed (SPS). Use of the SPS requires owner hierarchy authorization.
-  TPM2_HANDLE storageRootKey_handle = 0;
-
-  if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
-  {
-    kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
-
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
-
-  // We create a storage key (SK) that we will use to seal a symmetric
-  // wrapping key that we will create and use to encrypt the user input data.
-  // This storage key will be sealed to the SRK (its parent is the SRK).
-  TPM2B_PRIVATE storageKey_private;
-  TPM2B_PUBLIC storageKey_public;
-  TPM2_HANDLE storageKey_handle = 0;
-
-  storageKey_private.size = 0;
-  storageKey_public.size = 0;
-  if (tpm2_kmyth_create_sk(sapi_ctx,
-                           storageRootKey_handle,
-                           ownerAuth,
-                           objAuthVal,
-                           objPcrList, objAuthPolicy,
-                           &storageKey_handle,
-                           &storageKey_private, &storageKey_public))
-  {
-    kmyth_log(LOG_ERR, "failed to create a storage key ... exiting");
-
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // As this newly created storage key will be used by the TPM, we must load it
-  SESSION *nullAuthSession = NULL;  // no policy to auth load into SRK hierarchy
-  TPML_PCR_SELECTION emptyPcrList;
-
-  emptyPcrList.count = 0;       // no auth policy session means no PCR criteria
-  if (tpm2_kmyth_load_object(sapi_ctx,
-                             nullAuthSession,
-                             storageRootKey_handle,
-                             ownerAuth,
-                             emptyPcrList,
-                             &storageKey_private,
-                             &storageKey_public, &storageKey_handle))
-  {
-    kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
-
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // Done with owner hierarchy authorization - SRK and SK available in TPM
-  kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-
-  // Wrap input data -
-  //   - The data to be encrypted is contained in a file and the path to that
-  //     file is specified by the user.
-  //   - The encryption uses the symmetric 'cipher' specified by the user.
-  //   - The symmetric wrapping key used for encryption
-  //     is created as part of the call to kmyth_wrap_input().
-  kmyth_log(LOG_DEBUG, "wrapping input data");
-  size_t wrapped_data_size = 0;
-  unsigned char *wrapped_data = NULL;
-  size_t wrapKey_size = get_key_len_from_cipher(cipher) / 8;
-  unsigned char *wrapKey = calloc(wrapKey_size, sizeof(unsigned char));
-
-  if (kmyth_wrap_input(input_path,
-                       cipher,
-                       &wrapped_data,
-                       &wrapped_data_size, &wrapKey, &wrapKey_size))
-  {
-    kmyth_log(LOG_ERR, "kmyth_wrap_input() call failed ... exiting");
-
-    // even though wrapping failed, overwrite wrap key before freeing
-    // also free memory set aside for wrapped data before exiting early
-    kmyth_clear_and_free(&wrapKey, wrapKey_size);
-    free(wrapped_data);
-
-    // clear authVal data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "input data wrapped");
-
-  // private and public blobs for sealed data object 
-  TPM2B_PRIVATE sealedData_private;
-  TPM2B_PUBLIC sealedData_public;
-
-  // init private and public blobs to empty  
-  sealedData_private.size = 0;
-  sealedData_public.size = 0;
-
-  // Seal the wrapping key to the TPM using the Storage Key (SK)
-  if (tpm2_kmyth_seal_data(sapi_ctx,
-                           wrapKey,
-                           wrapKey_size,
-                           storageKey_handle,
-                           objAuthVal,
-                           objPcrList,
-                           objAuthVal,
-                           objPcrList,
-                           objAuthPolicy,
-                           &sealedData_public, &sealedData_private))
-  {
-    kmyth_log(LOG_ERR, "unable to seal data ... exiting");
-    kmyth_clear_and_free(wrapKey, wrapKey_size);
-    free(wrapped_data);
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // Clean-up:
-  //   - done with unencrypted wrapping key (now have sealed version)
-  //   - done with authVal
-  kmyth_clear_and_free(wrapKey, wrapKey_size);
-  kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-
-  // Create .ski file
-  if (tpm2_kmyth_write_ski_file(output_path,
-                                basename(input_path),
-                                objPcrList,
-                                storageKey_public,
-                                storageKey_private,
-                                cipher.cipher_name,
-                                sealedData_public, sealedData_private,
-                                wrapped_data, wrapped_data_size))
-  {
-    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    free(wrapped_data);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // done, so free any allocated resources that remain
-  free(wrapped_data);
-  tpm2_free_resources(&sapi_ctx);
 
   return 0;
 }
@@ -698,7 +465,6 @@ int tpm2_kmyth_seal_file(char *input_path,
 // tpm2_kmyth_unseal_file()
 //############################################################################
 int tpm2_kmyth_unseal_file(char *input_path,
-                           char **default_out_path,
                            char *auth_string,
                            char *owner_auth_passwd,
                            uint8_t ** output_data, size_t *output_size)
@@ -767,7 +533,6 @@ int tpm2_kmyth_unseal_file(char *input_path,
   size_t enc_data_size = 0;
 
   if (tpm2_kmyth_read_ski_file(input_path,
-                               default_out_path,
                                &objPcrList,
                                &storageKey_public,
                                &storageKey_private,

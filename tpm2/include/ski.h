@@ -9,9 +9,6 @@
 
 typedef struct Ski_s
 {
-  //Original filename if data was encrypted using kmyth-seal
-  char *original_filename;
-
   //List of PCRs chosen to use when kmyth-sealing
   TPML_PCR_SELECTION pcr_list;
 
@@ -32,14 +29,6 @@ typedef struct Ski_s
 
 } Ski;
 
-/*
- * The following syntax: 
- *
- * 		Ski ski = Ski_default;
- *
- * can be used to create a default ski struct with known values.
- */
-
 /**
  * @brief Takes in a string and validates
  *
@@ -59,8 +48,5 @@ int tpm2_kmyth_create_ski_string(Ski input, uint8_t ** output,
 void free_ski(Ski * ski);
 
 Ski get_default_ski(void);
-
-//int tpm2_kmyth_create_ski_string(Ski input, uint8_t ** output,
-//                                 size_t *output_length);
 
 #endif /* SKI_H */

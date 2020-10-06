@@ -31,27 +31,6 @@ int tpm2_kmyth_parse_ski_string(uint8_t * input, size_t input_length,
 {
   size_t remaining = input_length;
 
-  // read in (parse out) original filename block - input filename when sealed
-  size_t block_size = 0;
-
-  if (kmyth_getSkiBlock((char **) &input,
-                        &remaining,
-                        (unsigned char **) &output->original_filename,
-                        &block_size,
-                        KMYTH_DELIM_ORIGINAL_FILENAME,
-                        KMYTH_DELIM_PCR_SELECTION_LIST))
-  {
-    kmyth_log(LOG_ERR, "get original filename error ... exiting");
-    free_ski(output);
-    return 1;
-  }
-
-  // create original filename string
-  if (block_size == 0)
-  {
-    output->original_filename = NULL;
-  }
-
   // read in (parse out) 'raw' (encoded) PCR selection list block
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
@@ -443,10 +422,6 @@ int tpm2_kmyth_create_ski_string(Ski input,
   uint8_t *out = NULL;
   size_t out_length = 0;
 
-  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_ORIGINAL_FILENAME,
-         strlen(KMYTH_DELIM_ORIGINAL_FILENAME));
-  concat(&out, &out_length, (uint8_t *) "\n", 1);
-
   concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_PCR_SELECTION_LIST,
          strlen(KMYTH_DELIM_PCR_SELECTION_LIST));
   concat(&out, &out_length, pcr64_select_data, pcr64_select_size);
@@ -494,7 +469,7 @@ int tpm2_kmyth_create_ski_string(Ski input,
 
 Ski get_default_ski(void)
 {
-  Ski ret = {.original_filename = NULL,
+  Ski ret = {
     .pcr_list = {.count = 0,},
     .sk_pub = {.size = 0,},
     .sk_priv = {.size = 0,},
@@ -509,7 +484,6 @@ Ski get_default_ski(void)
 
 void free_ski(Ski * ski)
 {
-  free(ski->original_filename);
   free(ski->enc_data);
   ski->enc_data_size = 0;
 }
