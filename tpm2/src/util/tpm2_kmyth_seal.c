@@ -415,10 +415,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 // tpm2_kmyth_seal_file()
 //############################################################################
 int tpm2_kmyth_seal_file(char *input_path,
+                         uint8_t ** output, size_t *output_length,
                          char *auth_string,
                          char *pcrs_string,
-                         char *owner_auth_passwd, char *cipher_string,
-                         uint8_t ** output, size_t *output_length)
+                         char *owner_auth_passwd, char *cipher_string)
 {
 
   // Verify input path exists with read permissions
@@ -465,9 +465,8 @@ int tpm2_kmyth_seal_file(char *input_path,
 // tpm2_kmyth_unseal_file()
 //############################################################################
 int tpm2_kmyth_unseal_file(char *input_path,
-                           char *auth_string,
-                           char *owner_auth_passwd,
-                           uint8_t ** output_data, size_t *output_length)
+                           uint8_t ** output, size_t *output_length,
+                           char *auth_string, char *owner_auth_passwd)
 {
 
   uint8_t *data = NULL;
@@ -480,8 +479,7 @@ int tpm2_kmyth_unseal_file(char *input_path,
   }
 
   if (tpm2_kmyth_unseal(data, data_length,
-                        output_data, output_length,
-                        auth_string, owner_auth_passwd))
+                        output, output_length, auth_string, owner_auth_passwd))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     free(data);

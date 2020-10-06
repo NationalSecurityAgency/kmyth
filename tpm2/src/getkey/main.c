@@ -245,9 +245,8 @@ int main(int argc, char **argv)
   size_t clientPrivateKey_size = 0;
 
   if (tpm2_kmyth_unseal_file(inPath,
-                             authString,
-                             ownerAuthPasswd,
-                             &clientPrivateKey_data, &clientPrivateKey_size))
+                             &clientPrivateKey_data, &clientPrivateKey_size,
+                             authString, ownerAuthPasswd))
   {
     kmyth_log(LOG_ERR, "Unable to unseal the certificate's private key.");
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);

@@ -27,7 +27,7 @@
 // tpm2_kmyth_parse_ski_bytes
 //############################################################################
 int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
-                                Ski * output)
+                               Ski * output)
 {
   size_t remaining = input_length;
 
@@ -297,7 +297,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
 // tpm2_kmyth_create_ski_bytes
 //############################################################################
 int tpm2_kmyth_create_ski_bytes(Ski input,
-                                 uint8_t ** output, size_t *output_length)
+                                uint8_t ** output, size_t *output_length)
 {
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)

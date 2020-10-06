@@ -41,7 +41,7 @@ typedef struct Ski_s
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
-                                Ski * output);
+                               Ski * output);
 
 /**
  * @brief Creates a byte array in .ski format from a ski struct
@@ -55,7 +55,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_create_ski_bytes(Ski input, uint8_t ** output,
-                                 size_t *output_length);
+                                size_t *output_length);
 
 /**
  * @brief Frees the contents of a ski struct

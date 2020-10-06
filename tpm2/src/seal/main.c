@@ -232,9 +232,9 @@ int main(int argc, char **argv)
   size_t output_length = 0;
 
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(inPath,
+  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            authString, pcrsString, ownerAuthPasswd,
-                           cipherString, &output, &output_length))
+                           cipherString))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     if (authString != NULL)
