@@ -72,7 +72,7 @@ int tpm2_kmyth_seal_file(char *input_path,
 int tpm2_kmyth_unseal_file(char *input_path,
                            char *auth_string,
                            char *owner_auth_passwd,
-                           uint8_t ** output_data, size_t *output_size);
+                           uint8_t ** output_data, size_t *output_length);
 
 /**
  * @brief Seal data using TPM 2.0.

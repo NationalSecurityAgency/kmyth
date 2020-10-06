@@ -69,24 +69,23 @@ int verifyOutputFilePath(char *path);
  *
  * @return 0 if success, 1 if error
  */
-int read_arbitrary_file(char *input_path, uint8_t ** data, size_t *data_length);
+int read_bytes_from_file(char *input_path, uint8_t ** data,
+                         size_t *data_length);
 
 /**
- * @brief Writes sealed key meta-data to a .ski file.
+ * @brief Verifies output_path is valid, then writes bytes to file
  * 
  * @param[in]  output_path             String containing the path to the
- *                                     output .ski file to be produced.
+ *                                     output file
  *
- * @param[in]  ski_bytes               Bytes resulting from kmyth-seal in
- *                                     .ski format
+ * @param[in]  bytes               Bytes to be written
  *
- * @param[in]  ski_bytes_length        Size, in bytes, of the .ski data
+ * @param[in]  bytes_length        Number of bytes to be written
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_write_ski_bytes_to_file(char *output_path,
-                                       uint8_t * ski_bytes,
-                                       size_t ski_bytes_length);
+int write_bytes_to_file(char *output_path,
+                        uint8_t * bytes, size_t bytes_length);
 
 /**
  * @brief Reads Kmyth sealing meta-data from a .ski file.

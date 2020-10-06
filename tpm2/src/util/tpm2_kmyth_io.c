@@ -124,9 +124,9 @@ int verifyOutputFilePath(char *path)
 }
 
 //############################################################################
-// read_arbitrary_file()
+// read_bytes_from_file()
 //############################################################################
-int read_arbitrary_file(char *input_path, uint8_t ** data, size_t *data_length)
+int read_bytes_from_file(char *input_path, uint8_t ** data, size_t *data_length)
 {
 
   // Create a BIO for the input file
@@ -169,10 +169,9 @@ int read_arbitrary_file(char *input_path, uint8_t ** data, size_t *data_length)
 }
 
 //############################################################################
-// tpm2_kmyth_write_ski_file()
+// write_bytes_to_file
 //############################################################################
-int tpm2_kmyth_write_ski_bytes_to_file(char *output_path, uint8_t * ski_bytes,
-                                       size_t ski_bytes_length)
+int write_bytes_to_file(char *output_path, uint8_t * bytes, size_t bytes_length)
 {
   // validate that file path exists and can be written to and open for writing
   if (verifyOutputFilePath(output_path))
@@ -189,8 +188,7 @@ int tpm2_kmyth_write_ski_bytes_to_file(char *output_path, uint8_t * ski_bytes,
   }
   kmyth_log(LOG_DEBUG, "opened file \"%s\" for writing", output_path);
 
-  if (fwrite(ski_bytes, sizeof(uint8_t), ski_bytes_length, file) !=
-      ski_bytes_length)
+  if (fwrite(bytes, sizeof(uint8_t), bytes_length, file) != bytes_length)
   {
     kmyth_log(LOG_ERR, "Error writing file ... exiting");
     return 1;

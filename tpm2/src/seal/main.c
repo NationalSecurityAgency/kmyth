@@ -247,7 +247,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  if (tpm2_kmyth_write_ski_bytes_to_file(outPath, output, output_length))
+  if (write_bytes_to_file(outPath, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
     if (authString != NULL)

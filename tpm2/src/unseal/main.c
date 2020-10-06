@@ -109,9 +109,10 @@ int main(int argc, char **argv)
     }
   }
   // Check that input path (file to be sealed) was specified
-  if (inPath == NULL)
+  if (inPath == NULL || (outPath == NULL && stdout_flag == false))
   {
-    kmyth_log(LOG_ERR, "no input (sealed data file) specified ... exiting");
+    kmyth_log(LOG_ERR,
+              "Input file and output file (or stdout) must both be specified ... exiting");
     if (authString != NULL)
     {
       kmyth_clear(authString, strlen(authString));
@@ -133,18 +134,48 @@ int main(int argc, char **argv)
       return 1;
     }
   }
+  // If output to be written to file - validate that path
+  if (stdout_flag == false)
+  {
+    // Verify output path
+    if (verifyOutputFilePath(outPath))
+    {
+      kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      return 1;
+    }
+
+    // If 'force overwrite' flag not set, make sure filename doesn't exist
+    if (!forceOverwrite)
+    {
+      struct stat st = { 0 };
+      if (!stat(outPath, &st))
+      {
+        kmyth_log(LOG_ERR,
+                  "output filename (%s) already exists ... exiting", outPath);
+        if (authString != NULL)
+        {
+          kmyth_clear(authString, strlen(authString));
+        }
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+        return 1;
+      }
+    }
+  }
 
   // Call top-level "kmyth-unseal" function
-  char *default_outPath = NULL;
-  uint8_t *outputData = NULL;
-  size_t outputSize = 0;
+  uint8_t *output = NULL;
+  size_t output_length = 0;
 
   if (tpm2_kmyth_unseal_file(inPath,
-                             authString, ownerAuthPasswd, &outputData,
-                             &outputSize))
+                             authString, ownerAuthPasswd, &output,
+                             &output_length))
   {
-    free(default_outPath);
-    kmyth_clear_and_free(outputData, outputSize);
+    kmyth_clear_and_free(output, output_length);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     if (authString != NULL)
     {
@@ -161,53 +192,16 @@ int main(int argc, char **argv)
   }
   kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
 
-  // If output to be written to file - validate that path
-  if (stdout_flag == false)
-  {
-    // If user didn't specify an output file path, use default
-    if (outPath == NULL)
-    {
-      outPath = default_outPath;
-    }
-
-    // Verify output path
-    if (verifyOutputFilePath(outPath))
-    {
-      kmyth_log(LOG_ERR, "kmyth-unseal encountered invalid outfile path");
-      free(default_outPath);
-      kmyth_clear_and_free(outputData, outputSize);
-      return 1;
-    }
-
-    // If 'force overwrite' flag not set, make sure default filename
-    // does not already exist
-    if (!forceOverwrite)
-    {
-      struct stat st = { 0 };
-      if (!stat(outPath, &st))
-      {
-        kmyth_log(LOG_ERR,
-                  "default output filename (%s) already exists ... exiting",
-                  outPath);
-        free(default_outPath);
-        kmyth_clear_and_free(outputData, outputSize);
-        return 1;
-      }
-    }
-  }
-
   if (stdout_flag == true)
   {
-    if (print_to_stdout(outputData, outputSize))
+    if (print_to_stdout(output, output_length))
     {
       kmyth_log(LOG_ERR, "error printing to stdout");
     }
   }
   else
   {
-    FILE *file = fopen(outPath, "w");
-
-    if (fwrite(outputData, sizeof(uint8_t), outputSize, file) != outputSize)
+    if (write_bytes_to_file(outPath, output, output_length))
     {
       kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
     }
@@ -217,8 +211,7 @@ int main(int argc, char **argv)
     }
   }
 
-  free(default_outPath);
-  kmyth_clear_and_free(outputData, outputSize);
+  kmyth_clear_and_free(output, output_length);
 
   return 0;
 }
