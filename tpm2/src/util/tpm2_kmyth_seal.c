@@ -431,7 +431,6 @@ int tpm2_kmyth_seal_file(char *input_path,
   uint8_t *data = NULL;
   size_t data_length = 0;
 
-  kmyth_log(LOG_DEBUG, "reading input file ...");
   if (read_bytes_from_file(input_path, &data, &data_length))
   {
     kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
