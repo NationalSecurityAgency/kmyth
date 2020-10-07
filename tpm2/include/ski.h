@@ -23,14 +23,16 @@ typedef struct Ski_s
   TPM2B_PUBLIC wk_pub;
   TPM2B_PRIVATE wk_priv;
 
-  //Data being encrypted
+  //The data encrypted by kmyth-seal
   uint8_t *enc_data;
   size_t enc_data_size;
 
 } Ski;
 
 /**
- * @brief Parses a .ski formatted bytes into a ski struct
+ * @brief Parses a .ski formatted bytes into a ski struct. The 
+ *        output is only modified on success, otherwise the 
+ *        pointer is untouched
  *
  * @param[in]  input					The bytes in .ski format
  *
@@ -103,7 +105,7 @@ Ski get_default_ski(void);
  *
  * @param[in] next_delim    String value representing the next expected
  *                          delimiter.
- * @return
+ * @return 0 on success, 1 on failure
  */
 int get_ski_block_bytes(char **contents,
                         size_t *remaining, unsigned char **block,

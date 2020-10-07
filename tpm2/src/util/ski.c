@@ -30,6 +30,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                                Ski * output)
 {
   size_t remaining = input_length;
+  Ski temp_ski = get_default_ski();
 
   // read in (parse out) 'raw' (encoded) PCR selection list block
   uint8_t *raw_pcr_select_list_data = NULL;
@@ -43,7 +44,6 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC))
   {
     kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
-    free_ski(output);
     free(raw_pcr_select_list_data);
     return 1;
   }
@@ -60,7 +60,6 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_STORAGE_KEY_PRIVATE))
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
-    free_ski(output);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     return 1;
@@ -78,7 +77,6 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_CIPHER_SUITE))
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
-    free_ski(output);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -96,7 +94,6 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_CIPHER_SUITE, KMYTH_DELIM_SYM_KEY_PUBLIC))
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
-    free_ski(output);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -106,11 +103,12 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
 
   // create cipher suite struct
   raw_cipher_str_data[raw_cipher_str_size - 1] = '\0';
-  output->cipher = kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
-  if (output->cipher.cipher_name == NULL)
+  temp_ski.cipher =
+    kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
+  if (temp_ski.cipher.cipher_name == NULL)
   {
     kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
-    free_ski(output);
+    free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -130,7 +128,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_SYM_KEY_PRIVATE))
   {
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
-    free_ski(output);
+    free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -149,7 +147,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_SYM_KEY_PRIVATE, KMYTH_DELIM_ENC_DATA))
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
-    free_ski(output);
+    free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -168,7 +166,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
                           KMYTH_DELIM_ENC_DATA, KMYTH_DELIM_END_FILE))
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
-    free_ski(output);
+    free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -183,7 +181,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
       || remaining != strlen(KMYTH_DELIM_END_FILE))
   {
     kmyth_log(LOG_ERR, "unable to find the end delimiter ... exiting");
-    free_ski(output);
+    free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
@@ -248,8 +246,8 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
 
   // decode the encrypted data block
   retval |= decodeBase64Data(raw_enc_data,
-                             raw_enc_size, &output->enc_data,
-                             &output->enc_data_size);
+                             raw_enc_size, &temp_ski.enc_data,
+                             &temp_ski.enc_data_size);
   free(raw_enc_data);
 
   if (retval)
@@ -258,23 +256,23 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
   }
   else
   {
-    retval = tpm2_kmyth_unmarshal_skiObjects(&output->pcr_list,
+    retval = tpm2_kmyth_unmarshal_skiObjects(&temp_ski.pcr_list,
                                              decoded_pcr_select_list_data,
                                              decoded_pcr_select_list_size,
                                              decoded_pcr_select_list_offset,
-                                             &output->sk_pub,
+                                             &temp_ski.sk_pub,
                                              decoded_sk_pub_data,
                                              decoded_sk_pub_size,
                                              decoded_sk_pub_offset,
-                                             &output->sk_priv,
+                                             &temp_ski.sk_priv,
                                              decoded_sk_priv_data,
                                              decoded_sk_priv_size,
                                              decoded_sk_priv_offset,
-                                             &output->wk_pub,
+                                             &temp_ski.wk_pub,
                                              decoded_sym_pub_data,
                                              decoded_sym_pub_size,
                                              decoded_sym_pub_offset,
-                                             &output->wk_priv,
+                                             &temp_ski.wk_priv,
                                              decoded_sym_priv_data,
                                              decoded_sym_priv_size,
                                              decoded_sym_priv_offset);
@@ -289,7 +287,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
   free(decoded_sk_priv_data);
   free(decoded_sym_pub_data);
   free(decoded_sym_priv_data);
-
+  *output = temp_ski;
   return retval;
 }
 
