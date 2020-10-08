@@ -187,7 +187,7 @@ int main(int argc, char **argv)
   // If configured to write to an output file, verify that path
   if (outPath != NULL)
   {
-    if (verifyInputOutputPaths(inPath, outPath))
+    if (verifyOutputFilePath(outPath))
     {
       kmyth_log(LOG_ERR, "error verifying output path ... exiting");
       if (authString != NULL)
@@ -245,10 +245,8 @@ int main(int argc, char **argv)
   size_t clientPrivateKey_size = 0;
 
   if (tpm2_kmyth_unseal_file(inPath,
-                             &sdo_orig_fn,
-                             authString,
-                             ownerAuthPasswd,
-                             &clientPrivateKey_data, &clientPrivateKey_size))
+                             &clientPrivateKey_data, &clientPrivateKey_size,
+                             authString, ownerAuthPasswd))
   {
     kmyth_log(LOG_ERR, "Unable to unseal the certificate's private key.");
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);
@@ -319,9 +317,9 @@ int main(int argc, char **argv)
   }
   else
   {
-    if (print_to_file(outPath, key, key_size) != 0)
+    if (write_bytes_to_file(outPath, key, key_size))
     {
-      kmyth_log(LOG_ERR, "error writing file: %s", outPath);
+      kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
     }
   }
 

@@ -316,13 +316,6 @@
 /** 
  * @ingroup block_delim
  *
- * @brief   Indicates the start of the original (input) filename block
- */
-#define KMYTH_DELIM_ORIGINAL_FILENAME "-----ORIGINAL FILENAME-----\n"
-
-/** 
- * @ingroup block_delim
- *
  * @brief   Indicates the start of the PCR selection list block
  */
 #define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"

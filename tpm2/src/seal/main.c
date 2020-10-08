@@ -170,19 +170,6 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  // Verify input path exists with read permissions
-  if (verifyInputFilePath(inPath))
-  {
-    kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", inPath);
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    free(outPath);
-    return 1;
-  }
-
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL)
@@ -241,22 +228,11 @@ int main(int argc, char **argv)
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
-  // Verify output path is valid
-  if (verifyOutputFilePath(outPath))
-  {
-    kmyth_log(LOG_ERR, "output path (%s) is not valid ... exiting", outPath);
+  uint8_t *output = NULL;
+  size_t output_length = 0;
 
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    free(outPath);
-    return 1;
-  }
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(inPath,
-                           outPath,
+  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            authString, pcrsString, ownerAuthPasswd,
                            cipherString))
   {
@@ -267,16 +243,29 @@ int main(int argc, char **argv)
     }
     kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
+    free(output);
     return 1;
   }
 
-  // Clean-up any remaining resources
+  if (write_bytes_to_file(outPath, output, output_length))
+  {
+    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    free(outPath);
+    free(output);
+    return 1;
+  }
+
   if (authString != NULL)
   {
     kmyth_clear(authString, strlen(authString));
   }
   kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
   free(outPath);
-
+  free(output);
   return 0;
 }
