@@ -216,27 +216,29 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
  * TPM 2.0 supports two types of "password" authorization. In the first, and
  * simplest, a plaintext password can be used directly. In the second the
  * password is used as an input to HMAC-based authorization. This code
- * supports an implementation of the second. The user passes in a plaintext
- * password (e.g., as a command line parameter), which is referred to here
- * as an authorization string. This function computes the hash of this
- * password and that result is referred to as the authorization value
- * (authVal). When authorizing TPM commands, this authVal is used as the
- * key for a keyed hash (HMAC) computation.
+ * supports an implementation of the second. The user passes in bytes
+ * (e.g., as a command line parameter), which is referred to here as the 
+ * auth_bytes. This function computes the hash of these bytes and that result 
+ * is referred to as the authorization value (authVal). When authorizing TPM 
+ * commands, this authVal is used as the key for a keyed hash (HMAC) computation.
  * 
- * @param[in]  authStringIn Authorization string to use in creating the authVal
- *                          used in the authorization policy applied to Kmyth
- *                          ordinary (storage key and sealed data) objects.
+ * @param[in]  auth_bytes     Authorization string to use in creating the authVal
+ *                            used in the authorization policy applied to Kmyth
+ *                            ordinary (storage key and sealed data) objects.
  *
- * @param[out] authValOut   TPM 2.0 authorization value (digest) structure to
- *                          contain the result computed by this function:
- *                          <UL>
- *                            <LI> all-zero digest if input string is NULL
- *                            <LI> hash of input string otherwise
- *                          </UL>
+ * @param[in]  auth_bytes_len length of authStringIn
+ *
+ * @param[out] authValOut     TPM 2.0 authorization value (digest) structure to
+ *                            contain the result computed by this function:
+ *                            <UL>
+ *                              <LI> all-zero digest if input string is NULL
+ *                              <LI> hash of input string otherwise
+ *                            </UL>
  *
  * @return None
  */
-void tpm2_kmyth_create_authVal(char *authStringIn, TPM2B_AUTH * authValOut);
+void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
+                               TPM2B_AUTH * authValOut);
 
 /**
  * @brief Creates a random initial nonce value that the caller can send to the

@@ -31,11 +31,11 @@ extern const cipher_t cipher_list[];
 //############################################################################
 // tpm2_kmyth_seal()
 //############################################################################
-int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
-                    uint8_t ** output, size_t *output_length,
-                    char *auth_string,
-                    char *pcrs_string,
-                    char *owner_auth_passwd, char *cipher_string)
+int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
+                    uint8_t ** output, size_t *output_len,
+                    uint8_t * auth_bytes, size_t auth_bytes_len,
+                    uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                    char *pcrs_string, char *cipher_string)
 {
 
   //init connection to the resource manager
@@ -69,12 +69,10 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   // Create owner (storage) hierarchy authorization structure
   TPM2B_AUTH ownerAuth;
 
-  ownerAuth.size = 0;
-  if (owner_auth_passwd != NULL && strlen(owner_auth_passwd) > 0)
+  ownerAuth.size = oa_bytes_len;
+  if (owner_auth_bytes != NULL && oa_bytes_len > 0)
   {
-    ownerAuth.size = strlen(owner_auth_passwd);
-    memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
-    kmyth_clear(owner_auth_passwd, strlen(owner_auth_passwd));
+    memcpy(ownerAuth.buffer, owner_auth_bytes, ownerAuth.size);
   }
   if (ownerAuth.size > 0)
   {
@@ -101,11 +99,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   //   - all-zero digest (like TPM 1.2 well-known secret) by default
   //   - hash of input authorization string if one is specified
   TPM2B_AUTH objAuthVal = {.size = 0, };
-  tpm2_kmyth_create_authVal(auth_string, &objAuthVal);
-  if (auth_string != NULL)
-  {
-    kmyth_clear(auth_string, strlen(auth_string));
-  }
+  tpm2_kmyth_create_authVal(auth_bytes, auth_bytes_len, &objAuthVal);
 
   // Create a "PCR Selection" struct and populate it in accordance with
   // the PCR values specified in user input "PCR Selection" string, if any
@@ -223,14 +217,14 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   unsigned char *wrapKey = calloc(wrapKey_size, sizeof(unsigned char));
 
   // validate non-empty plaintext buffer specified
-  if (input_length == 0 || input == NULL)
+  if (input_len == 0 || input == NULL)
   {
     kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
 
   // encrypt (wrap) input data read in (e.g., client certificate private .pem)
-  if (kmyth_encrypt_data(input, input_length,
+  if (kmyth_encrypt_data(input, input_len,
                          ski.cipher, &ski.enc_data, &ski.enc_data_size,
                          &wrapKey, &wrapKey_size))
   {
@@ -264,7 +258,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
   kmyth_clear_and_free(wrapKey, wrapKey_size);
   kmyth_clear(objAuthVal.buffer, objAuthVal.size);
 
-  if (tpm2_kmyth_create_ski_bytes(ski, output, output_length))
+  if (tpm2_kmyth_create_ski_bytes(ski, output, output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski format ... exiting");
     tpm2_free_resources(&sapi_ctx);
@@ -282,7 +276,8 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_length,
 //############################################################################
 int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                       uint8_t ** output, size_t *output_len,
-                      char *auth_string, char *owner_auth_passwd)
+                      uint8_t * auth_bytes, size_t auth_bytes_len,
+                      uint8_t * owner_auth_bytes, size_t oa_bytes_len)
 {
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
@@ -301,12 +296,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   //   - Storage Primary Seed (SPS), if necessary to re-derive SRK
   TPM2B_AUTH ownerAuth;
 
-  ownerAuth.size = 0;
-  if (owner_auth_passwd != NULL && strlen(owner_auth_passwd) > 0)
+  ownerAuth.size = oa_bytes_len;
+  if (owner_auth_bytes != NULL && oa_bytes_len > 0)
   {
-    ownerAuth.size = strlen(owner_auth_passwd);
-    memcpy(ownerAuth.buffer, owner_auth_passwd, ownerAuth.size);
-    kmyth_clear(owner_auth_passwd, strlen(owner_auth_passwd));
+    memcpy(ownerAuth.buffer, owner_auth_bytes, ownerAuth.size);
   }
 
   if (ownerAuth.size > 0)
@@ -322,11 +315,7 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   //   - hash of input authorization string if one is specified
   TPM2B_AUTH objAuthValue;
 
-  tpm2_kmyth_create_authVal(auth_string, &objAuthValue);
-  if (auth_string != NULL)
-  {
-    kmyth_clear(auth_string, strlen(auth_string));
-  }
+  tpm2_kmyth_create_authVal(auth_bytes, auth_bytes_len, &objAuthValue);
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
@@ -415,10 +404,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 // tpm2_kmyth_seal_file()
 //############################################################################
 int tpm2_kmyth_seal_file(char *input_path,
-                         uint8_t ** output, size_t *output_length,
-                         char *auth_string,
-                         char *pcrs_string,
-                         char *owner_auth_passwd, char *cipher_string)
+                         uint8_t ** output, size_t *output_len,
+                         uint8_t * auth_bytes, size_t auth_bytes_len,
+                         uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                         char *pcrs_string, char *cipher_string)
 {
 
   // Verify input path exists with read permissions
@@ -429,28 +418,29 @@ int tpm2_kmyth_seal_file(char *input_path,
   }
 
   uint8_t *data = NULL;
-  size_t data_length = 0;
+  size_t data_len = 0;
 
-  if (read_bytes_from_file(input_path, &data, &data_length))
+  if (read_bytes_from_file(input_path, &data, &data_len))
   {
     kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
     free(data);
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_length);
+  kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_len);
 
   // validate non-empty plaintext buffer specified
-  if (data_length == 0 || data == NULL)
+  if (data_len == 0 || data == NULL)
   {
     kmyth_log(LOG_ERR, "no input data ... exiting");
     free(data);
     return 1;
   }
 
-  if (tpm2_kmyth_seal(data, data_length,
-                      output, output_length,
-                      auth_string,
-                      pcrs_string, owner_auth_passwd, cipher_string))
+  if (tpm2_kmyth_seal(data, data_len,
+                      output, output_len,
+                      auth_bytes, auth_bytes_len,
+                      owner_auth_bytes, oa_bytes_len,
+                      pcrs_string, cipher_string))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
     free(output);
@@ -465,7 +455,8 @@ int tpm2_kmyth_seal_file(char *input_path,
 //############################################################################
 int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output, size_t *output_length,
-                           char *auth_string, char *owner_auth_passwd)
+                           uint8_t * auth_bytes, size_t auth_bytes_len,
+                           uint8_t * owner_auth_bytes, size_t oa_bytes_len)
 {
 
   uint8_t *data = NULL;
@@ -476,9 +467,9 @@ int tpm2_kmyth_unseal_file(char *input_path,
     kmyth_log(LOG_ERR, "Unable to read file %s ... exiting", input_path);
     return (1);
   }
-
   if (tpm2_kmyth_unseal(data, data_length,
-                        output, output_length, auth_string, owner_auth_passwd))
+                        output, output_length, auth_bytes, auth_bytes_len,
+                        owner_auth_bytes, oa_bytes_len))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     free(data);

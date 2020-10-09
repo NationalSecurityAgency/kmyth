@@ -200,14 +200,15 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
 //############################################################################
 // tpm2_kmyth_create_authVal()
 //############################################################################
-void tpm2_kmyth_create_authVal(char *authStringIn, TPM2B_AUTH * authValOut)
+void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
+                               TPM2B_AUTH * authValOut)
 {
   // Set authVal size to digest size produced by Kmyth hash algorithm
   authValOut->size = KMYTH_DIGEST_SIZE;
 
   // If no authorization string was specified by the user (NULL string passed
   // in), initialize authorization value to the default (all-zero digest)
-  if (authStringIn == NULL)
+  if (auth_bytes == NULL)
   {
     kmyth_log(LOG_DEBUG, "NULL authorization string");
     memset(authValOut->buffer, 0, authValOut->size);
@@ -217,15 +218,10 @@ void tpm2_kmyth_create_authVal(char *authStringIn, TPM2B_AUTH * authValOut)
   // authorization value digest as the hash of user specified string.
   else
   {
-    kmyth_log(LOG_DEBUG,
-              "user specified authorization string = \"%s\"", authStringIn);
-
     // use OpenSSL EVP_Digest() to compute hash
-    EVP_Digest(authStringIn, strlen(authStringIn), authValOut->buffer, NULL,
+    EVP_Digest((char *) auth_bytes, auth_bytes_len, authValOut->buffer, NULL,
                KMYTH_OPENSSL_HASH, NULL);
   }
-  kmyth_log(LOG_DEBUG, "authVal: 0x%02X..%02X", authValOut->buffer[0],
-            authValOut->buffer[authValOut->size - 1]);
 }
 
 //############################################################################

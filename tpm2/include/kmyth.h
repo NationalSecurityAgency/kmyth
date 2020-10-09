@@ -22,30 +22,36 @@
  * @param[in]  output_path       Path to .ski file where the kmyth-seal output
  *                               will be written
  *
- * @param[in]  auth_string       Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               wrapping key) created by kmyth-seal
+ *
+ * @param[in]  auth_bytes_len    length of auth_string
+ *
+ * @param[in]  owner_auth_bytes  TPM owner (storage) hierarchy password.
+ *                               EmptyAuth by default, but, if it has been
+ *                               changed (e.g., by tpm2_takeownership), user
+ *                               must provide via this parameter.
+ *
+ * @param[in]  oa_bytes_len      number of bytes in owner_auth_passwd
  *
  * @param[in]  pcrs_string       String indicating which PCRs, if any, to apply
  *                               to the authorization policy for Kmyth TPM
  *                               objects created by kmyth-seal.
  *                               (i.e., storage key and sealed wrapping key)
- *
- * @param[in]  owner_auth_passwd TPM owner (storage) hierarchy password.
- *                               EmptyAuth by default, but, if it has been
- *                               changed (e.g., by tpm2_takeownership), user
- *                               must provide via this parameter.
+ *                               Must be NULL or '\0' terminated
  *
  * @param[in]  cipher_string     String indicating the symmetric cipher to use
- *                               for encrypting the input data.
+ *                               for encrypting the input data. Must be NULL 
+ *                               or '\0' terminated
  *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
                     uint8_t ** output, size_t *output_len,
-                    char *auth_string,
-                    char *pcrs_string,
-                    char *owner_auth_passwd, char *cipher_string);
+                    uint8_t * auth_bytes, size_t auth_bytes_len,
+                    uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                    char *pcrs_string, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal
@@ -59,21 +65,25 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
  *
  * @param[out] output_len        The size of the output data
  *
- * @param[in]  auth_string       Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               data) created by kmyth-seal
  *
- * @param[in]  owner_auth_passwd TPM owner (storage) hierarchy password.
+ * @param[in]  auth_bytes_len    Number of bytes in auth_bytes
+ *
+ * @param[in]  owner_auth_bytes  TPM owner (storage) hierarchy password.
  *                               EmptyAuth by default, but, if it has been
  *                               changed (e.g., by tpm2_takeownership), user
- *                               must provide via this parameter. (passed as
- *                               a string)
+ *                               must provide via this parameter.
+ *
+ * @param[in] oa_bytes_len       Number of bytes in owner_auth_bytes
  *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                       uint8_t ** output, size_t *output_len,
-                      char *auth_string, char *owner_auth_passwd);
+                      uint8_t * auth_bytes, size_t auth_bytes_len,
+                      uint8_t * owner_auth_bytes, size_t oa_bytes_len);
 
 /**
  * @brief High-level function implementing kmyth-seal for files
@@ -83,31 +93,38 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
  * @param[out] output            The result of tpm2_kmyth_seal as bytes in
  *                               .ski format
  *
- * @param[out] output_length     The length, in bytes, of output
+ * @param[out] output_len        The length, in bytes, of output
  *
- * @param[in]  auth_string       Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               wrapping key) created by kmyth-seal
  *
- * @param[in]  pcrs_string       String indicating which PCRs, if any, to apply
- *                               to the authorization policy for Kmyth TPM
- *                               objects created by kmyth-seal.
- *                               (i.e., storage key and sealed wrapping key)
+ * @param[in]  auth_bytes_len    length of auth_string
  *
- * @param[in]  owner_auth_passwd TPM owner (storage) hierarchy password.
+ * @param[in]  owner_auth_bytes  TPM owner (storage) hierarchy password.
  *                               EmptyAuth by default, but, if it has been
  *                               changed (e.g., by tpm2_takeownership), user
  *                               must provide via this parameter.
  *
+ * @param[in]  oa_bytes_len      number of bytes in owner_auth_passwd
+ *
+ * @param[in]  pcrs_string       String indicating which PCRs, if any, to apply
+ *                               to the authorization policy for Kmyth TPM
+ *                               objects created by kmyth-seal.
+ *                               (i.e., storage key and sealed wrapping key
+ *                               Must be NULL or '\0' terminated
+ *
  * @param[in]  cipher_string     String indicating the symmetric cipher to use
- *                               for encrypting the input data.
+ *                               for encrypting the input data. Must be NULL
+ *                               or '\0' terminated
  *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_seal_file(char *input_path,
-                         uint8_t ** output, size_t *output_length,
-                         char *auth_string, char *pcrs_string,
-                         char *owner_auth_passwd, char *cipher_string);
+                         uint8_t ** output, size_t *output_len,
+                         uint8_t * auth_bytes, size_t auth_bytes_len,
+                         uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                         char *pcrs_string, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files
@@ -120,19 +137,23 @@ int tpm2_kmyth_seal_file(char *input_path,
  * @param[out] output_size       Size (in bytes) of decrypted result
  *                               (passed as pointer to size value)
  *
- * @param[in]  auth_string       Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization string to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               data) created by kmyth-seal
  *
- * @param[in]  owner_auth_passwd TPM owner (storage) hierarchy password.
+ * @param[in]  auth_bytes_len    Number of bytes in auth_bytes
+ *
+ * @param[in]  owner_auth_bytes  TPM owner (storage) hierarchy password.
  *                               EmptyAuth by default, but, if it has been
  *                               changed (e.g., by tpm2_takeownership), user
- *                               must provide via this parameter. (passed as
- *                               a string)
+ *                               must provide via this parameter.
+ *
+ * @param[in]  oa_bytes_len      Number of bytes in owner_auth_bytes
  *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output, size_t *output_length,
-                           char *auth_string, char *owner_auth_passwd);
+                           uint8_t * auth_bytes, size_t auth_bytes_len,
+                           uint8_t * owner_auth_bytes, size_t oa_bytes_len);
 #endif /* KMYTH_H */

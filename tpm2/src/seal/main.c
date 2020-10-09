@@ -157,15 +157,20 @@ int main(int argc, char **argv)
     }
   }
 
+  //Since these originate in main() we know they are null terminated
+  size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
+  size_t oa_passwd_len =
+    (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
+
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
     if (authString != NULL)
     {
-      kmyth_clear(authString, strlen(authString));
+      kmyth_clear(authString, auth_string_len);
     }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(outPath);
     return 1;
   }
@@ -199,11 +204,8 @@ int main(int argc, char **argv)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
       free(temp_str);
-      if (authString != NULL)
-      {
-        kmyth_clear(authString, strlen(authString));
-      }
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      kmyth_clear(authString, auth_string_len);
+      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
     // Make sure default filename we constructed doesn't already exist
@@ -214,11 +216,8 @@ int main(int argc, char **argv)
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
       free(temp_str);
-      if (authString != NULL)
-      {
-        kmyth_clear(authString, strlen(authString));
-      }
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      kmyth_clear(authString, auth_string_len);
+      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
     // Go ahead and make the default value the output path
@@ -233,38 +232,29 @@ int main(int argc, char **argv)
 
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
-                           authString, pcrsString, ownerAuthPasswd,
-                           cipherString))
+                           (uint8_t *) authString, auth_string_len,
+                           (uint8_t *) ownerAuthPasswd, oa_passwd_len,
+                           pcrsString, cipherString))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    kmyth_clear(authString, auth_string_len);
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(outPath);
     free(output);
     return 1;
   }
+
+  kmyth_clear(authString, auth_string_len);
+  kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
   if (write_bytes_to_file(outPath, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
     free(outPath);
     free(output);
     return 1;
   }
 
-  if (authString != NULL)
-  {
-    kmyth_clear(authString, strlen(authString));
-  }
-  kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
   free(outPath);
   free(output);
   return 0;
