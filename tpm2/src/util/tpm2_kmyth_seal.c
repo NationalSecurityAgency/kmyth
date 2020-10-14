@@ -326,7 +326,10 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   if (auth_string != NULL)
   {
     kmyth_clear(auth_string, strlen(auth_string));
+    kmyth_log(LOG_ERR, "error creating authorization value (authVal) ... exiting");
+    return 1;
   }
+  kmyth_log(LOG_DEBUG, "created authorization value (authVal)");
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
