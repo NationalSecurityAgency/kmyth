@@ -265,6 +265,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
     return 1;
   }
 
+  free_ski(&ski);
   // done, so free any allocated resources that remain
   tpm2_free_resources(&sapi_ctx);
 
@@ -443,10 +444,10 @@ int tpm2_kmyth_seal_file(char *input_path,
                       pcrs_string, cipher_string))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
-    free(output);
+    free(data);
     return (1);
   }
-
+  free(data);
   return 0;
 }
 

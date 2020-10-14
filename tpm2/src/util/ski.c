@@ -116,7 +116,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
     free(raw_cipher_str_data);
     return 1;
   }
-
+  free(raw_cipher_str_data);
   // read in (parse out) 'raw' (encoded) public data block for the wrapping key
   uint8_t *raw_sym_pub_data = NULL;
   size_t raw_sym_pub_size = 0;
@@ -311,7 +311,7 @@ int tpm2_kmyth_create_ski_bytes(Ski input,
   size_t sk_pub_size = input.sk_pub.size + 2;
   size_t sk_pub_offset = 0;
   uint8_t *sk_pub_data = malloc(sk_pub_size);
-  size_t sk_priv_size = input.sk_pub.size + 2;
+  size_t sk_priv_size = input.sk_priv.size + 2;
   size_t sk_priv_offset = 0;
   uint8_t *sk_priv_data = malloc(sk_priv_size);
   size_t wk_pub_size = input.wk_pub.size + 2;
