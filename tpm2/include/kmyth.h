@@ -22,7 +22,7 @@
  * @param[in]  output_path       Path to .ski file where the kmyth-seal output
  *                               will be written
  *
- * @param[in]  auth_bytes        Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization bytes to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               wrapping key) created by kmyth-seal
  *
@@ -65,7 +65,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
  *
  * @param[out] output_len        The size of the output data
  *
- * @param[in]  auth_bytes        Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization bytes to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               data) created by kmyth-seal
  *
@@ -95,7 +95,7 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
  *
  * @param[out] output_len        The length, in bytes, of output
  *
- * @param[in]  auth_bytes        Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization bytes to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               wrapping key) created by kmyth-seal
  *
@@ -137,7 +137,7 @@ int tpm2_kmyth_seal_file(char *input_path,
  * @param[out] output_size       Size (in bytes) of decrypted result
  *                               (passed as pointer to size value)
  *
- * @param[in]  auth_bytes        Authorization string to be applied to the
+ * @param[in]  auth_bytes        Authorization bytes to be applied to the
  *                               Kmyth TPM objects (i.e, storage key and sealed
  *                               data) created by kmyth-seal
  *

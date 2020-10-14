@@ -211,7 +211,7 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
 
 /**
  * @brief Creates an authorization value digest from an input authorization
- *        string (all-zero digest if the authorization string is NULL)
+ *        string (all-zero digest if the authorization bytes are NULL)
  *
  * TPM 2.0 supports two types of "password" authorization. In the first, and
  * simplest, a plaintext password can be used directly. In the second the
@@ -222,7 +222,7 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
  * is referred to as the authorization value (authVal). When authorizing TPM 
  * commands, this authVal is used as the key for a keyed hash (HMAC) computation.
  * 
- * @param[in]  auth_bytes     Authorization string to use in creating the authVal
+ * @param[in]  auth_bytes     Authorization bytes to use in creating the authVal
  *                            used in the authorization policy applied to Kmyth
  *                            ordinary (storage key and sealed data) objects.
  *
@@ -352,7 +352,7 @@ void tpm2_kmyth_compute_rpHash(TPM2_RC rspCode,
  * @param[in]  auth_pHash             Command or response parameter hash
  *
  * @param[in]  auth_authValue         Authorization value (hash of
- *                                    authorization string) for authorization
+ *                                    authorization bytes) for authorization
  *                                    entity of command.
  *
  * @param[in]  auth_sessionAttributes Session attributes for current

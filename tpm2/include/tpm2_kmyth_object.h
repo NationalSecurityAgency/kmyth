@@ -228,8 +228,8 @@ int tpm2_init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
  *                                              <LI> all-zero hash (hash of
  *                                                   default emptyAuth)
  *                                              </LI>
- *                                              <LI> hash of user supplied
- *                                                   authorization string,
+ *                                              <LI> hash of the supplied
+ *                                                   authorization bytes,
  *                                                   if applicable
  *                                              </LI>
  *                                            </UL>
@@ -365,8 +365,8 @@ int tpm2_kmyth_create_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   respresent the password for the owner
  *                                   (storage) hierarchy. Alternatively,
  *                                   if the parent is an SK, this should be
- *                                   the hash of the authorization string,
- *                                   which is empty (all-zero hash) by default.
+ *                                   the hash of the authorization bytes,
+ *                                   which are empty (all-zero hash) by default.
  *
  * @param[in]  parent_pcrList        PCR List structure indicating the PCR
  *                                   values that the parent (SRK if a SK is
@@ -416,9 +416,9 @@ int tpm2_kmyth_load_object(TSS2_SYS_CONTEXT * sapi_ctx,
  * @param[in]  object_auth                Authorization value associated with
  *                                        the data object when it was created
  *                                        and now needed to unseal it. Should
- *                                        be hash of an authorization string or
+ *                                        be hash of the authorization bytes or
  *                                        the default all-zero hash associated
- *                                        with an empty authorization string.
+ *                                        with empty authorization bytes.
  *
  * @param[in]  object_pcrList             PCR List structure indicating the PCR
  *                                        values to which the data object was
