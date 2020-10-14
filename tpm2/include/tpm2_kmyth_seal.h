@@ -90,8 +90,8 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
  * @param[in]  authVal        Authorization value required to load and then
  *                            unseal the input 'data' blob. This is the hash
  *                            of either the emptyAuth by default (all-zero
- *                            hash) or the hash of the user supplied
- *                            authorization string.
+ *                            hash) or the hash of the supplied authorization
+ *                            bytes.
  *
  * @param[in]  pcrList        PCR Selection structure indicating which PCR
  *                            values must be included to authorize loading

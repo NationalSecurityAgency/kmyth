@@ -118,6 +118,7 @@ size_t get_key_len_from_cipher(cipher_t cipher)
   }
 
   int key_len = atoi(key_len_string);
+
   if (key_len <= 0)
   {
     kmyth_log(LOG_ERR, "Unable to convert key length to a positive integer");

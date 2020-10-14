@@ -94,8 +94,8 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
  * @param[in]  sk_authVal    Authorization value (authVal) for storage key
  *                           to be created (put into the new storage key
  *                           object's sensitive data). Should be either hash
- *                           of the authorization string passed in by the user
- *                           on the command line or the default all-zero hash.
+ *                           of the authorization bytes passed in or the
+ *                           default all-zero hash.
  *
  * @param[in]  sk_pcrList    PCR Selection List struct indicating the set of
  *                           PCRs to which the storage key should be sealed
