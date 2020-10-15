@@ -21,7 +21,7 @@ Table of Contents
 
   * [Usage](#usage)
 
-  * [TPM-Tips](#tpm-tips)
+  * [TPM-Tips and Notes](#notes)
 
   * [Random-Sources](#random-sources)
 
