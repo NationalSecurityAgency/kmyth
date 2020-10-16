@@ -1,5 +1,11 @@
 #include <stdint.h>
 
+#ifndef KMYTHSGXSEAL_H
+#define KMYTHSGXSEAL_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Tell the library where to find the Sealing/Unsealing enclave binary
  *
@@ -58,3 +64,8 @@ int sgx_seal_seal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_da
  * @see sgx_tseal.h
  */
 int sgx_seal_unseal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data, uint32_t out_size);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
