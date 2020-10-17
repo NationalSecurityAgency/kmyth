@@ -27,12 +27,12 @@ LDLIBS += -lkmip#                         libkmip
 # Specify compiler flags
 CFLAGS = -Wall#                          enable all warnings
 CFLAGS += -c#                            compile, but do not link
-CFLAGS += ${DEBUG}#                      debugging options (above)
+CFLAGS += $(DEBUG)#                      debugging options (above)
 CFLAGS += -D_GNU_SOURCE#                 GNU/LINUX platform
 CFLAGS += -fPIC#                         Generate position independent code
 
 KMYTH_CFLAGS = $(CFLAGS)
-KMYTH_CFLAGS += -I${LOGGER_DIR}/include#    kmyth logging utility header files
+KMYTH_CFLAGS += -I$(LOGGER_DIR)/include#    kmyth logging utility header files
 
 # Specify flags for the SO build of the logger
 LOGGER_CFLAGS = $(CFLAGS)
@@ -51,6 +51,9 @@ SRC_DIR = src
 BIN_DIR = bin
 DOC_DIR = doc
 LIB_DIR = lib
+TEST_DIR = test
+TEST_INC_DIR = $(TEST_DIR)/include
+TEST_OBJ_DIR = $(TEST_DIR)/obj
 LOGGER_INC_DIR = $(LOGGER_DIR)/include
 LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
 LOGGER_SRC_DIR = $(LOGGER_DIR)/src
@@ -76,17 +79,30 @@ GETKEY_OBJECTS = $(subst $(GETKEY_SRC_DIR), $(GETKEY_OBJ_DIR), $(GETKEY_SOURCES:
 
 # Specify Kmyth 'utility function' source/object path/files
 UTIL_SRC_DIR = $(SRC_DIR)/util
-UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*c)
+UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), $(UTIL_OBJ_DIR), $(UTIL_SOURCES:%.c=%.o))
 
 # Specify logger source/object/header files
-LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*c)
+LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), $(LOGGER_OBJ_DIR), $(LOGGER_SOURCES:%.c=%.o))
 
+# Specify, then consolidate kmyth-test source/object path/files
+TEST_MAIN_SOURCES = $(TEST_DIR)/kmyth-test.c
+TEST_MAIN_OBJECTS = $(TEST_OBJ_DIR)/kmyth-test.o
+TEST_UTIL_SRC_DIR = $(TEST_DIR)/util
+TEST_UTIL_SOURCES = $(wildcard $(TEST_UTIL_SRC_DIR)/*.c)
+TEST_UTIL_OBJ_DIR = $(TEST_OBJ_DIR)/util
+TEST_UTIL_OBJECTS = $(subst $(TEST_UTIL_SRC_DIR), $(TEST_UTIL_OBJ_DIR), $(TEST_UTIL_SOURCES:%.c=%.o))
+TEST_SOURCES = $(TEST_MAIN_SOURCES)
+TEST_SOURCES += $(TEST_UTIL_SOURCES)
+TEST_OBJECTS = $(TEST_UTIL_OBJECTS)
+TEST_OBJECTS += $(TEST_MAIN_OBJECTS)
+
 # Specify Kmyth header files
-HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*h)
-LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*h)
+HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
+LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
+TEST_HEADER_FILES = $(wildcard $(TEST_INC_DIR)/*.h)
 
 #Specify path for logger output of shared library
 KMYTH_LIB_NAME = kmyth
@@ -101,6 +117,7 @@ OBJECT_DIRS += $(UTIL_OBJ_DIR)
 OBJECT_DIRS += $(LOGGER_OBJ_DIR)
 DOC_DIRS = $(DOC_DIR)
 DOC_DIRS += $(LOGGER_DOC_DIR)
+TEST_OBJECT_DIRS = $(TEST_UTIL_OBJ_DIR)
 
 .PHONY: all
 all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
@@ -117,7 +134,7 @@ kmyth-unseal: $(UNSEAL_OBJECTS)
 kmyth-getkey: $(GETKEY_OBJECTS)
 	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
-$(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGER_HEADERS)
+$(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGGER_HEADER_FILES)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
@@ -126,7 +143,7 @@ $(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR)
 $(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
-$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c | $(UTIL_OBJ_DIR)
+$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c $(INCLUDE_DIR)/%.h | $(UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
@@ -146,6 +163,23 @@ pre:
 .PHONY: doc
 doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
+
+.PHONY: test
+test: pretest kmyth-test
+	./bin/kmyth-test 2>/dev/null
+
+.PHONY: pretest
+pretest:
+	mkdir -p $(TEST_OBJECT_DIRS)
+
+$(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) $< -o $@
+
+$(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c $(TEST_INC_DIR)/%.h | $(TEST_UTIL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) -I$(INCLUDE_DIR) $< -o $@
+
+kmyth-test: $(TEST_OBJECTS)
+	$(CC) $(TEST_OBJECTS) -o $(BIN_DIR)/kmyth-test $(LDFLAGS) $(LDLIBS) -lcunit -lkmyth
 
 .PHONY: install
 install:
@@ -172,3 +206,4 @@ clean:
 	rm -rf $(OBJECT_DIRS)
 	rm -rf $(DOC_DIRS)
 	rm -rf $(LIB_DIR)
+	rm -rf $(TEST_OBJ_DIR)
