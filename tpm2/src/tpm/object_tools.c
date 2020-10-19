@@ -42,7 +42,15 @@ int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
   sensitiveArea->sensitive.data.size = object_dataSize;
   // TODO: Calling memcpy with either source or dest addresses set to NULL
   // is technically undefined behavior. However, object_data is expected
-  // to be NULL in certain conditions.
+if ( (object_dataSize == 0) || (object_data == NULL) )
+{
+   sensitiveArea->sensitive.data.size = 0;
+}
+else
+{
+    sensitiveArea->sensitive.data.size = object_dataSize;
+    memcpy(&sensitiveArea.sensitive.data.buffer, object_data, sensitiveArea.sensitive.data.size);
+}
   memcpy(&sensitiveArea->sensitive.data.buffer, object_data,
          sensitiveArea->sensitive.data.size);
   if (object_dataSize > 0)
