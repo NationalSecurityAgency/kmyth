@@ -4,10 +4,10 @@
  */
 
 #include "tpm2_kmyth_global.h"
-#include "cipher.h"
-#include "aes_keywrap_5649pad.h"
-#include "aes_keywrap_3394nopad.h"
-#include "aes_gcm.h"
+#include "cipher/cipher.h"
+#include "cipher/aes_keywrap_5649pad.h"
+#include "cipher/aes_keywrap_3394nopad.h"
+#include "cipher/aes_gcm.h"
 
 #include <stdlib.h>
 #include <string.h>

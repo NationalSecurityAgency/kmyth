@@ -6,7 +6,7 @@
 
 #include "tpm2_kmyth_seal.h"
 #include "tpm2_kmyth_global.h"
-#include "cipher.h"
+#include "cipher/cipher.h"
 #include "memory_util.h"
 #include "tpm2_kmyth_session.h"
 #include "file_io.h"

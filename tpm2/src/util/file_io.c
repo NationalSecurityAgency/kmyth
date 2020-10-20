@@ -6,7 +6,7 @@
  */
 
 #include "file_io.h"
-#include "cipher.h"
+#include "cipher/cipher.h"
 #include "tpm2_kmyth_mu.h"
 #include "tpm2_kmyth_global.h"
 #include "memory_util.h"

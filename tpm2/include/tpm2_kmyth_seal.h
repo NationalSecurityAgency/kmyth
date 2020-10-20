@@ -7,7 +7,7 @@
 #ifndef TPM2_KMYTH_SEAL_H
 #define TPM2_KMYTH_SEAL_H
 
-#include "cipher.h"
+#include "cipher/cipher.h"
 
 #include <stdint.h>
 #include <tss2/tss2_sys.h>

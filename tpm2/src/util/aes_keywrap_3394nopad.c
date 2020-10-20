@@ -4,7 +4,7 @@
  * @brief Implements AES Key Wrap with no padding (RFC 3394) for Kmyth.
  */
 
-#include "aes_keywrap_3394nopad.h"
+#include "cipher/aes_keywrap_3394nopad.h"
 #include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>

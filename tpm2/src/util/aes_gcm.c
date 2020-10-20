@@ -4,7 +4,7 @@
  * @brief Implements AES GCM for kmyth.
  */
 
-#include "aes_gcm.h"
+#include "cipher/aes_gcm.h"
 #include "memory_util.h"
 #include "tpm2_kmyth_global.h"
 

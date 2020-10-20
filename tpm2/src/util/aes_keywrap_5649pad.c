@@ -4,7 +4,7 @@
  * @brief Implements AES Key Wrap with Padding (RFC 5649) for kmyth.
  */
 
-#include "aes_keywrap_5649pad.h"
+#include "cipher/aes_keywrap_5649pad.h"
 #include "tpm2_kmyth_global.h"
 
 #include <stdlib.h>
