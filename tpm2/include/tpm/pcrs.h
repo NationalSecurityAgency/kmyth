@@ -1,12 +1,12 @@
 /**
- * @file  tpm2_pcrManagement.h
+ * @file  pcrs.h
  *
  * @brief Provides utility functions for using TPM 2.0 platform configuration
  *        registers (PCRs).
  *
  */
-#ifndef TPM2_PCRMANAGEMENT_H
-#define TPM2_PCRMANAGEMENT_H
+#ifndef PCRS_H
+#define PCRS_H
 
 #include <stdbool.h>
 
@@ -63,4 +63,4 @@ int tpm2_get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
 bool tpm2_pcrSelection_isEqual(TPML_PCR_SELECTION pcrSelectA,
                                TPML_PCR_SELECTION pcrSelectB);
 
-#endif /* TPM2_PCRMANAGEMENT_H */
+#endif /* PRCS_H */

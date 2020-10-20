@@ -11,7 +11,7 @@
 #include "tpm2_kmyth_session.h"
 #include "file_io.h"
 #include "storage_key_tools.h"
-#include "tpm2_pcrManagement.h"
+#include "pcrs.h"
 #include "tpm2_kmyth_object.h"
 #include "tpm2_config_tools.h"
 #include "tpm2_info_tools.h"

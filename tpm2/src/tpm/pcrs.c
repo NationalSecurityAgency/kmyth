@@ -1,10 +1,10 @@
 /**
- * @file  tpm2_pcrManagement.c
+ * @file  pcrs.c
  * @brief Implements library supporting Kmyth applications utilizing
  *        Platform Configuration Registers (PCRs) in TPM 2.0.
  */
 
-#include "tpm2_pcrManagement.h"
+#include "pcrs.h"
 #include "defines.h"
 #include "tpm2_info_tools.h"
 
