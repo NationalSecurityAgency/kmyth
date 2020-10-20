@@ -61,22 +61,10 @@ LOGGER_SRC_DIR = $(LOGGER_DIR)/src
 LOGGER_DOC_DIR = $(LOGGER_DIR)/doc
 
 # Specify kmyth-seal main() source/object path/files
-SEAL_SRC_DIR = $(SRC_DIR)/seal
-SEAL_SOURCES = $(wildcard $(SEAL_SRC_DIR)/*.c)
-SEAL_OBJ_DIR = $(OBJ_DIR)/seal
-SEAL_OBJECTS = $(subst $(SEAL_SRC_DIR), $(SEAL_OBJ_DIR), $(SEAL_SOURCES:%.c=%.o))
-
-# Specify kmyth-unseal main() source/object path/files
-UNSEAL_SRC_DIR = $(SRC_DIR)/unseal
-UNSEAL_SOURCES = $(wildcard $(UNSEAL_SRC_DIR)/*.c)
-UNSEAL_OBJ_DIR = $(OBJ_DIR)/unseal
-UNSEAL_OBJECTS = $(subst $(UNSEAL_SRC_DIR), $(UNSEAL_OBJ_DIR), $(UNSEAL_SOURCES:%.c=%.o))
-
-# Specify kmyth-getkey main() source/object path/files
-GETKEY_SRC_DIR = $(SRC_DIR)/getkey
-GETKEY_SOURCES = $(wildcard $(GETKEY_SRC_DIR)/*.c)
-GETKEY_OBJ_DIR = $(OBJ_DIR)/getkey
-GETKEY_OBJECTS = $(subst $(GETKEY_SRC_DIR), $(GETKEY_OBJ_DIR), $(GETKEY_SOURCES:%.c=%.o))
+MAIN_SRC_DIR = $(SRC_DIR)/main
+MAIN_SOURCES = $(wildcard $(MAIN_SRC_DIR)/*.c)
+MAIN_OBJ_DIR = $(OBJ_DIR)/main
+MAIN_OBJECTS = $(subst $(MAIN_SRC_DIR), $(MAIN_OBJ_DIR), $(MAIN_SOURCES:%.c=%.o))
 
 # Specify Kmyth 'utility function' source/object path/files
 UTIL_SRC_DIR = $(SRC_DIR)/util
@@ -110,7 +98,6 @@ TEST_OBJECTS += $(TEST_MAIN_OBJECTS)
 HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
 HEADER_FILES += $(wildcard $(CIPHER_INCLUDE_DIR)/*.h)
 LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
-TEST_HEADER_FILES = $(wildcard $(TEST_INC_DIR)/*.h)
 
 #Specify path for logger output of shared library
 KMYTH_LIB_NAME = kmyth
@@ -118,9 +105,7 @@ KMYTH_LIB_SONAME = lib$(KMYTH_LIB_NAME).so
 KMYTH_LIB_LOCAL_DEST = $(LIB_DIR)/$(KMYTH_LIB_SONAME)
 
 # Consolidate created directories to simplify mkdir call for 'pre' target below
-OBJECT_DIRS = $(SEAL_OBJ_DIR)
-OBJECT_DIRS += $(UNSEAL_OBJ_DIR)
-OBJECT_DIRS += $(GETKEY_OBJ_DIR)
+OBJECT_DIRS = $(MAIN_OBJ_DIR)
 OBJECT_DIRS += $(UTIL_OBJ_DIR)
 OBJECT_DIRS += $(CIPHER_OBJ_DIR)
 OBJECT_DIRS += $(LOGGER_OBJ_DIR)
@@ -134,25 +119,19 @@ all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
 kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS)
 	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
 
-kmyth-seal: $(SEAL_OBJECTS)
-	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-seal: $(MAIN_OBJ_DIR)/seal.o
+	$(CC) $(MAIN_OBJ_DIR)/seal.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
 
-kmyth-unseal: $(UNSEAL_OBJECTS)
-	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o
+	$(CC) $(MAIN_OBJ_DIR)/unseal.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
 
-kmyth-getkey: $(GETKEY_OBJECTS)
-	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o
+	$(CC) $(MAIN_OBJ_DIR)/getkey.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGGER_HEADER_FILES)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
 
-$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
+$(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c | $(MAIN_OBJ_DIR) 
 	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c $(INCLUDE_DIR)/%.h | $(UTIL_OBJ_DIR)
@@ -173,7 +152,7 @@ pre:
 	mkdir -p $(LIB_DIR)
 
 .PHONY: doc
-doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
+doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(MAIN_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
 
 .PHONY: test
