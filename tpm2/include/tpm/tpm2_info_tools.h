@@ -56,22 +56,6 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
 
 /**
- * There are a number of fixed TPM properties (tagged properties)
- * that are returned as 32-bit integers into which up to four 8-byte
- * characters have been packed (four concatenated bytes that can be
- * interpreted as a string of up to four ASCII characters). This 
- * utility function can be used to recover the string representation.
- * 
- * @param[in]  uint_value 32-bit unsigned integer input value
- * 
- * @param[out] str_repr   String representation output -
- *                        passed as pointer to the string
- *
- * @return 0 if success, 1 if error
- */
-int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
-
-/**
  * @brief Translates error string from hex into human readable.
  *
  * Got translations from comments in:

@@ -443,4 +443,20 @@ int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
                         size_t packed_data_in_size,
                         size_t packed_data_in_offset);
 
+/**
+ * There are a number of fixed TPM properties (tagged properties)
+ * that are returned as 32-bit integers into which up to four 8-byte
+ * characters have been packed (four concatenated bytes that can be
+ * interpreted as a string of up to four ASCII characters). This
+ * utility function can be used to recover the string representation.
+ *
+ * @param[in]  uint_value 32-bit unsigned integer input value
+ *
+ * @param[out] str_repr   String representation output -
+ *                        passed as pointer to the string
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
+
 #endif /* TPM2_KMYTH_MU_H */

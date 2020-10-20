@@ -8,6 +8,7 @@
 
 #include "tpm2_info_tools.h"
 #include "defines.h"
+#include "tpm2_kmyth_mu.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
