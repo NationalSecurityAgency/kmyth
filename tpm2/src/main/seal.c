@@ -2,11 +2,11 @@
  * Kmyth Sealing Interface - TPM 2.0 version
  */
 
-#include "tpm2_kmyth_global.h"
-#include "tpm2_kmyth_seal.h"
 #include "memory_util.h"
 #include "file_io.h"
 #include "kmyth.h"
+#include "cipher/cipher.h"
+#include "tpm/tpm2_kmyth_global.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -14,9 +14,7 @@
 #include <getopt.h>
 #include <stdbool.h>
 #include <sys/stat.h>
-
 #include <kmyth_log.h>
-
 #include <tss2/tss2_sys.h>
 
 /**
