@@ -4,9 +4,8 @@
 
 #include "tpm2_kmyth_global.h"
 #include "tpm2_kmyth_seal.h"
-#include "kmyth_cipher.h"
-#include "tpm2_kmyth_misc.h"
-#include "tpm2_kmyth_io.h"
+#include "memory_util.h"
+#include "file_io.h"
 #include "kmyth.h"
 
 #include <stdio.h>

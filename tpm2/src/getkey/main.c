@@ -9,8 +9,8 @@
 
 #include "tls_util.h"
 #include "tpm2_kmyth_global.h"
-#include "tpm2_kmyth_io.h"
-#include "tpm2_kmyth_misc.h"
+#include "file_io.h"
+#include "memory_util.h"
 #include "tpm2_kmyth_seal.h"
 #include "kmyth.h"
 

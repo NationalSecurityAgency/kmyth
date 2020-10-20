@@ -5,7 +5,7 @@
  * using TPM 2.0
  */
 
-#include "tpm2_kmyth_misc.h"
+#include "memory_util.h"
 
 #include <stdlib.h>
 

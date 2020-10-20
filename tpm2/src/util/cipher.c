@@ -4,7 +4,7 @@
  */
 
 #include "tpm2_kmyth_global.h"
-#include "kmyth_cipher.h"
+#include "cipher.h"
 #include "aes_keywrap_5649pad.h"
 #include "aes_keywrap_3394nopad.h"
 #include "aes_gcm.h"

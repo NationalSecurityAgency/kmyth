@@ -111,4 +111,69 @@ int get_ski_block_bytes(char **contents,
                         size_t *remaining, unsigned char **block,
                         size_t *blocksize, char *delim, char *next_delim);
 
+/**
+ * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained
+ *        in an input data buffer.
+ *
+ * @param[in]  raw_data         The "raw" input data  (hex bytes) -
+ *                              passed as a pointer to the byte
+ *                              array containing these bytes
+ *
+ * @param[in]  raw_data_size    Size, in bytes, of the base-64 encoded
+ *                              input data
+ *
+ * @param[out] base64_data      The base-64 encoded data result -
+ *                              passed as a pointer to the address of the
+ *                              output data buffer
+ *
+ * @param[out] base64_data_size Size, in bytes, of the base-64 encoded output
+ *                              data - passed as a pointer to the length value
+ *
+ * @return 0 if success, 1 if error
+ */
+int encodeBase64Data(uint8_t * raw_data,
+                     size_t raw_data_size, uint8_t ** base64_data,
+                     size_t *base64_data_size);
+
+/**
+ * @brief Decodes a base-64 encoded data buffer into "raw" hex bytes.
+ *
+ * @param[in]  base64_data      The base-64 encoded input data -
+ *                              passed as a pointer to the byte
+ *                              array containing these bytes
+ *
+ * @param[in]  base64_data_size Size, in bytes, of the base-64 encoded
+ *                              input data
+ *
+ * @param[out] raw_data         The base-64 decoded "raw" data bytes -
+ *                              passed as a pointer to the address of the
+ *                              output data buffer
+ *
+ * @param[out] raw_data_size    Size, in bytes, of the base-64 decoded output
+ *                              data - passed as a pointer to the length value
+ *
+ * @return 0 if success, 1 if error
+ */
+int decodeBase64Data(unsigned char *base64_data,
+                     size_t base64_data_size, unsigned char **raw_data,
+                     size_t *raw_data_size);
+
+/**
+ * @brief Concatinates two arrays of type uint8_t
+ *
+ * @param[in/out] dest          The first array, output contains the
+ *                              concatenated arrays
+ *
+ * @param[in/out] dest_length   Inputs the original length of dest,
+ *                              output contains the length of the new array
+ *
+ * @param[in]     input         The second array, concatenated to dest
+ *
+ * @param[out]    input_length  The length of the second array
+ *
+ * @return 0 if success, 1 if error
+ */
+int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
+           size_t input_length);
+
 #endif /* SKI_H */
