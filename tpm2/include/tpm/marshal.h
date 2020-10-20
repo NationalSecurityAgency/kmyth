@@ -1,12 +1,13 @@
 /**
- * @file  tpm2_kmyth_mu.h
+ * @file  marshal.h
  *
  * @brief Provides data marshaling (pack) and unmarshaling (unpack)
  *        utility functions for Kmyth applications using TPM 2.0.
  */
 
-#ifndef TPM2_KMYTH_MU_H
-#define TPM2_KMYTH_MU_H
+//tss_mu.h uses ifndef MARSHAL_H
+#ifndef KMYTH_MARSHAL_H
+#define KMYTH_MARSHAL_H
 
 #include <stdlib.h>
 #include <tss2/tss2_sys.h>
@@ -459,4 +460,4 @@ int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
  */
 int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
 
-#endif /* TPM2_KMYTH_MU_H */
+#endif /* KMYTH_MARSHAL_H */

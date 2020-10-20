@@ -6,7 +6,7 @@
  */
 #include "defines.h"
 #include "tpm/tpm2_kmyth_object.h"
-#include "tpm/tpm2_kmyth_mu.h"
+#include "tpm/marshal.h"
 
 #include "cipher/cipher.h"
 #include "memory_util.h"

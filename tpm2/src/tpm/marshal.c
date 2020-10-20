@@ -1,11 +1,11 @@
 /**
- * tpm2_kmyth_mu.c:
+ * marshal.c:
  *
  * C library containing data marshaling and unmarshaling utilities
  * supporting Kmyth applications using TPM 2.0
  */
 
-#include "tpm2_kmyth_mu.h"
+#include "marshal.h"
 #include "defines.h"
 
 #include <stdlib.h>
