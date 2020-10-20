@@ -129,13 +129,13 @@ kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS)
 	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
 
 kmyth-seal: $(MAIN_OBJ_DIR)/seal.o
-	$(CC) $(MAIN_OBJ_DIR)/seal.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(MAIN_OBJ_DIR)/seal.o -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o
-	$(CC) $(MAIN_OBJ_DIR)/unseal.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(MAIN_OBJ_DIR)/unseal.o -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o
-	$(CC) $(MAIN_OBJ_DIR)/getkey.o $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(MAIN_OBJ_DIR)/getkey.o -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGGER_HEADER_FILES)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
