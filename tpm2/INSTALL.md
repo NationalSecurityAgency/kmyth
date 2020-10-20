@@ -256,7 +256,7 @@ Once the dependencies are installed:
 3. The documentation is built using *make doc*. The doxygen generated
    documentation is put in ./doc.
 
-4. In the `tpm2.0` directory run *make* or  *make all* to create:
+4. In the `tpm2` directory run *make* or  *make all* to create:
   * ./bin/kmyth-seal
   * ./bin/kmyth-unseal
   * ./bin/kmyth-getkey
@@ -266,7 +266,7 @@ Once the dependencies are installed:
 
 ##### Running Kmyth Unit Tests
 
-1. In the `tpm2.0` directory run *make test* to build and run the tests.
+1. In the `tpm2` directory run *make test* to build and run the tests.
 
 
 ### Running with TPM 2.0 Emulators
