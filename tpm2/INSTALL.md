@@ -266,7 +266,7 @@ Once the dependencies are installed:
 
 ##### Running Kmyth Unit Tests
 
-1. In the `tpm2.0` directory run *make test* to build and run the tests.:
+1. In the `tpm2.0` directory run *make test* to build and run the tests.
 
 
 ### Running with TPM 2.0 Emulators
