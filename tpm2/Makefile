@@ -46,6 +46,7 @@ LDFLAGS += -Wl,-rpath=lib#                   runtime path for libkmyth.so
 
 # Specify top-level source and target directories for build process
 INCLUDE_DIR = include
+CIPHER_INCLUDE_DIR = include/cipher
 OBJ_DIR = obj
 SRC_DIR = src
 BIN_DIR = bin
@@ -83,6 +84,12 @@ UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), $(UTIL_OBJ_DIR), $(UTIL_SOURCES:%.c=%.o))
 
+# Specify Kmyth cipher source/object path/files
+CIPHER_SRC_DIR = $(SRC_DIR)/cipher
+CIPHER_SOURCES = $(wildcard $(CIPHER_SRC_DIR)/*.c)
+CIPHER_OBJ_DIR = $(OBJ_DIR)/cipher
+CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), $(CIPHER_OBJ_DIR), $(CIPHER_SOURCES:%.c=%.o))
+
 # Specify logger source/object/header files
 LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), $(LOGGER_OBJ_DIR), $(LOGGER_SOURCES:%.c=%.o))
@@ -101,6 +108,7 @@ TEST_OBJECTS += $(TEST_MAIN_OBJECTS)
 
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
+HEADER_FILES += $(wildcard $(CIPHER_INCLUDE_DIR)/*.h)
 LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
 TEST_HEADER_FILES = $(wildcard $(TEST_INC_DIR)/*.h)
 
@@ -114,6 +122,7 @@ OBJECT_DIRS = $(SEAL_OBJ_DIR)
 OBJECT_DIRS += $(UNSEAL_OBJ_DIR)
 OBJECT_DIRS += $(GETKEY_OBJ_DIR)
 OBJECT_DIRS += $(UTIL_OBJ_DIR)
+OBJECT_DIRS += $(CIPHER_OBJ_DIR)
 OBJECT_DIRS += $(LOGGER_OBJ_DIR)
 DOC_DIRS = $(DOC_DIR)
 DOC_DIRS += $(LOGGER_DOC_DIR)
@@ -122,32 +131,35 @@ TEST_OBJECT_DIRS = $(TEST_UTIL_OBJ_DIR)
 .PHONY: all
 all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
 
-kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS)
-	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
+kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS)
+	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
 
 kmyth-seal: $(SEAL_OBJECTS)
-	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-unseal: $(UNSEAL_OBJECTS)
-	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
 
 kmyth-getkey: $(GETKEY_OBJECTS)
-	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
+	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGGER_HEADER_FILES)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c $(INCLUDE_DIR)/%.h | $(UTIL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c $(INCLUDE_DIR)/%.h | $(UTIL_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c $(CIPHER_INCLUDE_DIR)/%.h | $(CIPHER_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 .PHONY: pre
 pre:
@@ -176,7 +188,7 @@ $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) $< -o $@
 
 $(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c $(TEST_INC_DIR)/%.h | $(TEST_UTIL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) -I$(INCLUDE_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) $< -o $@
 
 kmyth-test: $(TEST_OBJECTS)
 	$(CC) $(TEST_OBJECTS) -o $(BIN_DIR)/kmyth-test $(LDFLAGS) $(LDLIBS) -lcunit -lkmyth

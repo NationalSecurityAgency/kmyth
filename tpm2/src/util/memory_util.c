@@ -1,5 +1,5 @@
 /**
- * tpm2_kmyth_misc.c:
+ * memory_util.c:
  *
  * C library containing miscellaneous utilities supporting Kmyth applications
  * using TPM 2.0

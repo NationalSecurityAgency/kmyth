@@ -1,12 +1,12 @@
 /**
- * @file  kmyth_cipher.h
+ * @file  cipher.h
  *
  * @brief Provides structures, constants, and utilities for Kmyth
  *        symmetric ciphers.
  */
 
-#ifndef KMYTH_CIPHER_H
-#define KMYTH_CIPHER_H
+#ifndef CIPHER_H
+#define CIPHER_H
 
 #include <stdlib.h>
 
@@ -88,4 +88,4 @@ cipher_t kmyth_get_cipher_t_from_string(char *cipher_string);
  */
 size_t get_key_len_from_cipher(cipher_t cipher);
 
-#endif /* KMYTH_CIPHER_H */
+#endif /* CIPHER_H */

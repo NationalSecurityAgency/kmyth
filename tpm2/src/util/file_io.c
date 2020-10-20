@@ -1,5 +1,5 @@
 /**
- * tpm2_kmyth_io.c:
+ * file_io.c:
  *
  * C library containing file input and output related utilities supporting
  * Kmyth applications using TPM 2.0.

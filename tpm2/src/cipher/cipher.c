@@ -1,5 +1,5 @@
 /**
- * @file  kmyth_cipher.c
+ * @file  cipher.c
  * @brief Implements the Kmyth cipher utility library for TPM 2.0.
  */
 

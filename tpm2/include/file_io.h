@@ -1,12 +1,12 @@
 /**
- * @file  tpm2_kmyth_io.h
+ * @file  file_io.h
  *
  * @brief Provides miscellaneous file input and output utility functions
  *        for Kmyth applications using TPM 2.0.
  */
 
-#ifndef TPM2_KMYTH_IO_H
-#define TPM2_KMYTH_IO_H
+#ifndef FILE_IO_H
+#define FILE_IO_H
 
 #include <stdio.h>
 #include <stdint.h>
@@ -83,4 +83,4 @@ int write_bytes_to_file(char *output_path,
 int print_to_stdout(unsigned char *plain_text_data,
                     size_t plain_text_data_size);
 
-#endif /* TPM2_KMYTH_IO_H */
+#endif /* FILE_IO_H */

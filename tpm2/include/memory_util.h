@@ -1,12 +1,12 @@
 /**
- * @file  tpm2_kmyth_misc.h
+ * @file  memory_util.h
  *
  * @brief Provides miscellaneous utility functions for Kmyth applications
  *        using TPM 2.0
  */
 
-#ifndef TPM2_KMYTH_MISC_H
-#define TPM2_KMYTH_MISC_H
+#ifndef MEMORY_UTIL_H
+#define MEMORY_UTIL_H
 
 #include <stdlib.h>
 
@@ -50,4 +50,4 @@ void kmyth_clear_and_free(void *v, size_t size);
  */
 void *secure_memset(void *v, int c, size_t n);
 
-#endif /* TPM2_KMYTH_MISC_H */
+#endif /* MEMORY_UTIL_H */
