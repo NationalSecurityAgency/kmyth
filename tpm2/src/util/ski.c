@@ -4,25 +4,18 @@
  * C library containing utilities related to the ski format for
  * Kmyth applications using TPM 2.0.
  */
-#include "tpm2_kmyth_seal.h"
 #include "tpm2_kmyth_global.h"
 #include "cipher/cipher.h"
 #include "memory_util.h"
-#include "tpm2_kmyth_session.h"
-#include "file_io.h"
-#include "tpm2_kmyth_key.h"
-#include "tpm2_pcrManagement.h"
 #include "tpm2_kmyth_object.h"
-#include "tpm2_config_tools.h"
-#include "tpm2_info_tools.h"
 #include "ski.h"
 #include "tpm2_kmyth_mu.h"
 
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <openssl/rand.h>
 
+#include <openssl/evp.h>
 #include <openssl/buffer.h>
 #include <openssl/bio.h>
 

@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
-
+#include <openssl/evp.h>
 #include <tss2/tss2_sys.h>
 
 //############################################################################

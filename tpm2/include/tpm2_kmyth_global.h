@@ -7,7 +7,6 @@
 #define TPM2_KMYTH_GLOBAL_H
 
 #include <kmyth_log.h>
-#include <openssl/evp.h>
 
 /**
  * The version of a specific Kmyth release, library, and code
