@@ -4,6 +4,12 @@ at https://github.com/intel/linux-sgx/
 Ensure version 2.35 of GNU Binutils is installed and has precedence in your
 $PATH in order to compile with the LVI mitigations.
 
+Prior to build, you must create a private key to sign the enclave. It can be done with this command from the kmyth/sgx/ directory:
+
+```bash
+openssl genrsa -out Enclave/Enclave_private.pem -3 3072
+```
+
 To build a debug simulation version of the enclave, which will function on
 platforms without support for SGX, use this command:
 
