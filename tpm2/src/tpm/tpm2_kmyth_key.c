@@ -9,7 +9,7 @@
 #include "tpm2_kmyth_key.h"
 #include "tpm2_kmyth_session.h"
 #include "tpm2_kmyth_object.h"
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 #include "tpm2_info_tools.h"
 
 #include <stdbool.h>

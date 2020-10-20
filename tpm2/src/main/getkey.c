@@ -8,7 +8,7 @@
  */
 
 #include "tls_util.h"
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 #include "file_io.h"
 #include "memory_util.h"
 #include "tpm2_kmyth_seal.h"

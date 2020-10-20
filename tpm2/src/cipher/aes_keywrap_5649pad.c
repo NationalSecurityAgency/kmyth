@@ -6,7 +6,7 @@
 
 #include "cipher/aes_keywrap_5649pad.h"
 
-#include "tpm/tpm2_kmyth_global.h"
+#include "defines.h"
 #include <stdlib.h>
 #include <openssl/evp.h>
 //##########################################################################

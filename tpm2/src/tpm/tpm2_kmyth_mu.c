@@ -6,7 +6,7 @@
  */
 
 #include "tpm2_kmyth_mu.h"
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 
 #include <stdlib.h>
 #include <tss2/tss2_sys.h>

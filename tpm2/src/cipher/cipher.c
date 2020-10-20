@@ -8,7 +8,7 @@
 #include "cipher/aes_keywrap_3394nopad.h"
 #include "cipher/aes_gcm.h"
 
-#include "tpm/tpm2_kmyth_global.h"
+#include "defines.h"
 #include <stdlib.h>
 #include <string.h>
 

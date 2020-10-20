@@ -2,7 +2,7 @@
  * Kmyth Unsealing Interface - TPM 2.0
  */
 
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 #include "tpm2_kmyth_seal.h"
 #include "memory_util.h"
 #include "file_io.h"

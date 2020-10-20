@@ -10,7 +10,7 @@
 
 #include "cipher/cipher.h"
 #include "tpm/tpm2_kmyth_mu.h"
-#include "tpm/tpm2_kmyth_global.h"
+#include "defines.h"
 
 #include <stdio.h>
 #include <unistd.h>

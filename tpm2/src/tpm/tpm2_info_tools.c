@@ -7,7 +7,7 @@
  */
 
 #include "tpm2_info_tools.h"
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 
 #include <stdlib.h>
 #include <stdbool.h>

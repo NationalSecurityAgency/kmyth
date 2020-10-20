@@ -4,7 +4,7 @@
  * C library containing utilities related to the ski format for
  * Kmyth applications using TPM 2.0.
  */
-#include "tpm/tpm2_kmyth_global.h"
+#include "defines.h"
 #include "tpm/tpm2_kmyth_object.h"
 #include "tpm/tpm2_kmyth_mu.h"
 

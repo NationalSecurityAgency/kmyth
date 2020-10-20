@@ -5,7 +5,7 @@
  */
 
 #include "tpm2_pcrManagement.h"
-#include "tpm2_kmyth_global.h"
+#include "defines.h"
 #include "tpm2_info_tools.h"
 
 #include <stdio.h>

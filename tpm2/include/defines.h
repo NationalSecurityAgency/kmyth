@@ -1,10 +1,10 @@
 /**
- * @file  tpm2_kmyth_global.h
+ * @file  defines.h
  *
- * @brief Provides global constants for Kmyth
+ * @brief Provides global #defines for Kmyth
  */
-#ifndef TPM2_KMYTH_GLOBAL_H
-#define TPM2_KMYTH_GLOBAL_H
+#ifndef DEFINES_H
+#define DEFINES_H
 
 #include <kmyth_log.h>
 
@@ -370,4 +370,4 @@
  */
 #define KMYTH_DELIM_END_FILE "-----FILE END-----\n"
 
-#endif // TPM2_KMYTH_GLOBAL_H
+#endif // DEFINES_H
