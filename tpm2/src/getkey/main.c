@@ -32,7 +32,7 @@ static void usage(const char *prog)
           "  -l or --client        Path to file containing the client's certificate.\n\n"
           "Server Information --\n"
           "  -t or --type          The type of the key server. Valid values include 'kmip' and 'simple'.\n"
-          "                        Defaults to 'simple'."
+          "                        Defaults to 'simple'.\n"
           "  -s or --server        Path to file containing the certificate\n"
           "                        for the CA that issued the server cert.\n"
           "  -c or --conn_addr     The ip_address:port for the TLS connection.\n"

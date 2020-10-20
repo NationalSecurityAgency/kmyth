@@ -133,6 +133,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
       -l or --client        Path to file containing the client's certificate.
     
     Server Information --
+      -t or --type          Type of key server backend (e.g., 'kmip', 'simple').
       -s or --server        Path to file containing the certificate
                             for the CA that issued the server cert.
       -c or --conn_addr     The ip_address:port for the TLS connection.
