@@ -12,7 +12,6 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
-
 #include <openssl/evp.h>
 
 #include <tss2/tss2_sys.h>
@@ -63,23 +62,26 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
     while (*pcrs_string_cur != '\0')
     {
       pcr_index_l = strtol(pcrs_string_cur, &pcrs_string_next, 10);
+
+      // Check for overflow or underflow on the strtol call. There
+      // really shouldn't be, because the number of PCRs is small.
       if ((pcr_index_l == LONG_MIN) || (pcr_index_l == LONG_MAX))
       {
-        kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
+        kmyth_log(LOG_ERR, "invalid PCR value specified ... exiting");
         return 1;
       }
 
-      // Check that some digits were parsed. In order for these to be these pointers
-      // to be the same here strtol must have failed to parse any integers.
+      // Check that strtol didn't fail to parse an integer, which is the only
+      // condition that would cause the pointers to match.
       if (pcrs_string_cur == pcrs_string_next)
       {
         kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
         return 1;
       }
 
-      // Look at the first invalid character and confirm it's a blank or a comma
-      // but don't error out if it's '\0', that indicates we're processing the
-      // last PCR value
+      // Look at the first invalid character from the last call to strtol
+      // and confirm it's a blank, a comma, or '\0'. If not there's a disallowed
+      // character in the PCR string.
       if (!isblank(*pcrs_string_next) && (*pcrs_string_next != ',')
           && (*pcrs_string_next != '\0'))
       {
@@ -88,7 +90,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
         return 1;
       }
 
-      // Step past the invalid characters, again checking not to skip past the
+      // Step past the invalid characters, checking not to skip past the
       // end of the string.
       while ((*pcrs_string_next != '\0')
              && (isblank(*pcrs_string_next) || (*pcrs_string_next == ',')))
@@ -96,7 +98,8 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
         pcrs_string_next++;
       }
 
-      // check that user entry specifies a valid PCR register
+      // check that user entry specifies a valid PCR register. This is a more
+      // precise check the strtol overflow/underflow check used earlier.
       if ((pcr_index_l < 0) || (pcr_index_l >= numPCRs))
       {
         kmyth_log(LOG_ERR,
