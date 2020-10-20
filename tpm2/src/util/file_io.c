@@ -6,10 +6,11 @@
  */
 
 #include "file_io.h"
-#include "cipher/cipher.h"
-#include "tpm2_kmyth_mu.h"
-#include "tpm2_kmyth_global.h"
 #include "memory_util.h"
+
+#include "cipher/cipher.h"
+#include "tpm/tpm2_kmyth_mu.h"
+#include "tpm/tpm2_kmyth_global.h"
 
 #include <stdio.h>
 #include <unistd.h>

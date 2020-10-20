@@ -1,6 +1,6 @@
 #include "tls_util.h"
 #include "memory_util.h"
-#include "tpm2_kmyth_global.h"
+#include "tpm/tpm2_kmyth_global.h"
 
 #include <string.h>
 #include <openssl/bio.h>
