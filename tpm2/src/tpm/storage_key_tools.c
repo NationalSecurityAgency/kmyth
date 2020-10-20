@@ -1,12 +1,12 @@
 /**
- * @file  tpm2_kmyth_key.c
+ * @file  storage_key_tools.c
  *
  * @brief Implements library of TPM 2.0 utility functions for managing and
  *        interacting with Kmyth TPM keys (i.e., storage root key and storage
  *        keys).
  */
 
-#include "tpm2_kmyth_key.h"
+#include "storage_key_tools.h"
 #include "tpm2_kmyth_session.h"
 #include "tpm2_kmyth_object.h"
 #include "defines.h"

@@ -1,11 +1,11 @@
 /**
- * @file  tpm2_kmyth_key.h
+ * @file  storage_key_tools.h
  *
  * @brief Provides TPM 2.0 key utility functions for Kmyth.
  */
 
-#ifndef TPM2_KEY_TOOLS_H
-#define TPM2_KEY_TOOLS_H
+#ifndef STORAGE_KEY_TOOLS_H
+#define STORAGE_KEY_TOOLS_H
 
 #include <stdbool.h>
 
@@ -124,4 +124,4 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                          TPM2_HANDLE * sk_handle, TPM2B_PRIVATE * sk_private,
                          TPM2B_PUBLIC * sk_public);
 
-#endif /* TPM2_KEY_TOOLS_H */
+#endif /* STORAGE_KEY_TOOLS_H */
