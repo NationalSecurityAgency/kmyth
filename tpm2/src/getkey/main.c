@@ -31,6 +31,8 @@ static void usage(const char *prog)
           "  -i or --input         Path to file containing the kmyth-sealed client's certificate private key.\n"
           "  -l or --client        Path to file containing the client's certificate.\n\n"
           "Server Information --\n"
+          "  -t or --type          The type of the key server. Valid values include 'kmip' and 'simple'.\n"
+          "                        Defaults to 'simple'.\n"
           "  -s or --server        Path to file containing the certificate\n"
           "                        for the CA that issued the server cert.\n"
           "  -c or --conn_addr     The ip_address:port for the TLS connection.\n"
@@ -45,11 +47,22 @@ static void usage(const char *prog)
           "  -h or --help          Help (displays this usage).\n\n", prog);
 }
 
+int check_string_arg(const char *arg, size_t arg_len,
+                     const char *value, size_t value_len)
+{
+  if ((arg_len != value_len) || strncmp(arg, value, value_len))
+  {
+    return 0;
+  }
+  return 1;
+}
+
 const struct option longopts[] = {
   // Client info
   {"input", required_argument, 0, 'i'},
   {"client", required_argument, 0, 'l'},
   // Server info
+  {"type", no_argument, 0, 't'},
   {"server", required_argument, 0, 's'},
   {"conn_addr", required_argument, 0, 'c'},
   {"message", required_argument, 0, 'm'},
@@ -82,6 +95,7 @@ int main(int argc, char **argv)
   char *inPath = NULL;
   char *outPath = NULL;
   char *clientCertPath = NULL;
+  char *serverType = "simple";
   char *serverCertPath = NULL;
   char *address = NULL;
   char *message = NULL;
@@ -92,7 +106,7 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "i:l:s:c:m:o:a:w:vh", longopts,
+          getopt_long(argc, argv, "i:l:t:s:c:m:o:a:w:vh", longopts,
                       &option_index)) != -1)
     switch (options)
     {
@@ -105,6 +119,9 @@ int main(int argc, char **argv)
       break;
 
       // Server info
+    case 't':
+      serverType = optarg;
+      break;
     case 's':
       serverCertPath = optarg;
       break;
@@ -189,6 +206,17 @@ int main(int argc, char **argv)
     }
   }
 
+  // Verify the type of the key server
+  size_t serverTypeLen = strlen(serverType);
+
+  if (!check_string_arg(serverType, serverTypeLen, "simple", strlen("simple"))
+      && !check_string_arg(serverType, serverTypeLen, "kmip", strlen("kmip")))
+  {
+    kmyth_log(LOG_ERR, "invalid key server type ... exiting");
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    return 1;
+  }
+
   // Validate user-specified input paths
   if (verifyInputFilePath(inPath))
   {
@@ -269,7 +297,23 @@ int main(int argc, char **argv)
   size_t key_size = 0;
   unsigned char *key = NULL;
 
-  if (get_key_from_kmip_server(bio, message, message_length, &key, &key_size))
+  int server_result = 1;
+
+  if (check_string_arg(serverType, serverTypeLen, "kmip", strlen("kmip")))
+  {
+    server_result = get_key_from_kmip_server(bio,
+                                             message, message_length,
+                                             &key, &key_size);
+  }
+  else
+  {
+    // The "simple" key server is the default.
+    server_result = get_key_from_server(bio,
+                                        message, message_length,
+                                        &key, &key_size);
+  }
+
+  if (server_result)
   {
     kmyth_log(LOG_ERR, "error obtaining key from server ... exiting");
     BIO_ssl_shutdown(bio);
