@@ -12,7 +12,9 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
+
 #include <openssl/evp.h>
+
 #include <tss2/tss2_sys.h>
 
 //############################################################################
@@ -53,86 +55,64 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
               pcrs_string);
 
     // create copies of pcrs_string for modification/processing
-    char *pcrs_string_copy = NULL;
-    char *pcrs_string_copy_prev = NULL;
+    char *pcrs_string_cur = pcrs_string;
+    char *pcrs_string_next = NULL;
+    long pcr_index_l;
+    int pcr_index;
 
-    // put in comma-delimited format without spaces (e.g., 1,2,3)
-    char *cur_char = pcrs_string;
-
-    while (*cur_char != 0)
+    while (*pcrs_string_cur != '\0')
     {
-      if (!isspace(*cur_char))
+      pcr_index_l = strtol(pcrs_string_cur, &pcrs_string_next, 10);
+      if ((pcr_index_l == LONG_MIN) || (pcr_index_l == LONG_MAX))
       {
-        if (pcrs_string_copy == NULL)
-        {
-          // Avoid leading NULL character when the string copy is empty
-          if (asprintf(&pcrs_string_copy, "%c", *cur_char) < 0)
-          {
-            kmyth_log(LOG_ERR, "error copying PCR string ... exiting");
-            free(pcrs_string_copy);
-            return 1;
-          }
-        }
-        else
-        {
-          // Keep track of the old string copy so it can be freed
-          pcrs_string_copy_prev = pcrs_string_copy;
-          if (asprintf(&pcrs_string_copy, "%s%c", pcrs_string_copy, *cur_char) <
-              0)
-          {
-            kmyth_log(LOG_ERR, "error copying PCR string ... exiting");
-            free(pcrs_string_copy);
-            return 1;
-          }
-          free(pcrs_string_copy_prev);
-          pcrs_string_copy_prev = NULL;
-        }
+        kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
+        return 1;
       }
-      cur_char++;
-    }
 
-    // process each user specified PCR index in list and update the
-    // PCR Selection List structure appropriately
-    char *pcrIndex_str = NULL;
-
-    if (pcrs_string_copy != NULL)
-    {
-      // get first user entry (token)
-      pcrIndex_str = strtok((char *) pcrs_string_copy, ",");
-    }
-    while (pcrIndex_str != NULL)
-    {
-      // convert string representation to integer
-      int pcrIndex = atoi(pcrIndex_str);
-
-      // If parsed PCR register is 0, verify that it's not a parse error
-      if (pcrIndex == 0)
+      // Check that some digits were parsed. In order for these to be these pointers
+      // to be the same here strtol must have failed to parse any integers.
+      if (pcrs_string_cur == pcrs_string_next)
       {
-        if (strncmp(pcrIndex_str, "0\0", 2) != 0)
-        {
-          kmyth_log(LOG_ERR, "error parsing PCR value ... exiting");
-          free(pcrs_string_copy);
-          return 1;
-        }
+        kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
+        return 1;
+      }
+
+      // Look at the first invalid character and confirm it's a blank or a comma
+      // but don't error out if it's '\0', that indicates we're processing the
+      // last PCR value
+      if (!isblank(*pcrs_string_next) && (*pcrs_string_next != ',')
+          && (*pcrs_string_next != '\0'))
+      {
+        kmyth_log(LOG_ERR, "invalid character (%c) in PCR string ... exiting",
+                  *pcrs_string_next);
+        return 1;
+      }
+
+      // Step past the invalid characters, again checking not to skip past the
+      // end of the string.
+      while ((*pcrs_string_next != '\0')
+             && (isblank(*pcrs_string_next) || (*pcrs_string_next == ',')))
+      {
+        pcrs_string_next++;
       }
 
       // check that user entry specifies a valid PCR register
-      if ((pcrIndex < 0) || (pcrIndex >= numPCRs))
+      if ((pcr_index_l < 0) || (pcr_index_l >= numPCRs))
       {
         kmyth_log(LOG_ERR,
-                  "TPM PCR %d invalid, must be within range 0-%d ... exiting",
-                  pcrIndex, numPCRs - 1);
-        free(pcrs_string_copy);
+                  "TPM PCR %ld invalid, must be within range 0-%d ... exiting",
+                  pcr_index_l, numPCRs - 1);
         return 1;
       }
-      pcrs_struct->pcrSelections[0].pcrSelect[pcrIndex / 8] |=
-        (1 << (pcrIndex % 8));
 
-      // get next user entry (token), returns NULL if no more PCR entries
-      pcrIndex_str = strtok(NULL, ",");
+      pcr_index = (int) pcr_index_l;
+      pcrs_struct->pcrSelections[0].pcrSelect[pcr_index / 8] |=
+        (1 << (pcr_index % 8));
+
+      pcrs_string_cur = pcrs_string_next;
+      pcrs_string_next = NULL;
     }
 
-    free(pcrs_string_copy);
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
     {
       kmyth_log(LOG_DEBUG,
