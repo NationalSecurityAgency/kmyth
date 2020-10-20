@@ -13,6 +13,8 @@
 #include <string.h>
 
 #include <openssl/opensslv.h>
+#include <openssl/rand.h>
+
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.x required for AES KeyWrap RFC5649 w/ padding
 //   - OpenSSL v1.1.1 is a LTS version supported until 2023-09-11
@@ -126,4 +128,70 @@ size_t get_key_len_from_cipher(cipher_t cipher)
   }
 
   return (size_t) key_len;
+}
+
+//############################################################################
+// kmyth_encrypt_data
+//############################################################################
+int kmyth_encrypt_data(unsigned char *data,
+                       size_t data_size,
+                       cipher_t cipher_spec,
+                       unsigned char **enc_data,
+                       size_t *enc_data_size,
+                       unsigned char **enc_key, size_t *enc_key_size)
+{
+  if (cipher_spec.cipher_name == NULL)
+  {
+    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
+    return 1;
+  }
+
+  // create symmetric key (wrapping key) of the desired size
+  if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
+  {
+    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key "
+              "... exiting", *enc_key_size * 8);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "created %d-bit random symmetric key",
+            *enc_key_size * 8);
+
+  *enc_data_size = 0;
+  if (cipher_spec.encrypt_fn(*enc_key,
+                             *enc_key_size,
+                             data, data_size, enc_data, enc_data_size))
+  {
+    kmyth_log(LOG_ERR, "error encrypting data ... exiting");
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "encrypted data with %s", cipher_spec.cipher_name);
+
+  return 0;
+}
+
+//############################################################################
+// kmyth_decrypt_data
+//###########################################################################
+int kmyth_decrypt_data(unsigned char *enc_data,
+                       size_t enc_data_size,
+                       cipher_t cipher_spec,
+                       unsigned char *key,
+                       size_t key_size,
+                       unsigned char **result, size_t *result_size)
+{
+  if (cipher_spec.cipher_name == NULL)
+  {
+    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
+    return 1;
+  }
+
+  *result_size = 0;
+  if (cipher_spec.decrypt_fn(key, key_size, enc_data,
+                             enc_data_size, result, result_size))
+  {
+    kmyth_log(LOG_ERR, "symmetric decryption error ... exiting");
+    return 1;
+  }
+
+  return 0;
 }

@@ -102,16 +102,7 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
  *                            loading the input 'data' blob under the SK and
  *                            then unsealing it. 
  *
- * @param[in]  sym_cipher     The cipher_t struct specifying the symmetric
- *                            encryption method that must be used to unwrap
- *                            the contents of the 'data' object after it is
- *                            unsealed.
- *
- * @param[in]  encrypted_data The encrypted data to be unsealed (byte buffer)
- *
- * @param[in]  encrypted_size The size of the sealed (encrypted) input data
- *
- * @param[out] result_data    The kmyth-unsealed result
+ * @param[out] result         The kmyth-unsealed result
  *                            (passed as pointer to byte buffer)
  *
  * @param[out] result_size    The size of the kmyth-unsealed (unencrypted)
@@ -126,42 +117,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
-                           cipher_t sym_cipher,
-                           uint8_t * encrypted_data,
-                           size_t encrypted_size, uint8_t ** result_data,
+                           uint8_t ** result,
                            size_t *result_size);
-
-/**
- * @brief Performs the symmetric encryption specified by the caller.
- *
- * @param[in]  data          Input data to be encrypted -
- *                           pass in pointer to the input plaintext buffer
- *
- * @param[in]  data_size     Size, in bytes, of the input plaintext data -
- *                           pass in pointer to the length value
- *
- * @param[out] enc_cipher    Struct (cipher_t) specifying cipher to use
- *
- * @param[out] enc_data      Output encrypted result data -
- *                           passed as pointer to the
- *                           output ciphertext buffer
- *
- * @param[out] enc_data_size Size, in bytes, of the encrypted result -
- *                           passed as pointer to the length value
- *
- * @param[in]  enc_key       The hex bytes containing the key -
- *                           pass in pointer to the address of the key value
- *
- * @param[in]  enc_key_size  The length of the key in bytes
- *                           (must be 16, 24, or 32)
- *
- * @return 0 on success, 1 on error
- */
-int kmyth_encrypt_data(unsigned char *data,
-                       size_t data_size,
-                       cipher_t enc_cipher,
-                       unsigned char **enc_data,
-                       size_t *enc_data_size, unsigned char **enc_key,
-                       size_t *enc_key_size);
 
 #endif /* TPM2_KMYTH_SEAL_H */

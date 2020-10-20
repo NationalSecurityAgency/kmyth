@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <openssl/rand.h>
 
 /**
  * @brief The external list of valid (implemented and configured) symmetric
@@ -377,26 +376,40 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 
   objAuthPolicy.size = 0;
 
+  uint8_t *key = NULL;
+  size_t key_len;
+
   // Perform "unseal" to recover data
   if (tpm2_kmyth_unseal_data(sapi_ctx,
                              storageKey_handle,
                              ski.wk_pub,
                              ski.wk_priv,
                              objAuthValue,
-                             ski.pcr_list,
-                             objAuthPolicy,
-                             ski.cipher,
-                             ski.enc_data, ski.enc_data_size, output,
-                             output_len))
+                             ski.pcr_list, objAuthPolicy, &key, &key_len))
   {
     kmyth_log(LOG_ERR, "error unsealing data ... exiting");
     free_ski(&ski);
     tpm2_free_resources(&sapi_ctx);
+    kmyth_clear(key, key_len);
     return 1;
   }
+
+  if (kmyth_decrypt_data((unsigned char *) ski.enc_data,
+                         ski.enc_data_size,
+                         ski.cipher,
+                         (unsigned char *) key, key_len, output, output_len))
+  {
+    kmyth_log(LOG_ERR, "error decrypting data ... exiting");
+    free_ski(&ski);
+    tpm2_free_resources(&sapi_ctx);
+    kmyth_clear(key, key_len);
+    return 1;
+  }
+
   // done, so free any allocated resources that remain
   free_ski(&ski);
   tpm2_free_resources(&sapi_ctx);
+  kmyth_clear(key, key_len);
 
   return 0;
 }
@@ -578,10 +591,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
-                           cipher_t sym_cipher,
-                           uint8_t * encrypted_data,
-                           size_t encrypted_size, uint8_t ** result_data,
-                           size_t *result_size)
+                           uint8_t ** result, size_t *result_size)
 {
   // Start a TPM 2.0 policy session that we will use to authorize the use of
   // storage key (SK) to:
@@ -645,61 +655,11 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   kmyth_log(LOG_DEBUG, "flushed policy auth session (handle = 0x%08X)",
             unsealData_session.sessionHandle);
 
-  // Perform symmetric decryption of the encrypted data using the unsealed
-  // wrapping key
-  if (sym_cipher.decrypt_fn(unseal_sensitive.buffer,
-                            unseal_sensitive.size, encrypted_data,
-                            encrypted_size, result_data, result_size))
-  {
-    kmyth_log(LOG_ERR, "symmetric decryption error ... exiting");
-    kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
-    tpm2_free_resources(&sapi_ctx);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "symmetric decryption complete");
+  *result_size = unseal_sensitive.size;
+  *result = (uint8_t *) malloc(*result_size);
 
-  // We are now done with the wrapping key, so we can erase it before exiting
+  memcpy(*result, unseal_sensitive.buffer, *result_size);
   kmyth_clear(unseal_sensitive.buffer, unseal_sensitive.size);
-
-  return 0;
-}
-
-//############################################################################
-// kmyth_encrypt_data
-//############################################################################
-int kmyth_encrypt_data(unsigned char *data,
-                       size_t data_size,
-                       cipher_t cipher_spec,
-                       unsigned char **enc_data,
-                       size_t *enc_data_size,
-                       unsigned char **enc_key, size_t *enc_key_size)
-{
-  if (cipher_spec.cipher_name == NULL)
-  {
-    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
-    return 1;
-  }
-
-  // create symmetric key (wrapping key) of the desired size
-  if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
-  {
-    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key "
-              "... exiting", *enc_key_size * 8);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "created %d-bit random symmetric key",
-            *enc_key_size * 8);
-
-  // perform encryption 
-  *enc_data_size = 0;
-  if (cipher_spec.encrypt_fn(*enc_key,
-                             *enc_key_size,
-                             data, data_size, enc_data, enc_data_size))
-  {
-    kmyth_log(LOG_ERR, "error encrypting data ... exiting");
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "encrypted data with %s", cipher_spec.cipher_name);
 
   return 0;
 }
