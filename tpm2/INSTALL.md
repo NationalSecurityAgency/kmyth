@@ -59,6 +59,21 @@ installed from source.
 
 ```apt install tss2 libtss2-dev libtss2-tcti-tabrmd-dev tpm2-abrmd```
 
+#### Required for running Kmyth unit tests:
+
+* CUnit framework library and headers
+* CUnit framework documentation (optional)
+
+Some unit tests may also assume the use of a TPM 2.0 emulator.
+
+##### CentOS 8 (Red Hat 8) Commands
+
+```yum install CUnit CUnit-devel```
+
+##### Ubuntu 20.04 Commands
+
+```apt install libcunit1 libcunit1-dev libcunit1-doc```
+
 #### Useful TPM 2.0 utilities (may be required for TPM configuration, etc):
 
 * tpm2-tools (command line tools for TPM 2.0 based on tpm2-tss)
@@ -235,19 +250,21 @@ Once the dependencies are installed:
 
 1. Download the code
 
-2. Build and install the kmyth logger
-  * In the `kmyth_log` directory run *make* and *make install*
-
-3. The documentation is built using *make doc*. The doxygen generated
+2. The documentation is built using *make doc*. The doxygen generated
    documentation is put in ./doc.
 
-4. In the `tpm2.0` directory run *make* or  *make all* to create:
+3. In the `tpm2` directory run *make* or  *make all* to create:
+  * ./lib/libkmyth.so
   * ./bin/kmyth-seal
   * ./bin/kmyth-unseal
   * ./bin/kmyth-getkey
 
-5. The existing build (executables, object files, and documentation) can be
+4. The existing build (executables, object files, and documentation) can be
    cleared away to support a fresh build by using *make clean*.
+
+##### Running Kmyth Unit Tests
+
+1. In the `tpm2` directory run *make test* to build and run the tests.
 
 
 ### Running with TPM 2.0 Emulators
