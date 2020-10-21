@@ -3,7 +3,7 @@
  */
 
 #include "defines.h"
-#include "tpm2_kmyth_seal.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "memory_util.h"
 #include "file_io.h"
 #include "kmyth.h"

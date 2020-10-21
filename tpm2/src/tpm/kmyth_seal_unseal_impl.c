@@ -1,10 +1,11 @@
 /**
- * @file  tpm2_kmyth_seal.c
- * @brief Implements library supporting Kmyth seal and unseal functionality
- *        using TPM 2.0.
+ * @file  kmyth_seal_unseal_impl.c
+ * @brief Implements library supporting Kmyth seal and unseal fuctionality for TPM 2.0
+ *        The underlying seal_data and unseal_data functionality is implemented here
+ *        along with the other kmyth_seal/kmyth_unseal functions defined in kmyth.h
  */
 
-#include "tpm2_kmyth_seal.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "defines.h"
 #include "cipher/cipher.h"
 #include "memory_util.h"
