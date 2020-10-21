@@ -1,7 +1,7 @@
 /**
  * @file  memory_util.h
  *
- * @brief Provides miscellaneous utility functions for Kmyth applications
+ * @brief Provides memory utility functions for Kmyth applications
  *        using TPM 2.0
  */
 

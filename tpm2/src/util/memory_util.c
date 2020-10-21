@@ -1,7 +1,7 @@
 /**
  * memory_util.c:
  *
- * C library containing miscellaneous utilities supporting Kmyth applications
+ * C library containing memory utilities supporting Kmyth applications
  * using TPM 2.0
  */
 
