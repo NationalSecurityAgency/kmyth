@@ -257,19 +257,6 @@ void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
 int tpm2_kmyth_create_caller_nonce(TPM2B_NONCE * nonceOut);
 
 /**
- * @brief Increment caller's nonce value for next use
- *
- * After creating a random nonce initially, the caller's nonce is simply
- * incremented for each subsequent use within the same authorization session.
- * 
- * @param[in/out] cNonce The created nonce value (passed as a pointer to
- *                       the TPM2B_NONCE struct containing the nonce value)
- *
- * @return 0 if success, 1 if error
- */
-//int tpm2_kmyth_increment_nonceCaller(TPM2B_NONCE * cNonce);
-
-/**
  * @brief Computes command parameter hash that is one of the inputs used for
  *        computation of the authHMAC passed to the TPM in the authorization
  *        area of the command.

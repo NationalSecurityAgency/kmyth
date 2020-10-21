@@ -1,12 +1,13 @@
 /**
- * @file  tpm2_kmyth_object.h
+ * @file  object_tools.h
  *
  * @brief Provides TPM 2.0 utility functions for identifying, creating,
- *        loading, managing, and otherwise interacting with Kmyth objects.
+ *        loading, managing, and otherwise interacting with TPM2 objects
+ *        required by Kmyth
  */
 
-#ifndef TPM2_KMYTH_OBJECT_H
-#define TPM2_KMYTH_OBJECT_H
+#ifndef OBJECT_TOOLS_H
+#define OBJECT_TOOLS_H
 
 #include <stdbool.h>
 
@@ -435,4 +436,4 @@ int tpm2_kmyth_unseal_object(TSS2_SYS_CONTEXT * sapi_ctx,
                              TPML_PCR_SELECTION object_pcrList,
                              TPM2B_SENSITIVE_DATA * object_sensitive);
 
-#endif /* TPM2_KMYTH_OBJECT_H */
+#endif /* OBJECT_TOOLS_H */

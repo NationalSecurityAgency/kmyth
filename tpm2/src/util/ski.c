@@ -5,7 +5,7 @@
  * Kmyth applications using TPM 2.0.
  */
 #include "defines.h"
-#include "tpm/tpm2_kmyth_object.h"
+#include "tpm/object_tools.h"
 #include "tpm/marshal.h"
 
 #include "cipher/cipher.h"

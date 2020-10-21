@@ -1,12 +1,12 @@
 /**
- * @file  tpm2_kmyth_object.c
+ * @file  object_tools.c
  *
  * @brief Implements a library of TPM 2.0 utility functions for identifying,
  *        creating, loading, managing, or otherwise interacting with objects
- *        that are customized for the Kmyth application.
+ *        that are used by the Kmyth application to interact with the TPM2
  */
 
-#include "tpm2_kmyth_object.h"
+#include "object_tools.h"
 #include "defines.h"
 #include "tpm2_info_tools.h"
 

@@ -8,7 +8,7 @@
 
 #include "storage_key_tools.h"
 #include "tpm2_kmyth_session.h"
-#include "tpm2_kmyth_object.h"
+#include "object_tools.h"
 #include "defines.h"
 #include "tpm2_info_tools.h"
 
