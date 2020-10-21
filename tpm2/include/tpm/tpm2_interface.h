@@ -1,14 +1,20 @@
 /**
- * @file  tpm2_kmyth_session.h
+ * @file  tpm2_interface.h
  *
- * @brief Provides utility functions for authorization within Kmyth
- *        applications using TPM 2.0 sessions.
+ * @brief Provides basic TPM 2.0 functions from initialization and startup through
+ *        maintaining the session and querying the TPM. 
  */
 
-#ifndef TPM2_KMYTH_SESSION_H
-#define TPM2_KMYTH_SESSION_H
+#ifndef TPM2_INTERFACE_H
+#define TPM2_INTERFACE_H
 
 #include <tss2/tss2_sys.h>
+#include <stdbool.h>
+
+/**
+ * @brief Array of manufacturer strings known to identify software TPM simulators.
+ */
+extern const char *simulator_manufacturers[];
 
 /**
  * @brief TPM2 sessions are the vehicle for authorizations and maintain state
@@ -69,6 +75,116 @@ typedef struct
   TPM2B_NONCE nonceTpmEncrypt;  // Applicable for 'encrypt' sessions
 
 } SESSION;
+
+/**
+ * @brief Initializes TPM 2.0 connection to resource manager. 
+ *
+ * Will error if resource manager is not running. 
+ *
+ * @param[out] sapi_ctx  System API context, must be initialized to NULL
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx);
+
+/**
+ * @brief Initializes a TCTI context to talk to resource manager.
+ *        Will not work if resource manager is not turned on and connected
+ *        to either emulator or device. 
+ *
+ * @param[out] tcti_ctx  TPM Command Transmission Interface (TCTI) context,
+ *                       must be passed in as a NULL
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx);
+
+/**
+ * @brief Initializes a System API (SAPI) context to talk to a TPM 2.0.
+ *
+ * @param[out] sapi_ctx  System API context, must be passed in as NULL. 
+ *
+ * @param[out] tcti_ctx  TPM Command Transmission Interface (TCTI) context,
+ *                       must be initialized (non-NULL)
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx);
+
+/**
+ * @brief Free any TPM 2.0 resources that have been allocated.
+ *
+ * @param[in]  sapi_ctx  System API context, must be initialized (non-NULL)
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx);
+
+/**
+ * @brief Starts up TPM. 
+ *
+ * @param[in]  sapi_ctx  System API context - must be initialized
+ *
+ * @param[in]  sapi_ctx  System API context, must be initialized (non-NULL)
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx);
+
+/**
+ * @brief Get specified TPM 2.0 property value(s).
+ *
+ * @param[in]  sapi_ctx       System API (SAPI) context, must be initialized -
+ *                            passed in as a pointer to the context struct
+ *
+ * @param[in]  capability     "Capability category" value to use for query
+ *
+ * @param[in]  property       "Property group" value to use for query
+ *
+ * @param[in]  propertyCount  "Property count" value to use as max for query
+ *
+ * @param[out] capabilityData "Capability data" structure to hold retrieved
+ *                            property values
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
+                        uint32_t capability,
+                        uint32_t property, uint32_t propertyCount,
+                        TPMS_CAPABILITY_DATA * capabilityData);
+
+/**
+ * @brief Determine whether TPM 2.0 implementation is hardware or emulator.
+ *
+ * @param[in]  sapi_ctx   System API (SAPI) context, must be initialized -
+ *                        passed in as a pointer to the context struct
+ *
+ * @param[out] isEmulator Boolean flag to hold result:
+ *                        <UL>
+ *                          <LI> true = emulator </LI>
+ *                          <LI> false = hardware </LI>
+ *                        </UL>
+ *
+ * @return 0 if success, 1 if error
+ */
+int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
+
+/**
+ * @brief Translates error string from hex into human readable.
+ *
+ * Got translations from comments in:
+ * <UL>
+ *   <LI> tpm2-tss-2.0.1/include/tss2/tss2_common.h </LI>
+ *   <LI> tpm2-tss-2.0.1/include/tss2/tss2_tpm2_types.h </LI>
+ *   <LI> tpm2-abrmd-2.0.2 source files </LI>
+ * </UL>
+ *
+ * @param[in]  err - TPM 2.0 error code (return value)
+ *
+ * @return String containing human readable error message
+ *         mapped to input response code
+ */
+const char *tpm2_getErrorString(TSS2_RC err);
 
 /**
  * @brief Initializes command and response authorization structures
@@ -464,4 +580,5 @@ int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
  */
 void tpm2_session_rollNonces(SESSION * session, TPM2B_NONCE newNonce);
 
-#endif /* TPM2_KMYTH_SESSION_H */
+
+#endif /* TPM2_INTERFACE_H */

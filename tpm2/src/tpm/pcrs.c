@@ -6,7 +6,7 @@
 
 #include "pcrs.h"
 #include "defines.h"
-#include "tpm2_info_tools.h"
+#include "tpm2_interface.h"
 
 #include <stdio.h>
 #include <stdbool.h>

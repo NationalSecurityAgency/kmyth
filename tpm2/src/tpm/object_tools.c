@@ -8,7 +8,7 @@
 
 #include "object_tools.h"
 #include "defines.h"
-#include "tpm2_info_tools.h"
+#include "tpm2_interface.h"
 
 #include <stdlib.h>
 #include <stdint.h>

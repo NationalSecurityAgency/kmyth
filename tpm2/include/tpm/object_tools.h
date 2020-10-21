@@ -11,7 +11,7 @@
 
 #include <stdbool.h>
 
-#include "tpm2_kmyth_session.h"
+#include "tpm2_interface.h"
 
 /**
  * @brief Fill in sensitive data input used for Kmyth object creation.

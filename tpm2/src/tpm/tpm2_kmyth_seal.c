@@ -8,13 +8,11 @@
 #include "defines.h"
 #include "cipher/cipher.h"
 #include "memory_util.h"
-#include "tpm2_kmyth_session.h"
+#include "tpm2_interface.h"
 #include "file_io.h"
 #include "storage_key_tools.h"
 #include "pcrs.h"
 #include "object_tools.h"
-#include "tpm2_config_tools.h"
-#include "tpm2_info_tools.h"
 #include "ski.h"
 
 #include <stdio.h>
