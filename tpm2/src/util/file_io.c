@@ -9,7 +9,7 @@
 #include "memory_util.h"
 
 #include "cipher/cipher.h"
-#include "tpm/marshal.h"
+#include "tpm/formatting_tools.h"
 #include "defines.h"
 
 #include <stdio.h>

@@ -7,7 +7,7 @@
 
 #include "tpm2_interface.h"
 #include "defines.h"
-#include "marshal.h"
+#include "formatting_tools.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
