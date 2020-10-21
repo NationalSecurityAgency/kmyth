@@ -8,14 +8,13 @@
 #include "cipher/cipher.h"
 #include "defines.h"
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <kmyth_log.h>
-#include <tss2/tss2_sys.h>
 
 /**
  * @brief The external list of valid (implemented and configured) symmetric

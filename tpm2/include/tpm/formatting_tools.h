@@ -8,9 +8,10 @@
 #ifndef FORMATTING_TOOLS_H
 #define FORMATTING_TOOLS_H
 
-#include <stdlib.h>
 #include <tss2/tss2_sys.h>
 #include "cipher/cipher.h"
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct Ski_s
 {

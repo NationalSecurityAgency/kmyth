@@ -8,11 +8,8 @@
 #ifndef FILE_IO_H
 #define FILE_IO_H
 
-#include <stdio.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
-
-#include <tss2/tss2_sys.h>
 
 /**
  * @brief Checks a path to an input file to make sure that it exists and that

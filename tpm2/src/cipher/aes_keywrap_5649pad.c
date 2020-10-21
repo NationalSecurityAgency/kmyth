@@ -7,7 +7,6 @@
 #include "cipher/aes_keywrap_5649pad.h"
 
 #include "defines.h"
-#include <stdlib.h>
 #include <openssl/evp.h>
 //##########################################################################
 // aes_keywrap_5649pad_encrypt()

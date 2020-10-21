@@ -7,7 +7,6 @@
 #include "cipher/aes_keywrap_3394nopad.h"
 
 #include "defines.h"
-#include <stdlib.h>
 #include <openssl/evp.h>
 //############################################################################
 // aes_keywrap_3394nopad_encrypt()

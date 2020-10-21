@@ -11,10 +11,8 @@
 #include "defines.h"
 #include "tpm2_interface.h"
 
-#include <stdbool.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <tss2/tss2_sys.h>
 #include <openssl/evp.h>
 
 //############################################################################

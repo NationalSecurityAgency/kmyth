@@ -11,10 +11,8 @@
 #include "defines.h"
 #include "file_io.h"
 #include "memory_util.h"
-#include "kmyth_seal_unseal_impl.h"
 #include "kmyth.h"
 
-#include <stdio.h>
 #include <string.h>
 #include <getopt.h>
 #include <openssl/bio.h>

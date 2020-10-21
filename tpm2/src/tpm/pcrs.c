@@ -8,12 +8,9 @@
 #include "defines.h"
 #include "tpm2_interface.h"
 
-#include <stdio.h>
-#include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
 #include <openssl/evp.h>
-#include <tss2/tss2_sys.h>
 
 //############################################################################
 // tpm2_init_pcr_selection()

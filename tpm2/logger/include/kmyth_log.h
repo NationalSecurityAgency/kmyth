@@ -10,7 +10,6 @@
 
 #include <syslog.h>
 #include <stdio.h>
-#include <string.h>
 
 //--------------------------Macros--------------------------------------------
 

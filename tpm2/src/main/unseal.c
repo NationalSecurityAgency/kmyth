@@ -3,12 +3,10 @@
  */
 
 #include "defines.h"
-#include "kmyth_seal_unseal_impl.h"
 #include "memory_util.h"
 #include "file_io.h"
 #include "kmyth.h"
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <getopt.h>

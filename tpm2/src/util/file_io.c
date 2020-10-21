@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <libgen.h>
-#include <string.h>
 
 #include <openssl/bio.h>
 

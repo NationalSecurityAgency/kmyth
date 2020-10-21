@@ -9,10 +9,8 @@
 #include "cipher/aes_gcm.h"
 
 #include "defines.h"
-#include <stdlib.h>
 #include <string.h>
 
-#include <openssl/opensslv.h>
 #include <openssl/rand.h>
 
 // Check for supported OpenSSL version

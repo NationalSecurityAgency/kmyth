@@ -16,9 +16,8 @@
 #include "object_tools.h"
 #include "formatting_tools.h"
 
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 /**
  * @brief The external list of valid (implemented and configured) symmetric
