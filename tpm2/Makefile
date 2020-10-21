@@ -46,6 +46,8 @@ LDFLAGS += -Wl,-rpath=lib#                   runtime path for libkmyth.so
 
 # Specify top-level source and target directories for build process
 INCLUDE_DIR = include
+CIPHER_INCLUDE_DIR = include/cipher
+TPM_INCLUDE_DIR = include/tpm
 OBJ_DIR = obj
 SRC_DIR = src
 BIN_DIR = bin
@@ -60,28 +62,28 @@ LOGGER_SRC_DIR = $(LOGGER_DIR)/src
 LOGGER_DOC_DIR = $(LOGGER_DIR)/doc
 
 # Specify kmyth-seal main() source/object path/files
-SEAL_SRC_DIR = $(SRC_DIR)/seal
-SEAL_SOURCES = $(wildcard $(SEAL_SRC_DIR)/*.c)
-SEAL_OBJ_DIR = $(OBJ_DIR)/seal
-SEAL_OBJECTS = $(subst $(SEAL_SRC_DIR), $(SEAL_OBJ_DIR), $(SEAL_SOURCES:%.c=%.o))
-
-# Specify kmyth-unseal main() source/object path/files
-UNSEAL_SRC_DIR = $(SRC_DIR)/unseal
-UNSEAL_SOURCES = $(wildcard $(UNSEAL_SRC_DIR)/*.c)
-UNSEAL_OBJ_DIR = $(OBJ_DIR)/unseal
-UNSEAL_OBJECTS = $(subst $(UNSEAL_SRC_DIR), $(UNSEAL_OBJ_DIR), $(UNSEAL_SOURCES:%.c=%.o))
-
-# Specify kmyth-getkey main() source/object path/files
-GETKEY_SRC_DIR = $(SRC_DIR)/getkey
-GETKEY_SOURCES = $(wildcard $(GETKEY_SRC_DIR)/*.c)
-GETKEY_OBJ_DIR = $(OBJ_DIR)/getkey
-GETKEY_OBJECTS = $(subst $(GETKEY_SRC_DIR), $(GETKEY_OBJ_DIR), $(GETKEY_SOURCES:%.c=%.o))
+MAIN_SRC_DIR = $(SRC_DIR)/main
+MAIN_SOURCES = $(wildcard $(MAIN_SRC_DIR)/*.c)
+MAIN_OBJ_DIR = $(OBJ_DIR)/main
+MAIN_OBJECTS = $(subst $(MAIN_SRC_DIR), $(MAIN_OBJ_DIR), $(MAIN_SOURCES:%.c=%.o))
 
 # Specify Kmyth 'utility function' source/object path/files
 UTIL_SRC_DIR = $(SRC_DIR)/util
 UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), $(UTIL_OBJ_DIR), $(UTIL_SOURCES:%.c=%.o))
+
+# Specify kmyth cipher source/object path/files
+CIPHER_SRC_DIR = $(SRC_DIR)/cipher
+CIPHER_SOURCES = $(wildcard $(CIPHER_SRC_DIR)/*.c)
+CIPHER_OBJ_DIR = $(OBJ_DIR)/cipher
+CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), $(CIPHER_OBJ_DIR), $(CIPHER_SOURCES:%.c=%.o))
+
+# Specify kmyth tpm source/object path/files
+TPM_SRC_DIR = $(SRC_DIR)/tpm
+TPM_SOURCES = $(wildcard $(TPM_SRC_DIR)/*.c)
+TPM_OBJ_DIR = $(OBJ_DIR)/tpm
+TPM_OBJECTS = $(subst $(TPM_SRC_DIR), $(TPM_OBJ_DIR), $(TPM_SOURCES:%.c=%.o))
 
 # Specify logger source/object/header files
 LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
@@ -101,8 +103,9 @@ TEST_OBJECTS += $(TEST_MAIN_OBJECTS)
 
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
+HEADER_FILES += $(wildcard $(CIPHER_INCLUDE_DIR)/*.h)
+HEADER_FILES += $(wildcard $(TPM_INCLUDE_DIR)/*.h)
 LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
-TEST_HEADER_FILES = $(wildcard $(TEST_INC_DIR)/*.h)
 
 #Specify path for logger output of shared library
 KMYTH_LIB_NAME = kmyth
@@ -110,10 +113,10 @@ KMYTH_LIB_SONAME = lib$(KMYTH_LIB_NAME).so
 KMYTH_LIB_LOCAL_DEST = $(LIB_DIR)/$(KMYTH_LIB_SONAME)
 
 # Consolidate created directories to simplify mkdir call for 'pre' target below
-OBJECT_DIRS = $(SEAL_OBJ_DIR)
-OBJECT_DIRS += $(UNSEAL_OBJ_DIR)
-OBJECT_DIRS += $(GETKEY_OBJ_DIR)
+OBJECT_DIRS = $(MAIN_OBJ_DIR)
 OBJECT_DIRS += $(UTIL_OBJ_DIR)
+OBJECT_DIRS += $(CIPHER_OBJ_DIR)
+OBJECT_DIRS += $(TPM_OBJ_DIR)
 OBJECT_DIRS += $(LOGGER_OBJ_DIR)
 DOC_DIRS = $(DOC_DIR)
 DOC_DIRS += $(LOGGER_DOC_DIR)
@@ -122,32 +125,32 @@ TEST_OBJECT_DIRS = $(TEST_UTIL_OBJ_DIR)
 .PHONY: all
 all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
 
-kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS)
-	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
+kmyth-lib: $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS)
+	$(CC) $(SOFLAGS) $(LOGGER_OBJECTS) $(UTIL_OBJECTS) $(CIPHER_OBJECTS) $(TPM_OBJECTS) -o $(KMYTH_LIB_LOCAL_DEST) $(LDLIBS)
 
-kmyth-seal: $(SEAL_OBJECTS)
-	$(CC) $(SEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-seal: $(MAIN_OBJ_DIR)/seal.o
+	$(CC) $(MAIN_OBJ_DIR)/seal.o -o $(BIN_DIR)/kmyth-seal $(LDFLAGS) $(LDLIBS) -lkmyth
 
-kmyth-unseal: $(UNSEAL_OBJECTS)
-	$(CC) $(UNSEAL_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o
+	$(CC) $(MAIN_OBJ_DIR)/unseal.o -o $(BIN_DIR)/kmyth-unseal $(LDFLAGS) $(LDLIBS) -lkmyth
 
-kmyth-getkey: $(GETKEY_OBJECTS)
-	$(CC) $(GETKEY_OBJECTS) $(UTIL_OBJECTS) -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
+kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o
+	$(CC) $(MAIN_OBJ_DIR)/getkey.o -o $(BIN_DIR)/kmyth-getkey $(LDFLAGS) $(LDLIBS) -lkmyth
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) $(LOGGER_HEADER_FILES)
 	$(CC) $(LOGGER_CFLAGS) -I$(LOGGER_INC_DIR) $< -o $@
 
-$(SEAL_OBJ_DIR)/%.o: $(SEAL_SRC_DIR)/%.c | $(SEAL_OBJ_DIR) 
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
-
-$(UNSEAL_OBJ_DIR)/%.o: $(UNSEAL_SRC_DIR)/%.c | $(UNSEAL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+$(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c | $(MAIN_OBJ_DIR) 
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(TPM_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c $(INCLUDE_DIR)/%.h | $(UTIL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(TPM_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
-$(GETKEY_OBJ_DIR)/%.o: $(GETKEY_SRC_DIR)/%.c | $(GETKEY_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+$(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c $(TPM_INCLUDE_DIR)/%.h | $(TPM_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(TPM_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
+
+$(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c $(CIPHER_INCLUDE_DIR)/%.h | $(CIPHER_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(TPM_INCLUDE_DIR) -I$(LOGGER_INC_DIR) $< -o $@
 
 .PHONY: pre
 pre:
@@ -161,7 +164,7 @@ pre:
 	mkdir -p $(LIB_DIR)
 
 .PHONY: doc
-doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(SEAL_SOURCES) $(UNSEAL_SOURCES) $(GETKEY_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
+doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(MAIN_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
 	doxygen Doxyfile
 
 .PHONY: test
@@ -176,7 +179,7 @@ $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) $< -o $@
 
 $(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c $(TEST_INC_DIR)/%.h | $(TEST_UTIL_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) -I$(INCLUDE_DIR) $< -o $@
+	$(CC) $(KMYTH_CFLAGS) -I$(TEST_INC_DIR) -I$(INCLUDE_DIR) -I$(CIPHER_INCLUDE_DIR) -I$(TPM_INCLUDE_DIR) $< -o $@
 
 kmyth-test: $(TEST_OBJECTS)
 	$(CC) $(TEST_OBJECTS) -o $(BIN_DIR)/kmyth-test $(LDFLAGS) $(LDLIBS) -lcunit -lkmyth

@@ -11,7 +11,7 @@
 #include <CUnit/CUnit.h>
 
 #include "tpm2_kmyth_io_test.h"
-#include "tpm2_kmyth_io.h"
+#include "file_io.h"
 
 
 //----------------------------------------------------------------------------
