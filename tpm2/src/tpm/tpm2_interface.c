@@ -395,8 +395,8 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
   // obtain string representation of TPM2_PT_MANUFACTURER property
   char *manufacturer_str;
 
-  if (tpm2_unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
-                                &manufacturer_str))
+  if (unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
+                           &manufacturer_str))
   {
     kmyth_log(LOG_ERR, "unable to get vendor string ... exiting");
     return 1;
@@ -419,24 +419,6 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 
   // finished with manufacturer_str
   free(manufacturer_str);
-
-  return 0;
-}
-
-//############################################################################
-// tpm2_unpack_uint32_to_str()
-//############################################################################
-int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr)
-{
-  if (asprintf(str_repr, "%c%c%c%c",
-               ((uint8_t *) & uint_value)[3],
-               ((uint8_t *) & uint_value)[2],
-               ((uint8_t *) & uint_value)[1],
-               ((uint8_t *) & uint_value)[0]) < 0)
-  {
-    kmyth_log(LOG_ERR, "error unpacking uint32 to string ... exiting");
-    return 1;
-  }
 
   return 0;
 }

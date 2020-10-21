@@ -256,7 +256,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
   kmyth_clear_and_free(wrapKey, wrapKey_size);
   kmyth_clear(objAuthVal.buffer, objAuthVal.size);
 
-  if (tpm2_kmyth_create_ski_bytes(ski, output, output_len))
+  if (create_ski_bytes(ski, output, output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski format ... exiting");
     tpm2_free_resources(&sapi_ctx);
@@ -336,7 +336,7 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
 
   Ski ski = get_default_ski();
 
-  if (tpm2_kmyth_parse_ski_bytes(input, input_len, &ski))
+  if (parse_ski_bytes(input, input_len, &ski))
   {
     kmyth_log(LOG_ERR, "error parsing ski string ... exiting");
     free_ski(&ski);

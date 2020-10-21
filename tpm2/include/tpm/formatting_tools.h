@@ -144,26 +144,26 @@ typedef struct Ski_s
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
-                                  uint8_t ** pcr_selection_struct_data,
-                                  size_t *pcr_selection_struct_data_size,
-                                  size_t pcr_selection_struct_data_offset,
-                                  TPM2B_PUBLIC * storage_key_public_blob,
-                                  uint8_t ** storage_key_public_data,
-                                  size_t *storage_key_public_data_size,
-                                  size_t storage_key_public_data_offset,
-                                  TPM2B_PRIVATE * storage_key_private_blob,
-                                  uint8_t ** storage_key_private_data,
-                                  size_t *storage_key_private_data_size,
-                                  size_t storage_key_private_data_offset,
-                                  TPM2B_PUBLIC * sealed_key_public_blob,
-                                  uint8_t ** sealed_key_public_data,
-                                  size_t *sealed_key_public_data_size,
-                                  size_t sealed_key_public_data_offset,
-                                  TPM2B_PRIVATE * sealed_key_private_blob,
-                                  uint8_t ** sealed_key_private_data,
-                                  size_t *sealed_key_private_data_size,
-                                  size_t sealed_key_private_data_offset);
+int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+                       uint8_t ** pcr_selection_struct_data,
+                       size_t *pcr_selection_struct_data_size,
+                       size_t pcr_selection_struct_data_offset,
+                       TPM2B_PUBLIC * storage_key_public_blob,
+                       uint8_t ** storage_key_public_data,
+                       size_t *storage_key_public_data_size,
+                       size_t storage_key_public_data_offset,
+                       TPM2B_PRIVATE * storage_key_private_blob,
+                       uint8_t ** storage_key_private_data,
+                       size_t *storage_key_private_data_size,
+                       size_t storage_key_private_data_offset,
+                       TPM2B_PUBLIC * sealed_key_public_blob,
+                       uint8_t ** sealed_key_public_data,
+                       size_t *sealed_key_public_data_size,
+                       size_t sealed_key_public_data_offset,
+                       TPM2B_PRIVATE * sealed_key_private_blob,
+                       uint8_t ** sealed_key_private_data,
+                       size_t *sealed_key_private_data_size,
+                       size_t sealed_key_private_data_offset);
 
 /**
  * @brief Unmarshals TPM 2.0 objects read from a .ski file.
@@ -252,26 +252,26 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
-                                    uint8_t * pcr_selection_struct_data,
-                                    size_t pcr_selection_struct_data_size,
-                                    size_t pcr_selection_struct_data_offset,
-                                    TPM2B_PUBLIC * storage_key_public_blob,
-                                    uint8_t * storage_key_public_data,
-                                    size_t storage_key_public_data_size,
-                                    size_t storage_key_public_data_offset,
-                                    TPM2B_PRIVATE * storage_key_private_blob,
-                                    uint8_t * storage_key_private_data,
-                                    size_t storage_key_private_data_size,
-                                    size_t storage_key_private_data_offset,
-                                    TPM2B_PUBLIC * sealed_key_public_blob,
-                                    uint8_t * sealed_key_public_data,
-                                    size_t sealed_key_public_data_size,
-                                    size_t sealed_key_public_data_offset,
-                                    TPM2B_PRIVATE * sealed_key_private_blob,
-                                    uint8_t * sealed_key_private_data,
-                                    size_t sealed_key_private_data_size,
-                                    size_t sealed_key_private_data_offset);
+int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+                         uint8_t * pcr_selection_struct_data,
+                         size_t pcr_selection_struct_data_size,
+                         size_t pcr_selection_struct_data_offset,
+                         TPM2B_PUBLIC * storage_key_public_blob,
+                         uint8_t * storage_key_public_data,
+                         size_t storage_key_public_data_size,
+                         size_t storage_key_public_data_offset,
+                         TPM2B_PRIVATE * storage_key_private_blob,
+                         uint8_t * storage_key_private_data,
+                         size_t storage_key_private_data_size,
+                         size_t storage_key_private_data_offset,
+                         TPM2B_PUBLIC * sealed_key_public_blob,
+                         uint8_t * sealed_key_public_data,
+                         size_t sealed_key_public_data_size,
+                         size_t sealed_key_public_data_offset,
+                         TPM2B_PRIVATE * sealed_key_private_blob,
+                         uint8_t * sealed_key_private_data,
+                         size_t sealed_key_private_data_size,
+                         size_t sealed_key_private_data_offset);
 
 /**
  * @brief This function packs an input TPM 2.0 PCR selection list structure
@@ -298,9 +298,9 @@ int tpm2_kmyth_unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
-                  uint8_t * packed_data_out,
-                  size_t packed_data_out_size, size_t packed_data_out_offset);
+int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
+             uint8_t * packed_data_out,
+             size_t packed_data_out_size, size_t packed_data_out_offset);
 
 /**
  * @brief This function unpacks platform independently formatted TPM 2.0 PCR
@@ -328,9 +328,9 @@ int tpm2_pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
-                    uint8_t * packed_data_in,
-                    size_t packed_data_in_size, size_t blob_offset);
+int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
+               uint8_t * packed_data_in,
+               size_t packed_data_in_size, size_t blob_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a
@@ -360,10 +360,10 @@ int tpm2_unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_pack_public(TPM2B_PUBLIC * public_blob_in,
-                     uint8_t * packed_data_out,
-                     size_t packed_data_out_size,
-                     size_t packed_data_out_offset);
+int pack_public(TPM2B_PUBLIC * public_blob_in,
+                uint8_t * packed_data_out,
+                size_t packed_data_out_size,
+                size_t packed_data_out_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a TPM 2.0
@@ -394,9 +394,9 @@ int tpm2_pack_public(TPM2B_PUBLIC * public_blob_in,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_unpack_public(TPM2B_PUBLIC * public_blob_out,
-                       uint8_t * packed_data_in,
-                       size_t packed_data_in_size, size_t blob_offset);
+int unpack_public(TPM2B_PUBLIC * public_blob_out,
+                  uint8_t * packed_data_in,
+                  size_t packed_data_in_size, size_t blob_offset);
 
 /**
  * @brief As the contents of memory containing the encrypted private area of a
@@ -426,10 +426,10 @@ int tpm2_unpack_public(TPM2B_PUBLIC * public_blob_out,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_pack_private(TPM2B_PRIVATE * private_blob_in,
-                      uint8_t * packed_data_out,
-                      size_t packed_data_out_size,
-                      size_t packed_data_out_offset);
+int pack_private(TPM2B_PRIVATE * private_blob_in,
+                 uint8_t * packed_data_out,
+                 size_t packed_data_out_size,
+                 size_t packed_data_out_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a TPM 2.0
@@ -461,10 +461,10 @@ int tpm2_pack_private(TPM2B_PRIVATE * private_blob_in,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
-                        uint8_t * packed_data_in,
-                        size_t packed_data_in_size,
-                        size_t packed_data_in_offset);
+int unpack_private(TPM2B_PRIVATE * private_blob_out,
+                   uint8_t * packed_data_in,
+                   size_t packed_data_in_size,
+                   size_t packed_data_in_offset);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)
@@ -480,23 +480,22 @@ int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
+int unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
 
 /**
  * @brief Parses a .ski formatted bytes into a ski struct. The 
  *        output is only modified on success, otherwise the 
  *        pointer is untouched
  *
- * @param[in]  input					The bytes in .ski format
+ * @param[in]  input          The bytes in .ski format
  *
- * @param[in]  input_length		The number of bytes
+ * @param[in]  input_length   The number of bytes
  *
- * @param[out] output					The new ski struct
+ * @param[out] output         The new ski struct
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
-                               Ski * output);
+int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
 
 /**
  * @brief Creates a byte array in .ski format from a ski struct
@@ -509,8 +508,7 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_create_ski_bytes(Ski input, uint8_t ** output,
-                                size_t *output_length);
+int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length);
 
 /**
  * @brief Frees the contents of a ski struct
@@ -628,6 +626,5 @@ int decodeBase64Data(unsigned char *base64_data,
  */
 int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
            size_t input_length);
-
 
 #endif /* FORMATTING_TOOLS_H */
