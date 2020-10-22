@@ -313,8 +313,8 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
   srk_sensitive.sensitive.data.size = 0;
   srk_sensitive.sensitive.userAuth.size = 0;
 
-  tpm2_init_kmyth_object_sensitive(sps_auth, object_data, object_data_size,
-                                   &srk_sensitive);
+  init_kmyth_object_sensitive(sps_auth,
+                              object_data, object_data_size, &srk_sensitive);
 
   // Create and setup public data "template" for the SRK
   TPM2B_PUBLIC srk_template;
@@ -322,8 +322,9 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
 
   srk_template.size = 0;
   empty_policy_digest.size = 0;
-  if (tpm2_init_kmyth_object_template
-      (true, empty_policy_digest, &(srk_template.publicArea)))
+  if (init_kmyth_object_template(true,
+                                 empty_policy_digest,
+                                 &(srk_template.publicArea)))
   {
     kmyth_log(LOG_ERR, "create SRK template error ... exiting");
     return 1;
@@ -337,10 +338,15 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
   TPML_PCR_SELECTION emptyPCRList;  // no PCR auth (SRK or SPS)
 
   emptyPCRList.count = 0;
-  if (tpm2_kmyth_create_object
-      (sapi_ctx, nullSession, TPM2_RH_OWNER, sps_auth, emptyPCRList,
-       srk_sensitive, srk_template, emptyPCRList, srk_handle, nullPrivateBlob,
-       nullPublicBlob))
+  if (create_kmyth_object(sapi_ctx,
+                          nullSession,
+                          TPM2_RH_OWNER,
+                          sps_auth,
+                          emptyPCRList,
+                          srk_sensitive,
+                          srk_template,
+                          emptyPCRList,
+                          srk_handle, nullPrivateBlob, nullPublicBlob))
   {
     kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
     return 1;
@@ -373,14 +379,14 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sk_sensitive.sensitive.data.size = 0;
   sk_sensitive.sensitive.userAuth.size = 0;
-  tpm2_init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive);
+  init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive);
 
   // Create empty and then set up public data "template" for storage key
   TPM2B_PUBLIC sk_template;
 
   sk_template.size = 0;
-  if (tpm2_init_kmyth_object_template
-      (true, sk_authPolicy, &(sk_template.publicArea)))
+  if (init_kmyth_object_template(true,
+                                 sk_authPolicy, &(sk_template.publicArea)))
   {
     kmyth_log(LOG_ERR, "SK create template error ... exiting");
     return 1;
@@ -392,10 +398,14 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
 
   emptyPCRList.count = 0;
-  if (tpm2_kmyth_create_object
-      (sapi_ctx, nullSession, srk_handle, srk_authVal, emptyPCRList,
-       sk_sensitive, sk_template, sk_pcrList, unusedHandle, sk_private,
-       sk_public))
+  if (create_kmyth_object(sapi_ctx,
+                          nullSession,
+                          srk_handle,
+                          srk_authVal,
+                          emptyPCRList,
+                          sk_sensitive,
+                          sk_template,
+                          sk_pcrList, unusedHandle, sk_private, sk_public))
   {
     kmyth_log(LOG_ERR, "error creating storage key ... exiting");
     return 1;

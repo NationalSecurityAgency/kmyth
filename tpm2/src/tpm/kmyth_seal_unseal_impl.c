@@ -186,12 +186,12 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
   TPML_PCR_SELECTION emptyPcrList;
 
   emptyPcrList.count = 0;       // no auth policy session means no PCR criteria
-  if (tpm2_kmyth_load_object(sapi_ctx,
-                             nullAuthSession,
-                             storageRootKey_handle,
-                             ownerAuth,
-                             emptyPcrList,
-                             &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
+  if (load_kmyth_object(sapi_ctx,
+                        nullAuthSession,
+                        storageRootKey_handle,
+                        ownerAuth,
+                        emptyPcrList,
+                        &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
 
@@ -349,12 +349,12 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   // the input .ski file and will now load the SK into the TPM.
   TPM2_HANDLE storageKey_handle = 0;
   TPML_PCR_SELECTION emptyPcrList = {.count = 0, };
-  if (tpm2_kmyth_load_object(sapi_ctx,
-                             (SESSION *) NULL,
-                             storageRootKey_handle,
-                             ownerAuth,
-                             emptyPcrList,
-                             &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
+  if (load_kmyth_object(sapi_ctx,
+                        (SESSION *) NULL,
+                        storageRootKey_handle,
+                        ownerAuth,
+                        emptyPcrList,
+                        &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "error loading storage key ... exiting");
     free_ski(&ski);
@@ -518,16 +518,15 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   sdo_sensitive.sensitive.userAuth.size = 0;  // and empty userAuth buffers
 
   // Populate buffer with data to be sealed and set size to its length in bytes
-  tpm2_init_kmyth_object_sensitive(sdo_authVal,
-                                   sdo_data, sdo_dataSize, &sdo_sensitive);
+  init_kmyth_object_sensitive(sdo_authVal,
+                              sdo_data, sdo_dataSize, &sdo_sensitive);
 
   // Create (empty) and setup public area of "template" for sealed data object
   TPM2B_PUBLIC sdo_template;
 
   sdo_template.size = 0;
-  if (tpm2_init_kmyth_object_template(false,
-                                      sdo_authPolicy,
-                                      &(sdo_template.publicArea)))
+  if (init_kmyth_object_template(false,
+                                 sdo_authPolicy, &(sdo_template.publicArea)))
   {
     kmyth_log(LOG_ERR,
               "error populating public template for data object ... exiting");
@@ -545,15 +544,15 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // create sealed data object
-  if (tpm2_kmyth_create_object(sapi_ctx,
-                               &sealData_session,
-                               sk_handle,
-                               sk_authVal,
-                               sk_pcrList,
-                               sdo_sensitive,
-                               sdo_template,
-                               sdo_pcrList,
-                               (TPM2_HANDLE) 0, sdo_private, sdo_public))
+  if (create_kmyth_object(sapi_ctx,
+                          &sealData_session,
+                          sk_handle,
+                          sk_authVal,
+                          sk_pcrList,
+                          sdo_sensitive,
+                          sdo_template,
+                          sdo_pcrList,
+                          (TPM2_HANDLE) 0, sdo_private, sdo_public))
   {
     kmyth_log(LOG_ERR, "could not seal data ... exiting");
     return 1;
@@ -608,10 +607,11 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   // It gets loaded under the storage key (authEntity for this command)
   TPM2_HANDLE sdo_handle = 0;
 
-  if (tpm2_kmyth_load_object(sapi_ctx,
-                             &unsealData_session,
-                             sk_handle, authVal, pcrList, &sdo_private,
-                             &sdo_public, &sdo_handle))
+  if (load_kmyth_object(sapi_ctx,
+                        &unsealData_session,
+                        sk_handle,
+                        authVal,
+                        pcrList, &sdo_private, &sdo_public, &sdo_handle))
   {
     kmyth_log(LOG_ERR, "load error: sealed data object ... exiting");
     return 1;
@@ -621,9 +621,9 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   // Unseal the data object just loaded into the TPM (e.g., sealed wrap key)
   TPM2B_SENSITIVE_DATA unseal_sensitive = {.size = 0, };
-  if (tpm2_kmyth_unseal_object(sapi_ctx,
-                               &unsealData_session,
-                               sdo_handle, authVal, pcrList, &unseal_sensitive))
+  if (unseal_kmyth_object(sapi_ctx,
+                          &unsealData_session,
+                          sdo_handle, authVal, pcrList, &unseal_sensitive))
   {
     kmyth_log(LOG_ERR, "error unsealing ... exiting");
 
