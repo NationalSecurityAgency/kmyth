@@ -206,7 +206,7 @@ uninstall:
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
-	rm -rf $(OBJECT_DIRS)
+	rm -rf $(OBJ_DIR)
 	rm -rf $(DOC_DIRS)
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
