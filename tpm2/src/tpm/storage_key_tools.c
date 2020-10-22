@@ -83,7 +83,7 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     bool isSRK = false;
 
-    if (srk_check(sapi_ctx, capData.data.handles.handle[i], &isSRK))
+    if (check_if_srk(sapi_ctx, capData.data.handles.handle[i], &isSRK))
     {
       kmyth_log(LOG_ERR,
                 "error checking if handle = 0x%08X references SRK ... exiting",
@@ -116,9 +116,9 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// srk_check()
+// check_if_srk()
 //############################################################################
-int srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
   // initialize 'isSRK' result to true - changed to false when SRK check fails
   *isSRK = true;

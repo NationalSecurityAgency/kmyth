@@ -55,9 +55,9 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int srk_check(TSS2_SYS_CONTEXT * sapi_ctx,
-              TPM2_HANDLE handle,
-              bool *isSRK);
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx,
+                 TPM2_HANDLE handle,
+                 bool *isSRK);
 
 /**
  * @brief Re-derives SRK with configured public key and hash algorithms
