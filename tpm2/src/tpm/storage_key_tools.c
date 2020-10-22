@@ -45,7 +45,7 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   //          case.
   TPMS_CAPABILITY_DATA capData;
 
-  if (tpm2_get_properties
+  if (get_tpm2_properties
       (sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES,
        &capData))
   {

@@ -328,10 +328,9 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // Set up NULL password authorization session for TPM commands used to
     // create the primary object (Tss2_Sys_CreatePrimary()) and load it at
     // a persistent handle (Tss2_Sys_EvictControl())
-    tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                      parent_auth,
-                                      &createObjectCmdAuths,
-                                      &createObjectRspAuths);
+    init_password_cmd_auth(sapi_ctx,
+                           parent_auth,
+                           &createObjectCmdAuths, &createObjectRspAuths);
     kmyth_log(LOG_DEBUG,
               "setup auth structs for TPM commands to create/load SRK");
 
@@ -350,7 +349,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     {
       kmyth_log(LOG_ERR,
                 "Tss2_Sys_CreatePrimary(): rc = 0x%08X, %s ... exiting", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     kmyth_log(LOG_DEBUG, "created primary object (transient handle = 0x%08X)",
@@ -367,7 +366,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_EvictControl(): rc = 0x%08X, %s", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     kmyth_log(LOG_DEBUG, "made primary object persistent (handle = 0x%08X)",
@@ -383,10 +382,9 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a NULL authorization session (indicating password authorization)
       // was passed in, the object being created is a storage key (SK)
       //   - TPM owner (storage) auth is required for use of the SRK to seal
-      tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                        parent_auth,
-                                        &createObjectCmdAuths,
-                                        &createObjectRspAuths);
+      init_password_cmd_auth(sapi_ctx,
+                             parent_auth,
+                             &createObjectCmdAuths, &createObjectRspAuths);
       kmyth_log(LOG_DEBUG,
                 "setup authorization structs for TPM command to create SK");
     }
@@ -397,9 +395,8 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       //   - SK authorization is required for use of the SK to seal
 
       // Apply policy to session context, in preparation for the "create" command
-      if (tpm2_kmyth_apply_policy(sapi_ctx,
-                                  createObjectAuthSession->sessionHandle,
-                                  parent_pcrList))
+      if (apply_policy(sapi_ctx,
+                       createObjectAuthSession->sessionHandle, parent_pcrList))
       {
         kmyth_log(LOG_ERR,
                   "error applying policy to session context ... exiting");
@@ -418,7 +415,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_PolicyGetDigest(): rc = 0x%08X, %s ... exiting",
-                  rc, tpm2_getErrorString(rc));
+                  rc, getErrorString(rc));
         return 1;
       }
       kmyth_log(LOG_DEBUG, "session digest: 0x%02X..%02X",
@@ -441,7 +438,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_ReadPublic(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
 
@@ -455,7 +452,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_Create_Prepare(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
 
@@ -473,7 +470,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_GetCpBuffer(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
 
@@ -484,21 +481,20 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_GetCommandCode(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
 
       // prepare command and response authorization structures
-      if (tpm2_kmyth_prep_policy_cmd_auth(sapi_ctx,
-                                          createObjectAuthSession,
-                                          create_object_command_code,
-                                          parent_name,
-                                          parent_auth,
-                                          cmdParams,
-                                          cmdParams_size,
-                                          object_pcrSelect,
-                                          &createObjectCmdAuths,
-                                          &createObjectRspAuths))
+      if (init_policy_cmd_auth(sapi_ctx,
+                               createObjectAuthSession,
+                               create_object_command_code,
+                               parent_name,
+                               parent_auth,
+                               cmdParams,
+                               cmdParams_size,
+                               object_pcrSelect,
+                               &createObjectCmdAuths, &createObjectRspAuths))
       {
         kmyth_log(LOG_ERR,
                   "error preparing auth for Tss2_Sys_Create() ... exiting");
@@ -512,7 +508,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_SetCmdAuths(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
     }
@@ -548,7 +544,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_Create(): rc = 0x%08X, %s ... exiting", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     if (retry_count > 0)
@@ -573,16 +569,16 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         kmyth_log(LOG_ERR,
                   "Tss2_Sys_GetRpBuffer(): rc = 0x%08X, %s ... exiting", rc,
-                  tpm2_getErrorString(rc));
+                  getErrorString(rc));
         return 1;
       }
 
       // check HMAC in response authorization structure
-      if (tpm2_kmyth_check_response_auth(createObjectAuthSession,
-                                         create_object_command_code,
-                                         rspParams,
-                                         rspParams_size,
-                                         parent_auth, &createObjectRspAuths))
+      if (check_response_auth(createObjectAuthSession,
+                              create_object_command_code,
+                              rspParams,
+                              rspParams_size,
+                              parent_auth, &createObjectRspAuths))
       {
         kmyth_log(LOG_ERR, "response authorization check failed ... exiting");
         return 1;
@@ -633,7 +629,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_ReadPublic(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -658,9 +654,9 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a NULL authorization session (indicating password authorization)
     // was passed in, the object being loaded is a storage key (SK)
     //   - TPM owner (storage) auth is required to load under the SRK
-    tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                      parent_auth,
-                                      &loadObjectCmdAuths, &loadObjectRspAuths);
+    init_password_cmd_auth(sapi_ctx,
+                           parent_auth,
+                           &loadObjectCmdAuths, &loadObjectRspAuths);
     kmyth_log(LOG_DEBUG, "setup auth structs for TPM command to create SK");
   }
   else
@@ -670,9 +666,8 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     //   - Storage Key (SK) auth is required to load it under the SK
 
     // Apply policy to session context, in preparation for the "load" command
-    if (tpm2_kmyth_apply_policy(sapi_ctx,
-                                loadObjectAuthSession->sessionHandle,
-                                parent_pcrList))
+    if (apply_policy(sapi_ctx,
+                     loadObjectAuthSession->sessionHandle, parent_pcrList))
     {
       kmyth_log(LOG_ERR, "apply policy to session context error ... exiting");
       return 1;
@@ -689,7 +684,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     {
       kmyth_log(LOG_ERR,
                 "Tss2_Sys_PolicyGetDigest(): rc = 0x%08X, %s ... exiting", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     kmyth_log(LOG_DEBUG, "session digest: 0x%02X..%02X",
@@ -701,7 +696,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_Load_Prepare(): rc = 0x%08X, %s ... exiting",
-                rc, tpm2_getErrorString(rc));
+                rc, getErrorString(rc));
       return 1;
     }
 
@@ -718,7 +713,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_GetCpBuffer(): rc = 0x%08X, %s ... exiting",
-                rc, tpm2_getErrorString(rc));
+                rc, getErrorString(rc));
       return 1;
     }
 
@@ -729,20 +724,19 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     {
       kmyth_log(LOG_ERR,
                 "Tss2_Sys_GetCommandCode(): rc = 0x%08X, %s ... exiting", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     // prepare command and response authorization structures
-    if (tpm2_kmyth_prep_policy_cmd_auth(sapi_ctx,
-                                        loadObjectAuthSession,
-                                        load_object_command_code,
-                                        parent_name,
-                                        parent_auth,
-                                        cmdParams,
-                                        cmdParams_size,
-                                        parent_pcrList,
-                                        &loadObjectCmdAuths,
-                                        &loadObjectRspAuths))
+    if (init_policy_cmd_auth(sapi_ctx,
+                             loadObjectAuthSession,
+                             load_object_command_code,
+                             parent_name,
+                             parent_auth,
+                             cmdParams,
+                             cmdParams_size,
+                             parent_pcrList,
+                             &loadObjectCmdAuths, &loadObjectRspAuths))
     {
       kmyth_log(LOG_ERR,
                 "error preparing Tss2_Sys_Load() policy auth ... exiting");
@@ -754,7 +748,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_SetCmdAuths(): rc = 0x%08X, %s ... exiting",
-                rc, tpm2_getErrorString(rc));
+                rc, getErrorString(rc));
       return 1;
     }
   }
@@ -769,7 +763,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Load(): rc = 0x%08X, %s ... exiting", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "loaded object into TPM");
@@ -789,16 +783,15 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TSS2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_GetRpBuffer(): rc = 0x%08X, %s ... exiting",
-                rc, tpm2_getErrorString(rc));
+                rc, getErrorString(rc));
       return 1;
     }
 
     // check HMAC in response authorization structure
-    if (tpm2_kmyth_check_response_auth(loadObjectAuthSession,
-                                       load_object_command_code,
-                                       rspParams,
-                                       rspParams_size,
-                                       parent_auth, &loadObjectRspAuths))
+    if (check_response_auth(loadObjectAuthSession,
+                            load_object_command_code,
+                            rspParams,
+                            rspParams_size, parent_auth, &loadObjectRspAuths))
     {
       kmyth_log(LOG_ERR, "response authorization check failed ... exiting");
       return 1;
@@ -847,8 +840,8 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   // PCR selection list (empty by default).
 
   // Apply policy to session context, in preparation for the "unseal" command
-  if (tpm2_kmyth_apply_policy
-      (sapi_ctx, unsealObjectAuthSession->sessionHandle, object_pcrList))
+  if (apply_policy(sapi_ctx,
+                   unsealObjectAuthSession->sessionHandle, object_pcrList))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;
@@ -865,7 +858,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     kmyth_log(LOG_ERR,
               "Tss2_Sys_PolicyGetDigest(): rc = 0x%08X, %s ... exiting", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "session digest: 0x%02X..%02X",
@@ -886,7 +879,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_ReadPublic(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -902,7 +895,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Unseal_Prepare(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -912,7 +905,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_GetCpBuffer(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -922,21 +915,20 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_GetCommandCode(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
   // prepare command and response authorization structures
-  if (tpm2_kmyth_prep_policy_cmd_auth(sapi_ctx,
-                                      unsealObjectAuthSession,
-                                      unseal_object_command_code,
-                                      object_name,
-                                      object_auth,
-                                      cmdParams,
-                                      cmdParams_size,
-                                      object_pcrList,
-                                      &unsealObjectCmdAuths,
-                                      &unsealObjectRspAuths))
+  if (init_policy_cmd_auth(sapi_ctx,
+                           unsealObjectAuthSession,
+                           unseal_object_command_code,
+                           object_name,
+                           object_auth,
+                           cmdParams,
+                           cmdParams_size,
+                           object_pcrList,
+                           &unsealObjectCmdAuths, &unsealObjectRspAuths))
   {
     kmyth_log(LOG_ERR, "error preparing Tss2_Sys_Unseal() auth ... exiting");
     return 1;
@@ -948,7 +940,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_SetCmdAuths(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -959,7 +951,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Unseal(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
@@ -976,16 +968,15 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_GetRpBuffer(): rc = 0x%08X, %s ... exiting",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
 
   // check HMAC in response authorization structure
-  if (tpm2_kmyth_check_response_auth(unsealObjectAuthSession,
-                                     unseal_object_command_code,
-                                     rspParams,
-                                     rspParams_size,
-                                     object_auth, &unsealObjectRspAuths))
+  if (check_response_auth(unsealObjectAuthSession,
+                          unseal_object_command_code,
+                          rspParams,
+                          rspParams_size, object_auth, &unsealObjectRspAuths))
   {
     kmyth_log(LOG_ERR, "response auth check failed ... exiting");
     return 1;

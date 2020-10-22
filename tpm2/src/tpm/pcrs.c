@@ -154,7 +154,7 @@ int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
   // query TPM 2.0 to obtain the count of available PCRs
   TPMS_CAPABILITY_DATA capData;
 
-  if (tpm2_get_properties
+  if (get_tpm2_properties
       (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
        &capData))
   {
