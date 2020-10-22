@@ -53,7 +53,6 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
               "converting user supplied PCR selection string = \"%s\"",
               pcrs_string);
 
-    // create copies of pcrs_string for modification/processing
     char *pcrs_string_cur = pcrs_string;
     char *pcrs_string_next = NULL;
     long pcr_index_l;
