@@ -161,7 +161,7 @@ int parse_pcrs_string(char *pcrs_string, int num_pcrs, bool *pcrs_list)
                 pcr_index_l, num_pcrs - 1);
       return 1;
     }
-    pcrs_list[(int) pcr_index_l] = 1;
+    pcrs_list[(int) pcr_index_l] = true;
 
     pcrs_string_cur = pcrs_string_next;
     pcrs_string_next = NULL;
