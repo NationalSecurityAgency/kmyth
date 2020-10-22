@@ -94,7 +94,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
 //############################################################################
 // parse_pcrs_string()
 //############################################################################
-int parse_pcrs_string(char *pcrs_string, int num_pcrs, bool *pcrs_list)
+int parse_pcrs_string(char *pcrs_string, int numPCRs, bool *pcrs_list)
 {
   if (pcrs_string == NULL)
   {
@@ -106,20 +106,20 @@ int parse_pcrs_string(char *pcrs_string, int num_pcrs, bool *pcrs_list)
     return 1;
   }
   kmyth_log(LOG_DEBUG, "parsing PCR selection string");
-  memset(pcrs_list, 0, num_pcrs * sizeof(bool));
+  memset(pcrs_list, 0, numPCRs * sizeof(bool));
 
   char *pcrs_string_cur = pcrs_string;
   char *pcrs_string_next = NULL;
 
-  long pcr_index_l;
+  long pcrIndex;
 
   while (*pcrs_string_cur != '\0')
   {
-    pcr_index_l = strtol(pcrs_string_cur, &pcrs_string_next, 10);
+    pcrIndex = strtol(pcrs_string_cur, &pcrs_string_next, 10);
 
     // Check for overflow or underflow on the strtol call. There
     // really shouldn't be, because the number of PCRs is small.
-    if ((pcr_index_l == LONG_MIN) || (pcr_index_l == LONG_MAX))
+    if ((pcrIndex == LONG_MIN) || (pcrIndex == LONG_MAX))
     {
       kmyth_log(LOG_ERR, "invalid PCR value specified ... exiting");
       return 1;
@@ -154,14 +154,14 @@ int parse_pcrs_string(char *pcrs_string, int num_pcrs, bool *pcrs_list)
 
     // check that user entry specifies a valid PCR register. This is a more
     // precise check the strtol overflow/underflow check used earlier.
-    if ((pcr_index_l < 0) || (pcr_index_l >= num_pcrs))
+    if ((pcrIndex < 0) || (pcrIndex >= numPCRs))
     {
       kmyth_log(LOG_ERR,
                 "TPM PCR %ld invalid, must be within range 0-%d ... exiting",
-                pcr_index_l, num_pcrs - 1);
+                pcrIndex, numPCRs - 1);
       return 1;
     }
-    pcrs_list[(int) pcr_index_l] = true;
+    pcrs_list[(int) pcrIndex] = true;
 
     pcrs_string_cur = pcrs_string_next;
     pcrs_string_next = NULL;
