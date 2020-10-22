@@ -18,11 +18,11 @@
 #include <openssl/evp.h>
 
 //############################################################################
-// tpm2_kmyth_get_srk_handle()
+// get_srk_handle()
 //############################################################################
-int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
-                              TPM2_HANDLE * srk_handle,
-                              TPM2B_AUTH * storage_hierarchy_auth)
+int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
+                   TPM2_HANDLE * srk_handle,
+                   TPM2B_AUTH * storage_hierarchy_auth)
 {
   kmyth_log(LOG_DEBUG, "checking TPM persistent handles for SRK");
 
@@ -83,7 +83,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     bool isSRK = false;
 
-    if (tpm2_kmyth_srk_check(sapi_ctx, capData.data.handles.handle[i], &isSRK))
+    if (srk_check(sapi_ctx, capData.data.handles.handle[i], &isSRK))
     {
       kmyth_log(LOG_ERR,
                 "error checking if handle = 0x%08X references SRK ... exiting",
@@ -105,7 +105,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if (*srk_handle == 0)
   {
     *srk_handle = next_persistent_handle;
-    if (tpm2_kmyth_derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
+    if (derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
     {
       kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
       return 1;
@@ -116,10 +116,9 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_srk_check()
+// srk_check()
 //############################################################################
-int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool *isSRK)
+int srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
   // initialize 'isSRK' result to true - changed to false when SRK check fails
   *isSRK = true;
@@ -280,10 +279,10 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
 }
 
 //############################################################################
-// tpm2_derive_srk
+// derive_srk
 //############################################################################
-int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
-                          TPM2B_AUTH sps_auth)
+int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
+               TPM2_HANDLE srk_handle, TPM2B_AUTH sps_auth)
 {
   kmyth_log(LOG_DEBUG, "deriving SRK ..");
 
@@ -356,16 +355,16 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
 }
 
 //############################################################################
-// tpm2_kmyth_create_sk()
+// create_sk()
 //############################################################################
-int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-                         TPM2_HANDLE srk_handle,
-                         TPM2B_AUTH srk_authVal,
-                         TPM2B_AUTH sk_authVal,
-                         TPML_PCR_SELECTION sk_pcrList,
-                         TPM2B_DIGEST sk_authPolicy,
-                         TPM2_HANDLE * sk_handle,
-                         TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
+int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+              TPM2_HANDLE srk_handle,
+              TPM2B_AUTH srk_authVal,
+              TPM2B_AUTH sk_authVal,
+              TPML_PCR_SELECTION sk_pcrList,
+              TPM2B_DIGEST sk_authPolicy,
+              TPM2_HANDLE * sk_handle,
+              TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
   //   - The authVal (hash of user specifed authorization string or default

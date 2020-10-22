@@ -148,7 +148,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
   // seed (SPS). Use of the SPS requires owner hierarchy authorization.
   TPM2_HANDLE storageRootKey_handle = 0;
 
-  if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
+  if (get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
   {
     kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
 
@@ -165,12 +165,12 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
   // This storage key will be sealed to the SRK (its parent is the SRK).
   TPM2_HANDLE storageKey_handle = 0;
 
-  if (tpm2_kmyth_create_sk(sapi_ctx,
-                           storageRootKey_handle,
-                           ownerAuth,
-                           objAuthVal,
-                           ski.pcr_list, objAuthPolicy,
-                           &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
+  if (create_sk(sapi_ctx,
+                storageRootKey_handle,
+                ownerAuth,
+                objAuthVal,
+                ski.pcr_list,
+                objAuthPolicy, &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
   {
     kmyth_log(LOG_ERR, "failed to create a storage key ... exiting");
 
@@ -326,7 +326,7 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
   // seed (SPS). Use of the SPS requires owner hierarchy authorization.
   TPM2_HANDLE storageRootKey_handle = 0;
 
-  if (tpm2_kmyth_get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
+  if (get_srk_handle(sapi_ctx, &storageRootKey_handle, &ownerAuth))
   {
     kmyth_log(LOG_ERR, "error obtaining handle for SRK ... exiting");
     tpm2_free_resources(&sapi_ctx);
