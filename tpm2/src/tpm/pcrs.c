@@ -4,17 +4,18 @@
  *        Platform Configuration Registers (PCRs) in TPM 2.0.
  */
 
-#include "pcrs.h"
-#include "defines.h"
-#include "tpm2_interface.h"
-
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
-#include <openssl/evp.h>
+#include <limits.h>
 
 #include <tss2/tss2_sys.h>
+
+#include "pcrs.h"
+#include "defines.h"
+#include "tpm2_interface.h"
 
 //############################################################################
 // tpm2_init_pcr_selection()
