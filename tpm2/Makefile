@@ -59,7 +59,6 @@ TEST_OBJ_DIR = $(TEST_DIR)/obj
 LOGGER_INC_DIR = $(LOGGER_DIR)/include
 LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
 LOGGER_SRC_DIR = $(LOGGER_DIR)/src
-LOGGER_DOC_DIR = $(LOGGER_DIR)/doc
 
 # Specify kmyth-seal main() source/object path/files
 MAIN_SRC_DIR = $(SRC_DIR)/main
@@ -118,8 +117,6 @@ OBJECT_DIRS += $(UTIL_OBJ_DIR)
 OBJECT_DIRS += $(CIPHER_OBJ_DIR)
 OBJECT_DIRS += $(TPM_OBJ_DIR)
 OBJECT_DIRS += $(LOGGER_OBJ_DIR)
-DOC_DIRS = $(DOC_DIR)
-DOC_DIRS += $(LOGGER_DOC_DIR)
 TEST_OBJECT_DIRS = $(TEST_UTIL_OBJ_DIR)
 
 .PHONY: all
@@ -160,11 +157,11 @@ pre:
 	rm -f include/*.h~
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJECT_DIRS)
-	mkdir -p $(DOC_DIRS)
 	mkdir -p $(LIB_DIR)
 
 .PHONY: doc
 doc: $(HEADER_FILES) $(UTIL_SOURCES) $(TOOL_SOURCES) $(MAIN_SOURCES) $(LOGGER_HEADERS) $(LOGGER_SOURCES) Doxyfile
+	mkdir -p $(DOC_DIR)
 	doxygen Doxyfile
 
 .PHONY: test
@@ -207,6 +204,6 @@ uninstall:
 clean:
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
-	rm -rf $(DOC_DIRS)
+	rm -rf $(DOC_DIR)
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
