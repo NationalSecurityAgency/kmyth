@@ -36,6 +36,22 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
                        TPML_PCR_SELECTION * pcrs_struct);
 
 /**
+ * @brief Parses a null-terminated PCR input string used to specify which
+ *        PCRs to use in a sealing (or other operation.) Also verifies that
+ *        the user's PCR selections are valid.
+ *
+ * @param[in] pcrs_string    The string indicating which PCRs to apply.
+ *
+ * @param[in] numPCRs        The total number of PCRs supported by the TPM.
+ *
+ * @param[out] pcrs_list     An array of bools indicating the PCRs to use. Must have length at least num_pcrs.
+ *
+ * @return 0 if some valid PCRs were parsed or if no pcrs_string was provided, 
+ *         1 otherwise.
+ */
+int parse_pcrs_string(char* pcrs_string, int numPCRs, bool* pcrs_list);
+
+/**
  * @brief Obtains the total count of available PCRs by reading the
  *        TPM2_PT_PCR_COUNT property from the TPM.
  *

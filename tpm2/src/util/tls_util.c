@@ -479,7 +479,7 @@ int get_key_from_kmip_server(BIO * bio,
                                                      bio,
                                                      message, message_len,
                                                      (char **) key, &key_len);
-    if (0 > result)
+    if (0 != result)
     {
       // NOTE: There is more error information available on the KMIP context
       // that may be useful here (e.g., stack trace, string version of the
