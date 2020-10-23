@@ -3,8 +3,9 @@
  *
  * Top-level application to run all kmyth unit tests.
  * Incorporates the following test suites:
- *   - Kmyth I/O Utility (tests in util/tpm2_kmyth_io_test.c)
+ *   - File I/O Utility (tests in util/file_io_test.c)
  *   - TLS Utility (tests in util/tls_util_test.c)
+ *   - PCR Handling (tests in tpm/pcrs_test.c)
  */
 
 #include <stdio.h>
@@ -13,7 +14,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "tpm2_kmyth_io_test.h"
+#include "file_io_test.h"
 #include "tls_util_test.h"
 #include "pcrs_test.h"
 
@@ -36,15 +37,15 @@ int main(int argc, char** argv)
   }
   
   // Create and configure kmyth I/O utility test suite
-  CU_pSuite kmyth_io_utility_test_suite = NULL;
-  kmyth_io_utility_test_suite = CU_add_suite("Kmyth I/O Utility Test Suite",
+  CU_pSuite file_io_utility_test_suite = NULL;
+  file_io_utility_test_suite = CU_add_suite("File I/O Utility Test Suite",
                                              init_suite, clean_suite);
-  if (NULL == kmyth_io_utility_test_suite)
+  if (NULL == file_io_utility_test_suite)
   {
     CU_cleanup_registry();
     return CU_get_error(); 
   }
-  if (tpm2_kmyth_io_add_tests(kmyth_io_utility_test_suite))
+  if (file_io_add_tests(file_io_utility_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error(); 
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
 
   // Create and configure the PCRs handling test suite
   CU_pSuite pcrs_test_suite = NULL;
-  pcrs_test_suite = CU_add_suite("PCR Handling Test Sutie",
+  pcrs_test_suite = CU_add_suite("PCR Handling Test Suite",
 				 init_suite, clean_suite);
   if (NULL == pcrs_test_suite)
     {
