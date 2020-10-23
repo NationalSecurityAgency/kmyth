@@ -15,6 +15,7 @@
 
 #include "tpm2_kmyth_io_test.h"
 #include "tls_util_test.h"
+#include "pcrs_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -63,6 +64,21 @@ int main(int argc, char** argv)
     CU_cleanup_registry();
     return CU_get_error();
   }
+
+  // Create and configure the PCRs handling test suite
+  CU_pSuite pcrs_test_suite = NULL;
+  pcrs_test_suite = CU_add_suite("PCR Handling Test Sutie",
+				 init_suite, clean_suite);
+  if (NULL == pcrs_test_suite)
+    {
+      CU_cleanup_registry();
+      return CU_get_error();
+    }
+  if(pcrs_add_tests(pcrs_test_suite))
+    {
+      CU_cleanup_registry();
+      return CU_get_error();
+    }
 
   // Run tests using basic interface
   CU_basic_run_tests();
