@@ -43,12 +43,12 @@
  *                             creation of a Kmyth object - passed as a
  *                             pointer to this struct
  *
- * @return None 
+ * @return 0 if success, 1 if error.
  */
-void tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
-                                      uint8_t * object_data,
-                                      size_t object_dataSize,
-                                      TPM2B_SENSITIVE_CREATE * sensitiveArea);
+int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+                                     uint8_t * object_data,
+                                     size_t object_dataSize,
+                                     TPM2B_SENSITIVE_CREATE * sensitiveArea);
 
 /**
  * @brief Fill in public template used to create Kmyth object.
@@ -96,9 +96,9 @@ int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
  * @param[out] objectAttrib Object attributes struct (TPMA_OBJECT) to
  *                          be configured - passed as a pointer to this buffer
  *
- * @return None
+ * @return 0 if success, 1 if error.
  */
-void tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
+int tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
 
 /**
  * @brief Set parameters for Kmyth objects (SRK, SK, or sealed data).
