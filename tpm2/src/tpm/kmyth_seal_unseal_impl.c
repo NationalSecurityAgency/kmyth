@@ -529,8 +529,8 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   sdo_sensitive.sensitive.userAuth.size = 0;  // and empty userAuth buffers
 
   // Populate buffer with data to be sealed and set size to its length in bytes
-  if (tpm2_init_kmyth_object_sensitive(sdo_authVal,
-                                       sdo_data, sdo_dataSize, &sdo_sensitive))
+  if (init_kmyth_object_sensitive(sdo_authVal,
+                                  sdo_data, sdo_dataSize, &sdo_sensitive))
   {
     kmyth_log(LOG_ERR, "error populating data to be sealed ... exiting");
     return 1;

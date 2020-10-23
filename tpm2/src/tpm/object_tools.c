@@ -18,10 +18,10 @@
 //############################################################################
 // init_kmyth_object_sensitive()
 //############################################################################
-void init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
-                                 uint8_t * object_data,
-                                 size_t object_dataSize,
-                                 TPM2B_SENSITIVE_CREATE * sensitiveArea)
+int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+                                uint8_t * object_data,
+                                size_t object_dataSize,
+                                TPM2B_SENSITIVE_CREATE * sensitiveArea)
 {
   if (sensitiveArea == NULL)
   {
@@ -40,16 +40,17 @@ void init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
   // For data, the data buffer size cannot be zero - we must populate the
   // buffer with data to be sealed and set the size to its length in bytes.
   sensitiveArea->sensitive.data.size = object_dataSize;
-  if ( (object_dataSize == 0) || (object_data == NULL) )
+  if ((object_dataSize == 0) || (object_data == NULL))
   {
     sensitiveArea->sensitive.data.size = 0;
   }
   else
   {
     sensitiveArea->sensitive.data.size = object_dataSize;
-    memcpy(&sensitiveArea->sensitive.data.buffer, object_data, sensitiveArea->sensitive.data.size);
-    kmyth_log(LOG_DEBUG,
-              "put %d-byte data field in sensitive area", object_dataSize);
+    memcpy(&sensitiveArea->sensitive.data.buffer, object_data,
+           sensitiveArea->sensitive.data.size);
+    kmyth_log(LOG_DEBUG, "put %d-byte data field in sensitive area",
+              object_dataSize);
   }
 
   // While the userAuth and data elements of a TPMS_SENSITIVE_CREATE
@@ -93,7 +94,7 @@ int init_kmyth_object_template(bool isKey,
   kmyth_log(LOG_DEBUG, "object hash ALG_ID = 0x%02X", KMYTH_HASH_ALG);
 
   // Initialize attributes for object to be created
-  if (tpm2_init_kmyth_object_attributes(isKey, &pubArea->objectAttributes))
+  if (init_kmyth_object_attributes(isKey, &pubArea->objectAttributes))
   {
     kmyth_log(LOG_ERR, "error setting attributes for new object ... exiting");
     return 1;
@@ -140,7 +141,7 @@ int init_kmyth_object_template(bool isKey,
 //############################################################################
 // init_kmyth_object_attributes()
 //############################################################################
-void init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
+int init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib)
 {
   if (objectAttrib == NULL)
   {
@@ -370,10 +371,9 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // Set up NULL password authorization session for TPM commands used to
     // create the primary object (Tss2_Sys_CreatePrimary()) and load it at
     // a persistent handle (Tss2_Sys_EvictControl())
-    if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                          parent_auth,
-                                          &createObjectCmdAuths,
-                                          &createObjectRspAuths))
+    if (init_password_cmd_auth(sapi_ctx,
+                               parent_auth,
+                               &createObjectCmdAuths, &createObjectRspAuths))
     {
       kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
       return 1;
@@ -429,10 +429,9 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a NULL authorization session (indicating password authorization)
       // was passed in, the object being created is a storage key (SK)
       //   - TPM owner (storage) auth is required for use of the SRK to seal
-      if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                            parent_auth,
-                                            &createObjectCmdAuths,
-                                            &createObjectRspAuths))
+      if (init_password_cmd_auth(sapi_ctx,
+                                 parent_auth,
+                                 &createObjectCmdAuths, &createObjectRspAuths))
       {
         kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
         return 1;
@@ -706,10 +705,9 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a NULL authorization session (indicating password authorization)
     // was passed in, the object being loaded is a storage key (SK)
     //   - TPM owner (storage) auth is required to load under the SRK
-    if (tpm2_kmyth_prep_password_cmd_auth(sapi_ctx,
-                                          parent_auth,
-                                          &loadObjectCmdAuths,
-                                          &loadObjectRspAuths))
+    if (init_password_cmd_auth(sapi_ctx,
+                               parent_auth,
+                               &loadObjectCmdAuths, &loadObjectRspAuths))
     {
       kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
       return 1;

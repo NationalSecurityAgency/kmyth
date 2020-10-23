@@ -312,8 +312,9 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
   srk_sensitive.sensitive.data.size = 0;
   srk_sensitive.sensitive.userAuth.size = 0;
 
-  if (tpm2_init_kmyth_object_sensitive(sps_auth, object_data, object_data_size,
-                                       &srk_sensitive))
+  if (init_kmyth_object_sensitive(sps_auth,
+                                  object_data,
+                                  object_data_size, &srk_sensitive))
   {
     kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
     return 1;
@@ -382,8 +383,7 @@ int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sk_sensitive.sensitive.data.size = 0;
   sk_sensitive.sensitive.userAuth.size = 0;
-  if (tpm2_init_kmyth_object_sensitive
-      (sk_authVal, skd, skd_size, &sk_sensitive))
+  if (init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive))
   {
     kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
     return 1;

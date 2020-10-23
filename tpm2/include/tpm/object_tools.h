@@ -45,7 +45,7 @@
  *
  * @return 0 if success, 1 if error.
  */
-void init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
                                  uint8_t * object_data,
                                  size_t object_dataSize,
                                  TPM2B_SENSITIVE_CREATE * sensitiveArea);
@@ -98,7 +98,7 @@ int init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
  *
  * @return 0 if success, 1 if error.
  */
-void init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
+int init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
 
 /**
  * @brief Set parameters for Kmyth objects (SRK, SK, or sealed data).
