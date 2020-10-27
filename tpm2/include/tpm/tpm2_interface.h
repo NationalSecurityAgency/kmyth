@@ -85,7 +85,7 @@ typedef struct
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx);
+int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx);
 
 /**
  * @brief Initializes a TCTI context to talk to resource manager.
@@ -97,7 +97,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx);
+int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx);
 
 /**
  * @brief Initializes a System API (SAPI) context to talk to a TPM 2.0.
@@ -109,7 +109,7 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx);
+int init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx);
 
 /**
  * @brief Free any TPM 2.0 resources that have been allocated.
@@ -118,7 +118,7 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx);
+int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx);
 
 /**
  * @brief Starts up TPM. 
@@ -129,7 +129,7 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx);
+int startup_tpm2(TSS2_SYS_CONTEXT ** sapi_ctx);
 
 /**
  * @brief Get specified TPM 2.0 property value(s).
@@ -148,7 +148,7 @@ int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
+int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
                         uint32_t capability,
                         uint32_t property, uint32_t propertyCount,
                         TPMS_CAPABILITY_DATA * capabilityData);
@@ -167,7 +167,7 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
 
 /**
  * @brief Translates error string from hex into human readable.
@@ -184,7 +184,7 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
  * @return String containing human readable error message
  *         mapped to input response code
  */
-const char *tpm2_getErrorString(TSS2_RC err);
+const char *getErrorString(TSS2_RC err);
 
 /**
  * @brief Initializes command and response authorization structures
@@ -209,10 +209,10 @@ const char *tpm2_getErrorString(TSS2_RC err);
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_prep_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
-                                      TPM2B_AUTH authEntityAuthVal,
-                                      TSS2L_SYS_AUTH_COMMAND * commandAuths,
-                                      TSS2L_SYS_AUTH_RESPONSE * responseAuths);
+int init_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
+                           TPM2B_AUTH authEntityAuthVal,
+                           TSS2L_SYS_AUTH_COMMAND * commandAuths,
+                           TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
 /**
  * @brief Initializes command and response authorization structures
@@ -270,16 +270,16 @@ int tpm2_kmyth_prep_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    SESSION * authSession,
-                                    TPM2_CC authCmdCode,
-                                    TPM2B_NAME authEntityName,
-                                    TPM2B_AUTH authEntityAuthVal,
-                                    uint8_t * authCmdParams,
-                                    size_t authCmdParams_size,
-                                    TPML_PCR_SELECTION authSession_pcrList,
-                                    TSS2L_SYS_AUTH_COMMAND * commandAuths,
-                                    TSS2L_SYS_AUTH_RESPONSE * responseAuths);
+int init_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
+                         SESSION * authSession,
+                         TPM2_CC authCmdCode,
+                         TPM2B_NAME authEntityName,
+                         TPM2B_AUTH authEntityAuthVal,
+                         uint8_t * authCmdParams,
+                         size_t authCmdParams_size,
+                         TPML_PCR_SELECTION authSession_pcrList,
+                         TSS2L_SYS_AUTH_COMMAND * commandAuths,
+                         TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
 /**
  * @brief Checks the response authorization structure received back from the
@@ -318,12 +318,12 @@ int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_check_response_auth(SESSION * authSession,
-                                   TPM2_CC authCommandCode,
-                                   uint8_t * authCmdParams,
-                                   size_t authCmdParams_size,
-                                   TPM2B_AUTH authEntityAuthVal,
-                                   TSS2L_SYS_AUTH_RESPONSE * responseAuths);
+int check_response_auth(SESSION * authSession,
+                        TPM2_CC authCommandCode,
+                        uint8_t * authCmdParams,
+                        size_t authCmdParams_size,
+                        TPM2B_AUTH authEntityAuthVal,
+                        TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
 /**
  * @brief Creates an authorization value digest from an input authorization
@@ -353,24 +353,9 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
  *
  * @return None
  */
-void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
-                               TPM2B_AUTH * authValOut);
-
-/**
- * @brief Creates a random initial nonce value that the caller can send to the
- *        TPM to provide some protection against replay of TPM commands
- *
- * An authorization session uses two nonces, the caller provides one with a
- * command and the TPM provides one with the response to the command. This
- * function creates an new caller nonce for the authorization session using
- * random bytes obtained from the OpenSSL RAND_bytes() function.
- * 
- * @param[out] nonceOut  The created nonce value (passed as a pointer to
- *                       the TPM2B_NONCE struct containing the nonce value)
- *
- * @return 0 if success, 1 if error
- */
-int tpm2_kmyth_create_caller_nonce(TPM2B_NONCE * nonceOut);
+void create_authVal(uint8_t * auth_bytes,
+                    size_t auth_bytes_len,
+                    TPM2B_AUTH * authValOut);
 
 /**
  * @brief Computes command parameter hash that is one of the inputs used for
@@ -405,10 +390,11 @@ int tpm2_kmyth_create_caller_nonce(TPM2B_NONCE * nonceOut);
  *
  * @return 0 if success, 1 if error
  */
-void tpm2_kmyth_compute_cpHash(TPM2_CC cmdCode,
-                               TPM2B_NAME authEntityName,
-                               uint8_t * cmdParams, size_t cmdParams_size,
-                               TPM2B_DIGEST * cpHash_out);
+void compute_cpHash(TPM2_CC cmdCode,
+                    TPM2B_NAME authEntityName,
+                    uint8_t * cmdParams,
+                    size_t cmdParams_size,
+                    TPM2B_DIGEST * cpHash_out);
 
 /**
  * @brief Computes response parameter hash that is one of the inputs to the
@@ -441,10 +427,11 @@ void tpm2_kmyth_compute_cpHash(TPM2_CC cmdCode,
  *
  * @return 0 if success, 1 if error
  */
-void tpm2_kmyth_compute_rpHash(TPM2_RC rspCode,
-                               TPM2_CC cmdCode,
-                               uint8_t * cmdParams, size_t cmdParams_size,
-                               TPM2B_DIGEST * rpHash_out);
+void compute_rpHash(TPM2_RC rspCode,
+                    TPM2_CC cmdCode,
+                    uint8_t * cmdParams,
+                    size_t cmdParams_size,
+                    TPM2B_DIGEST * rpHash_out);
 
 /**
  * @brief Computes the authorization HMAC value required for command and
@@ -466,15 +453,13 @@ void tpm2_kmyth_compute_rpHash(TPM2_RC rspCode,
  *
  * @return 0 if success, 1 if error
  */
-void tpm2_kmyth_compute_authHMAC(SESSION auth_session,
-                                 TPM2B_DIGEST auth_pHash,
-                                 TPM2B_AUTH auth_authValue,
-                                 TPMA_SESSION auth_sessionAttributes,
-                                 TPM2B_AUTH * auth_HMAC);
+void compute_authHMAC(SESSION auth_session,
+                      TPM2B_DIGEST auth_pHash,
+                      TPM2B_AUTH auth_authValue,
+                      TPMA_SESSION auth_sessionAttributes,
+                      TPM2B_AUTH * auth_HMAC);
 
 /**
- * tpm2_kmyth_create_policy_digest
- *
  * @brief Creates a trial policy (authorization session) and uses it to
  *        create an authorization policy (authPolicy) digest to associate
  *        with an object (in the Kmyth case, the storage key we create
@@ -496,13 +481,11 @@ void tpm2_kmyth_compute_authHMAC(SESSION auth_session,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    TPML_PCR_SELECTION tp_pcrList,
-                                    TPM2B_DIGEST * policyDigest_out);
+int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
+                         TPML_PCR_SELECTION tp_pcrList,
+                         TPM2B_DIGEST * policyDigest_out);
 
 /**
- * tpm2_kmyth_create_policy_auth_session
- *
  * @brief Creates a session used to authorize kmyth objects
  *
  * @param[in]  sapi_ctx      System API (SAPI) context, must be initialized
@@ -513,14 +496,12 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                                          SESSION * policySession);
+int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                               SESSION * policySession);
 
 /**
- * tpm2_kmyth_start_policy_auth_session
- *
  * @brief Initiates (starts) a new authorization session (called by
- *        tpm2_kmyth_create_policy_auth_session()).
+ *        create_policy_auth_session()).
  *
  * @param[in]  sapi_ctx     System API (SAPI) context, must be initialized
  *                          and passed in as pointer to the SAPI context
@@ -536,13 +517,11 @@ int tpm2_kmyth_create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                                         SESSION * session,
-                                         TPM2_SE session_type);
+int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                              SESSION * session,
+                              TPM2_SE session_type);
 
 /**
- * tpm2_kmyth_apply_policy
- *
  * @brief Executes the Kmyth-specific authorization policy steps and updates
  *        the authorization policy session context for the specified TPM 2.0
  *        session handle.
@@ -558,13 +537,27 @@ int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
-                            TPM2_HANDLE policySessionHandle,
-                            TPML_PCR_SELECTION policySession_pcrList);
+int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                 TPM2_HANDLE policySessionHandle,
+                 TPML_PCR_SELECTION policySession_pcrList);
 
 /**
- * tpm2_session_rollNonces
+ * @brief Creates a random initial nonce value that the caller can send to the
+ *        TPM to provide some protection against replay of TPM commands
  *
+ * An authorization session uses two nonces, the caller provides one with a
+ * command and the TPM provides one with the response to the command. This
+ * function creates an new caller nonce for the authorization session using
+ * random bytes obtained from the OpenSSL RAND_bytes() function.
+ * 
+ * @param[out] nonceOut  The created nonce value (passed as a pointer to
+ *                       the TPM2B_NONCE struct containing the nonce value)
+ *
+ * @return 0 if success, 1 if error
+ */
+int create_caller_nonce(TPM2B_NONCE * nonceOut);
+
+/**
  * @brief Before each command issued by the caller and each response
  *        provided by the TPM, the nonces are rolled. The caller issuing
  *        a command or the TPM providing a response, generates a 'newer'
@@ -578,7 +571,6 @@ int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-void tpm2_session_rollNonces(SESSION * session, TPM2B_NONCE newNonce);
-
+void rollNonces(SESSION * session, TPM2B_NONCE newNonce);
 
 #endif /* TPM2_INTERFACE_H */

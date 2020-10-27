@@ -1,7 +1,7 @@
 //############################################################################
-// tpm2_kmyth_io_test.c
+// file_io_test.c
 //
-// Tests for kmyth I/O utility functions in tpm2/src/util/tpm2_kmyth_io.c
+// Tests for kmyth I/O utility functions in tpm2/src/util/file_io.c
 //############################################################################
 
 
@@ -10,14 +10,14 @@
 #include <sys/stat.h>
 #include <CUnit/CUnit.h>
 
-#include "tpm2_kmyth_io_test.h"
+#include "file_io_test.h"
 #include "file_io.h"
 
 
 //----------------------------------------------------------------------------
-// tpm2_kmyth_io_add_tests()
+// file_io_add_tests()
 //----------------------------------------------------------------------------
-int tpm2_kmyth_io_add_tests(CU_pSuite suite)
+int file_io_add_tests(CU_pSuite suite)
 {
   if (NULL == CU_add_test(suite, "verifyInputFilePath() Tests",
                           test_verifyInputFilePath))

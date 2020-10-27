@@ -18,17 +18,17 @@
 #include "tpm2_interface.h"
 
 //############################################################################
-// tpm2_init_pcr_selection()
+// init_pcr_selection()
 //############################################################################
-int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
-                       TPML_PCR_SELECTION * pcrs_struct)
+int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
+                       char *pcrs_string, TPML_PCR_SELECTION * pcrs_struct)
 {
   kmyth_log(LOG_DEBUG, "creating PCR select struct from user input string");
 
   // Get the total number of PCRs from the TPM
   int numPCRs = -1;
 
-  if (tpm2_get_pcr_count(sapi_ctx, &numPCRs))
+  if (get_pcr_count(sapi_ctx, &numPCRs))
   {
     kmyth_log(LOG_ERR, "unable to retrieve PCR count ... exiting");
     return 1;
@@ -173,12 +173,12 @@ int parse_pcrs_string(char *pcrs_string, int numPCRs, bool *pcrs_list)
 //############################################################################
 // tpm2_get_pcr_count()
 //############################################################################
-int tpm2_get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
+int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
 {
   // query TPM 2.0 to obtain the count of available PCRs
   TPMS_CAPABILITY_DATA capData;
 
-  if (tpm2_get_properties
+  if (get_tpm2_properties
       (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
        &capData))
   {
@@ -189,47 +189,4 @@ int tpm2_get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
   kmyth_log(LOG_DEBUG, "count of available PCRs (TPM2_PT_PCR_COUNT) = %d",
             *pcrCount);
   return 0;
-}
-
-//############################################################################
-// tpm2_pcrSelection_isEqual()
-//############################################################################
-bool tpm2_pcrSelection_isEqual(TPML_PCR_SELECTION pcrSelectA,
-                               TPML_PCR_SELECTION pcrSelectB)
-{
-  // check that both have the same number of selection structures
-  if (pcrSelectA.count != pcrSelectB.count)
-  {
-    return false;
-  }
-
-  // compare each of the TPMS_PCR_SELECTION structures
-  for (int i = 0; i < pcrSelectA.count; i++)
-  {
-    // compare hash algorithms
-    if (pcrSelectA.pcrSelections[i].hash != pcrSelectB.pcrSelections[i].hash)
-    {
-      return false;
-    }
-
-    // compare sizes
-    if (pcrSelectA.pcrSelections[i].sizeofSelect !=
-        pcrSelectB.pcrSelections[i].sizeofSelect)
-    {
-      return false;
-    }
-
-    // compare PCR bitmaps
-    for (int j = 0; j < pcrSelectA.pcrSelections[i].sizeofSelect; j++)
-    {
-      if (pcrSelectA.pcrSelections[i].pcrSelect[j] !=
-          pcrSelectB.pcrSelections[i].pcrSelect[j])
-      {
-        return false;
-      }
-    }
-  }
-
-  // at this point, we know that the two input PCR Selection lists are equal
-  return true;
 }
