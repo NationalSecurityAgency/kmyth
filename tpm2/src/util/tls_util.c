@@ -379,11 +379,11 @@ int tls_set_context(unsigned char *client_private_key,
 }
 
 //############################################################################
-// get_key_from_server()
+// get_key_from_tls_server()
 //############################################################################
-int get_key_from_server(BIO * bio,
-                        char *message, size_t message_length,
-                        unsigned char **key, size_t *key_size)
+int get_key_from_tls_server(BIO * bio,
+                            char *message, size_t message_length,
+                            unsigned char **key, size_t *key_size)
 {
   // validate input
   if (bio == NULL)
@@ -479,7 +479,7 @@ int get_key_from_kmip_server(BIO * bio,
                                                      bio,
                                                      message, message_len,
                                                      (char **) key, &key_len);
-    if (0 > result)
+    if (0 != result)
     {
       // NOTE: There is more error information available on the KMIP context
       // that may be useful here (e.g., stack trace, string version of the

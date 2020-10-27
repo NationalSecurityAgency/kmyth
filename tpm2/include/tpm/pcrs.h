@@ -31,8 +31,25 @@
  *
  * @return 0 if success, 1 if error
  */
-int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
+int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
+                       char *pcrs_string,
                        TPML_PCR_SELECTION * pcrs_struct);
+
+/**
+ * @brief Parses a null-terminated PCR input string used to specify which
+ *        PCRs to use in a sealing (or other operation.) Also verifies that
+ *        the user's PCR selections are valid.
+ *
+ * @param[in] pcrs_string    The string indicating which PCRs to apply.
+ *
+ * @param[in] numPCRs        The total number of PCRs supported by the TPM.
+ *
+ * @param[out] pcrs_list     An array of bools indicating the PCRs to use. Must have length at least num_pcrs.
+ *
+ * @return 0 if some valid PCRs were parsed or if no pcrs_string was provided, 
+ *         1 otherwise.
+ */
+int parse_pcrs_string(char* pcrs_string, int numPCRs, bool* pcrs_list);
 
 /**
  * @brief Obtains the total count of available PCRs by reading the
@@ -46,21 +63,6 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx, char *pcrs_string,
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
-
-/**
- * @brief Compares two PCR Selection List structures to determine whether or
- *        not they are equal.
- *
- * @param[in]  pcrSelectA First TPML_PCR_SELECTION structure to be compared
- *
- * @param[in]  pcrSelectB Second TPML_PCR_SELECTION structure to be compared
- *
- * @return true if the two inputs select the same set of PCRs,
- *         false if the two inputs select two different sets of PCRs
- */
-
-bool tpm2_pcrSelection_isEqual(TPML_PCR_SELECTION pcrSelectA,
-                               TPML_PCR_SELECTION pcrSelectB);
+int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
 
 #endif /* PRCS_H */

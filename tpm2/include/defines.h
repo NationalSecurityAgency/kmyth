@@ -6,6 +6,8 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
+#include <openssl/evp.h>
+
 #include <kmyth_log.h>
 
 /**

@@ -1,15 +1,15 @@
 /**
  * @file  kmyth.h
  *
- * @brief Provides library headers for Kmyth seal/unseal functionality using TPM 2.0
- *        Provides library headers for Kmyth logging
+ * @brief Provides library headers for Kmyth seal/unseal functionality using
+ *        TPM 2.0. Provides library headers for Kmyth logging.
  */
 
 #ifndef KMYTH_H
 #define KMYTH_H
 
 /**
- * @brief High-level function implementing kmyth-seal
+ * @brief High-level function implementing kmyth-seal using TPM 2.0.
  *
  * @param[in]  input             Raw bytes to be kmyth-sealed
  *
@@ -54,7 +54,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
                     char *pcrs_string, char *cipher_string);
 
 /**
- * @brief High-level function implementing kmyth-unseal
+ * @brief High-level function implementing kmyth-unseal using TPM 2.0.
  *
  *
  * @param[in]  input             Raw data to be kmyth-sealed
@@ -86,7 +86,8 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len);
 
 /**
- * @brief High-level function implementing kmyth-seal for files
+ * @brief High-level function implementing kmyth-seal for files using TPM 2.0.
+ *        The kmyth-seal input data is read from the specified file.
  *
  * @param[in]  input_path        Path to input data file
  *
@@ -127,7 +128,8 @@ int tpm2_kmyth_seal_file(char *input_path,
                          char *pcrs_string, char *cipher_string);
 
 /**
- * @brief High-level function implementing kmyth-unseal for files
+ * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.
+ *        The kmyth-unseal input data is read from the specified file.
  *
  * @param[in]  input_path        Path to input .ski file
  *                               (passed as a string)
@@ -156,4 +158,5 @@ int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output, size_t *output_length,
                            uint8_t * auth_bytes, size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes, size_t oa_bytes_len);
+
 #endif /* KMYTH_H */

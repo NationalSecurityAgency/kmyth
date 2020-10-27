@@ -306,9 +306,9 @@ int main(int argc, char **argv)
   else
   {
     // The "simple" key server is the default.
-    server_result = get_key_from_server(bio,
-                                        message, message_length,
-                                        &key, &key_size);
+    server_result = get_key_from_tls_server(bio,
+                                            message, message_length,
+                                            &key, &key_size);
   }
 
   if (server_result)

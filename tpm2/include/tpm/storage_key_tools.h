@@ -34,9 +34,9 @@
  *
  * @return 0 if success, 1 if error
  */
-int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
-                              TPM2_HANDLE * srk_handle,
-                              TPM2B_AUTH * storage_hierarchy_auth);
+int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
+                   TPM2_HANDLE * srk_handle,
+                   TPM2B_AUTH * storage_hierarchy_auth);
 
 /**
  * @brief Determines if handle points to a storage root key (SRK)
@@ -55,8 +55,9 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool *isSRK);
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx,
+                 TPM2_HANDLE handle,
+                 bool *isSRK);
 
 /**
  * @brief Re-derives SRK with configured public key and hash algorithms
@@ -73,8 +74,9 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
-                          TPM2B_AUTH sps_auth);
+int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
+               TPM2_HANDLE srk_handle,
+               TPM2B_AUTH sps_auth);
 
 /**
  * @brief Creates a new storage key (SK) under the specified key hierarchy
@@ -115,13 +117,13 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-                         TPM2_HANDLE srk_handle,
-                         TPM2B_AUTH srk_authVal,
-                         TPM2B_AUTH sk_authVal,
-                         TPML_PCR_SELECTION sk_pcrList,
-                         TPM2B_DIGEST sk_authPolicy,
-                         TPM2_HANDLE * sk_handle, TPM2B_PRIVATE * sk_private,
-                         TPM2B_PUBLIC * sk_public);
+int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+              TPM2_HANDLE srk_handle,
+              TPM2B_AUTH srk_authVal,
+              TPM2B_AUTH sk_authVal,
+              TPML_PCR_SELECTION sk_pcrList,
+              TPM2B_DIGEST sk_authPolicy,
+              TPM2_HANDLE * sk_handle, TPM2B_PRIVATE * sk_private,
+              TPM2B_PUBLIC * sk_public);
 
 #endif /* STORAGE_KEY_TOOLS_H */

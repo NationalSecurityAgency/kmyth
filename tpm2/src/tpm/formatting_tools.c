@@ -17,28 +17,28 @@
 #include <tss2/tss2_mu.h>
 
 //############################################################################
-// tpm2_kmyth_marshal_skiObjects()
+// marshal_skiObjects()
 //############################################################################
-int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
-                                  uint8_t ** pcr_selection_struct_data,
-                                  size_t *pcr_selection_struct_data_size,
-                                  size_t pcr_selection_struct_data_offset,
-                                  TPM2B_PUBLIC * storage_key_public_blob,
-                                  uint8_t ** storage_key_public_data,
-                                  size_t *storage_key_public_data_size,
-                                  size_t storage_key_public_data_offset,
-                                  TPM2B_PRIVATE * storage_key_private_blob,
-                                  uint8_t ** storage_key_private_data,
-                                  size_t *storage_key_private_data_size,
-                                  size_t storage_key_private_data_offset,
-                                  TPM2B_PUBLIC * sealed_key_public_blob,
-                                  uint8_t ** sealed_key_public_data,
-                                  size_t *sealed_key_public_data_size,
-                                  size_t sealed_key_public_data_offset,
-                                  TPM2B_PRIVATE * sealed_key_private_blob,
-                                  uint8_t ** sealed_key_private_data,
-                                  size_t *sealed_key_private_data_size,
-                                  size_t sealed_key_private_data_offset)
+int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+                       uint8_t ** pcr_selection_struct_data,
+                       size_t *pcr_selection_struct_data_size,
+                       size_t pcr_selection_struct_data_offset,
+                       TPM2B_PUBLIC * storage_key_public_blob,
+                       uint8_t ** storage_key_public_data,
+                       size_t *storage_key_public_data_size,
+                       size_t storage_key_public_data_offset,
+                       TPM2B_PRIVATE * storage_key_private_blob,
+                       uint8_t ** storage_key_private_data,
+                       size_t *storage_key_private_data_size,
+                       size_t storage_key_private_data_offset,
+                       TPM2B_PUBLIC * sealed_key_public_blob,
+                       uint8_t ** sealed_key_public_data,
+                       size_t *sealed_key_public_data_size,
+                       size_t sealed_key_public_data_offset,
+                       TPM2B_PRIVATE * sealed_key_private_blob,
+                       uint8_t ** sealed_key_private_data,
+                       size_t *sealed_key_private_data_size,
+                       size_t sealed_key_private_data_offset)
 {
   // Validate that all input data structures to be packed in preparation
   // for writing to a .ski file are both non-NULL and non-empty.
@@ -61,10 +61,10 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     kmyth_log(LOG_ERR, "unallocated PCR select list data ... exiting");
     return 1;
   }
-  if (tpm2_pack_pcr(pcr_selection_struct,
-                    *pcr_selection_struct_data,
-                    *pcr_selection_struct_data_size,
-                    pcr_selection_struct_data_offset))
+  if (pack_pcr(pcr_selection_struct,
+               *pcr_selection_struct_data,
+               *pcr_selection_struct_data_size,
+               pcr_selection_struct_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing PCR select struct ... exiting");
     return 1;
@@ -76,10 +76,10 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     kmyth_log(LOG_ERR, "unallocated SK public byte array ... exiting");
     return 1;
   }
-  if (tpm2_pack_public(storage_key_public_blob,
-                       *storage_key_public_data,
-                       *storage_key_public_data_size,
-                       storage_key_public_data_offset))
+  if (pack_public(storage_key_public_blob,
+                  *storage_key_public_data,
+                  *storage_key_public_data_size,
+                  storage_key_public_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing SK public blob ... exiting");
     return 1;
@@ -91,10 +91,10 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     kmyth_log(LOG_ERR, "unallocated SK private byte array ... exiting");
     return 1;
   }
-  if (tpm2_pack_private(storage_key_private_blob,
-                        *storage_key_private_data,
-                        *storage_key_private_data_size,
-                        storage_key_private_data_offset))
+  if (pack_private(storage_key_private_blob,
+                   *storage_key_private_data,
+                   *storage_key_private_data_size,
+                   storage_key_private_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing SK private blob ... exiting");
     return 1;
@@ -106,10 +106,9 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     kmyth_log(LOG_ERR, "unallocated sealed key public byte array ... exiting");
     return 1;
   }
-  if (tpm2_pack_public(sealed_key_public_blob,
-                       *sealed_key_public_data,
-                       *sealed_key_public_data_size,
-                       sealed_key_public_data_offset))
+  if (pack_public(sealed_key_public_blob,
+                  *sealed_key_public_data,
+                  *sealed_key_public_data_size, sealed_key_public_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing sealed key public blob ... exiting");
     return 1;
@@ -122,10 +121,10 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     return 1;
   }
 
-  if (tpm2_pack_private(sealed_key_private_blob,
-                        *sealed_key_private_data,
-                        *sealed_key_private_data_size,
-                        sealed_key_private_data_offset))
+  if (pack_private(sealed_key_private_blob,
+                   *sealed_key_private_data,
+                   *sealed_key_private_data_size,
+                   sealed_key_private_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing sealed key private blob ... exiting");
     return 1;
@@ -135,70 +134,70 @@ int tpm2_kmyth_marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
 }
 
 //############################################################################
-// tpm2_kmyth_unmarshal_skiObjects()
+// unmarshal_skiObjects()
 //############################################################################
-int tpm2_kmyth_unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
-                                    uint8_t * pcr_selection_struct_data,
-                                    size_t pcr_selection_struct_data_size,
-                                    size_t pcr_selection_struct_data_offset,
-                                    TPM2B_PUBLIC * storage_key_public_blob,
-                                    uint8_t * storage_key_public_data,
-                                    size_t storage_key_public_data_size,
-                                    size_t storage_key_public_data_offset,
-                                    TPM2B_PRIVATE * storage_key_private_blob,
-                                    uint8_t * storage_key_private_data,
-                                    size_t storage_key_private_data_size,
-                                    size_t storage_key_private_data_offset,
-                                    TPM2B_PUBLIC * sealed_key_public_blob,
-                                    uint8_t * sealed_key_public_data,
-                                    size_t sealed_key_public_data_size,
-                                    size_t sealed_key_public_data_offset,
-                                    TPM2B_PRIVATE * sealed_key_private_blob,
-                                    uint8_t * sealed_key_private_data,
-                                    size_t sealed_key_private_data_size,
-                                    size_t sealed_key_private_data_offset)
+int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+                         uint8_t * pcr_selection_struct_data,
+                         size_t pcr_selection_struct_data_size,
+                         size_t pcr_selection_struct_data_offset,
+                         TPM2B_PUBLIC * storage_key_public_blob,
+                         uint8_t * storage_key_public_data,
+                         size_t storage_key_public_data_size,
+                         size_t storage_key_public_data_offset,
+                         TPM2B_PRIVATE * storage_key_private_blob,
+                         uint8_t * storage_key_private_data,
+                         size_t storage_key_private_data_size,
+                         size_t storage_key_private_data_offset,
+                         TPM2B_PUBLIC * sealed_key_public_blob,
+                         uint8_t * sealed_key_public_data,
+                         size_t sealed_key_public_data_size,
+                         size_t sealed_key_public_data_offset,
+                         TPM2B_PRIVATE * sealed_key_private_blob,
+                         uint8_t * sealed_key_private_data,
+                         size_t sealed_key_private_data_size,
+                         size_t sealed_key_private_data_offset)
 {
   int retval = 0;
 
   // Unmarshal PCR selection list struct
-  retval |= tpm2_unpack_pcr(pcr_selection_struct,
-                            pcr_selection_struct_data,
-                            pcr_selection_struct_data_size,
-                            pcr_selection_struct_data_offset);
+  retval |= unpack_pcr(pcr_selection_struct,
+                       pcr_selection_struct_data,
+                       pcr_selection_struct_data_size,
+                       pcr_selection_struct_data_offset);
 
   // Unmarshal public data for Kmyth storage key (SK)
-  retval |= tpm2_unpack_public(storage_key_public_blob,
-                               storage_key_public_data,
-                               storage_key_public_data_size,
-                               storage_key_public_data_offset);
+  retval |= unpack_public(storage_key_public_blob,
+                          storage_key_public_data,
+                          storage_key_public_data_size,
+                          storage_key_public_data_offset);
 
   // Unmarshal encrypted private data for Kmyth storage key (SK)
-  retval |= tpm2_unpack_private(storage_key_private_blob,
-                                storage_key_private_data,
-                                storage_key_private_data_size,
-                                storage_key_private_data_offset);
+  retval |= unpack_private(storage_key_private_blob,
+                           storage_key_private_data,
+                           storage_key_private_data_size,
+                           storage_key_private_data_offset);
 
   // Unmarshal public data for Kmyth sealed data object (sealed wrapping key)
-  retval |= tpm2_unpack_public(sealed_key_public_blob,
-                               sealed_key_public_data,
-                               sealed_key_public_data_size,
-                               sealed_key_public_data_offset);
+  retval |= unpack_public(sealed_key_public_blob,
+                          sealed_key_public_data,
+                          sealed_key_public_data_size,
+                          sealed_key_public_data_offset);
 
   // Unmarshal encrypted private data for Kmyth sealed data object
-  retval |= tpm2_unpack_private(sealed_key_private_blob,
-                                sealed_key_private_data,
-                                sealed_key_private_data_size,
-                                sealed_key_private_data_offset);
+  retval |= unpack_private(sealed_key_private_blob,
+                           sealed_key_private_data,
+                           sealed_key_private_data_size,
+                           sealed_key_private_data_offset);
 
   return retval;
 }
 
 //############################################################################
-// tpm2_pack_pcr()
+// pack_pcr()
 //############################################################################
-int tpm2_pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
-                  uint8_t * packed_data_out,
-                  size_t packed_data_out_size, size_t packed_data_out_offset)
+int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
+             uint8_t * packed_data_out,
+             size_t packed_data_out_size, size_t packed_data_out_offset)
 {
   // "Marshal" input PCR selections into packed, platform independent format
   TSS2_RC rc = 0;
@@ -217,11 +216,11 @@ int tpm2_pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
 }
 
 //############################################################################
-// tpm2_unpack_pcr()
+// unpack_pcr()
 //############################################################################
-int tpm2_unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
-                    uint8_t * packed_data_in,
-                    size_t packed_data_in_size, size_t packed_data_in_offset)
+int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
+               uint8_t * packed_data_in,
+               size_t packed_data_in_size, size_t packed_data_in_offset)
 {
   // "Unmarshal" input packed (.ski) format into a TPML_PCR_SELECTION struct
   TSS2_RC rc = 0;
@@ -240,11 +239,11 @@ int tpm2_unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
 }
 
 //############################################################################
-// tpm2_pack_public()
+// pack_public()
 //############################################################################
-int tpm2_pack_public(TPM2B_PUBLIC * public_blob_in,
-                     uint8_t * packed_data_out,
-                     size_t packed_data_out_size, size_t packed_data_out_offset)
+int pack_public(TPM2B_PUBLIC * public_blob_in,
+                uint8_t * packed_data_out,
+                size_t packed_data_out_size, size_t packed_data_out_offset)
 {
   // "Marshal" input public blob into packed, platform independent format
   TSS2_RC rc = 0;
@@ -263,11 +262,11 @@ int tpm2_pack_public(TPM2B_PUBLIC * public_blob_in,
 }
 
 //############################################################################
-// tpm2_unpack_public()
+// unpack_public()
 //############################################################################
-int tpm2_unpack_public(TPM2B_PUBLIC * public_blob_out,
-                       uint8_t * packed_data_in,
-                       size_t packed_data_in_size, size_t packed_data_in_offset)
+int unpack_public(TPM2B_PUBLIC * public_blob_out,
+                  uint8_t * packed_data_in,
+                  size_t packed_data_in_size, size_t packed_data_in_offset)
 {
   // "Unmarshal" input packed (.ski file) format into a TPM2B_PUBLIC struct
   TSS2_RC rc = 0;
@@ -286,12 +285,11 @@ int tpm2_unpack_public(TPM2B_PUBLIC * public_blob_out,
 }
 
 //############################################################################
-// tpm2_pack_private()
+// pack_private()
 //############################################################################
-int tpm2_pack_private(TPM2B_PRIVATE * private_blob_in,
-                      uint8_t * packed_data_out,
-                      size_t packed_data_out_size,
-                      size_t packed_data_out_offset)
+int pack_private(TPM2B_PRIVATE * private_blob_in,
+                 uint8_t * packed_data_out,
+                 size_t packed_data_out_size, size_t packed_data_out_offset)
 {
   // "Marshal" input private blob into packed, platform independent format
   TSS2_RC rc = 0;
@@ -310,12 +308,11 @@ int tpm2_pack_private(TPM2B_PRIVATE * private_blob_in,
 }
 
 //############################################################################
-// tpm2_unpack_private()
+// unpack_private()
 //############################################################################
-int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
-                        uint8_t * packed_data_in,
-                        size_t packed_data_in_size,
-                        size_t packed_data_in_offset)
+int unpack_private(TPM2B_PRIVATE * private_blob_out,
+                   uint8_t * packed_data_in,
+                   size_t packed_data_in_size, size_t packed_data_in_offset)
 {
   // "Unmarshal" input packed (.ski file) format into a TPM2B_PRIVATE struct
   TSS2_RC rc = 0;
@@ -334,10 +331,27 @@ int tpm2_unpack_private(TPM2B_PRIVATE * private_blob_out,
 }
 
 //############################################################################
-// tpm2_kmyth_parse_ski_bytes
+// unpack_uint32_to_str()
 //############################################################################
-int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
-                               Ski * output)
+int unpack_uint32_to_str(uint32_t uint_value, char **str_repr)
+{
+  if (asprintf(str_repr, "%c%c%c%c",
+               ((uint8_t *) & uint_value)[3],
+               ((uint8_t *) & uint_value)[2],
+               ((uint8_t *) & uint_value)[1],
+               ((uint8_t *) & uint_value)[0]) < 0)
+  {
+    kmyth_log(LOG_ERR, "error unpacking uint32 to string ... exiting");
+    return 1;
+  }
+
+  return 0;
+}
+
+//############################################################################
+// parse_ski_bytes
+//############################################################################
+int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 {
   uint8_t *position = input;
   size_t remaining = input_length;
@@ -570,26 +584,26 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
   }
   else
   {
-    retval = tpm2_kmyth_unmarshal_skiObjects(&temp_ski.pcr_list,
-                                             decoded_pcr_select_list_data,
-                                             decoded_pcr_select_list_size,
-                                             decoded_pcr_select_list_offset,
-                                             &temp_ski.sk_pub,
-                                             decoded_sk_pub_data,
-                                             decoded_sk_pub_size,
-                                             decoded_sk_pub_offset,
-                                             &temp_ski.sk_priv,
-                                             decoded_sk_priv_data,
-                                             decoded_sk_priv_size,
-                                             decoded_sk_priv_offset,
-                                             &temp_ski.wk_pub,
-                                             decoded_sym_pub_data,
-                                             decoded_sym_pub_size,
-                                             decoded_sym_pub_offset,
-                                             &temp_ski.wk_priv,
-                                             decoded_sym_priv_data,
-                                             decoded_sym_priv_size,
-                                             decoded_sym_priv_offset);
+    retval = unmarshal_skiObjects(&temp_ski.pcr_list,
+                                  decoded_pcr_select_list_data,
+                                  decoded_pcr_select_list_size,
+                                  decoded_pcr_select_list_offset,
+                                  &temp_ski.sk_pub,
+                                  decoded_sk_pub_data,
+                                  decoded_sk_pub_size,
+                                  decoded_sk_pub_offset,
+                                  &temp_ski.sk_priv,
+                                  decoded_sk_priv_data,
+                                  decoded_sk_priv_size,
+                                  decoded_sk_priv_offset,
+                                  &temp_ski.wk_pub,
+                                  decoded_sym_pub_data,
+                                  decoded_sym_pub_size,
+                                  decoded_sym_pub_offset,
+                                  &temp_ski.wk_priv,
+                                  decoded_sym_priv_data,
+                                  decoded_sym_priv_size,
+                                  decoded_sym_priv_offset);
     if (retval)
     {
       kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
@@ -606,10 +620,9 @@ int tpm2_kmyth_parse_ski_bytes(uint8_t * input, size_t input_length,
 }
 
 //############################################################################
-// tpm2_kmyth_create_ski_bytes
+// create_ski_bytes
 //############################################################################
-int tpm2_kmyth_create_ski_bytes(Ski input,
-                                uint8_t ** output, size_t *output_length)
+int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 {
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
@@ -631,25 +644,24 @@ int tpm2_kmyth_create_ski_bytes(Ski input,
   size_t wk_priv_offset = 0;
   uint8_t *wk_priv_data = malloc(wk_priv_size);
 
-  if (tpm2_kmyth_marshal_skiObjects(&input.pcr_list,
-                                    &pcr_select_data,
-                                    &pcr_select_size,
-                                    pcr_select_offset,
-                                    &input.sk_pub,
-                                    &sk_pub_data,
-                                    &sk_pub_size,
-                                    sk_pub_offset,
-                                    &input.sk_priv,
-                                    &sk_priv_data,
-                                    &sk_priv_size,
-                                    sk_priv_offset,
-                                    &input.wk_pub,
-                                    &wk_pub_data,
-                                    &wk_pub_size,
-                                    wk_pub_offset,
-                                    &input.wk_priv,
-                                    &wk_priv_data,
-                                    &wk_priv_size, wk_priv_offset))
+  if (marshal_skiObjects(&input.pcr_list,
+                         &pcr_select_data,
+                         &pcr_select_size,
+                         pcr_select_offset,
+                         &input.sk_pub,
+                         &sk_pub_data,
+                         &sk_pub_size,
+                         sk_pub_offset,
+                         &input.sk_priv,
+                         &sk_priv_data,
+                         &sk_priv_size,
+                         sk_priv_offset,
+                         &input.wk_pub,
+                         &wk_pub_data,
+                         &wk_pub_size,
+                         wk_pub_offset,
+                         &input.wk_priv,
+                         &wk_priv_data, &wk_priv_size, wk_priv_offset))
   {
     kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
     free(pcr_select_data);

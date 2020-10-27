@@ -16,11 +16,11 @@
 #include <openssl/evp.h>
 
 //############################################################################
-// tpm2_kmyth_get_srk_handle()
+// get_srk_handle()
 //############################################################################
-int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
-                              TPM2_HANDLE * srk_handle,
-                              TPM2B_AUTH * storage_hierarchy_auth)
+int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
+                   TPM2_HANDLE * srk_handle,
+                   TPM2B_AUTH * storage_hierarchy_auth)
 {
   kmyth_log(LOG_DEBUG, "checking TPM persistent handles for SRK");
 
@@ -43,7 +43,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   //          case.
   TPMS_CAPABILITY_DATA capData;
 
-  if (tpm2_get_properties
+  if (get_tpm2_properties
       (sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES,
        &capData))
   {
@@ -81,7 +81,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     bool isSRK = false;
 
-    if (tpm2_kmyth_srk_check(sapi_ctx, capData.data.handles.handle[i], &isSRK))
+    if (check_if_srk(sapi_ctx, capData.data.handles.handle[i], &isSRK))
     {
       kmyth_log(LOG_ERR,
                 "error checking if handle = 0x%08X references SRK ... exiting",
@@ -103,7 +103,7 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if (*srk_handle == 0)
   {
     *srk_handle = next_persistent_handle;
-    if (tpm2_kmyth_derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
+    if (derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
     {
       kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
       return 1;
@@ -114,10 +114,9 @@ int tpm2_kmyth_get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_srk_check()
+// check_if_srk()
 //############################################################################
-int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
-                         bool *isSRK)
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
   // initialize 'isSRK' result to true - changed to false when SRK check fails
   *isSRK = true;
@@ -278,10 +277,10 @@ int tpm2_kmyth_srk_check(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle,
 }
 
 //############################################################################
-// tpm2_derive_srk
+// derive_srk
 //############################################################################
-int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
-                          TPM2B_AUTH sps_auth)
+int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
+               TPM2_HANDLE srk_handle, TPM2B_AUTH sps_auth)
 {
   kmyth_log(LOG_DEBUG, "deriving SRK ..");
 
@@ -311,8 +310,13 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
   srk_sensitive.sensitive.data.size = 0;
   srk_sensitive.sensitive.userAuth.size = 0;
 
-  tpm2_init_kmyth_object_sensitive(sps_auth, object_data, object_data_size,
-                                   &srk_sensitive);
+  if (init_kmyth_object_sensitive(sps_auth,
+                                  object_data,
+                                  object_data_size, &srk_sensitive))
+  {
+    kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
+    return 1;
+  }
 
   // Create and setup public data "template" for the SRK
   TPM2B_PUBLIC srk_template;
@@ -320,8 +324,9 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
 
   srk_template.size = 0;
   empty_policy_digest.size = 0;
-  if (tpm2_init_kmyth_object_template
-      (true, empty_policy_digest, &(srk_template.publicArea)))
+  if (init_kmyth_object_template(true,
+                                 empty_policy_digest,
+                                 &(srk_template.publicArea)))
   {
     kmyth_log(LOG_ERR, "create SRK template error ... exiting");
     return 1;
@@ -335,10 +340,15 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
   TPML_PCR_SELECTION emptyPCRList;  // no PCR auth (SRK or SPS)
 
   emptyPCRList.count = 0;
-  if (tpm2_kmyth_create_object
-      (sapi_ctx, nullSession, TPM2_RH_OWNER, sps_auth, emptyPCRList,
-       srk_sensitive, srk_template, emptyPCRList, srk_handle, nullPrivateBlob,
-       nullPublicBlob))
+  if (create_kmyth_object(sapi_ctx,
+                          nullSession,
+                          TPM2_RH_OWNER,
+                          sps_auth,
+                          emptyPCRList,
+                          srk_sensitive,
+                          srk_template,
+                          emptyPCRList,
+                          srk_handle, nullPrivateBlob, nullPublicBlob))
   {
     kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
     return 1;
@@ -348,16 +358,16 @@ int tpm2_kmyth_derive_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE srk_handle,
 }
 
 //############################################################################
-// tpm2_kmyth_create_sk()
+// create_sk()
 //############################################################################
-int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-                         TPM2_HANDLE srk_handle,
-                         TPM2B_AUTH srk_authVal,
-                         TPM2B_AUTH sk_authVal,
-                         TPML_PCR_SELECTION sk_pcrList,
-                         TPM2B_DIGEST sk_authPolicy,
-                         TPM2_HANDLE * sk_handle,
-                         TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
+int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+              TPM2_HANDLE srk_handle,
+              TPM2B_AUTH srk_authVal,
+              TPM2B_AUTH sk_authVal,
+              TPML_PCR_SELECTION sk_pcrList,
+              TPM2B_DIGEST sk_authPolicy,
+              TPM2_HANDLE * sk_handle,
+              TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
   //   - The authVal (hash of user specifed authorization string or default
@@ -371,14 +381,18 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sk_sensitive.sensitive.data.size = 0;
   sk_sensitive.sensitive.userAuth.size = 0;
-  tpm2_init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive);
+  if (init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive))
+  {
+    kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
+    return 1;
+  }
 
   // Create empty and then set up public data "template" for storage key
   TPM2B_PUBLIC sk_template;
 
   sk_template.size = 0;
-  if (tpm2_init_kmyth_object_template
-      (true, sk_authPolicy, &(sk_template.publicArea)))
+  if (init_kmyth_object_template(true,
+                                 sk_authPolicy, &(sk_template.publicArea)))
   {
     kmyth_log(LOG_ERR, "SK create template error ... exiting");
     return 1;
@@ -390,10 +404,14 @@ int tpm2_kmyth_create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
 
   emptyPCRList.count = 0;
-  if (tpm2_kmyth_create_object
-      (sapi_ctx, nullSession, srk_handle, srk_authVal, emptyPCRList,
-       sk_sensitive, sk_template, sk_pcrList, unusedHandle, sk_private,
-       sk_public))
+  if (create_kmyth_object(sapi_ctx,
+                          nullSession,
+                          srk_handle,
+                          srk_authVal,
+                          emptyPCRList,
+                          sk_sensitive,
+                          sk_template,
+                          sk_pcrList, unusedHandle, sk_private, sk_public))
   {
     kmyth_log(LOG_ERR, "error creating storage key ... exiting");
     return 1;

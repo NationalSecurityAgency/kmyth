@@ -107,9 +107,9 @@ int tls_cleanup(void);
  * 
  * @return 0 if success, 1 if error
  */
-int get_key_from_server(BIO * bio,
-                        char *message, size_t message_length,
-                        unsigned char **key, size_t *key_size);
+int get_key_from_tls_server(BIO * bio,
+                            char *message, size_t message_length,
+                            unsigned char **key, size_t *key_size);
 
 /**
  * <pre>

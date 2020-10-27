@@ -28,9 +28,9 @@ const char *simulator_manufacturers[] = { "IBM",  // https://sourceforge.net/pro
 };
 
 //############################################################################
-// tpm2_init_connection()
+// init_tpm2_connection()
 //############################################################################
-int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
+int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
 {
   // Verify that SAPI context is uninitialized (NULL) -
   // TCTI context must be initialized first 
@@ -43,17 +43,17 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
   // Step 1: Initialize TCTI context for connection to resource manager
   TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
 
-  if (tpm2_init_tcti_abrmd(&tcti_ctx))
+  if (init_tcti_abrmd(&tcti_ctx))
   {
     kmyth_log(LOG_ERR, "unable to initialize TCTI context ... exiting");
     return 1;
   }
 
   // Step 2: Initialize SAPI context with TCTI context
-  if (tpm2_init_sapi(sapi_ctx, tcti_ctx))
+  if (init_sapi(sapi_ctx, tcti_ctx))
   {
     // If SAPI initialization fails: 
-    //   - sapi_ctx is freed by tpm2_init_sapi()
+    //   - sapi_ctx is freed by init_sapi()
     //   - tcti_ctx must still be cleaned up
     Tss2_Tcti_Finalize(tcti_ctx);
     free(tcti_ctx);
@@ -65,7 +65,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
   //         hardware TPM so we only invoke if emulator being used.
   bool tpmTypeIsEmulator = false;
 
-  if (tpm2_get_impl_type(*sapi_ctx, &tpmTypeIsEmulator))
+  if (get_tpm2_impl_type(*sapi_ctx, &tpmTypeIsEmulator))
   {
     // On failure, clean up initialization remnants to this point
     Tss2_Sys_Finalize(*sapi_ctx);
@@ -79,7 +79,7 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
   {
     if (tpmTypeIsEmulator)
     {
-      if (tpm2_startup(sapi_ctx))
+      if (startup_tpm2(sapi_ctx))
       {
         // On failure, clean up initialization remnants to this point
         Tss2_Sys_Finalize(*sapi_ctx);
@@ -104,9 +104,9 @@ int tpm2_init_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
 }
 
 //############################################################################
-// tpm2_init_tcti_abrmd()
+// init_tcti_abrmd()
 //############################################################################
-int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
+int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
 {
   // TCTI context must be passed in uninitialized (NULL)
   if (*tcti_ctx != NULL)
@@ -124,7 +124,7 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
 
@@ -141,7 +141,7 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     free(*tcti_ctx);
     return 1;
   }
@@ -150,9 +150,9 @@ int tpm2_init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
 }
 
 //############################################################################
-// tpm2_init_sapi()
+// init_sapi()
 //############################################################################
-int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
+int init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 {
   // SAPI context passed in to be initialized must be empty (NULL)
   if (*sapi_ctx != NULL)
@@ -200,7 +200,7 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Initialize(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     free(sapi_ctx);
     return 1;
   }
@@ -210,9 +210,9 @@ int tpm2_init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 }
 
 //############################################################################
-// tpm2_free_resources()
+// free_tpm2_resources()
 //############################################################################
-int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
+int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 {
   // If the input context is null there's nothing to do.
   if ((sapi_ctx == NULL) || (*sapi_ctx == NULL))
@@ -225,7 +225,9 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   // flush any remaining loaded or active session handle values
   TPMS_CAPABILITY_DATA hSession;
 
-  if (tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_HMAC_SESSION,
+  if (get_tpm2_properties(*sapi_ctx,
+                          TPM2_CAP_HANDLES,
+                          TPM2_HR_HMAC_SESSION,
                           TPM2_PT_ACTIVE_SESSIONS_MAX, &hSession))
   {
     kmyth_log(LOG_ERR, "unable to get TPM2_HR_HMAC_SESSION property from TPM");
@@ -244,7 +246,9 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   TPMS_CAPABILITY_DATA pSession;
 
-  if (tpm2_get_properties(*sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_POLICY_SESSION,
+  if (get_tpm2_properties(*sapi_ctx,
+                          TPM2_CAP_HANDLES,
+                          TPM2_HR_POLICY_SESSION,
                           TPM2_PT_ACTIVE_SESSIONS_MAX, &pSession))
   {
     kmyth_log(LOG_ERR,
@@ -269,7 +273,7 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_GetTctiContext(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     retval = 1;
   }
 
@@ -296,9 +300,9 @@ int tpm2_free_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 }
 
 //############################################################################
-// tpm2_startup()
+// startup_tpm2()
 //############################################################################
-int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx)
+int startup_tpm2(TSS2_SYS_CONTEXT ** sapi_ctx)
 {
   // make sure we can access the TPM SAPI
   if (*sapi_ctx == NULL)
@@ -325,7 +329,7 @@ int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx)
   else
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Startup(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
 
@@ -333,11 +337,12 @@ int tpm2_startup(TSS2_SYS_CONTEXT ** sapi_ctx)
 }
 
 //############################################################################
-// tpm2_get_properties()
+// get_tpm2_properties()
 //############################################################################
-int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
+int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
                         uint32_t capability,
-                        uint32_t property, uint32_t propertyCount,
+                        uint32_t property,
+                        uint32_t propertyCount,
                         TPMS_CAPABILITY_DATA * capabilityData)
 {
   TSS2_RC rc;
@@ -360,7 +365,7 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Get_Capability(): rc = 0x%08X, %s",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     kmyth_log(LOG_ERR, "unable to get capability = %u, property = %u,"
               " count = %u ... exiting", capability, property, propertyCount);
     return 1;
@@ -375,15 +380,15 @@ int tpm2_get_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_get_impl_type()
+// get_tpm2_impl_type()
 //############################################################################
-int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 {
   TPMS_CAPABILITY_DATA capData;
 
-  if (tpm2_get_properties
-      (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_MANUFACTURER, TPM2_PT_GROUP,
-       &capData))
+  if (get_tpm2_properties(sapi_ctx,
+                          TPM2_CAP_TPM_PROPERTIES,
+                          TPM2_PT_MANUFACTURER, TPM2_PT_GROUP, &capData))
   {
     kmyth_log(LOG_ERR, "unable to get TPM2_PT_MANUFACTURER "
               "property from TPM ... exiting");
@@ -393,8 +398,8 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
   // obtain string representation of TPM2_PT_MANUFACTURER property
   char *manufacturer_str;
 
-  if (tpm2_unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
-                                &manufacturer_str))
+  if (unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
+                           &manufacturer_str))
   {
     kmyth_log(LOG_ERR, "unable to get vendor string ... exiting");
     return 1;
@@ -422,39 +427,21 @@ int tpm2_get_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 }
 
 //############################################################################
-// tpm2_unpack_uint32_to_str()
-//############################################################################
-int tpm2_unpack_uint32_to_str(uint32_t uint_value, char **str_repr)
-{
-  if (asprintf(str_repr, "%c%c%c%c",
-               ((uint8_t *) & uint_value)[3],
-               ((uint8_t *) & uint_value)[2],
-               ((uint8_t *) & uint_value)[1],
-               ((uint8_t *) & uint_value)[0]) < 0)
-  {
-    kmyth_log(LOG_ERR, "error unpacking uint32 to string ... exiting");
-    return 1;
-  }
-
-  return 0;
-}
-
-//############################################################################
-// tpm2_getErrorString()
+// getErrorString()
 //############################################################################
 
-const char *tpm2_getErrorString(TSS2_RC err)
+const char *getErrorString(TSS2_RC err)
 {
   return Tss2_RC_Decode(err);
 }
 
 //############################################################################
-// tpm2_kmyth_prep_password_cmd_auth()
+// init_password_cmd_auth()
 //############################################################################
-int tpm2_kmyth_prep_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
-                                      TPM2B_AUTH authEntityAuthVal,
-                                      TSS2L_SYS_AUTH_COMMAND * commandAuths,
-                                      TSS2L_SYS_AUTH_RESPONSE * responseAuths)
+int init_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
+                           TPM2B_AUTH authEntityAuthVal,
+                           TSS2L_SYS_AUTH_COMMAND * commandAuths,
+                           TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
   // For Kmyth, we currently only invoke TPM commands requiring zero or one
   // sessions for authorization. For now we will simply set the count to one.
@@ -500,18 +487,18 @@ int tpm2_kmyth_prep_password_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_prep_policy_cmd_auth()
+// init_policy_cmd_auth()
 //############################################################################
-int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    SESSION * authSession,
-                                    TPM2_CC authCmdCode,
-                                    TPM2B_NAME authEntityName,
-                                    TPM2B_AUTH authEntityAuthVal,
-                                    uint8_t * authCmdParams,
-                                    size_t authCmdParams_len,
-                                    TPML_PCR_SELECTION authSession_pcrList,
-                                    TSS2L_SYS_AUTH_COMMAND * commandAuths,
-                                    TSS2L_SYS_AUTH_RESPONSE * responseAuths)
+int init_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
+                         SESSION * authSession,
+                         TPM2_CC authCmdCode,
+                         TPM2B_NAME authEntityName,
+                         TPM2B_AUTH authEntityAuthVal,
+                         uint8_t * authCmdParams,
+                         size_t authCmdParams_len,
+                         TPML_PCR_SELECTION authSession_pcrList,
+                         TSS2L_SYS_AUTH_COMMAND * commandAuths,
+                         TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
   // For Kmyth, we currently only invoke TPM commands requiring zero or one
   // sessions for authorization. For now we will simply set the count to one.
@@ -526,12 +513,12 @@ int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
   // (session nonceOlder) and 'roll nonces' (nonceCaller->nonceNewer)
   TPM2B_NONCE callerNonce = authSession->nonceOlder;
 
-  if (tpm2_kmyth_create_caller_nonce(&callerNonce))
+  if (create_caller_nonce(&callerNonce))
   {
     kmyth_log(LOG_ERR, "error generating new nonce ... exiting");
     return 1;
   }
-  tpm2_session_rollNonces(authSession, callerNonce);
+  rollNonces(authSession, callerNonce);
   kmyth_log(LOG_DEBUG, "rolled nonces - nonceCaller is now nonceNewer");
   commandAuths->auths[0].nonce.size = callerNonce.size;
   memcpy(commandAuths->auths[0].nonce.buffer, callerNonce.buffer,
@@ -552,13 +539,15 @@ int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
   // create the authorized command hash - part of the HMAC calculation
   TPM2B_DIGEST cpHash;
 
-  tpm2_kmyth_compute_cpHash(authCmdCode, authEntityName, authCmdParams,
-                            authCmdParams_len, &cpHash);
+  compute_cpHash(authCmdCode,
+                 authEntityName, authCmdParams, authCmdParams_len, &cpHash);
 
   // compute the HMAC required for command authorization, placing the result
   // in the command authorization structure
-  tpm2_kmyth_compute_authHMAC(*authSession, cpHash, authEntityAuthVal,
-                              sessionAttr, &commandAuths->auths[0].hmac);
+  compute_authHMAC(*authSession,
+                   cpHash,
+                   authEntityAuthVal,
+                   sessionAttr, &commandAuths->auths[0].hmac);
 
   // initialize lengths of values returned by TPM to zero in response
   // authorization structure sent with command to TPM
@@ -569,21 +558,21 @@ int tpm2_kmyth_prep_policy_cmd_auth(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_check_response_auth()
+// check_response_auth()
 //############################################################################
-int tpm2_kmyth_check_response_auth(SESSION * authSession,
-                                   TPM2_CC authCommandCode,
-                                   uint8_t * authCmdParams,
-                                   size_t authCmdParams_size,
-                                   TPM2B_AUTH authEntityAuthVal,
-                                   TSS2L_SYS_AUTH_RESPONSE * responseAuths)
+int check_response_auth(SESSION * authSession,
+                        TPM2_CC authCommandCode,
+                        uint8_t * authCmdParams,
+                        size_t authCmdParams_size,
+                        TPM2B_AUTH authEntityAuthVal,
+                        TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
   // nonceTPM (received in response from TPM) is available
   kmyth_log(LOG_DEBUG, "nonceTPM: 0x%02X...",
             responseAuths->auths[0].nonce.buffer[0]);
 
   // roll nonces - move nonceCaller to nonceOlder, noncTPM to nonceNewer
-  tpm2_session_rollNonces(authSession, responseAuths->auths[0].nonce);
+  rollNonces(authSession, responseAuths->auths[0].nonce);
   kmyth_log(LOG_DEBUG, "rolled nonces - nonceTPM is now nonceNewer");
 
   // create response parameter hash (rpHash) - part of the HMAC calculation
@@ -591,17 +580,16 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
   //        so the response code must be TPM2_RC_SUCCESS
   TPM2B_DIGEST rpHash;
 
-  tpm2_kmyth_compute_rpHash(TPM2_RC_SUCCESS, authCommandCode, authCmdParams,
-                            authCmdParams_size, &rpHash);
+  compute_rpHash(TPM2_RC_SUCCESS,
+                 authCommandCode, authCmdParams, authCmdParams_size, &rpHash);
 
   // compute the HMAC required for validation of the TPM response
   TPM2B_DIGEST checkHMAC;
 
   checkHMAC.size = 0;           // start with empty hash
-  tpm2_kmyth_compute_authHMAC(*authSession,
-                              rpHash, authEntityAuthVal,
-                              responseAuths->auths[0].sessionAttributes,
-                              &checkHMAC);
+  compute_authHMAC(*authSession,
+                   rpHash, authEntityAuthVal,
+                   responseAuths->auths[0].sessionAttributes, &checkHMAC);
 
   // print authHMAC returned from TPM for DEBUG-level logging  
   kmyth_log(LOG_DEBUG, "authHMAC returned by TPM: 0x%02X...",
@@ -627,10 +615,10 @@ int tpm2_kmyth_check_response_auth(SESSION * authSession,
 }
 
 //############################################################################
-// tpm2_kmyth_create_authVal()
+// create_authVal()
 //############################################################################
-void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
-                               TPM2B_AUTH * authValOut)
+void create_authVal(uint8_t * auth_bytes,
+                    size_t auth_bytes_len, TPM2B_AUTH * authValOut)
 {
   // Set authVal size to digest size produced by Kmyth hash algorithm
   authValOut->size = KMYTH_DIGEST_SIZE;
@@ -654,34 +642,12 @@ void tpm2_kmyth_create_authVal(uint8_t * auth_bytes, size_t auth_bytes_len,
 }
 
 //############################################################################
-// tpm2_kmyth_create_caller_nonce()
+// compute_cpHash
 //############################################################################
-int tpm2_kmyth_create_caller_nonce(TPM2B_NONCE * nonceOut)
-{
-  // use OpenSSL RAND_bytes() to generate a "unique" nonce
-  unsigned char rand_bytes[KMYTH_DIGEST_SIZE];
-
-  if (!RAND_bytes(rand_bytes, KMYTH_DIGEST_SIZE))
-  {
-    kmyth_log(LOG_ERR, "error generating random bytes ... exiting");
-  }
-
-  // Put random bytes result in the TPM2B_NONCE struct passed in
-  nonceOut->size = KMYTH_DIGEST_SIZE;
-  memcpy(nonceOut->buffer, rand_bytes, KMYTH_DIGEST_SIZE);
-
-  kmyth_log(LOG_DEBUG, "nonceCaller: 0x%02X..%02X",
-            nonceOut->buffer[0], nonceOut->buffer[nonceOut->size - 1]);
-  return 0;
-}
-
-//############################################################################
-// tpm2_kmyth_compute_cpHash
-//############################################################################
-void tpm2_kmyth_compute_cpHash(TPM2_CC cmdCode,
-                               TPM2B_NAME authEntityName,
-                               uint8_t * cmdParams, size_t cmdParams_size,
-                               TPM2B_DIGEST * cpHash_out)
+void compute_cpHash(TPM2_CC cmdCode,
+                    TPM2B_NAME authEntityName,
+                    uint8_t * cmdParams,
+                    size_t cmdParams_size, TPM2B_DIGEST * cpHash_out)
 {
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
@@ -712,12 +678,12 @@ void tpm2_kmyth_compute_cpHash(TPM2_CC cmdCode,
 }
 
 //############################################################################
-// tpm2_kmyth_compute_rpHash
+// compute_rpHash
 //############################################################################
-void tpm2_kmyth_compute_rpHash(TPM2_RC rspCode,
-                               TPM2_CC cmdCode,
-                               uint8_t * cmdParams, size_t cmdParams_size,
-                               TPM2B_DIGEST * rpHash_out)
+void compute_rpHash(TPM2_RC rspCode,
+                    TPM2_CC cmdCode,
+                    uint8_t * cmdParams,
+                    size_t cmdParams_size, TPM2B_DIGEST * rpHash_out)
 {
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
@@ -748,13 +714,13 @@ void tpm2_kmyth_compute_rpHash(TPM2_RC rspCode,
 }
 
 //############################################################################
-// tpm2_kmyth_compute_authHMAC
+// compute_authHMAC
 //############################################################################
-void tpm2_kmyth_compute_authHMAC(SESSION auth_session,
-                                 TPM2B_DIGEST auth_pHash,
-                                 TPM2B_AUTH auth_authValue,
-                                 TPMA_SESSION auth_sessionAttributes,
-                                 TPM2B_AUTH * auth_HMAC)
+void compute_authHMAC(SESSION auth_session,
+                      TPM2B_DIGEST auth_pHash,
+                      TPM2B_AUTH auth_authValue,
+                      TPMA_SESSION auth_sessionAttributes,
+                      TPM2B_AUTH * auth_HMAC)
 {
   // initialize authHMAC (authValue is key for computing the keyed hash)
   HMAC_CTX *hmac_ctx = HMAC_CTX_new();
@@ -791,11 +757,11 @@ void tpm2_kmyth_compute_authHMAC(SESSION auth_session,
 }
 
 //############################################################################
-// tpm2_kmyth_create_policy_digest
+// create_policy_digest
 //############################################################################
-int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    TPML_PCR_SELECTION tp_pcrList,
-                                    TPM2B_DIGEST * policyDigest_out)
+int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
+                         TPML_PCR_SELECTION tp_pcrList,
+                         TPM2B_DIGEST * policyDigest_out)
 {
   // declare a session structure variable for the trial policy session
   SESSION trialPolicySession;
@@ -804,7 +770,7 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2B_NONCE initialNonce;
 
   initialNonce.size = KMYTH_DIGEST_SIZE;
-  tpm2_kmyth_create_caller_nonce(&initialNonce);
+  create_caller_nonce(&initialNonce);
 
   // initialize session state with "start-up" nonce values
   //   - nonceNewer initialized to nonceCaller value just generated
@@ -813,21 +779,19 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   trialPolicySession.nonceNewer.size = KMYTH_DIGEST_SIZE;
   memset(trialPolicySession.nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
   trialPolicySession.nonceOlder.size = KMYTH_DIGEST_SIZE;
-  tpm2_session_rollNonces(&trialPolicySession, initialNonce);
+  rollNonces(&trialPolicySession, initialNonce);
   trialPolicySession.nonceTPM.size = 0;
 
   // create (start) unbound, unsalted trial policy session
   // consistent with the Kmyth authorization criteria
-  if (tpm2_kmyth_start_policy_auth_session
-      (sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
+  if (start_policy_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
   {
     kmyth_log(LOG_ERR, "start policy session error ... exiting");
     return 1;
   }
 
   // Apply policy to trial session context
-  if (tpm2_kmyth_apply_policy
-      (sapi_ctx, trialPolicySession.sessionHandle, tp_pcrList))
+  if (apply_policy(sapi_ctx, trialPolicySession.sessionHandle, tp_pcrList))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;
@@ -846,7 +810,7 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     kmyth_log(LOG_ERR,
               "Tss2_Sys_PolicyGetDigest(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "authPolicy: 0x%02X..%02X",
@@ -858,7 +822,7 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TSS2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_FlushContext(): rc = 0x%08X, %s", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "flushed trial policy session "
@@ -868,16 +832,16 @@ int tpm2_kmyth_create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_create_policy_auth_session
+// create_policy_auth_session
 //############################################################################
-int tpm2_kmyth_create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                                          SESSION * policySession)
+int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                               SESSION * policySession)
 {
   // create initial callerNonce
   TPM2B_NONCE initialNonce;
 
   initialNonce.size = 0;        // start with empty nonce
-  tpm2_kmyth_create_caller_nonce(&initialNonce);
+  create_caller_nonce(&initialNonce);
 
   // initialize session state with "start-up" nonce values
   //   - nonceNewer initialized to nonceCaller value just generated
@@ -885,12 +849,11 @@ int tpm2_kmyth_create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   //   - nonceTPM initialized to empty nonce
   policySession->nonceNewer.size = KMYTH_DIGEST_SIZE;
   memset(policySession->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
-  tpm2_session_rollNonces(policySession, initialNonce);
+  rollNonces(policySession, initialNonce);
   policySession->nonceTPM.size = 0;
 
   // initiate an unbound, unsalted policy session
-  if (tpm2_kmyth_start_policy_auth_session
-      (sapi_ctx, policySession, TPM2_SE_POLICY))
+  if (start_policy_auth_session(sapi_ctx, policySession, TPM2_SE_POLICY))
   {
     kmyth_log(LOG_ERR, "error starting policy session ... exiting");
     return 1;
@@ -900,11 +863,10 @@ int tpm2_kmyth_create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_start_policy_auth_session()
+// start_policy_auth_session()
 //############################################################################
-int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                                         SESSION * session,
-                                         TPM2_SE session_type)
+int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                              SESSION * session, TPM2_SE session_type)
 {
   // assign session "type" passed in - Kmyth sessions are either:
   //   - trial (used to compute policy digest value) - TPM2_SE_TRIAL
@@ -952,7 +914,7 @@ int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   if (rc != TPM2_RC_SUCCESS)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_StartAuthSession(): rc = 0x%08X, %s",
-              rc, tpm2_getErrorString(rc));
+              rc, getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "started %s session (0x%08X)",
@@ -961,7 +923,7 @@ int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 
   // Roll nonces to add the nonce just returned from the TPM to the session
   // state (i.e., nonceTPM -> nonceNewer and  nonceCaller -> nonceOlder)
-  tpm2_session_rollNonces(session, session->nonceTPM);
+  rollNonces(session, session->nonceTPM);
   kmyth_log(LOG_DEBUG,
             "rolled nonces - nonceTPM = 0x%02X..%02X is now nonceNewer",
             session->nonceTPM.buffer[0],
@@ -971,11 +933,11 @@ int tpm2_kmyth_start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_kmyth_apply_policy()
+// apply_policy()
 //############################################################################
-int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
-                            TPM2_HANDLE policySessionHandle,
-                            TPML_PCR_SELECTION policySession_pcrList)
+int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                 TPM2_HANDLE policySessionHandle,
+                 TPML_PCR_SELECTION policySession_pcrList)
 {
   // Apply authorization value (AuthValue) policy command
   TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
@@ -988,7 +950,7 @@ int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     kmyth_log(LOG_ERR,
               "Tss2_Sys_PolicyAuthValue(): rc = 0x%08X, %s ... exiting", rc,
-              tpm2_getErrorString(rc));
+              getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "applied AuthVal policy to session context");
@@ -1009,7 +971,7 @@ int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     if (rc != TPM2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_PolicyPCR(): rc = 0x%08X, %s", rc,
-                tpm2_getErrorString(rc));
+                getErrorString(rc));
       return 1;
     }
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
@@ -1018,9 +980,31 @@ int tpm2_kmyth_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// tpm2_session_rollNonces()
+// create_caller_nonce()
 //############################################################################
-void tpm2_session_rollNonces(SESSION * session, TPM2B_NONCE newNonce)
+int create_caller_nonce(TPM2B_NONCE * nonceOut)
+{
+  // use OpenSSL RAND_bytes() to generate a "unique" nonce
+  unsigned char rand_bytes[KMYTH_DIGEST_SIZE];
+
+  if (!RAND_bytes(rand_bytes, KMYTH_DIGEST_SIZE))
+  {
+    kmyth_log(LOG_ERR, "error generating random bytes ... exiting");
+  }
+
+  // Put random bytes result in the TPM2B_NONCE struct passed in
+  nonceOut->size = KMYTH_DIGEST_SIZE;
+  memcpy(nonceOut->buffer, rand_bytes, KMYTH_DIGEST_SIZE);
+
+  kmyth_log(LOG_DEBUG, "nonceCaller: 0x%02X..%02X",
+            nonceOut->buffer[0], nonceOut->buffer[nonceOut->size - 1]);
+  return 0;
+}
+
+//############################################################################
+// rollNonces()
+//############################################################################
+void rollNonces(SESSION * session, TPM2B_NONCE newNonce)
 {
   session->nonceOlder = session->nonceNewer;
   session->nonceNewer = newNonce;
