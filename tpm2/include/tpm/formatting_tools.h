@@ -535,32 +535,36 @@ Ski get_default_ski(void);
  * containing the contents (full or remaining) of the data read from a .ski
  * file.
  *
- * @param[in/out] contents  Data buffer containing the contents (or partial
- *                          contents of a .ski file - passed as a pointer
- *                          to the address of the data buffer (updated by
- *                          this function)
+ * @param[in/out] contents   Data buffer containing the contents (or partial
+ *                           contents of a .ski file - passed as a pointer
+ *                           to the address of the data buffer (updated by
+ *                           this function)
  *
- * @param[in/out] remaining Count of bytes remaining in data buffer -
- *                          passed as a pointer to the count value (updated by
- *                          this function)
+ * @param[in/out] remaining  Count of bytes remaining in data buffer -
+ *                           passed as a pointer to the count value (updated by
+ *                           this function)
  *
- * @param[out] block        Data buffer for the .ski file "block"
- *                          retrieved - passed as a pointer to the
- *                          address of the output buffer
+ * @param[out] block         Data buffer for the .ski file "block"
+ *                           retrieved - passed as a pointer to the
+ *                           address of the output buffer
  *
- * @param[out] blocksize    Size, in bytes, of the .ski file "block" retrieved -
- *                          passed as a pointer to the length value
+ * @param[out] blocksize     Size, in bytes, of the .ski file "block" retrieved -
+ *                           passed as a pointer to the length value
  *
- * @param[in]  delim        String value representing the expected delimiter (the
- *                          delimiter value for the block type being retrieved)
+ * @param[in]  delim         String value representing the expected delimiter (the
+ *                           delimiter value for the block type being retrieved)
  *
- * @param[in] next_delim    String value representing the next expected
- *                          delimiter.
+ * @param[in] delim_len      Length of the expected delimeter
+ * @param[in] next_delim     String value representing the next expected
+ *                           delimiter.
+ * @param[in] next_delim_len Length of the next expected delimeter
  * @return 0 on success, 1 on failure
  */
 int get_ski_block_bytes(char **contents,
                         size_t *remaining, unsigned char **block,
-                        size_t *blocksize, char *delim, char *next_delim);
+                        size_t *blocksize,
+                        char *delim, size_t delim_len,
+                        char *next_delim, size_t next_delim_len);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained

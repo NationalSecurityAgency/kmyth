@@ -161,8 +161,6 @@ int read_bytes_from_file(char *input_path, uint8_t ** data, size_t *data_length)
   }
   int input_size = st.st_size;
 
-  // TODO: What maximum file size should be supported here?
-
   // Create data buffer and read file into it
   *data = (uint8_t *) malloc(input_size);
   if (data == NULL)
