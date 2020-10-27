@@ -5,12 +5,14 @@
  */
 
 #include "pcrs.h"
-#include "defines.h"
-#include "tpm2_interface.h"
 
 #include <ctype.h>
 #include <string.h>
+
 #include <openssl/evp.h>
+
+#include "defines.h"
+#include "tpm2_interface.h"
 
 //############################################################################
 // init_pcr_selection()

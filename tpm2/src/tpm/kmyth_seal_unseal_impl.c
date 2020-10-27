@@ -6,18 +6,20 @@
  */
 
 #include "kmyth_seal_unseal_impl.h"
-#include "defines.h"
-#include "cipher/cipher.h"
-#include "memory_util.h"
-#include "tpm2_interface.h"
-#include "file_io.h"
-#include "storage_key_tools.h"
-#include "pcrs.h"
-#include "object_tools.h"
-#include "formatting_tools.h"
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "defines.h"
+#include "file_io.h"
+#include "formatting_tools.h"
+#include "memory_util.h"
+#include "object_tools.h"
+#include "pcrs.h"
+#include "storage_key_tools.h"
+#include "tpm2_interface.h"
+
+#include "cipher/cipher.h"
 
 /**
  * @brief The external list of valid (implemented and configured) symmetric

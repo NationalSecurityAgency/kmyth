@@ -7,13 +7,15 @@
  */
 
 #include "storage_key_tools.h"
-#include "object_tools.h"
-#include "defines.h"
-#include "tpm2_interface.h"
 
 #include <string.h>
+
 #include <arpa/inet.h>
 #include <openssl/evp.h>
+
+#include "defines.h"
+#include "object_tools.h"
+#include "tpm2_interface.h"
 
 //############################################################################
 // get_srk_handle()

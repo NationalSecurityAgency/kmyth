@@ -2,19 +2,21 @@
  * Kmyth Sealing Interface - TPM 2.0 version
  */
 
-#include "memory_util.h"
-#include "file_io.h"
-#include "kmyth.h"
-#include "cipher/cipher.h"
-#include "defines.h"
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <sys/stat.h>
-#include <kmyth_log.h>
+
+#include "defines.h"
+#include "file_io.h"
+#include "kmyth.h"
+#include "kmyth_log.h"
+#include "memory_util.h"
+
+#include "cipher/cipher.h"
 
 /**
  * @brief The external list of valid (implemented and configured) symmetric

@@ -6,13 +6,14 @@
 
 #include "kmyth_log.h"
 
-#include <syslog.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
 #include <stdarg.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <time.h>
+
 
 static struct log_params log_settings = {
   .app_name = DEFAULT_APP_NAME,

@@ -6,15 +6,15 @@
  */
 
 #include "tpm/formatting_tools.h"
-#include "defines.h"
 
 #include <string.h>
 
-#include <openssl/evp.h>
-#include <openssl/buffer.h>
 #include <openssl/bio.h>
-
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
 #include <tss2/tss2_mu.h>
+
+#include "defines.h"
 
 //############################################################################
 // marshal_skiObjects()

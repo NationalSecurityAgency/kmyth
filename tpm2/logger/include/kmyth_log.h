@@ -8,8 +8,8 @@
 #ifndef KMYTH_LOG_H
 #define KMYTH_LOG_H
 
-#include <syslog.h>
 #include <stdio.h>
+#include <syslog.h>
 
 //--------------------------Macros--------------------------------------------
 

@@ -4,14 +4,15 @@
  */
 
 #include "cipher/cipher.h"
-#include "cipher/aes_keywrap_5649pad.h"
-#include "cipher/aes_keywrap_3394nopad.h"
-#include "cipher/aes_gcm.h"
 
-#include "defines.h"
 #include <string.h>
 
 #include <openssl/rand.h>
+
+#include "defines.h"
+#include "cipher/aes_gcm.h"
+#include "cipher/aes_keywrap_3394nopad.h"
+#include "cipher/aes_keywrap_5649pad.h"
 
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.x required for AES KeyWrap RFC5649 w/ padding
