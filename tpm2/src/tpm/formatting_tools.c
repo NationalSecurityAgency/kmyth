@@ -489,8 +489,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                           &raw_sym_priv_size,
                           KMYTH_DELIM_SYM_KEY_PRIVATE,
                           strlen(KMYTH_DELIM_SYM_KEY_PRIVATE),
-                          KMYTH_DELIM_ENC_DATA,
-                          strlen(KMYTH_DELIM_ENC_DATA)))
+                          KMYTH_DELIM_ENC_DATA, strlen(KMYTH_DELIM_ENC_DATA)))
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free_ski(&temp_ski);
@@ -511,8 +510,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                           &raw_enc_data, &raw_enc_size,
                           KMYTH_DELIM_ENC_DATA,
                           strlen(KMYTH_DELIM_ENC_DATA),
-                          KMYTH_DELIM_END_FILE,
-                          strlen(KMYTH_DELIM_END_FILE)))
+                          KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE)))
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free_ski(&temp_ski);
