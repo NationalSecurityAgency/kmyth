@@ -217,10 +217,21 @@ int tpm2_kmyth_seal(uint8_t * input,
   size_t wrapKey_size = get_key_len_from_cipher(ski.cipher) / 8;
   unsigned char *wrapKey = calloc(wrapKey_size, sizeof(unsigned char));
 
+  if (wrapKey == NULL)
+  {
+    kmyth_log(LOG_ERR,
+              "unable to allocate memory for the wrapping key ... exiting");
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    free_tpm2_resources(&sapi_ctx);
+    return 1;
+  }
+
   // validate non-empty plaintext buffer specified
   if (input_len == 0 || input == NULL)
   {
     kmyth_log(LOG_ERR, "no input data ... exiting");
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    free_tpm2_resources(&sapi_ctx);
     return 1;
   }
 
@@ -230,6 +241,8 @@ int tpm2_kmyth_seal(uint8_t * input,
                          &wrapKey, &wrapKey_size))
   {
     kmyth_log(LOG_ERR, "unable to encrypt (wrap) data ... exiting");
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    free_tpm2_resources(&sapi_ctx);
     return 1;
   }
 
