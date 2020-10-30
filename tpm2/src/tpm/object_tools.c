@@ -371,8 +371,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // Set up NULL password authorization session for TPM commands used to
     // create the primary object (Tss2_Sys_CreatePrimary()) and load it at
     // a persistent handle (Tss2_Sys_EvictControl())
-    if (init_password_cmd_auth(sapi_ctx,
-                               parent_auth,
+    if (init_password_cmd_auth(parent_auth,
                                &createObjectCmdAuths, &createObjectRspAuths))
     {
       kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
@@ -429,8 +428,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a NULL authorization session (indicating password authorization)
       // was passed in, the object being created is a storage key (SK)
       //   - TPM owner (storage) auth is required for use of the SRK to seal
-      if (init_password_cmd_auth(sapi_ctx,
-                                 parent_auth,
+      if (init_password_cmd_auth(parent_auth,
                                  &createObjectCmdAuths, &createObjectRspAuths))
       {
         kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
@@ -537,8 +535,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       }
 
       // prepare command and response authorization structures
-      if (init_policy_cmd_auth(sapi_ctx,
-                               createObjectAuthSession,
+      if (init_policy_cmd_auth(createObjectAuthSession,
                                create_object_command_code,
                                parent_name,
                                parent_auth,
@@ -705,8 +702,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a NULL authorization session (indicating password authorization)
     // was passed in, the object being loaded is a storage key (SK)
     //   - TPM owner (storage) auth is required to load under the SRK
-    if (init_password_cmd_auth(sapi_ctx,
-                               parent_auth,
+    if (init_password_cmd_auth(parent_auth,
                                &loadObjectCmdAuths, &loadObjectRspAuths))
     {
       kmyth_log(LOG_ERR, "error setting up auth session ... exiting");
@@ -783,8 +779,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       return 1;
     }
     // prepare command and response authorization structures
-    if (init_policy_cmd_auth(sapi_ctx,
-                             loadObjectAuthSession,
+    if (init_policy_cmd_auth(loadObjectAuthSession,
                              load_object_command_code,
                              parent_name,
                              parent_auth,
@@ -975,8 +970,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // prepare command and response authorization structures
-  if (init_policy_cmd_auth(sapi_ctx,
-                           unsealObjectAuthSession,
+  if (init_policy_cmd_auth(unsealObjectAuthSession,
                            unseal_object_command_code,
                            object_name,
                            object_auth,

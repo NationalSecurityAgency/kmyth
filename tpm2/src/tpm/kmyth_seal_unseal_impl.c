@@ -100,7 +100,14 @@ int tpm2_kmyth_seal(uint8_t * input,
   //   - all-zero digest (like TPM 1.2 well-known secret) by default
   //   - hash of input authorization string if one is specified
   TPM2B_AUTH objAuthVal = {.size = 0, };
-  create_authVal(auth_bytes, auth_bytes_len, &objAuthVal);
+  if (create_authVal(auth_bytes, auth_bytes_len, &objAuthVal))
+  {
+    kmyth_log(LOG_ERR, "error creating authorization value ... exiting");
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+    free_tpm2_resources(&sapi_ctx);
+    return 1;
+  }
 
   // Create a "PCR Selection" struct and populate it in accordance with
   // the PCR values specified in user input "PCR Selection" string, if any
@@ -333,7 +340,14 @@ int tpm2_kmyth_unseal(uint8_t * input,
   //   - hash of input authorization string if one is specified
   TPM2B_AUTH objAuthValue;
 
-  create_authVal(auth_bytes, auth_bytes_len, &objAuthValue);
+  if (create_authVal(auth_bytes, auth_bytes_len, &objAuthValue))
+  {
+    kmyth_log(LOG_ERR, "error creating authorization value ... exiting");
+    kmyth_clear(objAuthValue.buffer, objAuthValue.size);
+    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+    free_tpm2_resources(&sapi_ctx);
+    return 1;
+  }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
