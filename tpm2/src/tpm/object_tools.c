@@ -40,16 +40,17 @@ int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
   // For data, the data buffer size cannot be zero - we must populate the
   // buffer with data to be sealed and set the size to its length in bytes.
   sensitiveArea->sensitive.data.size = object_dataSize;
-  if ( (object_dataSize == 0) || (object_data == NULL) )
+  if ((object_dataSize == 0) || (object_data == NULL))
   {
     sensitiveArea->sensitive.data.size = 0;
   }
   else
   {
     sensitiveArea->sensitive.data.size = object_dataSize;
-    memcpy(&sensitiveArea->sensitive.data.buffer, object_data, sensitiveArea->sensitive.data.size);
-    kmyth_log(LOG_DEBUG,
-              "put %d-byte data field in sensitive area", object_dataSize);
+    memcpy(&sensitiveArea->sensitive.data.buffer, object_data,
+           sensitiveArea->sensitive.data.size);
+    kmyth_log(LOG_DEBUG, "put %d-byte data field in sensitive area",
+              object_dataSize);
   }
 
   // While the userAuth and data elements of a TPMS_SENSITIVE_CREATE

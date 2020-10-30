@@ -13,7 +13,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "tpm2_kmyth_io_test.h"
+#include "file_io_test.h"
 #include "tls_util_test.h"
 #include "pcrs_test.h"
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     CU_cleanup_registry();
     return CU_get_error(); 
   }
-  if (tpm2_kmyth_io_add_tests(kmyth_io_utility_test_suite))
+  if (file_io_add_tests(kmyth_io_utility_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error(); 
