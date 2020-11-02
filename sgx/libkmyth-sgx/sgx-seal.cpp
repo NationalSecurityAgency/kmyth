@@ -5,13 +5,17 @@
 #include "sgx-seal.h"
 #include "Enclave_u.h"
 
+#ifndef ENCLAVE_PATH
+#define ENCLAVE_PATH "kmyth_signed_enclave.so"
+#endif
+
 static struct options {
     /** Path to the Sealing Enclave.  Will never be NULL */
     const char *enclave_path;
     /** Enclave ID value for the Sealing Enclave */
     sgx_enclave_id_t enclave_id;
 } opt = {
-    .enclave_path = "sealenclave.signed.so",
+    .enclave_path = ENCLAVE_PATH,
     .enclave_id = 0,
 };
 

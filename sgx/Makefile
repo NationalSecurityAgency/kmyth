@@ -30,6 +30,11 @@
 #
 #
 
+PREFIX ?= /usr/local
+INCLUDE_DIR ?= Include
+LIB_DIR ?= .
+INSTALL_LIB_PATH := $(DESTDIR)$(PREFIX)/lib
+
 ######## SGX SDK Settings ########
 
 SGX_SDK ?= /opt/intel/sgxsdk
@@ -76,10 +81,18 @@ SGX_COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
 SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
+######## Enclave Constants ########
+
+Enclave_Name := kmyth_enclave.so
+Signed_Enclave_Name := kmyth_signed_enclave.so
+Enclave_Config_File := Enclave/Enclave.config.xml
+
+ENCLAVE_PATH ?= $(INSTALL_LIB_PATH)/$(Signed_Enclave_Name)
+
 ######## App Settings ########
 
 App_Name := demo
-Lib_Name := sgxseal
+Lib_Name := kmyth-sgx
 
 Lib_Dir_Name := lib$(Lib_Name)
 Lib_File_Name := lib$(Lib_Name).so
@@ -92,7 +105,7 @@ endif
 
 Lib_Cpp_Files := $(Lib_Dir_Name)/sgx-seal.cpp
 Lib_Include_Paths := -IInclude -IApp -I$(SGX_SDK)/include
-Lib_C_Flags := -fPIC -Wno-attributes $(Lib_Include_Paths)
+Lib_C_Flags := -fPIC -Wno-attributes $(Lib_Include_Paths) -D'ENCLAVE_PATH="$(ENCLAVE_PATH)"'
 
 App_Cpp_Files := App/App.cpp
 App_Include_Paths := -IInclude -IApp
@@ -182,10 +195,6 @@ Enclave_Link_Flags := $(MITIGATION_LDFLAGS) $(Enclave_Security_Link_Flags) \
 	-Wl,--version-script=Enclave/Enclave.lds
 
 Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o))
-
-Enclave_Name := sealenclave.so
-Signed_Enclave_Name := sealenclave.signed.so
-Enclave_Config_File := Enclave/Enclave.config.xml
 
 ifeq ($(SGX_MODE), HW)
 ifeq ($(SGX_DEBUG), 1)
@@ -300,8 +309,25 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
-.PHONY: clean
+.PHONY: install
+install:
+	@install -d $(INSTALL_LIB_PATH)
+	@install -m 755 $(LIB_DIR)/$(Lib_File_Name) $(INSTALL_LIB_PATH)/
+	@install -m 755 $(LIB_DIR)/$(Enclave_Name) $(INSTALL_LIB_PATH)/
+	@install -m 755 $(LIB_DIR)/$(Signed_Enclave_Name) $(INSTALL_LIB_PATH)/
+	@install -d $(DESTDIR)$(PREFIX)/include/kmyth
+	@install -m 644 $(INCLUDE_DIR)/sgx-seal.h $(DESTDIR)$(PREFIX)/include/kmyth/
+	@ldconfig
 
+.PHONY: uninstall
+uninstall:
+	@rm -f $(INSTALL_LIB_PATH)/$(Lib_File_Name)
+	@rm -f $(INSTALL_LIB_PATH)/$(Enclave_Name)
+	@rm -f $(INSTALL_LIB_PATH)/$(Signed_Enclave_Name)
+	@rm -rf $(DESTDIR)$(PREFIX)/include/kmyth/sgx-seal.h
+	@ldconfig
+
+.PHONY: clean
 clean:
 	@rm -f .config_* $(Enclave_Name) $(Signed_Enclave_Name) $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 	@rm -f $(App_Name) $(App_Cpp_Objects) App/qe.capnp.*
