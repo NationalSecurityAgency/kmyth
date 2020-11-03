@@ -18,8 +18,8 @@
 // init_pcr_selection()
 //############################################################################
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
-		       int* pcrs,
-		       size_t pcrs_len, TPML_PCR_SELECTION * pcrs_struct)
+                       int *pcrs,
+                       size_t pcrs_len, TPML_PCR_SELECTION * pcrs_struct)
 {
   kmyth_log(LOG_DEBUG, "creating PCR select struct from user input string");
 
@@ -48,28 +48,26 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
   // structure appropriately
   if (pcrs)
   {
-    kmyth_log(LOG_DEBUG,
-              "applying user-specified PCRs ...",
-              pcrs_string);
+    kmyth_log(LOG_DEBUG, "applying user-specified PCRs ...");
 
-    if(pcrs_len == 0){
+    if (pcrs_len == 0)
+    {
       kmyth_log(LOG_ERR,
-		"non-NULL PRCs array supplied, but length is 0 ... exiting");
+                "non-NULL PRCs array supplied, but length is 0 ... exiting");
       return 1;
     }
 
-    
     for (size_t i = 0; i < pcrs_len; i++)
     {
       int pcr = pcrs[i];
-      if(0 < pcr || pcr >= numPCRs){
-	kmyth_log(LOG_ERR,
-		  "invalid PCR value specified (%d) ... exiting", pcr);
-	return 1;
+
+      if (0 < pcr || pcr >= numPCRs)
+      {
+        kmyth_log(LOG_ERR, "invalid PCR value specified (%d) ... exiting", pcr);
+        return 1;
       }
       pcrs_struct->pcrSelections[0].pcrSelect[pcr / 8] |= (1 << (pcr % 8));
     }
-
 
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
     {
