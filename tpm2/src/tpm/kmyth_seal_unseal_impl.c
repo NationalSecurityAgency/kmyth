@@ -37,7 +37,8 @@ int tpm2_kmyth_seal(uint8_t * input,
                     uint8_t * auth_bytes,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
-                    size_t oa_bytes_len, char *pcrs_string, char *cipher_string)
+                    size_t oa_bytes_len, int *pcrs, size_t pcrs_len,
+                    char *cipher_string)
 {
 
   //init connection to the resource manager
@@ -116,9 +117,9 @@ int tpm2_kmyth_seal(uint8_t * input,
   // will specify that no PCRs were selected by the user - all-zero mask)
   // This PCR Selection struct will be used in the authorization policy for
   // new, non-primary Kmyth objects.
-  if (init_pcr_selection(sapi_ctx, pcrs_string, &ski.pcr_list))
+  if (init_pcr_selection(sapi_ctx, pcrs, pcrs_len, &ski.pcr_list))
   {
-    kmyth_log(LOG_ERR, "error parsing PCR string: %s ... exiting", pcrs_string);
+    kmyth_log(LOG_ERR, "error intializing PCRs: %s ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -457,7 +458,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                          size_t auth_bytes_len,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
-                         char *pcrs_string, char *cipher_string)
+                         int *pcrs, size_t pcrs_len, char *cipher_string)
 {
 
   // Verify input path exists with read permissions
@@ -490,7 +491,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                       output, output_len,
                       auth_bytes, auth_bytes_len,
                       owner_auth_bytes, oa_bytes_len,
-                      pcrs_string, cipher_string))
+                      pcrs, pcrs_len, cipher_string))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
     free(data);

@@ -35,11 +35,12 @@
  *
  * @param[in]  oa_bytes_len      number of bytes in owner_auth_passwd
  *
- * @param[in]  pcrs_string       String indicating which PCRs, if any, to apply
+ * @param[in]  pcrs              Array containing PCRs values, if any, to apply
  *                               to the authorization policy for Kmyth TPM
  *                               objects created by kmyth-seal.
  *                               (i.e., storage key and sealed wrapping key)
- *                               Must be NULL or '\0' terminated
+ *
+ * @param[in]  pcrs_len          The length of pcrs
  *
  * @param[in]  cipher_string     String indicating the symmetric cipher to use
  *                               for encrypting the input data. Must be NULL 
@@ -51,7 +52,7 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
                     uint8_t ** output, size_t *output_len,
                     uint8_t * auth_bytes, size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes, size_t oa_bytes_len,
-                    char *pcrs_string, char *cipher_string);
+                    int *pcrs, size_t pcrs_len, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal using TPM 2.0.
@@ -109,11 +110,12 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
  *
  * @param[in]  oa_bytes_len      number of bytes in owner_auth_passwd
  *
- * @param[in]  pcrs_string       String indicating which PCRs, if any, to apply
+ * @param[in]  pcrs              Array containing PCRs, if any, to apply
  *                               to the authorization policy for Kmyth TPM
  *                               objects created by kmyth-seal.
  *                               (i.e., storage key and sealed wrapping key
- *                               Must be NULL or '\0' terminated
+
+ * @param[in]  pcrs_len          The length of pcrs
  *
  * @param[in]  cipher_string     String indicating the symmetric cipher to use
  *                               for encrypting the input data. Must be NULL
@@ -125,7 +127,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                          uint8_t ** output, size_t *output_len,
                          uint8_t * auth_bytes, size_t auth_bytes_len,
                          uint8_t * owner_auth_bytes, size_t oa_bytes_len,
-                         char *pcrs_string, char *cipher_string);
+                         int *pcrs, size_t pcrs_len, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.
