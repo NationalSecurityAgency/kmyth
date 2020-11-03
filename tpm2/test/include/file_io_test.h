@@ -37,4 +37,10 @@ void test_verifyInputFilePath(void);
  */
 void test_verifyOutputFilePath(void);
 
+/**
+ * Tests for the functionality to read bytes from a generic file in
+ * function read_bytes_from_file()
+ */
+void test_read_bytes_from_file(void);
+
 #endif

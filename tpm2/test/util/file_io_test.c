@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <CUnit/CUnit.h>
 
 #include "file_io_test.h"
@@ -27,6 +28,12 @@ int file_io_add_tests(CU_pSuite suite)
 
   if (NULL == CU_add_test(suite, "verifyOutputFilePaths() Tests",
                           test_verifyOutputFilePath))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "read_bytes_from_file() Tests",
+                          test_read_bytes_from_file))
   {
     return 1;
   }
@@ -94,3 +101,43 @@ void test_verifyOutputFilePath(void)
   remove("temp_file");
 }
  
+
+/*
+ * Tests functionality to read bytes from a generic file using
+ * function read_bytes_from_file()
+ */
+void test_read_bytes_from_file(void)
+{
+  // Create data amd data_length parameters to use in test function calls
+  uint8_t * testdata = NULL;
+  size_t testdata_len = 0;
+
+  // Trying to read from NULL input path should result in error
+  CU_ASSERT(read_bytes_from_file(NULL, &testdata, &testdata_len) == 1);
+
+  // Trying to read from non-existent file should result in error
+  CU_ASSERT(access("fake", F_OK) == -1);
+  CU_ASSERT(read_bytes_from_file("fake", &testdata, &testdata_len) == 1);
+
+  // Reading from an existing, but empty, file should produce an empty byte
+  // array (and not error)
+  FILE * fp = fopen("empty","w");
+  fclose(fp);
+  CU_ASSERT(read_bytes_from_file("empty", &testdata, &testdata_len) == 0);
+  CU_ASSERT(testdata_len == 0);
+  remove("empty");
+
+  // Reading file with actual test data should produce byte array
+  // consistent with the test data in the file
+  uint8_t * testfile_data = (uint8_t *) "123 & ABC !!";
+  size_t testfile_size = strlen((char *) testfile_data);
+  fp = fopen("test_file", "w");
+  fwrite(testfile_data, 1, testfile_size, fp);
+  fclose(fp);
+  CU_ASSERT(read_bytes_from_file("test_file", &testdata, &testdata_len) == 0);
+  CU_ASSERT(testdata_len == testfile_size);
+  CU_ASSERT(strncmp((char*)testdata, (char *)testfile_data, testfile_size)==0);
+  free(testdata);
+  remove("test_file");
+}
+
