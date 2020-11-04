@@ -32,6 +32,21 @@ int verifyInputFilePath(char *path)
     return 1;
   }
 
+  // Verify that the input file path points to a regular file
+  struct stat buffer = { 0 };
+  if (stat(path, &buffer) == -1)
+  {
+    kmyth_log(LOG_ERR,
+              "input file (%s) stats could not be retrieved ... exiting", path);
+    return 1;
+  }
+  if (S_ISREG(buffer.st_mode) == 0)
+  {
+    kmyth_log(LOG_ERR,
+              "input file (%s) is not a regular file ... exiting", path);
+    return 1;
+  }
+
   // check that permission allow reading
   if (access(path, R_OK) == -1)
   {
@@ -57,7 +72,11 @@ int verifyOutputFilePath(char *path)
   // check that specified output path directory exists
   char *path_copy = "\0";
 
-  asprintf(&path_copy, path);
+  if (asprintf(&path_copy, path) < 0)
+  {
+    kmyth_log(LOG_ERR, "unable to copy output file path ... exiting");
+    return 1;
+  }
   struct stat buffer = { 0 };
   if (stat(dirname(path_copy), &buffer))
   {
@@ -76,12 +95,13 @@ int verifyOutputFilePath(char *path)
   }
   free(path_copy);
 
-  // check that specified output path is not a directory
+  // check that specified output path is a regular file if it exists
   if (!stat(path, &buffer))
   {
-    if (S_ISDIR(buffer.st_mode))
+    if (S_ISREG(buffer.st_mode) == 0)
     {
-      kmyth_log(LOG_ERR, "output path (%s) is directory ... exiting", path);
+      kmyth_log(LOG_ERR,
+                "output path (%s) is not a regular file ... exiting", path);
       return 1;
     }
   }
@@ -118,28 +138,67 @@ int read_bytes_from_file(char *input_path, uint8_t ** data, size_t *data_length)
   if (!BIO_read_filename(bio, input_path))
   {
     kmyth_log(LOG_ERR, "error opening input file: %s ... exiting", input_path);
-    BIO_free(bio);
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
     return 1;
   }
 
   // Determine size of file
   struct stat st;
 
-  stat(input_path, &st);
+  if (stat(input_path, &st) == -1)
+  {
+    kmyth_log(LOG_ERR,
+              "input file (%s) stats could not be retrieved ... exiting",
+              input_path);
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
+    return 1;
+  }
   int input_size = st.st_size;
 
   // Create data buffer and read file into it
   *data = (uint8_t *) malloc(input_size);
+  if (data == NULL)
+  {
+    kmyth_log(LOG_ERR, "could not allocate memory to read file ... exiting");
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
+    return 1;
+  }
   *data_length = BIO_read(bio, *data, input_size);
+  if (*data_length <= 0)
+  {
+    kmyth_log(LOG_ERR, "no data read from input file ... exiting");
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
+    return 1;
+  }
+
   if (*data_length != input_size)
   {
     kmyth_log(LOG_ERR, "file size = %d bytes, buffer size = %d bytes "
               "... exiting", input_size, *data_length);
-    BIO_free(bio);
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
     return 1;
   }
 
-  BIO_free(bio);
+  if (!BIO_free(bio))
+  {
+    kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    return 1;
+  }
 
   return 0;
 }

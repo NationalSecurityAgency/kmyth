@@ -14,6 +14,7 @@
 
 #include <openssl/opensslv.h>
 #include <openssl/rand.h>
+#include <openssl/err.h>
 
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.x required for AES KeyWrap RFC5649 w/ padding
@@ -145,12 +146,33 @@ int kmyth_encrypt_data(unsigned char *data,
     kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
     return 1;
   }
+  if (data == NULL || data_size == 0)
+  {
+    kmyth_log(LOG_ERR, "no data to encrypt ... exiting");
+    return 1;
+  }
+  if (enc_data == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer to store the encrypted data ... exiting");
+    return 1;
+  }
+  if (enc_key == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer to store the encryption key ... exiting");
+    return 1;
+  }
+  if (*enc_key_size == 0)
+  {
+    kmyth_log(LOG_ERR, "cannot use a 0-bit encryption key ... exiting");
+    return 1;
+  }
 
   // create symmetric key (wrapping key) of the desired size
   if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
   {
-    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key "
-              "... exiting", *enc_key_size * 8);
+    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key, error: %s "
+              "... exiting", *enc_key_size * 8,
+              ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "created %d-bit random symmetric key",
@@ -179,9 +201,24 @@ int kmyth_decrypt_data(unsigned char *enc_data,
                        size_t key_size,
                        unsigned char **result, size_t *result_size)
 {
+  if (enc_data == NULL || enc_data_size == 0)
+  {
+    kmyth_log(LOG_ERR, "no encrypted data to unencrypt ... exiting");
+    return 1;
+  }
   if (cipher_spec.cipher_name == NULL)
   {
     kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
+    return 1;
+  }
+  if (key == NULL || key_size == 0)
+  {
+    kmyth_log(LOG_ERR, "no encryption key provided ... exiting");
+    return 1;
+  }
+  if (result == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer to store the unencrypted data ... exiting");
     return 1;
   }
 

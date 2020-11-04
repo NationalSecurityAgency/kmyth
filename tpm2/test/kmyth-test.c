@@ -3,8 +3,9 @@
  *
  * Top-level application to run all kmyth unit tests.
  * Incorporates the following test suites:
- *   - Kmyth I/O Utility (tests in util/tpm2_kmyth_io_test.c)
+ *   - File I/O Utility (tests in util/file_io_test.c)
  *   - TLS Utility (tests in util/tls_util_test.c)
+ *   - PCR Handling (tests in tpm/pcrs_test.c)
  */
 
 #include <stdio.h>
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
 
   // Create and configure the PCRs handling test suite
   CU_pSuite pcrs_test_suite = NULL;
-  pcrs_test_suite = CU_add_suite("PCR Handling Test Sutie",
+  pcrs_test_suite = CU_add_suite("PCR Handling Test Suite",
 				 init_suite, clean_suite);
   if (NULL == pcrs_test_suite)
     {

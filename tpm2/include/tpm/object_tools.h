@@ -45,10 +45,10 @@
  *
  * @return 0 if success, 1 if error.
  */
-int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
-                                     uint8_t * object_data,
-                                     size_t object_dataSize,
-                                     TPM2B_SENSITIVE_CREATE * sensitiveArea);
+int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+                                 uint8_t * object_data,
+                                 size_t object_dataSize,
+                                 TPM2B_SENSITIVE_CREATE * sensitiveArea);
 
 /**
  * @brief Fill in public template used to create Kmyth object.
@@ -74,8 +74,8 @@ int tpm2_init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
-                                    TPMT_PUBLIC * pubArea);
+int init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
+                               TPMT_PUBLIC * pubArea);
 
 /**
  * @brief Set attributes for Kmyth objects (SRK, SK, or sealed data).
@@ -98,7 +98,7 @@ int tpm2_init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
  *
  * @return 0 if success, 1 if error.
  */
-int tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
+int init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
 
 /**
  * @brief Set parameters for Kmyth objects (SRK, SK, or sealed data).
@@ -136,8 +136,8 @@ int tpm2_init_kmyth_object_attributes(bool isKey, TPMA_OBJECT * objectAttrib);
  *
  * @return None
  */
-int tpm2_init_kmyth_object_parameters(TPMI_ALG_PUBLIC objectType,
-                                      TPMU_PUBLIC_PARMS * objectParams);
+int init_kmyth_object_parameters(TPMI_ALG_PUBLIC objectType,
+                                 TPMU_PUBLIC_PARMS * objectParams);
 
 /**
  * @brief Set unique identifier for Kmyth objects (SRK, SK, or sealed data).
@@ -169,8 +169,8 @@ int tpm2_init_kmyth_object_parameters(TPMI_ALG_PUBLIC objectType,
  *
  * @return None
  */
-int tpm2_init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
-                                  TPMU_PUBLIC_ID * objectUnique);
+int init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
+                             TPMU_PUBLIC_ID * objectUnique);
 
 /**
  * @brief Create a new TPM 2.0 object (e.g., key or blob).
@@ -314,17 +314,17 @@ int tpm2_init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_create_object(TSS2_SYS_CONTEXT * sapi_ctx,
-                             SESSION * createObjectAuthSession,
-                             TPM2_HANDLE parent_handle,
-                             TPM2B_AUTH parent_auth,
-                             TPML_PCR_SELECTION parent_pcrList,
-                             TPM2B_SENSITIVE_CREATE object_sensitive,
-                             TPM2B_PUBLIC object_template,
-                             TPML_PCR_SELECTION object_pcrSelect,
-                             TPM2_HANDLE object_dest_handle,
-                             TPM2B_PRIVATE * object_private,
-                             TPM2B_PUBLIC * object_public);
+int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * createObjectAuthSession,
+                        TPM2_HANDLE parent_handle,
+                        TPM2B_AUTH parent_auth,
+                        TPML_PCR_SELECTION parent_pcrList,
+                        TPM2B_SENSITIVE_CREATE object_sensitive,
+                        TPM2B_PUBLIC object_template,
+                        TPML_PCR_SELECTION object_pcrSelect,
+                        TPM2_HANDLE object_dest_handle,
+                        TPM2B_PRIVATE * object_private,
+                        TPM2B_PUBLIC * object_public);
 
 /**
  * @brief Loads an object (e.g., key) into the TPM 2.0.
@@ -391,14 +391,14 @@ int tpm2_kmyth_create_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_load_object(TSS2_SYS_CONTEXT * sapi_ctx,
-                           SESSION * loadObjectAuthSession,
-                           TPM2_HANDLE parent_handle,
-                           TPM2B_AUTH parent_auth,
-                           TPML_PCR_SELECTION parent_pcrList,
-                           TPM2B_PRIVATE * in_private,
-                           TPM2B_PUBLIC * in_public,
-                           TPM2_HANDLE * object_handle);
+int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
+                      SESSION * loadObjectAuthSession,
+                      TPM2_HANDLE parent_handle,
+                      TPM2B_AUTH parent_auth,
+                      TPML_PCR_SELECTION parent_pcrList,
+                      TPM2B_PRIVATE * in_private,
+                      TPM2B_PUBLIC * in_public,
+                      TPM2_HANDLE * object_handle);
 
 /**
  * @brief Unseals a Kmyth TPM data object 
@@ -429,11 +429,11 @@ int tpm2_kmyth_load_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int tpm2_kmyth_unseal_object(TSS2_SYS_CONTEXT * sapi_ctx,
-                             SESSION * unsealObjectAuthSession,
-                             TPM2_HANDLE object_handle,
-                             TPM2B_AUTH object_auth,
-                             TPML_PCR_SELECTION object_pcrList,
-                             TPM2B_SENSITIVE_DATA * object_sensitive);
+int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * unsealObjectAuthSession,
+                        TPM2_HANDLE object_handle,
+                        TPM2B_AUTH object_auth,
+                        TPML_PCR_SELECTION object_pcrList,
+                        TPM2B_SENSITIVE_DATA * object_sensitive);
 
 #endif /* OBJECT_TOOLS_H */

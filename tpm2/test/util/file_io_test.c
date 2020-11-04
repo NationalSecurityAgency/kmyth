@@ -1,5 +1,5 @@
 //############################################################################
-// file_io.c
+// file_io_test.c
 //
 // Tests for kmyth I/O utility functions in tpm2/src/util/file_io.c
 //############################################################################
@@ -243,4 +243,3 @@ void test_print_to_stdout(void)
   dup2(saved_stdout_fd, STDOUT_FILENO);
   close(saved_stdout_fd);
 }
-
