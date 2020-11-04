@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <CUnit/CUnit.h>
@@ -40,6 +41,12 @@ int file_io_add_tests(CU_pSuite suite)
 
   if (NULL == CU_add_test(suite, "write_bytes_to_file() Tests",
                           test_write_bytes_to_file))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "print_to_stdout() Tests",
+                          test_print_to_stdout))
   {
     return 1;
   }
@@ -187,5 +194,53 @@ void test_write_bytes_to_file(void)
   // Test cleanup
   free(filedata);
   remove("testfile");
+}
+
+
+//----------------------------------------------------------------------------
+// test_print_to_stdout()
+//----------------------------------------------------------------------------
+void test_print_to_stdout(void)
+{
+  // Create some test "print data" (and companion length) to use in tests
+  unsigned char * testdata = (unsigned char *) "Display to user's console\n";
+  size_t testdata_len = strlen((char *) testdata);
+
+  // In order to check data written to STDOUT, these tests redirect it to a
+  // file. Must save STDOUT file descriptor so we can restore it when done.
+  int saved_stdout_fd = dup(STDOUT_FILENO);
+
+  // providing NULL pointer for print data of non-zero length should error
+  CU_ASSERT(print_to_stdout(NULL, 1) == 1);
+
+  // providing data size of zero should print empty string, but not error
+  int redir_fd = open("redirect_test1", O_WRONLY | O_TRUNC | O_CREAT, 0777);
+  dup2(redir_fd, STDOUT_FILENO);
+  close(redir_fd);
+  uint8_t * filedata1 = NULL;
+  size_t filedata1_len = testdata_len;
+  CU_ASSERT(print_to_stdout(testdata, 0) == 0);
+  read_bytes_from_file("redirect_test1", &filedata1, &filedata1_len);
+  CU_ASSERT(filedata1_len == 0);
+  CU_ASSERT(strncmp("", (char*) filedata1, testdata_len) == 0);
+  free(filedata1);
+  remove("redirect_test1");
+
+  // printing test data should not error and produce expected output
+  redir_fd = open("redirect_test2", O_WRONLY | O_TRUNC | O_CREAT, 0777);
+  dup2(redir_fd, STDOUT_FILENO);
+  close(redir_fd);
+  uint8_t * filedata2 = NULL;
+  size_t filedata2_len = 0;
+  CU_ASSERT(print_to_stdout(testdata, testdata_len) == 0);
+  read_bytes_from_file("redirect_test2", &filedata2, &filedata2_len);
+  CU_ASSERT(filedata2_len == testdata_len);
+  CU_ASSERT(strncmp((char*) testdata, (char*) filedata2, filedata2_len) == 0);
+  free(filedata2);
+  remove("redirect_test2");
+
+  // restore stdout
+  dup2(saved_stdout_fd, STDOUT_FILENO);
+  close(saved_stdout_fd);
 }
 

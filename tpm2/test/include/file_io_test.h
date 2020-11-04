@@ -26,27 +26,33 @@ int file_io_add_tests(CU_pSuite suite);
 //****************************************************************************
 
 /**
- * Tests for the input file path verification functionality in function
- * verifyInputFilePath()
+ * Tests for the input file path verification functionality implemented
+ * in function verifyInputFilePath()
  */
 void test_verifyInputFilePath(void);
 
 /**
- * Tests for the output file path verification functionality in
- * function verifyOutputiFilePath()
+ * Tests for the output file path verification functionality implemented
+ * in function verifyOutputiFilePath()
  */
 void test_verifyOutputFilePath(void);
 
 /**
- * Tests for the functionality to read bytes from a generic file in
- * function read_bytes_from_file()
+ * Tests for the functionality to read bytes from a generic file implemented
+ * in function read_bytes_from_file()
  */
 void test_read_bytes_from_file(void);
 
 /**
- * Tests for the functionality to write bytes to a generic file in
- * function write_bytes_to_file()
+ * Tests for the functionality to write bytes to a generic file implemented
+ * in function write_bytes_to_file()
  */
 void test_write_bytes_to_file(void);
+
+/**
+ * Tests for the functionality to print information to the STDOUT stream
+ * implemented in function print_to_stdout()
+ */
+void test_print_to_stdout(void);
 
 #endif
