@@ -136,7 +136,7 @@ void test_read_bytes_from_file(void)
   CU_ASSERT(read_bytes_from_file("fake_file", &testdata, &testdata_len) == 1);
 
   // Reading from an existing, but empty, file should error. This test should
-  // fail check that input data read from file is greater than zero.
+  // fail check that length of input data read from file is greater than zero.
   FILE * fp = fopen("empty_file", "w");
   fclose(fp);
   CU_ASSERT(read_bytes_from_file("empty_file", &testdata, &testdata_len) == 1);
