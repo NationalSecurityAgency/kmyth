@@ -43,4 +43,10 @@ void test_verifyOutputFilePath(void);
  */
 void test_read_bytes_from_file(void);
 
+/**
+ * Tests for the functionality to write bytes to a generic file in
+ * function write_bytes_to_file()
+ */
+void test_write_bytes_to_file(void);
+
 #endif

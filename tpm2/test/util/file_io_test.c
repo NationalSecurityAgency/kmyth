@@ -38,6 +38,12 @@ int file_io_add_tests(CU_pSuite suite)
     return 1;
   }
 
+  if (NULL == CU_add_test(suite, "write_bytes_to_file() Tests",
+                          test_write_bytes_to_file))
+  {
+    return 1;
+  }
+
   return 0;
 }
 
@@ -102,10 +108,9 @@ void test_verifyOutputFilePath(void)
 }
  
 
-/*
- * Tests functionality to read bytes from a generic file using
- * function read_bytes_from_file()
- */
+//----------------------------------------------------------------------------
+// test_read_bytes_from_file()
+//----------------------------------------------------------------------------
 void test_read_bytes_from_file(void)
 {
   // Create data amd data_length parameters to use in test function calls
@@ -131,13 +136,56 @@ void test_read_bytes_from_file(void)
   // consistent with the test data in the file
   uint8_t * testfile_data = (uint8_t *) "123 & ABC !!";
   size_t testfile_size = strlen((char *) testfile_data);
-  fp = fopen("test_file", "w");
+  fp = fopen("testfile", "w");
   fwrite(testfile_data, 1, testfile_size, fp);
   fclose(fp);
-  CU_ASSERT(read_bytes_from_file("test_file", &testdata, &testdata_len) == 0);
+  CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 0);
   CU_ASSERT(testdata_len == testfile_size);
   CU_ASSERT(strncmp((char*)testdata, (char *)testfile_data, testfile_size)==0);
+
+  // Test cleanup
   free(testdata);
-  remove("test_file");
+  remove("testfile");
+}
+
+
+//----------------------------------------------------------------------------
+// test_write_bytes_to_file()
+//----------------------------------------------------------------------------
+void test_write_bytes_to_file(void)
+{
+  // Create a couple test byte arrays (and companion lengths) to use in tests
+  uint8_t * testdata1 = (uint8_t *) "Testing 123 ...";
+  size_t testdata1_len = strlen((char *) testdata1);
+  uint8_t * testdata2 = (uint8_t *) "And now for something different!\n";
+  size_t testdata2_len = strlen((char *) testdata2);
+
+  // Trying to write to NULL output path should result in error
+  CU_ASSERT(write_bytes_to_file(NULL, testdata1, testdata1_len) == 1);
+
+  // Trying to write to an output path without write permission should error
+  FILE* fp = fopen("testfile", "w"); 
+  fclose(fp);
+  chmod("testfile", 0555);
+  CU_ASSERT(write_bytes_to_file("testfile", testdata1, testdata1_len) == 1);
+  remove("testfile");
+
+  // Writing a new file, with permission, should produce expected file
+  CU_ASSERT(write_bytes_to_file("testfile", testdata1, testdata1_len) == 0);
+  uint8_t * filedata = NULL;
+  size_t filedata_len = 0;
+  read_bytes_from_file("testfile", &filedata, &filedata_len);
+  CU_ASSERT(filedata_len == testdata1_len);
+  CU_ASSERT(strncmp((char*) testdata1, (char*) filedata, filedata_len) == 0);
+
+  // Writing to an existing file should correctly overwrite it
+  CU_ASSERT(write_bytes_to_file("testfile", testdata2, testdata2_len) == 0);
+  read_bytes_from_file("testfile", &filedata, &filedata_len);
+  CU_ASSERT(filedata_len == testdata2_len);
+  CU_ASSERT(strncmp((char*) testdata2, (char*) filedata, filedata_len) == 0);
+
+  // Test cleanup
+  free(filedata);
+  remove("testfile");
 }
 
