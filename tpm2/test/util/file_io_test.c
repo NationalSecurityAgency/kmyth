@@ -120,6 +120,10 @@ void test_verifyOutputFilePath(void)
 //----------------------------------------------------------------------------
 void test_read_bytes_from_file(void)
 {
+  // Create a test data (and length) example for use in tests
+  uint8_t * testfile_data = (uint8_t *) "123 & ABC !!";
+  size_t testfile_size = strlen((char *) testfile_data);
+
   // Create data amd data_length parameters to use in test function calls
   uint8_t * testdata = NULL;
   size_t testdata_len = 0;
@@ -128,21 +132,18 @@ void test_read_bytes_from_file(void)
   CU_ASSERT(read_bytes_from_file(NULL, &testdata, &testdata_len) == 1);
 
   // Trying to read from non-existent file should result in error
-  CU_ASSERT(access("fake", F_OK) == -1);
-  CU_ASSERT(read_bytes_from_file("fake", &testdata, &testdata_len) == 1);
+  CU_ASSERT(access("fake_file", F_OK) == -1);
+  CU_ASSERT(read_bytes_from_file("fake_file", &testdata, &testdata_len) == 1);
 
-  // Reading from an existing, but empty, file should produce an empty byte
-  // array (and not error)
-  FILE * fp = fopen("empty","w");
+  // Reading from an existing, but empty, file should error. This test should
+  // fail check that input data read from file is greater than zero.
+  FILE * fp = fopen("empty_file", "w");
   fclose(fp);
-  CU_ASSERT(read_bytes_from_file("empty", &testdata, &testdata_len) == 0);
-  CU_ASSERT(testdata_len == 0);
-  remove("empty");
+  CU_ASSERT(read_bytes_from_file("empty_file", &testdata, &testdata_len) == 1);
+  remove("empty_file");
 
   // Reading file with actual test data should produce byte array
   // consistent with the test data in the file
-  uint8_t * testfile_data = (uint8_t *) "123 & ABC !!";
-  size_t testfile_size = strlen((char *) testfile_data);
   fp = fopen("testfile", "w");
   fwrite(testfile_data, 1, testfile_size, fp);
   fclose(fp);
