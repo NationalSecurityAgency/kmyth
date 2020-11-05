@@ -119,7 +119,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   // new, non-primary Kmyth objects.
   if (init_pcr_selection(sapi_ctx, pcrs, pcrs_len, &ski.pcr_list))
   {
-    kmyth_log(LOG_ERR, "error intializing PCRs: %s ... exiting");
+    kmyth_log(LOG_ERR, "error intializing PCRs ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
