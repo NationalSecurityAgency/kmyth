@@ -60,25 +60,25 @@ int file_io_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 void test_verifyInputFilePath(void)
 {
+  // create "testfile", with sample data, as test input file path
+  FILE* fp = fopen("testfile", "w");  
+  fprintf(fp, "Testing..."); 
+  fclose(fp);
+
   // NULL input file path should error 
   CU_ASSERT(verifyInputFilePath(NULL) == 1);
 
-  // fake input file path should error
-  CU_ASSERT(verifyInputFilePath("fake_file_path") == 1); 
-
   // real file input path without read permission should error
-  FILE* fp = fopen("temp_file", "w");  
-  fprintf(fp, "Testing..."); 
-  fclose(fp);
-  chmod("temp_file", 0333);
-  CU_ASSERT(verifyInputFilePath("temp_file") == 1);
+  chmod("testfile", 0333);
+  CU_ASSERT(verifyInputFilePath("testfile") == 1);
 
   // real file input path with read permission should verify successfully
-  chmod("temp_file", 0444);
-  CU_ASSERT(verifyInputFilePath("temp_file") == 0);
+  chmod("testfile", 0444);
+  CU_ASSERT(verifyInputFilePath("testfile") == 0);
+  remove("testfile");
 
-  // clean-up
-  remove("temp_file");
+  // non-existing input file path should error
+  CU_ASSERT(verifyInputFilePath("testfile") == 1); 
 }
 
 
@@ -87,31 +87,30 @@ void test_verifyInputFilePath(void)
 //----------------------------------------------------------------------------
 void test_verifyOutputFilePath(void)
 {
+  // create empty "testfile" as test output file path
+  FILE* fp = fopen("testfile", "w");  
+  fclose(fp);
+
   // NULL output file path should error 
   CU_ASSERT(verifyOutputFilePath(NULL) == 1);
 
   // fake output path directory should error
-  CU_ASSERT(verifyOutputFilePath("fake_dir/fake_file") == 1); 
+  CU_ASSERT(verifyOutputFilePath("../fake_dir/testfile") == 1); 
 
   // output path is directory (even if valid) should error
-  CU_ASSERT(verifyOutputFilePath("..") == 1); 
+  CU_ASSERT(verifyOutputFilePath(".") == 1); 
 
   // real file output path without write permission should error
-  FILE* fp = fopen("temp_file", "w");  
-  fprintf(fp, "Testing..."); 
-  fclose(fp);
-  chmod("temp_file", 0555);
-  CU_ASSERT(verifyOutputFilePath("temp_file") == 1);
+  chmod("testfile", 0555);
+  CU_ASSERT(verifyOutputFilePath("testfile") == 1);
 
   // real file output path with write permission should verify successfully
-  chmod("temp_file", 0222);
-  CU_ASSERT(verifyOutputFilePath("temp_file") == 0);
+  chmod("testfile", 0222);
+  CU_ASSERT(verifyOutputFilePath("testfile") == 0);
+  remove("testfile");
 
   // non-existing filename in valid and writeable directory should verify
-  CU_ASSERT(verifyOutputFilePath("new_file") == 0);
-
-  // clean-up
-  remove("temp_file");
+  CU_ASSERT(verifyOutputFilePath("testfile") == 0);
 }
  
 
@@ -131,16 +130,11 @@ void test_read_bytes_from_file(void)
   // Trying to read from NULL input path should result in error
   CU_ASSERT(read_bytes_from_file(NULL, &testdata, &testdata_len) == 1);
 
-  // Trying to read from non-existent file should result in error
-  CU_ASSERT(access("fake_file", F_OK) == -1);
-  CU_ASSERT(read_bytes_from_file("fake_file", &testdata, &testdata_len) == 1);
-
   // Reading from an existing, but empty, file should error. This test should
   // fail check that length of input data read from file is greater than zero.
-  FILE * fp = fopen("empty_file", "w");
+  FILE * fp = fopen("testfile", "w");
   fclose(fp);
-  CU_ASSERT(read_bytes_from_file("empty_file", &testdata, &testdata_len) == 1);
-  remove("empty_file");
+  CU_ASSERT(read_bytes_from_file("te_file", &testdata, &testdata_len) == 1);
 
   // Reading file with actual test data should produce byte array
   // consistent with the test data in the file
@@ -150,6 +144,13 @@ void test_read_bytes_from_file(void)
   CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 0);
   CU_ASSERT(testdata_len == testfile_size);
   CU_ASSERT(strncmp((char*)testdata, (char *)testfile_data, testfile_size)==0);
+
+  // Read from existing file without read permission should result in error
+  chmod("testfile", 0333);
+  CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 1);
+
+  // Trying to read from non-existent file should result in error
+  CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 1);
 
   // Test cleanup
   free(testdata);
