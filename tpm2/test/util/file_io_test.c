@@ -75,9 +75,9 @@ void test_verifyInputFilePath(void)
   // real file input path with read permission should verify successfully
   chmod("testfile", 0444);
   CU_ASSERT(verifyInputFilePath("testfile") == 0);
-  remove("testfile");
 
   // non-existing input file path should error
+  remove("testfile");
   CU_ASSERT(verifyInputFilePath("testfile") == 1); 
 }
 
@@ -107,9 +107,9 @@ void test_verifyOutputFilePath(void)
   // real file output path with write permission should verify successfully
   chmod("testfile", 0222);
   CU_ASSERT(verifyOutputFilePath("testfile") == 0);
-  remove("testfile");
 
   // non-existing filename in valid and writeable directory should verify
+  remove("testfile");
   CU_ASSERT(verifyOutputFilePath("testfile") == 0);
 }
  
@@ -150,11 +150,11 @@ void test_read_bytes_from_file(void)
   CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 1);
 
   // Trying to read from non-existent file should result in error
+  remove("testfile");
   CU_ASSERT(read_bytes_from_file("testfile", &testdata, &testdata_len) == 1);
 
-  // Test cleanup
+  // Cleanup memory allocated for test data byte array
   free(testdata);
-  remove("testfile");
 }
 
 
