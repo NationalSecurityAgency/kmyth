@@ -8,8 +8,11 @@
 #ifndef TPM2_INTERFACE_H
 #define TPM2_INTERFACE_H
 
-#include <tss2/tss2_sys.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <tss2/tss2_sys.h>
 
 /**
  * @brief Array of manufacturer strings known to identify software TPM simulators.

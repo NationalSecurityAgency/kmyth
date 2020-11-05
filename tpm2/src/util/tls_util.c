@@ -1,15 +1,22 @@
+/**
+ * tls_util.c:
+ *
+ * C library containing tls utilities supporting Kmyth applications
+ */
+
 #include "tls_util.h"
-#include "memory_util.h"
-#include "defines.h"
 
 #include <string.h>
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
 
 #include <kmip/kmip.h>
 #include <kmip/kmip_bio.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <openssl/x509v3.h>
+
+#include "defines.h"
+#include "memory_util.h"
 
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.1 is a LTS version supported until 2023-09-11

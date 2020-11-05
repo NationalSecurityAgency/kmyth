@@ -5,22 +5,16 @@
  * using TPM 2.0
  */
 
-#include "formatting_tools.h"
-#include "defines.h"
-#include "cipher/cipher.h"
-#include "memory_util.h"
+#include "tpm/formatting_tools.h"
 
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-#include <stdlib.h>
 
-#include <openssl/evp.h>
-#include <openssl/buffer.h>
 #include <openssl/bio.h>
-
-#include <tss2/tss2_sys.h>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
 #include <tss2/tss2_mu.h>
+
+#include "defines.h"
 
 //############################################################################
 // marshal_skiObjects()

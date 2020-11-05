@@ -8,7 +8,7 @@
 #ifndef CIPHER_H
 #define CIPHER_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 // default cipher option used if the user does not specify symmetric cipher
 #define KMYTH_DEFAULT_CIPHER "AES/GCM/NoPadding/256"

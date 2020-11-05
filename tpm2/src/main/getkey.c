@@ -7,20 +7,18 @@
  * memory, to establish a connection to a key server.
  */
 
-#include "tls_util.h"
-#include "defines.h"
-#include "file_io.h"
-#include "memory_util.h"
-#include "kmyth_seal_unseal_impl.h"
-#include "kmyth.h"
-
-#include <stdio.h>
-#include <string.h>
 #include <getopt.h>
+#include <string.h>
+
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 
-#include <kmyth_log.h>
+#include "defines.h"
+#include "file_io.h"
+#include "kmyth.h"
+#include "kmyth_log.h"
+#include "memory_util.h"
+#include "tls_util.h"
 
 static void usage(const char *prog)
 {

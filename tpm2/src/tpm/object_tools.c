@@ -7,13 +7,11 @@
  */
 
 #include "object_tools.h"
+
+#include <string.h>
+
 #include "defines.h"
 #include "tpm2_interface.h"
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
 
 //############################################################################
 // init_kmyth_object_sensitive()

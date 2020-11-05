@@ -8,7 +8,7 @@
 #ifndef MEMORY_UTIL_H
 #define MEMORY_UTIL_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 /**
  * @brief Wipes the memory in a designated pointer. If the size is incorrectly specified, behavior 

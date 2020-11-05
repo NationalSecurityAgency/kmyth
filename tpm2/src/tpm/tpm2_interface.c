@@ -6,18 +6,19 @@
  */
 
 #include "tpm2_interface.h"
-#include "defines.h"
-#include "formatting_tools.h"
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
-#include <tss2/tss2_sys.h>
-#include <tss2/tss2-tcti-tabrmd.h>
-#include <tss2/tss2_rc.h>
-#include <openssl/rand.h>
-#include <openssl/hmac.h>
+
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/rand.h>
+
+#include <tss2/tss2_rc.h>
+#include <tss2/tss2-tcti-tabrmd.h>
+
+#include "defines.h"
+#include "tpm/formatting_tools.h"
 
 /*
  * These are known to be manufacturer strings for software TPM simulators.

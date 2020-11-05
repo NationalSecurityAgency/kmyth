@@ -10,9 +10,9 @@
 #ifndef KMYTH_SEAL_UNSEAL_IMPL_H
 #define KMYTH_SEAL_UNSEAL_IMPL_H
 
-#include "cipher/cipher.h"
-
+#include <stddef.h>
 #include <stdint.h>
+
 #include <tss2/tss2_sys.h>
 
 /**

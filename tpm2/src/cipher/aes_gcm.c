@@ -4,13 +4,13 @@
  * @brief Implements AES GCM for kmyth.
  */
 
-#include "defines.h"
-#include "memory_util.h"
-#include "aes_gcm.h"
+#include "cipher/aes_gcm.h"
 
-#include <stdlib.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+
+#include "defines.h"
+#include "memory_util.h"
 
 //############################################################################
 // aes_gcm_encrypt()

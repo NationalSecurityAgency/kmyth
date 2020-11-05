@@ -6,19 +6,19 @@
  */
 
 #include "file_io.h"
+
+#include <libgen.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <openssl/bio.h>
+#include <sys/stat.h>
+
+#include "defines.h"
 #include "memory_util.h"
 
 #include "cipher/cipher.h"
 #include "tpm/formatting_tools.h"
-#include "defines.h"
-
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <libgen.h>
-#include <string.h>
-
-#include <openssl/bio.h>
 
 //############################################################################
 // verifyInputFilePath()
