@@ -61,7 +61,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     {
       int pcr = pcrs[i];
 
-      if (0 < pcr || pcr >= numPCRs)
+      if (pcr < 0 || pcr >= numPCRs)
       {
         kmyth_log(LOG_ERR, "invalid PCR value specified (%d) ... exiting", pcr);
         return 1;

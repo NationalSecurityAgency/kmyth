@@ -30,6 +30,7 @@ extern const cipher_t cipher_list[];
 static int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
 {
   *pcrs_len = 0;
+
   if (pcrs_string == NULL)
   {
     return 0;
@@ -113,8 +114,8 @@ static int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
       *pcrs = new_pcrs;
       pcrs_array_size *= 2;
     }
-
-    *pcrs[*pcrs_len] = (int) pcrIndex;
+    (*pcrs)[*pcrs_len] = (int) pcrIndex;
+    (*pcrs_len)++;
     pcrs_string_cur = pcrs_string_next;
     pcrs_string_next = NULL;
   }
@@ -332,10 +333,11 @@ int main(int argc, char **argv)
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    return 1;
     free(outPath);
     free(output);
+    return 1;
   }
+
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
