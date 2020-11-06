@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     return CU_get_error();
   }
   
-  // Create and configure kmyth I/O utility test suite
+  // Create and configure File I/O utility test suite
   CU_pSuite file_io_utility_test_suite = NULL;
   file_io_utility_test_suite = CU_add_suite("File I/O Utility Test Suite",
                                              init_suite, clean_suite);
