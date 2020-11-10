@@ -35,9 +35,9 @@
  *
  * @param[in]  oa_bytes_len      number of bytes in owner_auth_passwd
  *
- * @param[in]  pcrs              Array containing PCRs values, if any, to apply
- *                               to the authorization policy for Kmyth TPM
- *                               objects created by kmyth-seal.
+ * @param[in]  pcrs              Array containing PCR index selections, if any,
+ *                               to apply to the authorization policy for Kmyth
+ *                               TPM objects created by kmyth-seal.
  *                               (i.e., storage key and sealed wrapping key)
  *
  * @param[in]  pcrs_len          The length of pcrs
