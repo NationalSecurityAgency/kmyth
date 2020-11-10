@@ -53,7 +53,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     if (pcrs_len == 0)
     {
       kmyth_log(LOG_ERR,
-                "non-NULL PRCs array supplied, but length is 0 ... exiting");
+                "non-NULL PCRs array supplied, but length is 0 ... exiting");
       return 1;
     }
 
