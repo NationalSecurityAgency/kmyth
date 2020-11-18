@@ -5,7 +5,6 @@
  * Incorporates the following test suites:
  *   - File I/O Utility (tests in util/file_io_test.c)
  *   - TLS Utility (tests in util/tls_util_test.c)
- *   - PCR Handling (tests in tpm/pcrs_test.c)
  */
 
 #include <stdio.h>
@@ -17,7 +16,6 @@
 #include "file_io_test.h"
 #include "memory_util_test.h"
 #include "tls_util_test.h"
-#include "pcrs_test.h"
 #include "aes_gcm_test.h"
 
 
@@ -79,21 +77,6 @@ int main(int argc, char** argv)
     return CU_get_error();
   }
   if (tls_util_add_tests(tls_utility_test_suite))
-  {
-    CU_cleanup_registry();
-    return CU_get_error();
-  }
-
-  // Create and configure the PCRs handling test suite
-  CU_pSuite pcrs_test_suite = NULL;
-  pcrs_test_suite = CU_add_suite("PCR Handling Test Suite",
-				                         init_suite, clean_suite);Test/aes gcm
-  if (NULL == pcrs_test_suite)
-  {
-    CU_cleanup_registry();
-    return CU_get_error();
-  }
-  if(pcrs_add_tests(pcrs_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error();
