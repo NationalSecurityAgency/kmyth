@@ -189,7 +189,7 @@ int aes_gcm_decrypt(unsigned char *key,
   if (inData_len <= GCM_IV_LEN + GCM_TAG_LEN)
   {
     kmyth_log(LOG_ERR, "input data incomplete (must be %d bytes, was %lu "
-              "bytes) ... exiting", GCM_IV_LEN + GCM_TAG_LEN, inData_len);
+              "bytes) ... exiting", GCM_IV_LEN + GCM_TAG_LEN + 1, inData_len);
     return 1;
   }
 
@@ -241,7 +241,7 @@ int aes_gcm_decrypt(unsigned char *key,
     init_result = EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
     break;
   default:
-    kmyth_log(LOG_ERR, "invalid key length (%d)", key_len);
+    kmyth_log(LOG_ERR, "invalid key length (%d bytes)", key_len);
   }
   if (!init_result)
   {
