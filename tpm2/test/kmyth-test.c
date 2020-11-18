@@ -20,6 +20,7 @@
 #include "pcrs_test.h"
 #include "aes_gcm_test.h"
 
+
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
  */
@@ -86,7 +87,7 @@ int main(int argc, char** argv)
   // Create and configure the PCRs handling test suite
   CU_pSuite pcrs_test_suite = NULL;
   pcrs_test_suite = CU_add_suite("PCR Handling Test Suite",
-				                         init_suite, clean_suite);
+				                         init_suite, clean_suite);Test/aes gcm
   if (NULL == pcrs_test_suite)
   {
     CU_cleanup_registry();
