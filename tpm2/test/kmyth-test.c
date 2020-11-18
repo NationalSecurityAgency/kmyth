@@ -5,7 +5,6 @@
  * Incorporates the following test suites:
  *   - File I/O Utility (tests in util/file_io_test.c)
  *   - TLS Utility (tests in util/tls_util_test.c)
- *   - PCR Handling (tests in tpm/pcrs_test.c)
  */
 
 #include <stdio.h>
