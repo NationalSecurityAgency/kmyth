@@ -11,9 +11,9 @@ Table of Contents
 
     * [Building](#building)
 
-       * [Building Dependencies](#building-the-dependencies)
-
        * [Building Kmyth](#building-kmyth)
+
+       * [Building Dependencies](#building-the-dependencies)
 
   * [Emulators](#running-with-tpm-20-emulators)
   
@@ -89,6 +89,38 @@ Some unit tests may also assume the use of a TPM 2.0 emulator.
 ```apt install tpm2-tools```
 
 ### Building
+
+##### Building Kmyth
+
+Once the dependencies are installed:
+
+1. Download the code
+
+2. The documentation is built using *make doc*. The doxygen generated
+   documentation is put in ./doc.
+
+3. In the `tpm2` directory run *make* or  *make all* to create:
+  * ./lib/libkmyth.so
+  * ./bin/kmyth-seal
+  * ./bin/kmyth-unseal
+  * ./bin/kmyth-getkey
+
+4. The existing build (executables, object files, and documentation) can be
+   cleared away to support a fresh build by using *make clean*.
+
+5. To install the `kmyth` headers, library, and the executables run *sudo make install*. By default this installs:
+  * /usr/local/include/kmyth_log.h
+  * /usr/local/include/kmyth.h
+  * /usr/local/lib/libkmyth.so
+  * /usr/local/bin/kmyth-seal
+  * /usr/local/bin/kmyth-unseal
+  
+These can be uninstalled by running *sudo make uninstall*.
+
+
+##### Running Kmyth Unit Tests
+
+1. In the `tpm2` directory run *make* and then *make test* to build and run the tests.
 
 #### Building the Dependencies
 
@@ -245,38 +277,6 @@ $ make
 ```
 
 4. The emulator executable can be found at: ```./src/tpm_server```
-
-##### Building Kmyth
-
-Once the dependencies are installed:
-
-1. Download the code
-
-2. The documentation is built using *make doc*. The doxygen generated
-   documentation is put in ./doc.
-
-3. In the `tpm2` directory run *make* or  *make all* to create:
-  * ./lib/libkmyth.so
-  * ./bin/kmyth-seal
-  * ./bin/kmyth-unseal
-  * ./bin/kmyth-getkey
-
-4. The existing build (executables, object files, and documentation) can be
-   cleared away to support a fresh build by using *make clean*.
-
-5. To install the `kmyth` headers, library, and the executables run *sudo make install*. By default this installs:
-  * /usr/local/include/kmyth_log.h
-  * /usr/local/include/kmyth.h
-  * /usr/local/lib/libkmyth.so
-  * /usr/local/bin/kmyth-seal
-  * /usr/local/bin/kmyth-unseal
-  
-These can be uninstalled by running *sudo make uninstall*.
-
-
-##### Running Kmyth Unit Tests
-
-1. In the `tpm2` directory run *make* and then *make test* to build and run the tests.
 
 
 ### Running with TPM 2.0 Emulators
