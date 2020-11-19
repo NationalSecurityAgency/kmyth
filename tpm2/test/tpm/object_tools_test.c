@@ -64,7 +64,7 @@ void test_init_kmyth_object_sensitive(void)
   // Empty object auth and data should yield a valid sensitive area
   CU_ASSERT(init_kmyth_object_sensitive(object_auth, (uint8_t *) NULL, 0,
                                         &sensitiveArea) == 0);
-  CU_ASSERT(sensitiveArea.sensitive.userAuth.size == 0);
+  CU_ASSERT(sensitiveArea.sensitive.userAuth.size == object_auth.size);
   CU_ASSERT(sensitiveArea.sensitive.data.size == 0);
   CU_ASSERT(sensitiveArea.size == 4);
 
@@ -75,13 +75,13 @@ void test_init_kmyth_object_sensitive(void)
 
   CU_ASSERT(init_kmyth_object_sensitive(object_auth, object_data,
                                         object_dataSize, &sensitiveArea) == 0);
-  CU_ASSERT(sensitiveArea.sensitive.userAuth.size == 4);
+  CU_ASSERT(sensitiveArea.sensitive.userAuth.size == object_auth.size);
   CU_ASSERT(memcmp(object_auth.buffer, sensitiveArea.sensitive.userAuth.buffer,
                    object_auth.size) == 0);
-  CU_ASSERT(sensitiveArea.sensitive.data.size == 4);
+  CU_ASSERT(sensitiveArea.sensitive.data.size == object_dataSize);
   CU_ASSERT(memcmp(object_data, sensitiveArea.sensitive.data.buffer,
                    object_dataSize) == 0);
-  CU_ASSERT(sensitiveArea.size == 12);
+  CU_ASSERT(sensitiveArea.size == (object_auth.size + object_dataSize + 4));
 }
 
 //----------------------------------------------------------------------------
@@ -128,11 +128,18 @@ void test_init_kmyth_object_attributes(void)
 
   // The object attribute for a non-key should be initialized a certain way
   CU_ASSERT(init_kmyth_object_attributes(false, &objectAttrib) == 0);
-  CU_ASSERT(objectAttrib == 0x52);
+  CU_ASSERT(objectAttrib == (TPMA_OBJECT_USERWITHAUTH |
+                             TPMA_OBJECT_FIXEDTPM |
+                             TPMA_OBJECT_FIXEDPARENT));
 
   // The object attribute for a key should be initialized a certain way
   CU_ASSERT(init_kmyth_object_attributes(true, &objectAttrib) == 0);
-  CU_ASSERT(objectAttrib == 0x30072);
+  CU_ASSERT(objectAttrib == (TPMA_OBJECT_RESTRICTED |
+                             TPMA_OBJECT_DECRYPT |
+                             TPMA_OBJECT_SENSITIVEDATAORIGIN |
+                             TPMA_OBJECT_USERWITHAUTH |
+                             TPMA_OBJECT_FIXEDTPM |
+                             TPMA_OBJECT_FIXEDPARENT));
 }
 
 //----------------------------------------------------------------------------
