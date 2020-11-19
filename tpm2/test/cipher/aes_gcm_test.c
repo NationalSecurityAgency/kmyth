@@ -76,7 +76,7 @@ void test_gcm_encrypt_decrypt(void)
   
   CU_ASSERT(aes_gcm_encrypt(key, key_len, plaintext,
             plaintext_len, &ciphertext, &ciphertext_len) == 0);
-  CU_ASSERT(ciphertext_len = plaintext_len + GCM_IV_LEN + GCM_TAG_LEN);
+  CU_ASSERT(ciphertext_len == plaintext_len + GCM_IV_LEN + GCM_TAG_LEN);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext,
             ciphertext_len, &decrypt, &decrypt_len) == 0);
   CU_ASSERT(decrypt_len == plaintext_len);
@@ -152,20 +152,19 @@ void test_gcm_tag_modification(void)
   decrypt = NULL;
   decrypt_len = 0;
 
-  // alter the last byte of the tag and verify decryption failure
+  // truncate tag by 2 bytes (pass wrong length) and verify decryption failure
+  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len-2,
+                            &decrypt, &decrypt_len) == 1);
+  decrypt_len = 0;
+  decrypt = NULL;
+  
+  // alter last byte of tag (pass correct length) and verify decryption failure
   ciphertext[ciphertext_len-1] ^= 0x1;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
                             &decrypt, &decrypt_len) == 1);
   decrypt_len = 0;
   decrypt = NULL;
  
-  // truncate the tag by 2 bytes and verify decryption failure
-  ciphertext_len -= 2;
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
-                            &decrypt, &decrypt_len) == 1);
-  decrypt_len = 0;
-  decrypt = NULL;
-  
   free(key);
   free(plaintext);
   free(ciphertext);
@@ -196,23 +195,23 @@ void test_gcm_iv_modification(void)
   decrypt = NULL;
   decrypt_len = 0;
 
-  // alter the first byte of IV and verify decryption failure
-  ciphertext[0] ^= 0x1;
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
-                            &decrypt, &decrypt_len) == 1);
-  decrypt = NULL;
-  decrypt_len = 0;
-
   // truncate the IV and verify decryption failure
   unsigned char* truncated_iv_cipher = ciphertext + 2;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, truncated_iv_cipher, ciphertext_len-2,
                             &decrypt, &decrypt_len) == 1);
  
+  decrypt = NULL;
+  decrypt_len = 0;
+
+  // alter the first byte of IV and verify decryption failure
+  ciphertext[0] ^= 0x1;
+  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
+                            &decrypt, &decrypt_len) == 1);
+
   free(key);
   free(plaintext);
   free(ciphertext);
 }
-
 
 void test_gcm_cipher_modification(void)
 {
