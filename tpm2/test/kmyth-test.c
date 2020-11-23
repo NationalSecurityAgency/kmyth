@@ -5,7 +5,6 @@
  * Incorporates the following test suites:
  *   - File I/O Utility (tests in util/file_io_test.c)
  *   - TLS Utility (tests in util/tls_util_test.c)
- *   - PCR Handling (tests in tpm/pcrs_test.c)
  */
 
 #include <stdio.h>
@@ -18,6 +17,7 @@
 #include "memory_util_test.h"
 #include "object_tools_test.h"
 #include "tls_util_test.h"
+#include "aes_gcm_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -92,6 +92,21 @@ int main(int argc, char** argv)
     return CU_get_error();
   }
   if (tls_util_add_tests(tls_utility_test_suite))
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  // Create and configure the AES/GCM cipher test suite
+  CU_pSuite aes_gcm_test_suite = NULL;
+  aes_gcm_test_suite = CU_add_suite("AES/GCM Cipher Test Suite",
+				                            init_suite, clean_suite);
+  if (NULL == aes_gcm_test_suite)
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if(aes_gcm_add_tests(aes_gcm_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error();
