@@ -246,7 +246,7 @@ $(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c | $(MAIN_OBJ_DIR)
 
 $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c \
 	                   $(UTIL_INC_DIR)/%.h \
-										 | $(UTIL_OBJ_DIR)
+                     | $(UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $< -o $@
 
 $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c $(TPM_INC_DIR)/%.h | $(TPM_OBJ_DIR)
@@ -254,7 +254,7 @@ $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c $(TPM_INC_DIR)/%.h | $(TPM_OBJ_DIR)
 
 $(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
 	                     $(CIPHER_INC_DIR)/%.h \
-											 | $(CIPHER_OBJ_DIR)
+                       | $(CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $< -o $@
 
 .PHONY: pre
@@ -295,17 +295,17 @@ $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 
 $(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c \
 	                        $(TEST_UTIL_INC_DIR)/%.h \
-													| $(TEST_UTIL_OBJ_DIR)
+                          | $(TEST_UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 $(TEST_TPM_OBJ_DIR)/%.o: $(TEST_TPM_SRC_DIR)/%.c \
 	                       $(TEST_TPM_INC_DIR)/%.h \
-												 | $(TEST_TPM_OBJ_DIR)
+                         | $(TEST_TPM_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 $(TEST_CIPHER_OBJ_DIR)/%.o: $(TEST_CIPHER_SRC_DIR)/%.c \
 	                          $(TEST_CIPHER_INC_DIR)/%.h \
-														| $(TEST_CIPHER_OBJ_DIR)
+                            | $(TEST_CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 .PHONY: install
