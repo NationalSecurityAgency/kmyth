@@ -16,8 +16,8 @@ MAIN_SRC_DIR = $(SRC_DIR)/main
 MAIN_SOURCES = $(wildcard $(MAIN_SRC_DIR)/*.c)
 MAIN_OBJ_DIR = $(OBJ_DIR)/main
 MAIN_OBJECTS = $(subst $(MAIN_SRC_DIR), \
-							         $(MAIN_OBJ_DIR), \
-											 $(MAIN_SOURCES:%.c=%.o))
+	                     $(MAIN_OBJ_DIR), \
+	                     $(MAIN_SOURCES:%.c=%.o))
 
 # Specify Kmyth general utility directories/files
 UTIL_SRC_DIR = $(SRC_DIR)/util
@@ -25,8 +25,8 @@ UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
 UTIL_INC_DIR = $(INC_DIR)/util
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), \
-							         $(UTIL_OBJ_DIR), \
-											 $(UTIL_SOURCES:%.c=%.o))
+	                     $(UTIL_OBJ_DIR), \
+	                     $(UTIL_SOURCES:%.c=%.o))
 
 # Specify Kmyth cipher utility directories/files
 CIPHER_SRC_DIR = $(SRC_DIR)/cipher
@@ -34,8 +34,8 @@ CIPHER_SOURCES = $(wildcard $(CIPHER_SRC_DIR)/*.c)
 CIPHER_INC_DIR = $(INC_DIR)/cipher
 CIPHER_OBJ_DIR = $(OBJ_DIR)/cipher
 CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), \
-								         $(CIPHER_OBJ_DIR), \
-												 $(CIPHER_SOURCES:%.c=%.o))
+	                       $(CIPHER_OBJ_DIR), \
+	                       $(CIPHER_SOURCES:%.c=%.o))
 
 # Specify Kmyth TPM 2.0 utility directories/files
 TPM_SRC_DIR = $(SRC_DIR)/tpm
@@ -43,8 +43,8 @@ TPM_SOURCES = $(wildcard $(TPM_SRC_DIR)/*.c)
 TPM_INC_DIR = $(INC_DIR)/tpm
 TPM_OBJ_DIR = $(OBJ_DIR)/tpm
 TPM_OBJECTS = $(subst $(TPM_SRC_DIR), \
-							        $(TPM_OBJ_DIR), \
-											$(TPM_SOURCES:%.c=%.o))
+	                    $(TPM_OBJ_DIR), \
+	                    $(TPM_SOURCES:%.c=%.o))
 
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INC_DIR)/*.h)
@@ -64,8 +64,8 @@ LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
 LOGGER_INC_DIR = $(LOGGER_DIR)/include
 LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), \
-								         $(LOGGER_OBJ_DIR), \
-												 $(LOGGER_SOURCES:%.c=%.o))
+	                       $(LOGGER_OBJ_DIR), \
+	                       $(LOGGER_SOURCES:%.c=%.o))
 LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
 
 # Specify path for logger output of shared library
@@ -92,8 +92,8 @@ TEST_MAIN_SRC_DIR = $(TEST_SRC_DIR)/main
 TEST_MAIN_SOURCES = $(wildcard $(TEST_MAIN_SRC_DIR)/*.c)
 TEST_MAIN_OBJ_DIR = $(TEST_OBJ_DIR)/main
 TEST_MAIN_OBJECTS = $(subst $(TEST_MAIN_SRC_DIR), \
-										        $(TEST_MAIN_OBJ_DIR), \
-														$(TEST_MAIN_SOURCES:%.c=%.o))
+	                          $(TEST_MAIN_OBJ_DIR), \
+	                          $(TEST_MAIN_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth general utility (util) testing
 TEST_UTIL_SRC_DIR = $(TEST_SRC_DIR)/util
@@ -101,8 +101,8 @@ TEST_UTIL_SOURCES = $(wildcard $(TEST_UTIL_SRC_DIR)/*.c)
 TEST_UTIL_INC_DIR = $(TEST_INC_DIR)/util
 TEST_UTIL_OBJ_DIR = $(TEST_OBJ_DIR)/util
 TEST_UTIL_OBJECTS = $(subst $(TEST_UTIL_SRC_DIR), \
-										        $(TEST_UTIL_OBJ_DIR), \
-														$(TEST_UTIL_SOURCES:%.c=%.o))
+	                          $(TEST_UTIL_OBJ_DIR), \
+	                          $(TEST_UTIL_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth TPM utility testing
 TEST_TPM_SRC_DIR = $(TEST_SRC_DIR)/tpm
@@ -110,8 +110,8 @@ TEST_TPM_SOURCES = $(wildcard $(TEST_TPM_SRC_DIR)/*.c)
 TEST_TPM_INC_DIR = $(TEST_INC_DIR)/tpm
 TEST_TPM_OBJ_DIR = $(TEST_OBJ_DIR)/tpm
 TEST_TPM_OBJECTS = $(subst $(TEST_TPM_SRC_DIR), \
-									         $(TEST_TPM_OBJ_DIR), \
-													 $(TEST_TPM_SOURCES:%.c=%.o))
+	                         $(TEST_TPM_OBJ_DIR), \
+	                         $(TEST_TPM_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth cipher utility testing
 TEST_CIPHER_SRC_DIR  = $(TEST_SRC_DIR)/cipher
@@ -119,8 +119,8 @@ TEST_CIPHER_SOURCES  = $(wildcard $(TEST_CIPHER_SRC_DIR)/*.c)
 TEST_CIPHER_INC_DIR = $(TEST_INC_DIR)/cipher
 TEST_CIPHER_OBJ_DIR  = $(TEST_OBJ_DIR)/cipher
 TEST_CIPHER_OBJECTS  = $(subst $(TEST_CIPHER_SRC_DIR), \
-											         $(TEST_CIPHER_OBJ_DIR), \
-															 $(TEST_CIPHER_SOURCES:%.c=%.o))
+	                             $(TEST_CIPHER_OBJ_DIR), \
+	                             $(TEST_CIPHER_SOURCES:%.c=%.o))
 
 # Create consolidated list of test source files
 TEST_SOURCES = $(TESTRUNNER_SOURCES)
@@ -246,7 +246,7 @@ $(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c | $(MAIN_OBJ_DIR)
 
 $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c \
 	                   $(UTIL_INC_DIR)/%.h \
-                     | $(UTIL_OBJ_DIR)
+	                   | $(UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $< -o $@
 
 $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c $(TPM_INC_DIR)/%.h | $(TPM_OBJ_DIR)
@@ -254,7 +254,7 @@ $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c $(TPM_INC_DIR)/%.h | $(TPM_OBJ_DIR)
 
 $(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
 	                     $(CIPHER_INC_DIR)/%.h \
-                       | $(CIPHER_OBJ_DIR)
+	                     | $(CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $< -o $@
 
 .PHONY: pre
@@ -270,11 +270,11 @@ pre:
 .PHONY: doc
 doc: $(HEADER_FILES) \
 	   $(UTIL_SOURCES) \
-		 $(TOOL_SOURCES) \
-		 $(MAIN_SOURCES) \
-		 $(LOGGER_HEADERS) \
-		 $(LOGGER_SOURCES) \
-		 Doxyfile
+	   $(TOOL_SOURCES) \
+	   $(MAIN_SOURCES) \
+	   $(LOGGER_HEADERS) \
+	   $(LOGGER_SOURCES) \
+	   Doxyfile
 	mkdir -p $(DOC_DIR)
 	doxygen Doxyfile
 
@@ -295,17 +295,17 @@ $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 
 $(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c \
 	                        $(TEST_UTIL_INC_DIR)/%.h \
-                          | $(TEST_UTIL_OBJ_DIR)
+	                        | $(TEST_UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 $(TEST_TPM_OBJ_DIR)/%.o: $(TEST_TPM_SRC_DIR)/%.c \
 	                       $(TEST_TPM_INC_DIR)/%.h \
-                         | $(TEST_TPM_OBJ_DIR)
+	                       | $(TEST_TPM_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 $(TEST_CIPHER_OBJ_DIR)/%.o: $(TEST_CIPHER_SRC_DIR)/%.c \
 	                          $(TEST_CIPHER_INC_DIR)/%.h \
-                            | $(TEST_CIPHER_OBJ_DIR)
+	                          | $(TEST_CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 .PHONY: install
@@ -314,7 +314,7 @@ install:
 	install -m 755 $(LIB_DIR)/libkmyth.so $(DESTDIR)$(PREFIX)/lib/
 	install -d $(DESTDIR)$(PREFIX)/include/kmyth/
 	install -m 644 $(LOGGER_INC_DIR)/kmyth_log.h \
-		             $(DESTDIR)$(PREFIX)/include/kmyth/
+	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	install -m 644 $(INC_DIR)/kmyth.h $(DESTDIR)$(PREFIX)/include/kmyth/
 	install -d $(DESTDIR)$(PREFIX)/bin
 	install -m 755 $(BIN_DIR)/kmyth-seal $(DESTDIR)$(PREFIX)/bin/
