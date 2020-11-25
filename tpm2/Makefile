@@ -270,8 +270,8 @@ $(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c \
 	      -o $@
 
 $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c \
-	                   $(UTIL_INC_DIR)/%.h \
-	                   | $(UTIL_OBJ_DIR)
+                     $(UTIL_INC_DIR)/%.h \
+                     | $(UTIL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
 	      $< \
@@ -286,8 +286,8 @@ $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c \
 	      -o $@
 
 $(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
-	                     $(CIPHER_INC_DIR)/%.h \
-	                     | $(CIPHER_OBJ_DIR)
+                       $(CIPHER_INC_DIR)/%.h \
+                       | $(CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
 	      $< \
