@@ -224,8 +224,8 @@ all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
 
 kmyth-lib: $(LOGGER_OBJECTS) \
            $(UTIL_OBJECTS) \
-  				 $(CIPHER_OBJECTS) \
-  				 $(TPM_OBJECTS)
+           $(CIPHER_OBJECTS) \
+           $(TPM_OBJECTS)
 	$(CC) $(SOFLAGS) \
 	      $(LOGGER_OBJECTS) \
 	      $(UTIL_OBJECTS) \
@@ -305,12 +305,12 @@ pre:
 
 .PHONY: doc
 doc: $(HEADER_FILES) \
-	   $(UTIL_SOURCES) \
-	   $(TOOL_SOURCES) \
-	   $(MAIN_SOURCES) \
-	   $(LOGGER_HEADERS) \
-	   $(LOGGER_SOURCES) \
-	   Doxyfile
+     $(UTIL_SOURCES) \
+     $(TOOL_SOURCES) \
+     $(MAIN_SOURCES) \
+     $(LOGGER_HEADERS) \
+     $(LOGGER_SOURCES) \
+     Doxyfile
 	mkdir -p $(DOC_DIR)
 	doxygen Doxyfile
 
