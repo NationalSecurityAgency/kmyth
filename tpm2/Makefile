@@ -1,6 +1,8 @@
-# Makefile for KMYTH using TPM 2.0
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Makefile for KMYTH using TPM 2.0                                           |
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#====================== BUILD ENVIRONMENT DEFINITION ==========================
+#====================== START: BUILD ENVIRONMENT DEFINITION ==================
 
 # Specify top-level directories for build process
 SRC_DIR ?= src
@@ -73,9 +75,9 @@ KMYTH_LIB_NAME = kmyth
 KMYTH_LIB_SONAME = lib$(KMYTH_LIB_NAME).so
 KMYTH_LIB_LOCAL_DEST = $(LIB_DIR)/$(KMYTH_LIB_SONAME)
 
-#================== END BUILD ENVIRONMENT DEFINITION =========================
+#====================== END: BUILD ENVIRONMENT DEFINITION ====================
 
-#==================== TEST ENVIRONMENT DEFINITION ============================
+#====================== START: TEST ENVIRONMENT DEFINITION ===================
 
 # Specify top-level unit testing directory structure
 TEST_DIR ?= test
@@ -142,9 +144,9 @@ TEST_OBJECT_DIRS += $(TEST_UTIL_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_TPM_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_CIPHER_OBJ_DIR)
 
-#===================== END TEST ENVIRONMENT DEFINITION =======================
+#====================== END: TEST ENVIRONMENT DEFINITION =====================
 
-#========================== TOOL CONFIGURATION ===============================
+#====================== START: TOOL CONFIGURATION ============================
 
 # Specify fundamental compiler parameters
 CC = gcc#                                invoke gcc compiler
@@ -215,9 +217,9 @@ INDENT_OPTS += -npsl#                    type of proc on same line as name
 INDENT_OPTS += -bbo#                     prefer break before boolean operator
 INDENT_OPTS += -l80#                     max non-comment line length is 80
 
-#====================== END TOOL CONFIGURATION ===============================
+#====================== END: TOOL CONFIGURATION ==============================
 
-#======================= TARGET CONFIGURATION ================================
+#====================== START: RULES =========================================
 
 .PHONY: all
 all: pre kmyth-lib kmyth-seal kmyth-unseal kmyth-getkey
@@ -389,5 +391,4 @@ clean:
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
 
-#============================ END TARGET CONFIGURATION =======================
-
+#====================== END: RULES =========================================
