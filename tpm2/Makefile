@@ -330,7 +330,7 @@ kmyth-test: $(TEST_OBJECTS)
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lcunit \
-	      -lkmyth
+	      -lkmyth-tpm
 
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c \
                               | $(TEST_OBJ_DIR)
