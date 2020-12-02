@@ -72,7 +72,7 @@ LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
 
 # Specify path for logger output of shared library
 KMYTH_LIB_NAME = kmyth
-KMYTH_LIB_SONAME = lib$(KMYTH_LIB_NAME).so
+KMYTH_LIB_SONAME = lib$(KMYTH_LIB_NAME)-tpm.so
 KMYTH_LIB_LOCAL_DEST = $(LIB_DIR)/$(KMYTH_LIB_SONAME)
 
 #====================== END: BUILD ENVIRONMENT DEFINITION ====================
@@ -241,21 +241,21 @@ kmyth-seal: $(MAIN_OBJ_DIR)/seal.o
 	      -o $(BIN_DIR)/kmyth-seal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-	      -lkmyth
+	      -lkmyth-tpm
 
 kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o
 	$(CC) $(MAIN_OBJ_DIR)/unseal.o \
 	      -o $(BIN_DIR)/kmyth-unseal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-	      -lkmyth
+	      -lkmyth-tpm
 
 kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o
 	$(CC) $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-	      -lkmyth
+	      -lkmyth-tpm
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) \
                    $(LOGGER_HEADER_FILES)
@@ -330,7 +330,7 @@ kmyth-test: $(TEST_OBJECTS)
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lcunit \
-	      -lkmyth
+	      -lkmyth-tpm
 
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c \
                               | $(TEST_OBJ_DIR)
@@ -366,7 +366,7 @@ $(TEST_CIPHER_OBJ_DIR)/%.o: $(TEST_CIPHER_SRC_DIR)/%.c \
 .PHONY: install
 install:
 	install -d $(DESTDIR)$(PREFIX)/lib
-	install -m 755 $(LIB_DIR)/libkmyth.so $(DESTDIR)$(PREFIX)/lib/
+	install -m 755 $(LIB_DIR)/$(KMYTH_LIB_SONAME) $(DESTDIR)$(PREFIX)/lib/
 	install -d $(DESTDIR)$(PREFIX)/include/kmyth/
 	install -m 644 $(LOGGER_INC_DIR)/kmyth_log.h \
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
@@ -378,8 +378,9 @@ install:
 
 .PHONY: uninstall
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/lib/libkmyth.so	
-	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(KMYTH_LIB_SONAME)
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
