@@ -497,4 +497,37 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
 //----------------------------------------------------------------------------
 void test_concat(void)
 {
+
+	uint8_t* green = (uint8_t*)"green";
+	size_t green_len = 5;
+	uint8_t* chile = (uint8_t*)"chile";
+	size_t chile_len = 5;
+	uint8_t* result = (uint8_t*)"greenchile";
+	size_t result_len = 10;
+
+	size_t dest_len = green_len;
+	uint8_t* dest = malloc(dest_len);
+	memcpy(dest, green, dest_len);
+
+	//Test valid concat
+	CU_ASSERT(concat(&dest, &dest_len, chile, chile_len) == 0);
+	CU_ASSERT(result_len == dest_len);
+	CU_ASSERT(memcmp(dest, result, dest_len) == 0);
+
+	//Test empty input
+	dest_len = green_len;
+  dest = malloc(dest_len);
+  memcpy(dest, green, dest_len);
+
+	CU_ASSERT(concat(&dest, &dest_len, NULL, chile_len) == 0);
+	CU_ASSERT(green_len == dest_len);
+	CU_ASSERT(memcmp(dest, green, dest_len) == 0);
+
+  CU_ASSERT(concat(&dest, &dest_len, chile, 0) == 0);
+  CU_ASSERT(green_len == dest_len);
+  CU_ASSERT(memcmp(dest, green, dest_len) == 0);
+
+	//Test invalid input
+	//The -1 sould trigger overflows here:    if (new_dest_len < *dest_length)
+  CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
 }
