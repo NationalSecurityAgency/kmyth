@@ -363,7 +363,6 @@ void test_get_ski_block_bytes(void)
 	remaining = sb_len;
 	raw_pcr_select_list_data = NULL;
 	raw_pcr_select_list_size = 0;
-	sb[208] = '-';
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
                           &raw_pcr_select_list_data,
