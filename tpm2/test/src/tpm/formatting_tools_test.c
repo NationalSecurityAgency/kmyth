@@ -12,6 +12,7 @@
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
 #include "defines.h"
+
 const char* CONST_SKI_BYTES = "\
 -----PCR SELECTION LIST-----\n\
 AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
@@ -46,6 +47,20 @@ lYUkqJ/V5ZBlLek/ufMxMg==\n\
 j53ixEuUSZcgOBkv9bSQkH1WXo7IWKsMP/XfevBjYhl/RBAmxpZeXLao2uCA8cc=\n\
 -----FILE END-----\n";
 
+const char* RAW_PCR64 = "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+
+const size_t RAW_PCR_SIZE = 132;
+uint8_t RAW_PCR[] = {0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0};
 
 //----------------------------------------------------------------------------
 // formatting_tools_add_tests()
@@ -81,6 +96,23 @@ int formatting_tools_add_tests(CU_pSuite suite)
 	{
 		return 1;
 	}
+  if (NULL == CU_add_test(suite, "encodeBase64Data() Tests",
+                          test_encodeBase64Data))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "decodeBase64Data() Tests",
+                          test_decodeBase64Data))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "concat() Tests",
+                          test_concat))
+  {
+    return 1;
+  }
 
   return 0;
 }
@@ -269,9 +301,6 @@ void test_get_ski_block_bytes(void)
   size_t raw_pcr_select_list_size = 0;
 
 	//Valid parse test
-  char* valid_raw_pcr = "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
   CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
                           &raw_pcr_select_list_data,
@@ -280,8 +309,8 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
-	CU_ASSERT(raw_pcr_select_list_size == strlen(valid_raw_pcr));
-	CU_ASSERT(memcmp(raw_pcr_select_list_data, valid_raw_pcr, raw_pcr_select_list_size) == 0);
+	CU_ASSERT(raw_pcr_select_list_size == strlen(RAW_PCR64));
+	CU_ASSERT(memcmp(raw_pcr_select_list_data, RAW_PCR64, raw_pcr_select_list_size) == 0);
 
 	//Invalid first delim
 	position = sb;
@@ -370,4 +399,69 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
 	CU_ASSERT(raw_pcr_select_list_data == NULL);
 	CU_ASSERT(raw_pcr_select_list_size == 0);
+}
+
+//----------------------------------------------------------------------------
+// test_encodeBase64Data()
+//----------------------------------------------------------------------------
+void test_encodeBase64Data(void)
+{
+	uint8_t *pcr64 = NULL;
+	size_t pcr64_len = 0;
+
+	//Test valid encode
+  CU_ASSERT(encodeBase64Data(RAW_PCR, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+	CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
+	CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)==0);
+
+	//Test empty input
+	CU_ASSERT(encodeBase64Data(NULL, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 1);
+  CU_ASSERT(encodeBase64Data(RAW_PCR, 0, &pcr64, &pcr64_len) == 1);
+
+	//Test different inputs don't produce the same base64 output
+	//First entry has a bit flipped
+	uint8_t wrong_pcr[] = {1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0};
+  pcr64 = NULL;
+  pcr64_len = 0;
+  CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+  CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
+  CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
+
+  //Test that different length raw data results in different length base64
+  uint8_t short_pcr[] = {0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0};
+  pcr64 = NULL;
+  pcr64_len = 0;
+  CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+  CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
+  CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
+
+}
+
+//----------------------------------------------------------------------------
+// test_decodeBase64Data()
+//----------------------------------------------------------------------------
+void test_decodeBase64Data(void)
+{
+}
+
+//----------------------------------------------------------------------------
+// test_concat()
+//----------------------------------------------------------------------------
+void test_concat(void)
+{
 }
