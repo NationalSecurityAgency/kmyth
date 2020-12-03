@@ -12,27 +12,7 @@
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
 
-//----------------------------------------------------------------------------
-// formatting_tools_add_tests()
-//----------------------------------------------------------------------------
-int formatting_tools_add_tests(CU_pSuite suite)
-{
-  if (NULL == CU_add_test(suite, "parse_ski_bytes() Tests",
-                          test_parse_ski_bytes))
-  {
-    return 1;
-  }
-
-  return 0;
-}
-
-//----------------------------------------------------------------------------
-// test_parse_ski_bytes
-//----------------------------------------------------------------------------
-void test_parse_ski_bytes(void)
-{
-
-char* ski_bytes = "\
+const char* CONST_SKI_BYTES = "\
 -----PCR SELECTION LIST-----\n\
 AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
@@ -66,8 +46,116 @@ lYUkqJ/V5ZBlLek/ufMxMg==\n\
 j53ixEuUSZcgOBkv9bSQkH1WXo7IWKsMP/XfevBjYhl/RBAmxpZeXLao2uCA8cc=\n\
 -----FILE END-----\n";
 
-	size_t ski_bytes_len = strlen(ski_bytes);
+
+//----------------------------------------------------------------------------
+// formatting_tools_add_tests()
+//----------------------------------------------------------------------------
+int formatting_tools_add_tests(CU_pSuite suite)
+{
+  if (NULL == CU_add_test(suite, "parse_ski_bytes() Tests",
+                          test_parse_ski_bytes))
+  {
+    return 1;
+  }
+
+	if (NULL == CU_add_test(suite, "create_ski_bytes() Tests",
+                          test_create_ski_bytes))
+	{
+		return 1;
+	}
+
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+// test_parse_ski_bytes
+//----------------------------------------------------------------------------
+void test_parse_ski_bytes(void)
+{
+	size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+
+	uint8_t* ski_bytes = malloc(ski_bytes_len*sizeof(char));
+	memcpy(ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
+
 	Ski output = get_default_ski();
+
+	//Valid ski test	
+	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+	//NULL or invalid input
+	CU_ASSERT(parse_ski_bytes(NULL, ski_bytes_len, &output) == 1);
+	CU_ASSERT(parse_ski_bytes(ski_bytes, 0, &output) == 1);
+	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len-1, &output) == 1);
+
+	/////////
+	//Invalid delims:
+	////////
 	
-	CU_ASSERT(parse_ski_bytes((uint8_t*)ski_bytes, ski_bytes_len, &output) == 0);
+	//PCR_SELECTION_LIST, indices 0-28
+	ski_bytes[0] = '!';
+	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+	ski_bytes[0] = '-';
+	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //STORAGE_KEY_PUBLIC, indices 208-236
+  ski_bytes[208] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[208] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //STORAGE_KEY_PRIVATE, indices 668-701
+  ski_bytes[668] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[668] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //CIPHER_SUITE, indices 1052-1074
+  ski_bytes[1052] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1052] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //SYM_KEY_PUBLIC, indices 1097-1121
+  ski_bytes[1097] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1097] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //SYM_KEY_PRIVATE, indices 1232-1261
+  ski_bytes[1232] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1232] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //ENC_DATA, indices 1482-1500
+  ski_bytes[1482] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1482] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  //END_FILE, indices 1566-1584
+  ski_bytes[1566] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1566] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+}
+
+//----------------------------------------------------------------------------
+// test_parse_ski_bytes
+//----------------------------------------------------------------------------
+void test_create_ski_bytes(void)
+{
+  size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+
+  Ski ski = get_default_ski();
+
+  parse_ski_bytes((uint8_t*)CONST_SKI_BYTES, ski_bytes_len, &ski); //get valid ski struct
+
+	//Valid ski struct test
+	uint8_t* sb = NULL;
+	size_t sb_len = 0;
+	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	CU_ASSERT(sb_len == ski_bytes_len);
+	CU_ASSERT(memcmp(sb, CONST_SKI_BYTES, sb_len) == 0);
+
 }

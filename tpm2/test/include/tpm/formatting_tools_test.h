@@ -26,9 +26,9 @@ int formatting_tools_add_tests(CU_pSuite suite);
 // Tests
 //****************************************************************************
 
-/**
- * Tests for various returns in parse_ski_bytes()
- */
+//Tests for parse_ski_bytes()
 void test_parse_ski_bytes(void);
+//Tests for create_ski_bytes()
+void test_create_ski_bytes(void);
 
 #endif
