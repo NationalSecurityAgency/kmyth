@@ -11,7 +11,7 @@
 
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
-
+#include "defines.h"
 const char* CONST_SKI_BYTES = "\
 -----PCR SELECTION LIST-----\n\
 AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
@@ -69,11 +69,18 @@ int formatting_tools_add_tests(CU_pSuite suite)
   {
     return 1;
   }
+
   if (NULL == CU_add_test(suite, "get_default_ski() Tests",
                           test_get_default_ski))
   {
     return 1;
   }
+
+  if (NULL == CU_add_test(suite, "get_ski_block_bytes() Tests",
+                          test_get_ski_block_bytes))
+	{
+		return 1;
+	}
 
   return 0;
 }
@@ -242,4 +249,125 @@ void test_get_default_ski(void)
   CU_ASSERT(ski.wk_priv.size == 0);
   CU_ASSERT(ski.enc_data == NULL);
   CU_ASSERT(ski.enc_data_size == 0);
+}
+
+//----------------------------------------------------------------------------
+// test_get_ski_block_bytes
+//----------------------------------------------------------------------------
+void test_get_ski_block_bytes(void)
+{
+	//NOTE: We do not test every required block here, because each specific 
+	//      block is tested in parse_ski_bytes.
+
+	size_t sb_len = strlen(CONST_SKI_BYTES);
+  uint8_t* sb = malloc(sb_len*sizeof(char));
+  memcpy(sb, CONST_SKI_BYTES, sb_len);
+
+  uint8_t *position = sb;
+  size_t remaining = sb_len;
+  uint8_t *raw_pcr_select_list_data = NULL;
+  size_t raw_pcr_select_list_size = 0;
+
+	//Valid parse test
+  char* valid_raw_pcr = "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
+	CU_ASSERT(raw_pcr_select_list_size == strlen(valid_raw_pcr));
+	CU_ASSERT(memcmp(raw_pcr_select_list_data, valid_raw_pcr, raw_pcr_select_list_size) == 0);
+
+	//Invalid first delim
+	position = sb;
+  remaining = sb_len;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  sb[0] = '!';
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
+  position = sb;
+  remaining = sb_len;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  sb[0] = '-';
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
+
+  //Invalid second delim
+  position = sb;
+  remaining = sb_len;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  sb[208] = '!';
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
+  position = sb;
+  remaining = sb_len;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  sb[208] = '-';
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
+
+	//Check to verify unexpected end of file
+	position = sb;
+  remaining = sb_len;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  sb[208] = '-';
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          remaining+1) == 1) //next_delim_len > remaining
+
+	//Test empty block
+	const char* empty_block = "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n";
+  position = (uint8_t*)empty_block;
+  remaining = strlen(empty_block);;
+  raw_pcr_select_list_data = NULL;
+  raw_pcr_select_list_size = 0;
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                          &remaining,
+                          &raw_pcr_select_list_data,
+                          &raw_pcr_select_list_size,
+                          KMYTH_DELIM_PCR_SELECTION_LIST,
+                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
+	CU_ASSERT(raw_pcr_select_list_data == NULL);
+	CU_ASSERT(raw_pcr_select_list_size == 0);
 }
