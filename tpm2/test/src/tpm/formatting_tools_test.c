@@ -64,6 +64,17 @@ int formatting_tools_add_tests(CU_pSuite suite)
 		return 1;
 	}
 
+  if (NULL == CU_add_test(suite, "free_ski() Tests",
+                          test_free_ski))
+  {
+    return 1;
+  }
+  if (NULL == CU_add_test(suite, "get_default_ski() Tests",
+                          test_get_default_ski))
+  {
+    return 1;
+  }
+
   return 0;
 }
 
@@ -158,4 +169,77 @@ void test_create_ski_bytes(void)
 	CU_ASSERT(sb_len == ski_bytes_len);
 	CU_ASSERT(memcmp(sb, CONST_SKI_BYTES, sb_len) == 0);
 
+	//Modify internals of ski to find failures
+	int orig = ski.sk_pub.size;
+	ski.sk_pub.size = 0;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	ski.sk_pub.size = orig;
+	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+
+  orig = ski.sk_priv.size;
+  ski.sk_priv.size = 0;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+  ski.sk_priv.size = orig;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+
+  orig = ski.wk_pub.size;
+  ski.wk_pub.size = 0;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+  ski.wk_pub.size = orig;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+
+  orig = ski.wk_priv.size;
+  ski.wk_priv.size = 0;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+  ski.wk_priv.size = orig;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+
+  orig = ski.enc_data_size;
+  ski.enc_data_size = 0;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+  ski.enc_data_size = orig;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+
+  uint8_t* data = malloc(ski.enc_data_size);
+  memcpy(data, ski.enc_data, ski.enc_data_size);
+	ski.enc_data = NULL;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+  ski.enc_data = data;
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);	
+
+	//Valid ski that has empty/NULL cannot be used
+	CU_ASSERT(create_ski_bytes(get_default_ski(), &sb, &sb_len) == 1);
+}
+
+//----------------------------------------------------------------------------
+// test_free_ski
+//----------------------------------------------------------------------------
+void test_free_ski(void)
+{
+  size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+
+  Ski ski = get_default_ski();
+
+  parse_ski_bytes((uint8_t*)CONST_SKI_BYTES, ski_bytes_len, &ski); //get valid ski struct
+
+	CU_ASSERT(ski.enc_data != NULL);
+	CU_ASSERT(ski.enc_data_size > 0);
+	free_ski(&ski);
+	CU_ASSERT(ski.enc_data == NULL);
+  CU_ASSERT(ski.enc_data_size == 0);
+}
+
+//----------------------------------------------------------------------------
+// test_get_default_ski
+//----------------------------------------------------------------------------
+void test_get_default_ski(void)
+{
+  Ski ski = get_default_ski();
+	CU_ASSERT(ski.pcr_list.count == 0);
+	CU_ASSERT(ski.sk_pub.size == 0);
+  CU_ASSERT(ski.sk_priv.size == 0);
+  CU_ASSERT(ski.wk_pub.size == 0);
+  CU_ASSERT(ski.wk_priv.size == 0);
+  CU_ASSERT(ski.enc_data == NULL);
+  CU_ASSERT(ski.enc_data_size == 0);
 }

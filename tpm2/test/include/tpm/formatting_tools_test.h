@@ -26,9 +26,11 @@ int formatting_tools_add_tests(CU_pSuite suite);
 // Tests
 //****************************************************************************
 
-//Tests for parse_ski_bytes()
+//Tests for functions in formatting_tools.h, format for test names is:
+//    test_funtion_name()
 void test_parse_ski_bytes(void);
-//Tests for create_ski_bytes()
 void test_create_ski_bytes(void);
+void test_free_ski(void);
+void test_get_default_ski(void);
 
 #endif
