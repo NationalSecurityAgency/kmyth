@@ -51,7 +51,7 @@ const char* RAW_PCR64 = "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
 
-const size_t RAW_PCR_SIZE = 132;
+const size_t RAW_PCR_LEN = 132;
 uint8_t RAW_PCR[] = {0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -410,12 +410,12 @@ void test_encodeBase64Data(void)
 	size_t pcr64_len = 0;
 
 	//Test valid encode
-  CU_ASSERT(encodeBase64Data(RAW_PCR, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+  CU_ASSERT(encodeBase64Data(RAW_PCR, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
 	CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
 	CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)==0);
 
 	//Test empty input
-	CU_ASSERT(encodeBase64Data(NULL, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 1);
+	CU_ASSERT(encodeBase64Data(NULL, RAW_PCR_LEN, &pcr64, &pcr64_len) == 1);
   CU_ASSERT(encodeBase64Data(RAW_PCR, 0, &pcr64, &pcr64_len) == 1);
 
 	//Test different inputs don't produce the same base64 output
@@ -431,7 +431,7 @@ void test_encodeBase64Data(void)
                     0, 0, 0, 0};
   pcr64 = NULL;
   pcr64_len = 0;
-  CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+  CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
   CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
   CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
 
@@ -446,7 +446,7 @@ void test_encodeBase64Data(void)
                     0, 0, 0, 0};
   pcr64 = NULL;
   pcr64_len = 0;
-  CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_SIZE, &pcr64, &pcr64_len) == 0);
+  CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
   CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
   CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
 
@@ -457,6 +457,39 @@ void test_encodeBase64Data(void)
 //----------------------------------------------------------------------------
 void test_decodeBase64Data(void)
 {
+  uint8_t *pcr = NULL;
+  size_t pcr_len = 0;
+
+  //Test valid decode
+  CU_ASSERT(decodeBase64Data((uint8_t*)RAW_PCR64, strlen(RAW_PCR64), &pcr, &pcr_len) == 0);
+  CU_ASSERT(pcr_len == RAW_PCR_LEN);
+  CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)==0);
+
+	//Test invalid input
+	CU_ASSERT(decodeBase64Data(NULL, strlen(RAW_PCR64), &pcr, &pcr_len) == 1);
+  CU_ASSERT(decodeBase64Data((uint8_t*)RAW_PCR64, 0, &pcr, &pcr_len) == 1)
+
+																								  //INT_MAX+1
+	CU_ASSERT(decodeBase64Data((uint8_t*)RAW_PCR64, -2147483648, &pcr, &pcr_len) == 1);
+
+	//Test that different input decodes to different output
+	char* modified = "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  pcr = NULL;
+  pcr_len = 0;
+  CU_ASSERT(decodeBase64Data((uint8_t*)modified, strlen(modified), &pcr, &pcr_len) == 0);
+  CU_ASSERT(pcr_len == RAW_PCR_LEN);
+  CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)!=0);
+
+	//Test that different length base64 result in different length raw data
+	char* shorter = "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  pcr = NULL;
+  pcr_len = 0;
+  CU_ASSERT(decodeBase64Data((uint8_t*)shorter, strlen(shorter), &pcr, &pcr_len) == 0);
+  CU_ASSERT(pcr_len != RAW_PCR_LEN);
+  CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)!=0);	
 }
 
 //----------------------------------------------------------------------------
