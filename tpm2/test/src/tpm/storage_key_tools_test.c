@@ -13,7 +13,7 @@
 
 #include "storage_key_tools_test.h"
 #include "storage_key_tools.h"
-
+#include "pcrs.h"
 //----------------------------------------------------------------------------
 // storage_key_tools_add_tests()
 //----------------------------------------------------------------------------
@@ -89,11 +89,12 @@ void test_check_if_srk(void)
 
 	//Valid test if not srk
 	TPM2B_AUTH obj_auth = {.size = 0, };
-	create_authVal(NULL, 0, &obj_auth);
+	CU_ASSERT(create_authVal(NULL, 0, &obj_auth) == 0);
 	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
-	TPM2B_DIGEST auth_policy;
-	auth_policy.size = 0;
-	create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy);
+	TPM2B_DIGEST auth_policy = {.size=0,};
+	CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
+
+	CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy) == 0);
 	TPM2B_PRIVATE sk_priv = {.size = 0,};
 	TPM2B_PUBLIC sk_pub = {.size = 0,};
   TPM2_HANDLE sk_handle = 0;
@@ -102,7 +103,7 @@ void test_check_if_srk(void)
 	CU_ASSERT(!is_srk);
 
 	//Test invalid sk handle
-	CU_ASSERT(check_if_srk(sapi_ctx, 0, &is_srk) != 0);
+	CU_ASSERT(check_if_srk(sapi_ctx, TPM2_PERSISTENT_FIRST-1, &is_srk) != 0);
 	
 	//NULL sapi_context
 	CU_ASSERT(check_if_srk(NULL, srk_handle, &is_srk) != 0);
