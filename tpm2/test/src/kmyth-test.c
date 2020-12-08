@@ -18,6 +18,7 @@
 #include "object_tools_test.h"
 #include "tls_util_test.h"
 #include "aes_gcm_test.h"
+#include "storage_key_tools_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -66,6 +67,21 @@ int main(int argc, char** argv)
     CU_cleanup_registry();
     return CU_get_error(); 
   }
+
+	// Create and configure storage key tools test suite
+	CU_pSuite storage_key_tools_test_suite = NULL;
+	storage_key_tools_test_suite = CU_add_suite("Storage Key Tools Test Suite",
+                                               init_suite, clean_suite);
+	if (NULL == storage_key_tools_test_suite)
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
+	if (storage_key_tools_add_tests(storage_key_tools_test_suite))
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
 
   // Create and configure TPM object tools test suite
   CU_pSuite object_tools_test_suite = NULL;
