@@ -18,6 +18,7 @@
 #include "object_tools_test.h"
 #include "tls_util_test.h"
 #include "aes_gcm_test.h"
+#include "tpm2_interface_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -111,6 +112,20 @@ int main(int argc, char** argv)
     CU_cleanup_registry();
     return CU_get_error();
   }
+
+	CU_pSuite tpm2_interface_test_suite = NULL;
+	tpm2_interface_test_suite = CU_add_suite("TPM2 Interface Test Suite",
+                                           init_suite, clean_suite);
+	if (NULL == tpm2_interface_test_suite)
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
+	if(tpm2_interface_add_tests(tpm2_interface_test_suite))
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
 
   // Run tests using basic interface
   CU_basic_run_tests();

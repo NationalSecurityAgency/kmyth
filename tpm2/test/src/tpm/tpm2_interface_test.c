@@ -135,27 +135,61 @@ int tpm2_interface_add_tests(CU_pSuite suite)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_init_tpm2_connection
 //----------------------------------------------------------------------------
 void test_init_tpm2_connection(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+	//Valid test
+	CU_ASSERT(init_tpm2_connection(&sapi_ctx) == 0);
+	CU_ASSERT(sapi_ctx != NULL);
+
+	//Must have null object to init
+	CU_ASSERT(init_tpm2_connection(&sapi_ctx) != 0);
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_init_tcti_abrmd
 //----------------------------------------------------------------------------
 void test_init_tcti_abrmd(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
+
+	//Valid test
+	CU_ASSERT(init_tcti_abrmd(&tcti_ctx) == 0);
+	CU_ASSERT(tcti_ctx != NULL);
+
+	//Must have null object to init
+	CU_ASSERT(init_tcti_abrmd(&tcti_ctx) != 0);
+	free(tcti_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_init_sapi
 //----------------------------------------------------------------------------
 void test_init_sapi(void)
 {
-  CU_ASSERT(0 == 0);
+  TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+	//Valid test
+	init_tcti_abrmd(&tcti_ctx);
+	CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) == 0);
+	CU_ASSERT(sapi_ctx != NULL);
+
+	//Must have null sapi_ctx
+	CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) != 0);
+
+	free(tcti_ctx);
+	free(sapi_ctx);
+	sapi_ctx = NULL;
+	tcti_ctx = NULL;
+
+	//tcti_ctx must be initialized
+	CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) != 0);
+	CU_ASSERT(sapi_ctx == NULL);
 }
 
 //----------------------------------------------------------------------------
