@@ -246,27 +246,58 @@ void test_get_tpm2_properties(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_get_tpm2_impl_type
 //----------------------------------------------------------------------------
 void test_get_tpm2_impl_type(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//This should only be executed on a simulator, otherwise these tests should not
+	//be called for execution at all.
+
+	//Valid Test
+	bool em = false;
+	CU_ASSERT(get_tpm2_impl_type(sapi_ctx, &em) == 0);
+	CU_ASSERT(em);
+
+	//NULL input
+	CU_ASSERT(get_tpm2_impl_type(NULL, &em) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_getErrorString
 //----------------------------------------------------------------------------
 void test_getErrorString(void)
 {
-  CU_ASSERT(0 == 0);
+	//This function exists purely as a wrapper around Tss2_RC_Decode
+	//We do one test to confirm the API is correct
+	TSS2_RC err_num = 0x00080005;
+	char* err_str = "sys:A pointer is NULL that isn't allowed to be NULL.";
+
+	CU_ASSERT(memcmp(getErrorString(err_num), err_str, strlen(err_str)) == 0);
+	CU_ASSERT(strlen(getErrorString(err_num)) == strlen(err_str));
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_init_password_cmd_auth
 //----------------------------------------------------------------------------
 void test_init_password_cmd_auth(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2L_SYS_AUTH_COMMAND cmd_out;
+	TSS2L_SYS_AUTH_RESPONSE res_out;
+
+	//Valid test for NULL auth
+	TPM2B_AUTH auth = {.size = 0, };
+	CU_ASSERT(init_password_cmd_auth(auth, &cmd_out, &res_out) == 0);
+
+	//Valid test non-null auth
+	uint8_t* auth_bytes = (uint8_t*)"0123";
+	create_authVal(auth_bytes, 4, &auth);
+	CU_ASSERT(auth.size > 0);
+	CU_ASSERT(init_password_cmd_auth(auth, &cmd_out, &res_out) == 0);
 }
 
 //----------------------------------------------------------------------------
