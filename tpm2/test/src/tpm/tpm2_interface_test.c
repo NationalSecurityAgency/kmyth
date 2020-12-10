@@ -193,27 +193,56 @@ void test_init_sapi(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_free_tpm2_resources
 //----------------------------------------------------------------------------
 void test_free_tpm2_resources(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  //Valid NULL test
+	TSS2_SYS_CONTEXT **sapi_ctx_test = NULL;
+  CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
+	CU_ASSERT(free_tpm2_resources(sapi_ctx_test) == 0);
+
+	//Valid initialized sapi_ctx test
+	init_tpm2_connection(&sapi_ctx);
+  CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
+	CU_ASSERT(sapi_ctx == NULL);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_startup_tpm2
 //----------------------------------------------------------------------------
 void test_startup_tpm2(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//Valid test
+	CU_ASSERT(startup_tpm2(&sapi_ctx) == 0);
+	free_tpm2_resources(&sapi_ctx);
+
+	//Test that it fails if sapi_ctx isn't initialized
+  CU_ASSERT(startup_tpm2(&sapi_ctx) != 0);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_get_tpm2_properties
 //----------------------------------------------------------------------------
 void test_get_tpm2_properties(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//Valid test
+	TPMS_CAPABILITY_DATA cap_data = {.capability=TPM2_CAP_TPM_PROPERTIES+1,}; //We expect this to change
+	CU_ASSERT(get_tpm2_properties(sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_MANUFACTURER, TPM2_PT_GROUP, &cap_data) == 0);
+	CU_ASSERT(cap_data.capability == TPM2_CAP_TPM_PROPERTIES); //TPM_PROPERTIES constant
+
+	//Test null input
+	CU_ASSERT(get_tpm2_properties(NULL, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_MANUFACTURER, TPM2_PT_GROUP, &cap_data) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------

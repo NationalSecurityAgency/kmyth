@@ -292,6 +292,7 @@ int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   // Clean up higher-level SAPI context, first
   Tss2_Sys_Finalize(*sapi_ctx);
   free(*sapi_ctx);
+  *sapi_ctx = NULL;
   kmyth_log(LOG_DEBUG, "cleaned up SAPI context");
 
   // Clean up TCTI context
