@@ -180,6 +180,7 @@ void test_parse_ski_bytes(void)
 	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
 	ski_bytes[1566] = '-';
 	CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+	free(ski_bytes);
 }
 
 //----------------------------------------------------------------------------
@@ -199,47 +200,83 @@ void test_create_ski_bytes(void)
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
 	CU_ASSERT(sb_len == ski_bytes_len);
 	CU_ASSERT(memcmp(sb, CONST_SKI_BYTES, sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	//Modify internals of ski to find failures
 	int orig = ski.sk_pub.size;
 	ski.sk_pub.size = 0;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.sk_pub.size = orig;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	orig = ski.sk_priv.size;
 	ski.sk_priv.size = 0;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.sk_priv.size = orig;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	orig = ski.wk_pub.size;
 	ski.wk_pub.size = 0;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.wk_pub.size = orig;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	orig = ski.wk_priv.size;
 	ski.wk_priv.size = 0;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.wk_priv.size = orig;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	orig = ski.enc_data_size;
 	ski.enc_data_size = 0;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.enc_data_size = orig;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
 
 	uint8_t* data = malloc(ski.enc_data_size);
 	memcpy(data, ski.enc_data, ski.enc_data_size);
 	ski.enc_data = NULL;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 	ski.enc_data = data;
 	CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);	
+	free(sb);
+	sb = NULL;
+	sb_len = 0;
+	free_ski(&ski);
 
 	//Valid ski that has empty/NULL cannot be used
 	CU_ASSERT(create_ski_bytes(get_default_ski(), &sb, &sb_len) == 1);
+	CU_ASSERT(sb == NULL);
+	CU_ASSERT(sb_len == 0);
 }
 
 //----------------------------------------------------------------------------
@@ -301,11 +338,12 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
 	CU_ASSERT(raw_pcr_select_list_size == strlen(RAW_PCR64));
 	CU_ASSERT(memcmp(raw_pcr_select_list_data, RAW_PCR64, raw_pcr_select_list_size) == 0);
+	free(raw_pcr_select_list_data);
+	raw_pcr_select_list_data = NULL;
 
 	//Invalid first delim
 	position = sb;
 	remaining = sb_len;
-	raw_pcr_select_list_data = NULL;
 	raw_pcr_select_list_size = 0;
 	sb[0] = '!';
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
@@ -316,10 +354,11 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
+	CU_ASSERT(raw_pcr_select_list_data == NULL);
+	CU_ASSERT(raw_pcr_select_list_size == 0);
+
 	position = sb;
 	remaining = sb_len;
-	raw_pcr_select_list_data = NULL;
-	raw_pcr_select_list_size = 0;
 	sb[0] = '-';
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
@@ -329,11 +368,12 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
+	free(raw_pcr_select_list_data);
+	raw_pcr_select_list_data = NULL;
 
 	//Invalid second delim
 	position = sb;
 	remaining = sb_len;
-	raw_pcr_select_list_data = NULL;
 	raw_pcr_select_list_size = 0;
 	sb[208] = '!';
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
@@ -344,10 +384,11 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
+	CU_ASSERT(raw_pcr_select_list_data == NULL);
+	CU_ASSERT(raw_pcr_select_list_size == 0);
+
 	position = sb;
 	remaining = sb_len;
-	raw_pcr_select_list_data = NULL;
-	raw_pcr_select_list_size = 0;
 	sb[208] = '-';
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
@@ -357,11 +398,12 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
+	free(raw_pcr_select_list_data);
+	raw_pcr_select_list_data = NULL;
 
 	//Check to verify unexpected end of file
 	position = sb;
 	remaining = sb_len;
-	raw_pcr_select_list_data = NULL;
 	raw_pcr_select_list_size = 0;
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
@@ -371,12 +413,13 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                           KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                           remaining+1) == 1) //next_delim_len > remaining
+	CU_ASSERT(raw_pcr_select_list_data == NULL);
+	CU_ASSERT(raw_pcr_select_list_size == 0);
 
 	//Test empty block
 	const char* empty_block = "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n";
 	position = (uint8_t*)empty_block;
 	remaining = strlen(empty_block);;
-	raw_pcr_select_list_data = NULL;
 	raw_pcr_select_list_size = 0;
 	CU_ASSERT(get_ski_block_bytes((char **) &position,
                           &remaining,
@@ -388,6 +431,7 @@ void test_get_ski_block_bytes(void)
                           strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
 	CU_ASSERT(raw_pcr_select_list_data == NULL);
 	CU_ASSERT(raw_pcr_select_list_size == 0);
+	free(sb);
 }
 
 //----------------------------------------------------------------------------
@@ -402,10 +446,15 @@ void test_encodeBase64Data(void)
 	CU_ASSERT(encodeBase64Data(RAW_PCR, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
 	CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
 	CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)==0);
+	free(pcr64);
+	pcr64 = NULL;
+	pcr64_len = 0;
 
 	//Test empty input
 	CU_ASSERT(encodeBase64Data(NULL, RAW_PCR_LEN, &pcr64, &pcr64_len) == 1);
 	CU_ASSERT(encodeBase64Data(RAW_PCR, 0, &pcr64, &pcr64_len) == 1);
+	CU_ASSERT(pcr64 == NULL);
+	CU_ASSERT(pcr64_len == 0);
 
 	//Test different inputs don't produce the same base64 output
 	//First entry has a bit flipped
@@ -418,11 +467,12 @@ void test_encodeBase64Data(void)
                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0};
-	pcr64 = NULL;
-	pcr64_len = 0;
 	CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
 	CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
 	CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
+	free(pcr64);
+	pcr64 = NULL;
+	pcr64_len = 0;
 
 	//Test that different length raw data results in different length base64
 	uint8_t short_pcr[] = {0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -433,12 +483,9 @@ void test_encodeBase64Data(void)
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0};
-	pcr64 = NULL;
-	pcr64_len = 0;
 	CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
 	CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
 	CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len)!=0);
-
 }
 
 //----------------------------------------------------------------------------
@@ -453,6 +500,9 @@ void test_decodeBase64Data(void)
 	CU_ASSERT(decodeBase64Data((uint8_t*)RAW_PCR64, strlen(RAW_PCR64), &pcr, &pcr_len) == 0);
 	CU_ASSERT(pcr_len == RAW_PCR_LEN);
 	CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)==0);
+	free(pcr);
+	pcr = NULL;
+	pcr_len = 0;
 
 	//Test invalid input
 	CU_ASSERT(decodeBase64Data(NULL, strlen(RAW_PCR64), &pcr, &pcr_len) == 1);
@@ -460,25 +510,27 @@ void test_decodeBase64Data(void)
 
 																								  //INT_MAX+1
 	CU_ASSERT(decodeBase64Data((uint8_t*)RAW_PCR64, -2147483648, &pcr, &pcr_len) == 1);
+	CU_ASSERT(pcr == NULL);
+	CU_ASSERT(pcr_len == 0);
 
 	//Test that different input decodes to different output
 	char* modified = "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
-	pcr = NULL;
-	pcr_len = 0;
 	CU_ASSERT(decodeBase64Data((uint8_t*)modified, strlen(modified), &pcr, &pcr_len) == 0);
 	CU_ASSERT(pcr_len == RAW_PCR_LEN);
 	CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)!=0);
+	free(pcr);
+	pcr = NULL;
+	pcr_len = 0;
 
 	//Test that different length base64 result in different length raw data
 	char* shorter = "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
-	pcr = NULL;
-	pcr_len = 0;
 	CU_ASSERT(decodeBase64Data((uint8_t*)shorter, strlen(shorter), &pcr, &pcr_len) == 0);
 	CU_ASSERT(pcr_len != RAW_PCR_LEN);
-	CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)!=0);	
+	CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len)!=0);
+	free(pcr);
 }
 
 //----------------------------------------------------------------------------
@@ -504,6 +556,7 @@ void test_concat(void)
 
 	//Test empty input
 	dest_len = green_len;
+	free(dest);
 	dest = malloc(dest_len);
 	memcpy(dest, green, dest_len);
 
@@ -518,4 +571,5 @@ void test_concat(void)
 	//Test invalid input
 	//The -1 sould trigger overflows here:    if (new_dest_len < *dest_length)
 	CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
+	free(dest);
 }
