@@ -24,11 +24,47 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
                    TPM2_HANDLE * srk_handle,
                    TPM2B_AUTH * storage_hierarchy_auth)
 {
+  // Get the list of objects in TPM persistent storage and check them all
+  // against the SRK criteria. Upon return from get_existing_srk_handle(),
+  // the srk_handle parameter passed to get_existing_srk_handle() is either
+  // zero (none of the loaded objects is the SRK) or contains the handle used
+  // to reference the SRK in TPM persistent storage. The function
+  // get_existing_srk_handle() will set next_persistent_handle to the next
+  // available TPM persistent storage location where the SRK can be put.
+  TPM2_HANDLE next_persistent_handle = 0;
+
+  get_existing_srk_handle(sapi_ctx, srk_handle, &next_persistent_handle);
+
+  // If we reach here and the srk_handle value is still zero (empty handle),
+  // a handle referencing the SRK is not already loaded in persistent storage.
+  // Therefore, we must re-derive it from its seed and load it at the
+  // previously determined next available persistent handle
+  if (*srk_handle == 0)
+  {
+    *srk_handle = next_persistent_handle;
+    if (put_srk_into_persistent_storage(sapi_ctx,
+                                        *srk_handle, *storage_hierarchy_auth))
+    {
+      kmyth_log(LOG_ERR, "error reinstalling SRK in TPM ... exiting");
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+//############################################################################
+// get_existing_srk_handle()
+//############################################################################
+int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
+                            TPM2_HANDLE * srkHandle,
+                            TPM2_HANDLE * nextSrkHandle)
+{
   kmyth_log(LOG_DEBUG, "checking TPM persistent handles for SRK");
 
   // Set SRK handle value to zero (empty handle). If the SRK is not loaded,
   // we will return this value.
-  *srk_handle = 0;
+  *srkHandle = 0;
 
   if (sapi_ctx == NULL)
   {
@@ -45,19 +81,18 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   //          case.
   TPMS_CAPABILITY_DATA capData;
 
-  if (get_tpm2_properties
-      (sapi_ctx, TPM2_CAP_HANDLES, TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES,
-       &capData))
+  if (get_tpm2_properties(sapi_ctx,
+                          TPM2_CAP_HANDLES,
+                          TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES, &capData))
   {
     kmyth_log(LOG_ERR, "get persistent obj. info error ... exiting");
     return 1;
   }
-  TPM2_HANDLE next_persistent_handle = 0;
 
   if (capData.data.handles.count == 0)
   {
     // If persistent handle list is empty, next available is first in range
-    next_persistent_handle = TPM2_PERSISTENT_FIRST; // 0x81010000
+    *nextSrkHandle = TPM2_PERSISTENT_FIRST; // 0x81010000
   }
   else
   {
@@ -66,7 +101,7 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
     // the last persistent handle value in the list
     int last_index = capData.data.handles.count - 1;
 
-    next_persistent_handle = capData.data.handles.handle[last_index] + 1;
+    *nextSrkHandle = capData.data.handles.handle[last_index] + 1;
   }
 
   // Step 2 - searching the list for the SRK
@@ -81,34 +116,20 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   }
   for (int i = 0; i < capData.data.handles.count; i++)
   {
-    bool isSRK = false;
+    bool SRK_flag = false;
 
-    if (check_if_srk(sapi_ctx, capData.data.handles.handle[i], &isSRK))
+    if (check_if_srk(sapi_ctx, capData.data.handles.handle[i], &SRK_flag))
     {
       kmyth_log(LOG_ERR,
                 "error checking if handle = 0x%08X references SRK ... exiting",
                 capData.data.handles.handle[i]);
       return 1;
     }
-    if (isSRK)
+    if (SRK_flag)
     {
-      *srk_handle = capData.data.handles.handle[i];
+      *srkHandle = capData.data.handles.handle[i];
       kmyth_log(LOG_DEBUG, "SRK found ... done searching");
       break;
-    }
-  }
-
-  // If we reach here and the srk_handle value is still zero (empty handle),
-  // a handle referencing the SRK is not already loaded in persistent storage.
-  // Therefore, we must re-derive it and load it at the previously determined
-  // next available persistent handle
-  if (*srk_handle == 0)
-  {
-    *srk_handle = next_persistent_handle;
-    if (derive_srk(sapi_ctx, *srk_handle, *storage_hierarchy_auth))
-    {
-      kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
-      return 1;
     }
   }
 
@@ -279,20 +300,19 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 }
 
 //############################################################################
-// derive_srk
+// put_srk_into_persistent_storage()
 //############################################################################
-int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
-               TPM2_HANDLE srk_handle, TPM2B_AUTH sps_auth)
+int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
+                                    TPM2_HANDLE srkHandle, TPM2B_AUTH sps_auth)
 {
   kmyth_log(LOG_DEBUG, "deriving SRK ..");
 
   // Check that the handle passed in is within persistent range
-  if ((srk_handle < TPM2_PERSISTENT_FIRST)
-      || (srk_handle > TPM2_PERSISTENT_LAST))
+  if ((srkHandle < TPM2_PERSISTENT_FIRST) || (srkHandle > TPM2_PERSISTENT_LAST))
   {
     kmyth_log(LOG_ERR,
               "SRK handle (0x%08X) out of persistent range ... exiting",
-              srk_handle);
+              srkHandle);
     return 1;
   }
 
@@ -338,7 +358,7 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
   // the input parameters just setup.
   SESSION *nullSession = NULL;  // SRK does not use policy auth
   TPM2B_PRIVATE *nullPrivateBlob = NULL;  // TPM derives SRK, not exported
-  TPM2B_PUBLIC *nullPublicBlob = NULL;  // TPM derives SRK, not exported
+  TPM2B_PUBLIC *nullPublicBlob = NULL;
   TPML_PCR_SELECTION emptyPCRList;  // no PCR auth (SRK or SPS)
 
   emptyPCRList.count = 0;
@@ -350,7 +370,7 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
                           srk_sensitive,
                           srk_template,
                           emptyPCRList,
-                          srk_handle, nullPrivateBlob, nullPublicBlob))
+                          srkHandle, nullPrivateBlob, nullPublicBlob))
   {
     kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
     return 1;
