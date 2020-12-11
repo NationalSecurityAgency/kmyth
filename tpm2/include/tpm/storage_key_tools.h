@@ -79,8 +79,8 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
                TPM2B_AUTH sps_auth);
 
 /**
- * @brief Creates a new storage key (SK) under the specified key hierarchy
- *        (handle of its parent is input)
+ * @brief Creates and loads, into the TPM, a new storage key (SK) under the
+ *        specified key hierarchy (parent is specified to be the SRK)
  *
  * @param[in]  sapi_ctx      System API (SAPI) context, must be initialized
  *                           and passed in as pointer to the SAPI context
@@ -117,13 +117,14 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-              TPM2_HANDLE srk_handle,
-              TPM2B_AUTH srk_authVal,
-              TPM2B_AUTH sk_authVal,
-              TPML_PCR_SELECTION sk_pcrList,
-              TPM2B_DIGEST sk_authPolicy,
-              TPM2_HANDLE * sk_handle, TPM2B_PRIVATE * sk_private,
-              TPM2B_PUBLIC * sk_public);
+int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+                       TPM2_HANDLE srk_handle,
+                       TPM2B_AUTH srk_authVal,
+                       TPM2B_AUTH sk_authVal,
+                       TPML_PCR_SELECTION sk_pcrList,
+                       TPM2B_DIGEST sk_authPolicy,
+                       TPM2_HANDLE * sk_handle,
+                       TPM2B_PRIVATE * sk_private,
+                       TPM2B_PUBLIC * sk_public);
 
 #endif /* STORAGE_KEY_TOOLS_H */
