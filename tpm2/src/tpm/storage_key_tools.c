@@ -120,8 +120,9 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
-  // initialize 'isSRK' result to true - changed to false when SRK check fails
-  *isSRK = true;
+  // initialize 'isSRK' result to false - early termination should not result
+  // in a true value passed back (even if the return code indicates an error)
+  *isSRK = false;
 
   kmyth_log(LOG_DEBUG, "checking handle %08X", handle);
 
@@ -154,11 +155,14 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
     return 1;
   }
 
+  // use a boolean to persist any failed SRK check result
+  bool failed_SRK_check = false;
+
   // First check that hash algorithm is correct. 
   if (publicOut.publicArea.nameAlg != KMYTH_HASH_ALG)
   {
     // persistent key has the wrong hash algorithm. 
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "wrong hash algorithm (ALG_ID=0x%08X)",
               publicOut.publicArea.nameAlg);
   }
@@ -167,7 +171,7 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   if (publicOut.publicArea.type != KMYTH_KEY_PUBKEY_ALG)
   {
     // persistent key has the wrong public key algorithm 
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "wrong public key algorithm (ALG_ID=0x%08X)",
               publicOut.publicArea.type);
   }
@@ -180,14 +184,14 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   //                    duplicated for use on a different TPM
   if (!(objAttr & TPMA_OBJECT_FIXEDTPM))
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "fixedTPM clear, should be set");
   }
 
   // fixedParent (bit 4) - should be set - SRK's parent may not be changed
   if (!(objAttr & TPMA_OBJECT_FIXEDPARENT))
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "fixedParent clear, should be set");
   }
 
@@ -195,7 +199,7 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   //                               (derived from primary seed) by TPM
   if (!(objAttr & TPMA_OBJECT_SENSITIVEDATAORIGIN))
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "sensitiveDataOrigin clear, should be set");
   }
 
@@ -205,21 +209,21 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   //                 in lockout
   if (objAttr & TPMA_OBJECT_NODA)
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "noDA set, should be clear");
   }
 
   // restricted (bit 16) - must be set - SRK is a parent key
   if (!(objAttr & TPMA_OBJECT_RESTRICTED))
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "restricted bit clear, should be set");
   }
 
   // decrypt (17) - must be set - SRK must be used to decrypt SKs 
   if (!(objAttr & TPMA_OBJECT_DECRYPT))
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "decrypt bit clear, should be set");
   }
 
@@ -268,9 +272,12 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   }
   if (!srkNameMatch)
   {
-    *isSRK = false;
+    failed_SRK_check = true;
     kmyth_log(LOG_DEBUG, "hashed name mismatches SRK qualified name");
   }
+
+  // end of checks, set isSRK flag parameter appropriately
+  *isSRK = !failed_SRK_check;
 
   kmyth_log(LOG_DEBUG, "handle 0x%08X: isSRK = %s", handle,
             (isSRK ? "true" : "false"));
