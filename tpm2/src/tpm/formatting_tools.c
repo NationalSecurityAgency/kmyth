@@ -353,6 +353,13 @@ int unpack_uint32_to_str(uint32_t uint_value, char **str_repr)
 //############################################################################
 int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 {
+
+  if (input == NULL)
+  {
+    kmyth_log(LOG_ERR, "NULL input cannot be parsed ... exiting");
+    return 1;
+  }
+
   uint8_t *position = input;
   size_t remaining = input_length;
   Ski temp_ski = get_default_ski();
