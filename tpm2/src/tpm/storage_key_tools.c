@@ -33,7 +33,11 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   // available TPM persistent storage location where the SRK can be put.
   TPM2_HANDLE next_persistent_handle = 0;
 
-  get_existing_srk_handle(sapi_ctx, srk_handle, &next_persistent_handle);
+  if(get_existing_srk_handle(sapi_ctx, srk_handle, &next_persistent_handle))
+  {
+    kmyth_log(LOG_ERR, "error retrieving SRK handle from TPM ... exiting");
+    return 1;
+  }
 
   // If we reach here and the srk_handle value is still zero (empty handle),
   // a handle referencing the SRK is not already loaded in persistent storage.
