@@ -360,16 +360,16 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// create_sk()
+// create_and_load_sk()
 //############################################################################
-int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-              TPM2_HANDLE srk_handle,
-              TPM2B_AUTH srk_authVal,
-              TPM2B_AUTH sk_authVal,
-              TPML_PCR_SELECTION sk_pcrList,
-              TPM2B_DIGEST sk_authPolicy,
-              TPM2_HANDLE * sk_handle,
-              TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
+int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+                       TPM2_HANDLE srk_handle,
+                       TPM2B_AUTH srk_authVal,
+                       TPM2B_AUTH sk_authVal,
+                       TPML_PCR_SELECTION sk_pcrList,
+                       TPM2B_DIGEST sk_authPolicy,
+                       TPM2_HANDLE * sk_handle,
+                       TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
   //   - The authVal (hash of user specifed authorization string or default
@@ -405,7 +405,7 @@ int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2_HANDLE unusedHandle = 0; // creating SK, not loading
   TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
 
-  emptyPCRList.count = 0;
+  emptyPCRList.count = 0;       // no auth policy session means no PCR criteria
   if (create_kmyth_object(sapi_ctx,
                           nullSession,
                           srk_handle,
@@ -419,6 +419,17 @@ int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
 
-  kmyth_log(LOG_DEBUG, "storage key object created");
+  // As this newly created storage key will be used by the TPM, we must load it
+  if (load_kmyth_object(sapi_ctx,
+                        nullSession,
+                        srk_handle,
+                        srk_authVal,
+                        emptyPCRList, sk_private, sk_public, sk_handle))
+  {
+    kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
+    return 1;
+  }
+
+  kmyth_log(LOG_DEBUG, "storage key object created and loaded");
   return 0;
 }
