@@ -93,12 +93,11 @@ void test_check_if_srk(void)
 	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
 	TPM2B_DIGEST auth_policy = {.size=0,};
 	CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
-
 	CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy) == 0);
 	TPM2B_PRIVATE sk_priv = {.size = 0,};
 	TPM2B_PUBLIC sk_pub = {.size = 0,};
   TPM2_HANDLE sk_handle = 0;
-	CU_ASSERT(create_sk(sapi_ctx, srk_handle, owner_auth, obj_auth, pcrs_struct, auth_policy, &sk_handle, &sk_priv, &sk_pub) == 0);
+	CU_ASSERT(create_and_load_sk(sapi_ctx, srk_handle, owner_auth, obj_auth, pcrs_struct, auth_policy, &sk_handle, &sk_priv, &sk_pub) == 0);
 	CU_ASSERT(check_if_srk(sapi_ctx, sk_handle, &is_srk) == 0);
 	CU_ASSERT(!is_srk);
 
@@ -110,10 +109,20 @@ void test_check_if_srk(void)
 	
 }
 
+
 //----------------------------------------------------------------------------
-// test_derive_srk
+// test_get_existing_srk_handle
 //----------------------------------------------------------------------------
-void test_derive_srk(void)
+void test_get_existing_srk_handle(void)
+{
+  CU_ASSERT(1 == 1);
+
+
+
+//----------------------------------------------------------------------------
+// test_put_srk_into_persistent_storage
+//----------------------------------------------------------------------------
+void test_put_srk_into_persistent_storage(void)
 {
   CU_ASSERT(1 == 1);
 
