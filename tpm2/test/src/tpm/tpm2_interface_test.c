@@ -301,11 +301,61 @@ void test_init_password_cmd_auth(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_init_policy_cmd_auth
 //----------------------------------------------------------------------------
 void test_init_policy_cmd_auth(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION* session = NULL;
+	TPM2B_AUTH auth = {.size=0,};
+	TSS2L_SYS_AUTH_COMMAND cmd_out;
+	TSS2L_SYS_AUTH_RESPONSE res_out;
+	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+	TPM2_CC create_object_command_code = 0;
+	TPM2B_NAME auth_name = {.size=0,};
+	uint8_t *cmdParams = NULL;
+	size_t cmdParams_size = 0;
+
+/*
+ * //Possibly needed for auth_name
+      TPM2B_PUBLIC *out_public = NULL;  // null, don't need result
+      TPM2B_NAME *qual_name = NULL; // null, don't need result
+      TPM2B_NAME parent_name;
+
+      parent_name.size = 0;     // start with empty parent name
+
+      rc = Tss2_Sys_ReadPublic(sapi_ctx,
+                               parent_handle,
+                               nullCmdAuths,
+                               out_public, &parent_name, qual_name,
+                               nullRspAuths);
+      if (rc != TSS2_RC_SUCCESS)
+      {
+        kmyth_log(LOG_ERR,
+                  "Tss2_Sys_ReadPublic(): rc = 0x%08X, %s ... exiting", rc,
+                  getErrorString(rc));
+        return 1;
+      }
+*/
+	init_tpm2_connection(&sapi_ctx);
+	init_password_cmd_auth(auth, &cmd_out, &res_out);
+	CU_ASSERT(Tss2_Sys_GetCommandCode(sapi_ctx, (uint8_t *) &create_object_command_code) == TSS2_RC_SUCCESS);
+	CU_ASSERT(Tss2_Sys_GetCpBuffer(sapi_ctx, &cmdParams_size, (const uint8_t **) &cmdParams) == TSS2_RC_SUCCESS);
+	init_password_cmd_auth(auth, &cmd_out, &res_out);
+
+	//auth_name needs to be populated
+
+	//Valid test
+	CU_ASSERT(init_policy_cmd_auth(session,
+                         create_object_command_code,
+                         auth_name,
+                         auth,
+                         cmdParams,
+                         cmdParams_size,
+                         pcrs_struct,
+                         &cmd_out,
+                         &res_out) == 0);
+
 }
 
 //----------------------------------------------------------------------------
