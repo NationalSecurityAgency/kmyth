@@ -14,13 +14,28 @@
 #include "storage_key_tools_test.h"
 #include "storage_key_tools.h"
 #include "pcrs.h"
+
 //----------------------------------------------------------------------------
 // storage_key_tools_add_tests()
 //----------------------------------------------------------------------------
 int storage_key_tools_add_tests(CU_pSuite suite)
 {
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+	bool emulator = true;
+	get_tpm2_impl_type(sapi_ctx, &emulator);
+	if(!emulator)
+	{
+		return 0;
+	}
+
 	if (NULL == CU_add_test(suite, "get_srk_handle() Tests",
                           test_get_srk_handle))
+	{
+		return 1;
+	}
+	if (NULL == CU_add_test(suite, "get_existing_srk_handle() Tests",
+                          test_get_existing_srk_handle))
 	{
 		return 1;
 	}
@@ -29,13 +44,13 @@ int storage_key_tools_add_tests(CU_pSuite suite)
 	{
 		return 1;
 	}
-	if (NULL == CU_add_test(suite, "derive_srk() Tests",
-                          test_derive_srk))
+	if (NULL == CU_add_test(suite, "put_srk_into_persistent_storage() Tests",
+                          test_put_srk_into_persistent_storage))
 	{
 		return 1;
 	}
-	if (NULL == CU_add_test(suite, "create_sk() Tests",
-                          test_create_sk))
+	if (NULL == CU_add_test(suite, "create_and_load_sk() Tests",
+                          test_create_and_load_sk))
 	{
 		return 1;
 	}
@@ -49,12 +64,6 @@ void test_get_srk_handle(void)
 {
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
   init_tpm2_connection(&sapi_ctx);
-  bool emulator = true;
-  get_tpm2_impl_type(sapi_ctx, &emulator);
-  if(!emulator)
-  {
-    return;
-  }
 
 	//Valid test
 	TPM2_HANDLE srk_handle = 0;
@@ -63,7 +72,29 @@ void test_get_srk_handle(void)
 
 	//NULL context
 	CU_ASSERT(get_srk_handle(NULL, &srk_handle, &owner_auth) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
+
+//----------------------------------------------------------------------------
+// test_get_existing_srk_handle
+//----------------------------------------------------------------------------
+void test_get_existing_srk_handle(void)
+{
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  init_tpm2_connection(&sapi_ctx);
+
+	//Valid test
+	TPM2_HANDLE srkHandle = 0;
+	TPM2_HANDLE next = 0;
+	CU_ASSERT(get_existing_srk_handle(sapi_ctx, &srkHandle, &next) == 0);
+
+	//NULL api
+	CU_ASSERT(get_existing_srk_handle(NULL, &srkHandle, &next) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
+}
+
 
 //----------------------------------------------------------------------------
 // test_check_if_srk
@@ -72,12 +103,6 @@ void test_check_if_srk(void)
 {
 	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 	init_tpm2_connection(&sapi_ctx);
-	bool emulator = true;
-	get_tpm2_impl_type(sapi_ctx, &emulator);
-	if(!emulator)
-	{
-		return;
-	}
 
 	//Valid test if srk
 	TPM2_HANDLE srk_handle = 0;
@@ -106,32 +131,39 @@ void test_check_if_srk(void)
 	
 	//NULL sapi_context
 	CU_ASSERT(check_if_srk(NULL, srk_handle, &is_srk) != 0);
-	
+
+	free_tpm2_resources(&sapi_ctx);
 }
-
-
-//----------------------------------------------------------------------------
-// test_get_existing_srk_handle
-//----------------------------------------------------------------------------
-void test_get_existing_srk_handle(void)
-{
-  CU_ASSERT(1 == 1);
-
-
 
 //----------------------------------------------------------------------------
 // test_put_srk_into_persistent_storage
 //----------------------------------------------------------------------------
 void test_put_srk_into_persistent_storage(void)
 {
-  CU_ASSERT(1 == 1);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+	TPM2B_AUTH auth = {.size=0,};
 
+	//NULL context
+	CU_ASSERT(put_srk_into_persistent_storage(NULL, 0, auth) != 0);
+
+	//Valid test
+  TPM2_HANDLE next = 0;
+	TPM2_HANDLE srk_handle = 0;
+  get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
+	if(srk_handle == 0)
+	{
+		srk_handle = next;
+		CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, auth) == 0);
+	}
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_create_sk
+// test_create_and_load_sk
 //----------------------------------------------------------------------------
-void test_create_sk(void)
+void test_create_and_load_sk(void)
 {
   CU_ASSERT(1 == 1);
 

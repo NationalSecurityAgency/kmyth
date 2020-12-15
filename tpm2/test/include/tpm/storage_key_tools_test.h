@@ -27,8 +27,9 @@ int storage_key_tools_add_tests(CU_pSuite suite);
 //  	test_funtion_name()
 //****************************************************************************
 void test_get_srk_handle(void);
+void test_get_existing_srk_handle(void);
 void test_check_if_srk(void);
-void test_derive_srk(void);
-void test_create_sk(void);
+void test_put_srk_into_persistent_storage(void);
+void test_create_and_load_sk(void);
 
 #endif
