@@ -16,9 +16,11 @@
 #include "file_io_test.h"
 #include "memory_util_test.h"
 #include "object_tools_test.h"
+#include "formatting_tools_test.h"
 #include "tls_util_test.h"
 #include "aes_gcm_test.h"
 #include "storage_key_tools_test.h"
+#include "pcrs_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -98,6 +100,21 @@ int main(int argc, char** argv)
     return CU_get_error();
   }
 
+	// Create and configure TPM formatting tools test suite
+	CU_pSuite formatting_tools_test_suite = NULL;
+	formatting_tools_test_suite = CU_add_suite("TPM Formatting Tools Test Suite",
+                                             init_suite, clean_suite);
+	if (NULL == formatting_tools_test_suite)
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
+	if (formatting_tools_add_tests(formatting_tools_test_suite))
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
+
   // Create and configure TLS utility test suite
   CU_pSuite tls_utility_test_suite = NULL;
   tls_utility_test_suite = CU_add_suite("TLS Utility Test Suite",
@@ -127,6 +144,20 @@ int main(int argc, char** argv)
     CU_cleanup_registry();
     return CU_get_error();
   }
+
+	// Create and configure pcrs test suite
+	CU_pSuite pcrs_test_suite = NULL;
+	pcrs_test_suite = CU_add_suite("PCRs Test Suite", init_suite, clean_suite);
+	if (NULL == pcrs_test_suite)
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
+	if (pcrs_add_tests(pcrs_test_suite))
+	{
+		CU_cleanup_registry();
+		return CU_get_error();
+	}
 
   // Run tests using basic interface
   CU_basic_run_tests();

@@ -177,35 +177,15 @@ int tpm2_kmyth_seal(uint8_t * input,
   // This storage key will be sealed to the SRK (its parent is the SRK).
   TPM2_HANDLE storageKey_handle = 0;
 
-  if (create_sk(sapi_ctx,
-                storageRootKey_handle,
-                ownerAuth,
-                objAuthVal,
-                ski.pcr_list,
-                objAuthPolicy, &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
+  if (create_and_load_sk(sapi_ctx,
+                         storageRootKey_handle,
+                         ownerAuth,
+                         objAuthVal,
+                         ski.pcr_list,
+                         objAuthPolicy,
+                         &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
   {
-    kmyth_log(LOG_ERR, "failed to create a storage key ... exiting");
-
-    // clear potential 'auth' data, free TPM resources before exiting early
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    free_tpm2_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // As this newly created storage key will be used by the TPM, we must load it
-  SESSION *nullAuthSession = NULL;  // no policy to auth load into SRK hierarchy
-  TPML_PCR_SELECTION emptyPcrList;
-
-  emptyPcrList.count = 0;       // no auth policy session means no PCR criteria
-  if (load_kmyth_object(sapi_ctx,
-                        nullAuthSession,
-                        storageRootKey_handle,
-                        ownerAuth,
-                        emptyPcrList,
-                        &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
-  {
-    kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
+    kmyth_log(LOG_ERR, "failed to create and load a storage key ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
