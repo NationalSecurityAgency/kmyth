@@ -39,6 +39,31 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
                    TPM2B_AUTH * storage_hierarchy_auth);
 
 /**
+ * @brief Try to get handle of a Storage Root Key (SRK) that is already loaded
+ *        into the TPM's persistent storage.
+ *
+ * @param[in]  sapi_ctx      System API (SAPI) context,
+ *                           must be initialized and
+ *                           passed in as pointer to the SAPI context
+ *
+ * @param[out] srkHandle     TPM 2.0 handle for SRK that this function
+ *                           gets - passed as pointer to SRK handle
+ *                           value
+ *
+ * @param[out] nextSrkHandle TPM 2.0 handle for the next available location
+ *                           in the TPM's persistent storage where the SRK
+ *                           could be put, in case it is not already present.
+ *                           If a current handle to the SRK is found, this
+ *                           parameter will still provide the next available
+ *                           location in persistent storage.
+ *
+ * @return 0 if success, 1 if error
+ */
+int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
+                            TPM2_HANDLE * srkHandle,
+                            TPM2_HANDLE * nextSrkHandle);
+
+/**
  * @brief Determines if handle points to a storage root key (SRK)
  *        generated with a template specifying the desired public
  *        key and hash algorithms.
@@ -67,20 +92,20 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx,
  *                        must be initialized and passed in
  *                        as pointer to the SAPI context
  *
- * @param[in]  srk_handle TPM 2.0 handle for SRK to be loaded under
+ * @param[in]  srkHandle TPM 2.0 handle for SRK to be loaded under
  *
  * @param[in]  sps_auth   TPM 2.0 Storage Primary Seed authentication
  *                        value (e.g., storage hierarchy password).     
  *
  * @return 0 if success, 1 if error. 
  */
-int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
-               TPM2_HANDLE srk_handle,
-               TPM2B_AUTH sps_auth);
+int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
+                                    TPM2_HANDLE srkHandle,
+                                    TPM2B_AUTH sps_auth);
 
 /**
- * @brief Creates a new storage key (SK) under the specified key hierarchy
- *        (handle of its parent is input)
+ * @brief Creates and loads, into the TPM, a new storage key (SK) under the
+ *        specified key hierarchy (parent is specified to be the SRK)
  *
  * @param[in]  sapi_ctx      System API (SAPI) context, must be initialized
  *                           and passed in as pointer to the SAPI context
@@ -117,13 +142,14 @@ int derive_srk(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int create_sk(TSS2_SYS_CONTEXT * sapi_ctx,
-              TPM2_HANDLE srk_handle,
-              TPM2B_AUTH srk_authVal,
-              TPM2B_AUTH sk_authVal,
-              TPML_PCR_SELECTION sk_pcrList,
-              TPM2B_DIGEST sk_authPolicy,
-              TPM2_HANDLE * sk_handle, TPM2B_PRIVATE * sk_private,
-              TPM2B_PUBLIC * sk_public);
+int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
+                       TPM2_HANDLE srk_handle,
+                       TPM2B_AUTH srk_authVal,
+                       TPM2B_AUTH sk_authVal,
+                       TPML_PCR_SELECTION sk_pcrList,
+                       TPM2B_DIGEST sk_authPolicy,
+                       TPM2_HANDLE * sk_handle,
+                       TPM2B_PRIVATE * sk_private,
+                       TPM2B_PUBLIC * sk_public);
 
 #endif /* STORAGE_KEY_TOOLS_H */
