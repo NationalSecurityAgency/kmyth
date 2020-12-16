@@ -312,7 +312,7 @@ void test_init_policy_cmd_auth(void)
 	TSS2L_SYS_AUTH_RESPONSE res_out;
 	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
 	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
-	TPM2_CC create_object_command_code = 0;
+	TPM2_CC cc = 0;
 	TPM2B_NAME auth_name = {.size=0,};
 	uint8_t *cmdParams = NULL;
 	size_t cmdParams_size = 0;
@@ -323,7 +323,7 @@ void test_init_policy_cmd_auth(void)
 
 	//Valid test
 	CU_ASSERT(init_policy_cmd_auth(&session,
-                         create_object_command_code,
+                         cc,
                          auth_name,
                          auth,
                          cmdParams,
@@ -393,19 +393,49 @@ void test_create_authVal(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_compute_cpHash
 //----------------------------------------------------------------------------
 void test_compute_cpHash(void)
 {
-  CU_ASSERT(0 == 0);
+	TPM2_CC cc = 0;
+	TPM2B_NAME auth_name = {.size=0,};
+	uint8_t* cmd = NULL;
+	uint8_t cmd_size = 0;
+	TPM2B_DIGEST out = {.size=0,};
+
+	//Valid test with empty input
+	CU_ASSERT(compute_cpHash(cc, auth_name, cmd, cmd_size, &out) == 0);
+	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
+
+	//Valid test with non-NULL cmd
+	cmd = (uint8_t*)"0123";
+	cmd_size = 4;
+	out.size = 0;
+	CU_ASSERT(compute_cpHash(cc, auth_name, cmd, cmd_size, &out) == 0);
+	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_compute_rpHash
 //----------------------------------------------------------------------------
 void test_compute_rpHash(void)
 {
-  CU_ASSERT(0 == 0);
+	TPM2_RC rc = 0;
+	TPM2_CC cc = 0;
+	uint8_t* cmd = NULL;
+	uint8_t cmd_size = 0;
+	TPM2B_DIGEST out = {.size=0,};
+
+	//Valid test with empty input
+	CU_ASSERT(compute_rpHash(rc, cc, cmd, cmd_size, &out) == 0);
+	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
+
+	//Valid test with non-NULL cmd
+	cmd = (uint8_t*)"0123";
+	cmd_size = 4;
+	out.size = 0;
+	CU_ASSERT(compute_rpHash(rc, cc, cmd, cmd_size, &out) == 0);
+	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
 }
 
 //----------------------------------------------------------------------------
