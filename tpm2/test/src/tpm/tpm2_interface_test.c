@@ -445,11 +445,30 @@ void test_compute_rpHash(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_compute_authHMAC
 //----------------------------------------------------------------------------
 void test_compute_authHMAC(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION session;
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+
+	//Valid test
+	init_tpm2_connection(&sapi_ctx);
+	create_policy_auth_session(sapi_ctx, &session);
+	TPM2_CC cc = 0;
+	TPM2B_NAME auth_name = {.size=0,};
+	uint8_t* cmd = NULL;
+	uint8_t cmd_size = 0;
+	TPM2B_DIGEST hash = {.size=0,};
+	compute_cpHash(cc, auth_name, cmd, cmd_size, &hash);
+	TPMA_SESSION session_attr = 0;
+	TPM2B_AUTH auth = {.size=0,};
+	TPM2B_AUTH hmac = {.size=0,};
+	CU_ASSERT(compute_authHMAC(session, hash, auth, session_attr, &hmac) == 0);
+	CU_ASSERT(hmac.size != 0);
+
+	//NULL output
+	CU_ASSERT(compute_authHMAC(session, hash, auth, session_attr, NULL) != 0);
 }
 
 //----------------------------------------------------------------------------
