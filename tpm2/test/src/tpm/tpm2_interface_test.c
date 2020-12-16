@@ -11,6 +11,7 @@
 
 #include "tpm2_interface.h"
 #include "tpm2_interface_test.h"
+#include "defines.h"
 
 //----------------------------------------------------------------------------
 // tpm2_interface_add_tests()
@@ -305,7 +306,7 @@ void test_init_password_cmd_auth(void)
 //----------------------------------------------------------------------------
 void test_init_policy_cmd_auth(void)
 {
-	SESSION* session = NULL;
+	SESSION session;
 	TPM2B_AUTH auth = {.size=0,};
 	TSS2L_SYS_AUTH_COMMAND cmd_out;
 	TSS2L_SYS_AUTH_RESPONSE res_out;
@@ -316,37 +317,12 @@ void test_init_policy_cmd_auth(void)
 	uint8_t *cmdParams = NULL;
 	size_t cmdParams_size = 0;
 
-/*
- * //Possibly needed for auth_name
-      TPM2B_PUBLIC *out_public = NULL;  // null, don't need result
-      TPM2B_NAME *qual_name = NULL; // null, don't need result
-      TPM2B_NAME parent_name;
-
-      parent_name.size = 0;     // start with empty parent name
-
-      rc = Tss2_Sys_ReadPublic(sapi_ctx,
-                               parent_handle,
-                               nullCmdAuths,
-                               out_public, &parent_name, qual_name,
-                               nullRspAuths);
-      if (rc != TSS2_RC_SUCCESS)
-      {
-        kmyth_log(LOG_ERR,
-                  "Tss2_Sys_ReadPublic(): rc = 0x%08X, %s ... exiting", rc,
-                  getErrorString(rc));
-        return 1;
-      }
-*/
 	init_tpm2_connection(&sapi_ctx);
+	create_policy_auth_session(sapi_ctx, &session);
 	init_password_cmd_auth(auth, &cmd_out, &res_out);
-	CU_ASSERT(Tss2_Sys_GetCommandCode(sapi_ctx, (uint8_t *) &create_object_command_code) == TSS2_RC_SUCCESS);
-	CU_ASSERT(Tss2_Sys_GetCpBuffer(sapi_ctx, &cmdParams_size, (const uint8_t **) &cmdParams) == TSS2_RC_SUCCESS);
-	init_password_cmd_auth(auth, &cmd_out, &res_out);
-
-	//auth_name needs to be populated
 
 	//Valid test
-	CU_ASSERT(init_policy_cmd_auth(session,
+	CU_ASSERT(init_policy_cmd_auth(&session,
                          create_object_command_code,
                          auth_name,
                          auth,
@@ -356,6 +332,7 @@ void test_init_policy_cmd_auth(void)
                          &cmd_out,
                          &res_out) == 0);
 
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
@@ -367,11 +344,52 @@ void test_check_response_auth(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_create_authVal
 //----------------------------------------------------------------------------
 void test_create_authVal(void)
 {
-  CU_ASSERT(0 == 0);
+	uint8_t* ab = NULL;
+	size_t ab_size = 0;
+	TPM2B_AUTH auth = {.size=0,};
+
+	//Valid test, empty auth
+	CU_ASSERT(create_authVal(ab, ab_size, &auth) == 0);
+	CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
+	uint8_t result = 0;
+	for(int i=0;i<auth.size;i++)
+	{
+		result |= auth.buffer[i];
+	}
+	CU_ASSERT(result == 0);
+
+	//Valid test with non-empty auth
+	ab = (uint8_t*)"0123";
+	ab_size = 4;
+	auth.size = 0;
+	CU_ASSERT(create_authVal(ab, ab_size, &auth) == 0);
+	CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
+	result = 0;
+	for(int i=0;i<auth.size;i++)
+	{
+		result |= auth.buffer[i];
+	}
+	CU_ASSERT(result != 0);
+
+	//Valid auth string with size 0
+	ab = (uint8_t*)"0123";
+	ab_size = 4;
+	auth.size = 0;
+	CU_ASSERT(create_authVal(ab, 0, &auth) == 0);
+	CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
+	result = 0;
+	for(int i=0;i<auth.size;i++)
+	{
+		result |= auth.buffer[i];
+	}
+	CU_ASSERT(result == 0); //Treats as if input string was NULL
+
+	//NULL output
+	CU_ASSERT(create_authVal(ab, ab_size, NULL) != 0);
 }
 
 //----------------------------------------------------------------------------
