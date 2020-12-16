@@ -658,7 +658,7 @@ int create_authVal(uint8_t * auth_bytes,
 
   // If no authorization string was specified by the user (NULL string passed
   // in), initialize authorization value to the default (all-zero digest)
-  if (auth_bytes == NULL)
+  if (auth_bytes == NULL || auth_bytes_len == 0)
   {
     kmyth_log(LOG_DEBUG, "NULL authorization string");
     memset(authValOut->buffer, 0, authValOut->size);
