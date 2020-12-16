@@ -413,6 +413,9 @@ void test_compute_cpHash(void)
 	out.size = 0;
 	CU_ASSERT(compute_cpHash(cc, auth_name, cmd, cmd_size, &out) == 0);
 	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
+
+	//NULL output
+	CU_ASSERT(compute_cpHash(cc, auth_name, cmd, cmd_size, NULL) != 0)
 }
 
 //----------------------------------------------------------------------------
@@ -436,6 +439,9 @@ void test_compute_rpHash(void)
 	out.size = 0;
 	CU_ASSERT(compute_rpHash(rc, cc, cmd, cmd_size, &out) == 0);
 	CU_ASSERT(out.size == KMYTH_DIGEST_SIZE);
+
+	//NULL output
+	CU_ASSERT(compute_rpHash(rc, cc, cmd, cmd_size, NULL) != 0);
 }
 
 //----------------------------------------------------------------------------

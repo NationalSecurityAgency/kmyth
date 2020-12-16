@@ -688,6 +688,12 @@ int compute_cpHash(TPM2_CC cmdCode,
                    uint8_t * cmdParams,
                    size_t cmdParams_size, TPM2B_DIGEST * cpHash_out)
 {
+  if (cpHash_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    return 1;
+  }
+
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
 
@@ -753,6 +759,12 @@ int compute_rpHash(TPM2_RC rspCode,
                    uint8_t * cmdParams,
                    size_t cmdParams_size, TPM2B_DIGEST * rpHash_out)
 {
+  if (rpHash_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    return 1;
+  }
+
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
 
