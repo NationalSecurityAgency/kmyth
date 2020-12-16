@@ -165,6 +165,36 @@ void test_put_srk_into_persistent_storage(void)
 //----------------------------------------------------------------------------
 void test_create_and_load_sk(void)
 {
-  CU_ASSERT(1 == 1);
+	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
 
+	TPM2_HANDLE srk_handle = 0;
+	TPM2B_AUTH owner_auth = {.size=0,};
+	get_srk_handle(sapi_ctx, &srk_handle, &owner_auth);
+
+	//Valid test
+	TPM2B_AUTH obj_auth = {.size = 0, };
+	create_authVal(NULL, 0, &obj_auth);
+	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+	TPM2B_DIGEST auth_policy = {.size=0,};
+	init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct);
+
+	create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy);
+	TPM2B_PRIVATE sk_priv = {.size = 0,};
+	TPM2B_PUBLIC sk_pub = {.size = 0,};
+  TPM2_HANDLE sk_handle = 0;
+	CU_ASSERT(create_and_load_sk(sapi_ctx, srk_handle, owner_auth, obj_auth,
+                               pcrs_struct, auth_policy, &sk_handle, &sk_priv, &sk_pub) == 0);
+	CU_ASSERT(sk_handle != 0);
+	CU_ASSERT(sk_handle != srk_handle);
+
+	//Invalid context
+	TPM2B_PRIVATE invalid_priv = {.size = 0,};
+	TPM2B_PUBLIC invalid_pub = {.size = 0,};
+  sk_handle = 0;
+  CU_ASSERT(create_and_load_sk(NULL, srk_handle, owner_auth, obj_auth,
+                               pcrs_struct, auth_policy, &sk_handle, &invalid_priv, &invalid_pub) != 0);
+	CU_ASSERT(sk_handle == 0 && invalid_priv.size == 0 && invalid_pub.size == 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
