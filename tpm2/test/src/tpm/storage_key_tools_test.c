@@ -121,7 +121,7 @@ void test_check_if_srk(void)
 	create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy);
 	TPM2B_PRIVATE sk_priv = {.size = 0,};
 	TPM2B_PUBLIC sk_pub = {.size = 0,};
-  TPM2_HANDLE sk_handle = 0;
+	TPM2_HANDLE sk_handle = 0;
 	create_and_load_sk(sapi_ctx, srk_handle, owner_auth, obj_auth, pcrs_struct, auth_policy, &sk_handle, &sk_priv, &sk_pub);
 	CU_ASSERT(check_if_srk(sapi_ctx, sk_handle, &is_srk) == 0);
 	CU_ASSERT(!is_srk);
