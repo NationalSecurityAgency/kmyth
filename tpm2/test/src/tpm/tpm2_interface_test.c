@@ -172,7 +172,7 @@ void test_init_tcti_abrmd(void)
 //----------------------------------------------------------------------------
 void test_init_sapi(void)
 {
-  TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
+	TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
 	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
 	//Valid test
@@ -202,12 +202,12 @@ void test_free_tpm2_resources(void)
 
   //Valid NULL test
 	TSS2_SYS_CONTEXT **sapi_ctx_test = NULL;
-  CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
+	CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
 	CU_ASSERT(free_tpm2_resources(sapi_ctx_test) == 0);
 
 	//Valid initialized sapi_ctx test
 	init_tpm2_connection(&sapi_ctx);
-  CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
+	CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
 	CU_ASSERT(sapi_ctx == NULL);
 }
 
@@ -224,7 +224,7 @@ void test_startup_tpm2(void)
 	free_tpm2_resources(&sapi_ctx);
 
 	//Test that it fails if sapi_ctx isn't initialized
-  CU_ASSERT(startup_tpm2(&sapi_ctx) != 0);
+	CU_ASSERT(startup_tpm2(&sapi_ctx) != 0);
 }
 
 //----------------------------------------------------------------------------
