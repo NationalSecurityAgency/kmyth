@@ -343,18 +343,13 @@ void test_check_response_auth(void)
 	//Initialize session to a valid state
 	SESSION session;
 	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
-	TSS2L_SYS_AUTH_COMMAND cmd_out;
 	TSS2L_SYS_AUTH_RESPONSE res_out;
-	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
 	TPM2_CC cc = 0;
 	TPM2B_AUTH auth = {.size=0,};
-	TPM2B_NAME auth_name = {.size=0,};
 	uint8_t *cmdParams = NULL;
 	size_t cmdParams_size = 0;
 	init_tpm2_connection(&sapi_ctx);
 	create_policy_auth_session(sapi_ctx, &session);
-	init_password_cmd_auth(auth, &cmd_out, &res_out);
-	init_policy_cmd_auth(&session, cc, auth_name, auth, cmdParams, cmdParams_size, pcrs_struct, &cmd_out, &res_out);
 
   //Valid failure before hashes are set
   CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
@@ -377,6 +372,11 @@ void test_check_response_auth(void)
 
 	//Valid test
 	CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) == 0);
+
+	session.nonceNewer.size = 1;
+	//Valid failure
+	CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+
 
 	//NULL session
 	CU_ASSERT(check_response_auth(NULL, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);

@@ -581,6 +581,11 @@ int check_response_auth(SESSION * authSession,
                         TPM2B_AUTH authEntityAuthVal,
                         TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
+  if (responseAuths->auths[0].hmac.size == 0)
+  {
+    kmyth_log(LOG_ERR, "Empty auth response ... exiting");
+    return 1;
+  }
   // nonceTPM (received in response from TPM) is available
   kmyth_log(LOG_DEBUG, "nonceTPM: 0x%02X...",
             responseAuths->auths[0].nonce.buffer[0]);
@@ -1175,8 +1180,10 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
     return 1;
   }
 
-  session->nonceOlder = session->nonceNewer;
-  session->nonceNewer = newNonce;
-
+  session->nonceOlder.size = session->nonceNewer.size;
+  memcpy(session->nonceOlder.buffer, session->nonceNewer.buffer,
+         session->nonceNewer.size);
+  session->nonceNewer.size = newNonce.size;
+  memcpy(session->nonceNewer.buffer, newNonce.buffer, newNonce.size);
   return 0;
 }
