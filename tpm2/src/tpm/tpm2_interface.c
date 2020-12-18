@@ -1186,6 +1186,12 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
     return 1;
   }
 
+  if (newNonce.size != KMYTH_DIGEST_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Invalid newNonce size ... exiting");
+    return 1;
+  }
+
   session->nonceOlder = session->nonceNewer;
   session->nonceNewer = newNonce;
 

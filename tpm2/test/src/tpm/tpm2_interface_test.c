@@ -617,25 +617,84 @@ void test_start_policy_auth_session(void)
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_apply_policy
 //----------------------------------------------------------------------------
 void test_apply_policy(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION session;
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//Valid test
+	create_policy_auth_session(sapi_ctx, &session);
+	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+	CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+	//NULL context
+	CU_ASSERT(apply_policy(NULL, session.sessionHandle, pcrs_struct) != 0);
+
+	//Invalid Handle
+	CU_ASSERT(apply_policy(sapi_ctx, 0, pcrs_struct) != 0);
+
+	//Multiple pcrs
+	int pcrs[2] = {};
+	pcrs[0] = 5;
+	pcrs[1] = 3;
+	init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
+	CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_create_caller_nonce
 //----------------------------------------------------------------------------
 void test_create_caller_nonce(void)
 {
-  CU_ASSERT(0 == 0);
+  TPM2B_NONCE nonce;
+	//Test on uninitialized nonce
+	CU_ASSERT(create_caller_nonce(&nonce) == 0);
+	CU_ASSERT(nonce.size == KMYTH_DIGEST_SIZE);
+
+	//Test that nonce is overwritten
+	memset(nonce.buffer, 0, KMYTH_DIGEST_SIZE);
+	BYTE zeroes[KMYTH_DIGEST_SIZE] = {0};
+	CU_ASSERT(memcmp(nonce.buffer, zeroes, KMYTH_DIGEST_SIZE) == 0);
+	CU_ASSERT(create_caller_nonce(&nonce) == 0);
+	CU_ASSERT(memcmp(nonce.buffer, zeroes, KMYTH_DIGEST_SIZE) != 0);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_rollNonces
 //----------------------------------------------------------------------------
 void test_rollNonces(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION session;
+	session.nonceOlder.size = KMYTH_DIGEST_SIZE;
+	session.nonceNewer.size = KMYTH_DIGEST_SIZE;
+
+	TPM2B_NONCE new = {.size=KMYTH_DIGEST_SIZE,};
+	memset(new.buffer, 0x01, KMYTH_DIGEST_SIZE);
+	memset(session.nonceOlder.buffer, 0x02, KMYTH_DIGEST_SIZE);
+	memset(session.nonceNewer.buffer, 0x00, KMYTH_DIGEST_SIZE);
+
+	//Valid rolls
+	CU_ASSERT(rollNonces(&session, new) == 0);
+	BYTE zeroes[KMYTH_DIGEST_SIZE] = {0};
+	CU_ASSERT(memcmp(session.nonceOlder.buffer, zeroes, KMYTH_DIGEST_SIZE) == 0);
+	BYTE ones[KMYTH_DIGEST_SIZE];
+	memset(ones, 0x01, KMYTH_DIGEST_SIZE);
+	CU_ASSERT(memcmp(session.nonceNewer.buffer, ones, KMYTH_DIGEST_SIZE) == 0);
+	memset(new.buffer, 0x00, KMYTH_DIGEST_SIZE);
+	CU_ASSERT(rollNonces(&session, new) == 0);
+	CU_ASSERT(memcmp(session.nonceOlder.buffer, ones, KMYTH_DIGEST_SIZE) == 0);
+	CU_ASSERT(memcmp(session.nonceNewer.buffer, zeroes, KMYTH_DIGEST_SIZE) == 0);
+
+	//NULL session
+	CU_ASSERT(rollNonces(NULL, new) != 0);
+
+	//newNonce is the right size
+	new.size = 0;
+	CU_ASSERT(rollNonces(&session, new) != 0);
+
 }
