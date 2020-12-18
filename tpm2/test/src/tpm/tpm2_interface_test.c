@@ -354,14 +354,14 @@ void test_check_response_auth(void)
 	session.nonceNewer.size = KMYTH_DIGEST_SIZE;
 	res_out.auths[0].nonce.size = KMYTH_DIGEST_SIZE;
 
-  //Valid failure before hashes are set
-  CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+	//Valid failure before hashes are set
+	CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
 
 	//Specify empty nonces for hash comparisons
 	//Calculate the expected hash
-  memset(session.nonceOlder.buffer, 0x00, KMYTH_DIGEST_SIZE);
-  memset(session.nonceNewer.buffer, 0x00, KMYTH_DIGEST_SIZE);
-  memset(res_out.auths[0].nonce.buffer, 0x00, KMYTH_DIGEST_SIZE);
+	memset(session.nonceOlder.buffer, 0x00, KMYTH_DIGEST_SIZE);
+	memset(session.nonceNewer.buffer, 0x00, KMYTH_DIGEST_SIZE);
+	memset(res_out.auths[0].nonce.buffer, 0x00, KMYTH_DIGEST_SIZE);
 
 	TPM2B_DIGEST rpHash;
 	compute_rpHash(TPM2_RC_SUCCESS, cc, cmdParams, cmdParams_size, &rpHash);
@@ -523,7 +523,7 @@ void test_create_policy_digest(void)
 {
 	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
 	init_tpm2_connection(&sapi_ctx);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
 
 	//Valid test with no PCRs selected
 	TPM2B_DIGEST out;
