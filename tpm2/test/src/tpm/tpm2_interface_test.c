@@ -11,6 +11,7 @@
 
 #include "tpm2_interface.h"
 #include "tpm2_interface_test.h"
+#include "pcrs.h"
 #include "defines.h"
 
 //----------------------------------------------------------------------------
@@ -380,9 +381,10 @@ void test_check_response_auth(void)
 	//Valid failure
 	CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
 
-
 	//NULL session
 	CU_ASSERT(check_response_auth(NULL, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
@@ -511,30 +513,107 @@ void test_compute_authHMAC(void)
 
 	//NULL output
 	CU_ASSERT(compute_authHMAC(session, hash, auth, session_attr, NULL) != 0);
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_create_policy_digest
 //----------------------------------------------------------------------------
 void test_create_policy_digest(void)
 {
-  CU_ASSERT(0 == 0);
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+
+	//Valid test with no PCRs selected
+	TPM2B_DIGEST out;
+	CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+	CU_ASSERT(out.size != 0);
+	BYTE pcr0_buf[KMYTH_DIGEST_SIZE];
+	memcpy(pcr0_buf, out.buffer, KMYTH_DIGEST_SIZE);
+
+	//Valid test with one PCR selected
+	int pcrs[2] = {};
+	pcrs[0] = 5;
+	init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+	out.size = 0;
+	CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+	CU_ASSERT(out.size != 0);
+	BYTE pcr1_buf[KMYTH_DIGEST_SIZE];
+	memcpy(pcr1_buf, out.buffer, KMYTH_DIGEST_SIZE);
+
+	//Valid test with multiple PCRs selected
+	out.size = 0;
+	pcrs[1] = 3;
+	init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
+	CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+	CU_ASSERT(out.size != 0);
+	BYTE pcr2_buf[KMYTH_DIGEST_SIZE];
+	memcpy(pcr2_buf, out.buffer, KMYTH_DIGEST_SIZE);
+
+	//Verify output digests are different
+	CU_ASSERT(memcmp(pcr0_buf, pcr1_buf, KMYTH_DIGEST_SIZE) != 0);
+	CU_ASSERT(memcmp(pcr0_buf, pcr2_buf, KMYTH_DIGEST_SIZE) != 0);
+	CU_ASSERT(memcmp(pcr1_buf, pcr2_buf, KMYTH_DIGEST_SIZE) != 0);
+
+	//Failure with null sapi_ctx
+	CU_ASSERT(create_policy_digest(NULL, pcrs_struct, &out) !=0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_create_policy_auth_session
 //----------------------------------------------------------------------------
 void test_create_policy_auth_session(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION session;
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//Valid test
+	CU_ASSERT(create_policy_auth_session(sapi_ctx, &session) == 0);
+	CU_ASSERT(session.nonceNewer.size == KMYTH_DIGEST_SIZE);
+	CU_ASSERT(session.nonceOlder.size == KMYTH_DIGEST_SIZE);
+
+	//NULL context
+	CU_ASSERT(create_policy_auth_session(NULL, &session) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------
-// test_
+// test_start_policy_auth_session
 //----------------------------------------------------------------------------
 void test_start_policy_auth_session(void)
 {
-  CU_ASSERT(0 == 0);
+	SESSION session;
+	TSS2_SYS_CONTEXT* sapi_ctx = NULL;
+	init_tpm2_connection(&sapi_ctx);
+
+	//Valid test SE_TRIAL
+	create_policy_auth_session(sapi_ctx, &session);
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL) == 0);
+
+	//Valid test SE_POLICY
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_POLICY) == 0);
+
+	//Valid failure if session_type isn't trial/policy
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_HMAC) != 0);
+
+	//Fail if session has uninitialized nonce
+	session.nonceNewer.size = 0;
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL) != 0);
+	session.nonceNewer.size = KMYTH_DIGEST_SIZE;
+	session.nonceOlder.size = 0;
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL) != 0);
+	session.nonceOlder.size = KMYTH_DIGEST_SIZE;
+	CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL) == 0);
+
+	//Fail if context is NULL
+	CU_ASSERT(start_policy_auth_session(NULL, &session, TPM2_SE_TRIAL) != 0);
+
+	free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------

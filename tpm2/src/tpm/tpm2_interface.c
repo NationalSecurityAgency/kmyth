@@ -1040,6 +1040,12 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
     kmyth_log(LOG_ERR, "invalid session type ... exiting");
     return 1;
   }
+  if (session->nonceNewer.size != KMYTH_DIGEST_SIZE
+      || session->nonceOlder.size != KMYTH_DIGEST_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Session nonce uninitialized ... exiting");
+    return 1;
+  }
   session->sessionType = session_type;
 
   // For Kmyth, the current implementation uses unbound and unsalted sessions.
