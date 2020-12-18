@@ -1180,10 +1180,8 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
     return 1;
   }
 
-  session->nonceOlder.size = session->nonceNewer.size;
-  memcpy(session->nonceOlder.buffer, session->nonceNewer.buffer,
-         session->nonceNewer.size);
-  session->nonceNewer.size = newNonce.size;
-  memcpy(session->nonceNewer.buffer, newNonce.buffer, newNonce.size);
+  session->nonceOlder = session->nonceNewer;
+  session->nonceNewer = newNonce;
+
   return 0;
 }
