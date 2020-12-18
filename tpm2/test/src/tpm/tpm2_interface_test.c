@@ -201,7 +201,7 @@ void test_free_tpm2_resources(void)
 {
 	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-  //Valid NULL test
+	//Valid NULL test
 	TSS2_SYS_CONTEXT **sapi_ctx_test = NULL;
 	CU_ASSERT(free_tpm2_resources(&sapi_ctx) == 0);
 	CU_ASSERT(free_tpm2_resources(sapi_ctx_test) == 0);
