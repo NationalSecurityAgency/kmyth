@@ -154,7 +154,9 @@ void test_put_srk_into_persistent_storage(void)
 	get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
 	TPM2_HANDLE old_srk = srk_handle;
 	srk_handle = next;
-	//Test for failure if the key is already in storage
+	//Test for failure if we try to load at a location that is already in use
+	CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, old_srk, auth) != 0);
+	//Loading second copy of SRK at next available persistent handle should work
 	CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, auth) == 0);
 	TPM2B_AUTH emptyAuth = { .size = 0 };
 	TPM2B_NONCE emptyNonce = { .size = 0 };
@@ -168,7 +170,7 @@ void test_put_srk_into_persistent_storage(void)
                                                  .hmac = emptyAuth
                                               }}
                                    };
-	//Clear the loaded srk
+	//Clear all persistent storage to remove SRK and make TPM2_PERSISTENT_FIRST available
 	Tss2_Sys_Clear(sapi_ctx, TPM2_RH_PLATFORM, &cmdAuth, &cmdRsp);
 	next = 0;
 	srk_handle = 0;
@@ -180,7 +182,7 @@ void test_put_srk_into_persistent_storage(void)
 	CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, auth) == 0);
 	get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
 	//Verify it has loaded correctly
-	CU_ASSERT(srk_handle == old_srk);
+	CU_ASSERT(srk_handle == TPM2_PERSISTENT_FIRST);
 
 	free_tpm2_resources(&sapi_ctx);
 }
