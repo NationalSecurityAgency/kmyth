@@ -349,16 +349,19 @@ void test_check_response_auth(void)
 	uint8_t *cmdParams = NULL;
 	size_t cmdParams_size = 0;
 	init_tpm2_connection(&sapi_ctx);
-	create_policy_auth_session(sapi_ctx, &session);
+	session.nonceOlder.size = KMYTH_DIGEST_SIZE;
+	session.nonceNewer.size = KMYTH_DIGEST_SIZE;
+	res_out.auths[0].nonce.size = KMYTH_DIGEST_SIZE;
 
   //Valid failure before hashes are set
   CU_ASSERT(check_response_auth(&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
 
 	//Specify empty nonces for hash comparisons
-	session.nonceOlder.size=0;
-	session.nonceNewer.size=0;
-	res_out.auths[0].nonce.size=0;
 	//Calculate the expected hash
+  memset(session.nonceOlder.buffer, 0x00, KMYTH_DIGEST_SIZE);
+  memset(session.nonceNewer.buffer, 0x00, KMYTH_DIGEST_SIZE);
+  memset(res_out.auths[0].nonce.buffer, 0x00, KMYTH_DIGEST_SIZE);
+
 	TPM2B_DIGEST rpHash;
 	compute_rpHash(TPM2_RC_SUCCESS, cc, cmdParams, cmdParams_size, &rpHash);
 	TPM2B_DIGEST checkHMAC;
