@@ -28,9 +28,24 @@ int tls_util_add_tests(CU_pSuite suite);
 //****************************************************************************
 
 /**
+ * Tests for creating a TLS connection in create_tls_connection()
+ */
+void test_create_tls_connection(void);
+
+/**
  * Tests for TLS context setup functionality in tls_set_context()
  */
 void test_tls_set_context(void);
+
+/**
+ * Tests for getting a key from a TLS server in get_key_from_tls_server()
+ */
+void test_get_key_from_tls_server(void);
+
+/**
+ * Tests for getting a key from a KMIP server in get_key_from_kmip_server()
+ */
+void test_get_key_from_kmip_server(void);
 
 #endif
 
