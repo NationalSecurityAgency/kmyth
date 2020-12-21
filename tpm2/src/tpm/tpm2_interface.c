@@ -292,6 +292,7 @@ int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   // Clean up higher-level SAPI context, first
   Tss2_Sys_Finalize(*sapi_ctx);
   free(*sapi_ctx);
+  *sapi_ctx = NULL;
   kmyth_log(LOG_DEBUG, "cleaned up SAPI context");
 
   // Clean up TCTI context
@@ -580,6 +581,11 @@ int check_response_auth(SESSION * authSession,
                         TPM2B_AUTH authEntityAuthVal,
                         TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
+  if (responseAuths->auths[0].hmac.size == 0)
+  {
+    kmyth_log(LOG_ERR, "Empty auth response ... exiting");
+    return 1;
+  }
   // nonceTPM (received in response from TPM) is available
   kmyth_log(LOG_DEBUG, "nonceTPM: 0x%02X...",
             responseAuths->auths[0].nonce.buffer[0]);
@@ -657,7 +663,7 @@ int create_authVal(uint8_t * auth_bytes,
 
   // If no authorization string was specified by the user (NULL string passed
   // in), initialize authorization value to the default (all-zero digest)
-  if (auth_bytes == NULL)
+  if (auth_bytes == NULL || auth_bytes_len == 0)
   {
     kmyth_log(LOG_DEBUG, "NULL authorization string");
     memset(authValOut->buffer, 0, authValOut->size);
@@ -687,6 +693,12 @@ int compute_cpHash(TPM2_CC cmdCode,
                    uint8_t * cmdParams,
                    size_t cmdParams_size, TPM2B_DIGEST * cpHash_out)
 {
+  if (cpHash_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    return 1;
+  }
+
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
 
@@ -752,6 +764,12 @@ int compute_rpHash(TPM2_RC rspCode,
                    uint8_t * cmdParams,
                    size_t cmdParams_size, TPM2B_DIGEST * rpHash_out)
 {
+  if (rpHash_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    return 1;
+  }
+
   // initialize hash
   EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
 
@@ -1022,6 +1040,12 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
     kmyth_log(LOG_ERR, "invalid session type ... exiting");
     return 1;
   }
+  if (session->nonceNewer.size != KMYTH_DIGEST_SIZE
+      || session->nonceOlder.size != KMYTH_DIGEST_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Session nonce uninitialized ... exiting");
+    return 1;
+  }
   session->sessionType = session_type;
 
   // For Kmyth, the current implementation uses unbound and unsalted sessions.
@@ -1159,6 +1183,12 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
   if (session == NULL)
   {
     kmyth_log(LOG_ERR, "no session ... exiting");
+    return 1;
+  }
+
+  if (newNonce.size != KMYTH_DIGEST_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Invalid newNonce size ... exiting");
     return 1;
   }
 

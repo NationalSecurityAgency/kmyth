@@ -307,7 +307,7 @@ int init_policy_cmd_auth(SESSION * authSession,
  * @param[in]  authEntityAuthVal  Authorization value (hash of authorization
  *                                string) for authorization entity of command.
  *
- * @param[out] responseAuths      Pointer to the response authorization struct
+ * @param[in]  responseAuths      Pointer to the response authorization struct
  *                                received in the TPM's response for an API
  *                                call requiring authorization.
  *
