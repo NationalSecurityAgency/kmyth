@@ -84,6 +84,7 @@ TEST_DIR ?= test
 TEST_SRC_DIR ?= $(TEST_DIR)/src
 TEST_INC_DIR ?= $(TEST_DIR)/include
 TEST_OBJ_DIR ?= $(TEST_DIR)/obj
+TEST_DATA_DIR ?= $(TEST_DIR)/data
 
 # Specify 'testrunner' (kmyth-test) files
 TESTRUNNER_SOURCES = $(TEST_DIR)/kmyth-test.c
@@ -138,12 +139,17 @@ TEST_OBJECTS += $(TEST_UTIL_OBJECTS)
 TEST_OBJECTS += $(TEST_TPM_OBJECTS)
 TEST_OBJECTS += $(TEST_CIPHER_OBJECTS)
 
-# Consolidate created directories to simplify mkdir call for 'pretest' target
+# Create consolidated list of test object directories
 TEST_OBJECT_DIRS = $(TEST_MAIN_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_UTIL_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_TPM_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_CIPHER_OBJ_DIR)
 
+# Create consolidated list of test vector directories
+TEST_VEC_DIRS = $(TEST_DATA_DIR)/kwtestvectors
+TEST_VEC_DIRS += $(TEST_DATA_DIR)/gcmtestvectors
+
+# 
 #====================== END: TEST ENVIRONMENT DEFINITION =====================
 
 #====================== START: TOOL CONFIGURATION ============================
@@ -319,6 +325,20 @@ doc: $(HEADER_FILES) \
 .PHONY: test
 test: pretest kmyth-test
 	./bin/kmyth-test 2>/dev/null
+
+.PHONY: install-test-vectors
+install-test-vectors: uninstall-test-vectors
+	mkdir -p $(TEST_VEC_DIRS)
+	wget https://csrc.nist.gov/groups/STM/cavp/documents/mac/kwtestvectors.zip
+	unzip kwtestvectors.zip -d $(TEST_DATA_DIR)
+	rm kwtestvectors.zip
+	wget https://csrc.nist.gov/groups/STM/cavp/documents/mac/gcmtestvectors.zip
+	unzip gcmtestvectors.zip -d $(TEST_DATA_DIR)/gcmtestvectors/
+	rm gcmtestvectors.zip
+
+.PHONY: uninstall-test-vectors
+uninstall-test-vectors:
+	rm -rf $(TEST_VEC_DIRS)
 
 .PHONY: pretest
 pretest:
