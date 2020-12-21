@@ -147,7 +147,7 @@ void test_init_tpm2_connection(void)
 	CU_ASSERT(init_tpm2_connection(&sapi_ctx) == 0);
 	CU_ASSERT(sapi_ctx != NULL);
 
-	//Must have null object to init
+	//Must have null sapi_ctx to init
 	CU_ASSERT(init_tpm2_connection(&sapi_ctx) != 0);
 	free_tpm2_resources(&sapi_ctx);
 }
@@ -163,7 +163,7 @@ void test_init_tcti_abrmd(void)
 	CU_ASSERT(init_tcti_abrmd(&tcti_ctx) == 0);
 	CU_ASSERT(tcti_ctx != NULL);
 
-	//Must have null object to init
+	//Must have null sapi_ctx to init
 	CU_ASSERT(init_tcti_abrmd(&tcti_ctx) != 0);
 	free(tcti_ctx);
 }
