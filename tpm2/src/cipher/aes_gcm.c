@@ -32,7 +32,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // validate non-NULL input plaintext buffer specified
   if (inData == NULL)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
+    kmyth_log(LOG_ERR, "null input data pointer ... exiting");
     return 1;
   }
 
