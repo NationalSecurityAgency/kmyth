@@ -695,16 +695,29 @@ void test_gcm_parameter_limits(void)
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
   
-  // check that an input data length being too short produces an error
-  inData_len = 32;
+  inData_len = GCM_IV_LEN + GCM_TAG_LEN;
   inData = malloc(inData_len);
+
+  // check that an empty (zero length) PT data input to encrypt succeeds
+  // output data should be concatenation of IV and tag
   inData_len = 0;
   CU_ASSERT(inData != NULL);
   CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
-                            &outData, &outData_len) == 1);
+                            &outData, &outData_len) == 0);
+  CU_ASSERT(outData_len == (GCM_IV_LEN + GCM_TAG_LEN));
+
+
+  // check decryption of empty (zero length) CT result succeeds and
+  // produces empty (zero length) plaintext result
+  memcpy(inData, outData, outData_len);
+  inData_len = outData_len;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
-                            &outData, &outData_len) == 1);
-  inData_len = GCM_IV_LEN + GCM_TAG_LEN;
+                            &outData, &outData_len) == 0);
+  CU_ASSERT(outData_len == 0);
+
+  // check that a completely empty (but non-NULL) data input to decrypt errors
+  inData_len = 0;
+  CU_ASSERT(inData != NULL);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
 

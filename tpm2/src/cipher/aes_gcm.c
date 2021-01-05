@@ -29,8 +29,8 @@ int aes_gcm_encrypt(unsigned char *key,
     return 1;
   }
 
-  // validate non-NULL and non-empty input plaintext buffer specified
-  if (inData == NULL || inData_len == 0)
+  // validate non-NULL input plaintext buffer specified
+  if (inData == NULL)
   {
     kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
