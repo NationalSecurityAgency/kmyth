@@ -186,7 +186,7 @@ int aes_gcm_decrypt(unsigned char *key,
     kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
-  if (inData_len <= GCM_IV_LEN + GCM_TAG_LEN)
+  if (inData_len < GCM_IV_LEN + GCM_TAG_LEN)
   {
     kmyth_log(LOG_ERR, "input data incomplete (must be %d bytes, was %lu "
               "bytes) ... exiting", GCM_IV_LEN + GCM_TAG_LEN + 1, inData_len);
