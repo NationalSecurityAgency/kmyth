@@ -33,7 +33,7 @@ extern const cipher_t cipher_list[];
 int tpm2_kmyth_seal(uint8_t * input,
                     size_t input_len,
                     uint8_t ** output,
-                    size_t *output_len,
+                    size_t * output_len,
                     uint8_t * auth_bytes,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
@@ -281,7 +281,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 int tpm2_kmyth_unseal(uint8_t * input,
                       size_t input_len,
                       uint8_t ** output,
-                      size_t *output_len,
+                      size_t * output_len,
                       uint8_t * auth_bytes,
                       size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len)
@@ -433,7 +433,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
 //############################################################################
 int tpm2_kmyth_seal_file(char *input_path,
                          uint8_t ** output,
-                         size_t *output_len,
+                         size_t * output_len,
                          uint8_t * auth_bytes,
                          size_t auth_bytes_len,
                          uint8_t * owner_auth_bytes,
@@ -486,7 +486,7 @@ int tpm2_kmyth_seal_file(char *input_path,
 //############################################################################
 int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output,
-                           size_t *output_length,
+                           size_t * output_length,
                            uint8_t * auth_bytes,
                            size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes, size_t oa_bytes_len)
@@ -613,7 +613,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
-                           uint8_t ** result, size_t *result_size)
+                           uint8_t ** result, size_t * result_size)
 {
   // Start a TPM 2.0 policy session that we will use to authorize the use of
   // storage key (SK) to:

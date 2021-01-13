@@ -72,7 +72,7 @@ int verifyOutputFilePath(char *path)
   // check that specified output path directory exists
   char *path_copy = "\0";
 
-  if (asprintf(&path_copy, path) < 0)
+  if (asprintf(&path_copy, "%s", path) < 0)
   {
     kmyth_log(LOG_ERR, "unable to copy output file path ... exiting");
     return 1;
@@ -122,7 +122,8 @@ int verifyOutputFilePath(char *path)
 //############################################################################
 // read_bytes_from_file()
 //############################################################################
-int read_bytes_from_file(char *input_path, uint8_t ** data, size_t *data_length)
+int read_bytes_from_file(char *input_path, uint8_t ** data,
+                         size_t * data_length)
 {
 
   // Create a BIO for the input file

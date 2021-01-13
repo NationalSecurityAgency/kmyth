@@ -386,7 +386,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // get_tpm2_impl_type()
 //############################################################################
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator)
 {
   TPMS_CAPABILITY_DATA capData;
 
