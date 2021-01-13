@@ -380,7 +380,7 @@ void test_aes_keywrap_vectors(void)
 
           // create flag to aggregate pass/fail result
           // (initialize true but latch in false for any unexpected result)
-          bool vector_passed;
+          bool vector_passed = true;
 
           // create variable to hold response code from function being tested
           int rc = -1;
