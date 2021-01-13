@@ -130,7 +130,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
 
   // verify that the resultant CT length matches expected (input PT length plus
   // eight bytes for prepended integrity check value)
-  if (ciphertext_len != *outData_len)
+  if (ciphertext_len != (int) *outData_len)
   {
     kmyth_log(LOG_ERR,
               "CT length error (expected %lu, actual %d) bytes ... exiting",
