@@ -22,7 +22,7 @@
 #include "tpm2_interface_test.h"
 #include "storage_key_tools_test.h"
 #include "pcrs_test.h"
-#include "kmyth_seal_unseal_imlp_test.h"
+#include "kmyth_seal_unseal_impl_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
