@@ -21,23 +21,23 @@
 //############################################################################
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t *pcr_selection_struct_data_size,
+                       size_t * pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t *storage_key_public_data_size,
+                       size_t * storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t *storage_key_private_data_size,
+                       size_t * storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
                        TPM2B_PUBLIC * sealed_key_public_blob,
                        uint8_t ** sealed_key_public_data,
-                       size_t *sealed_key_public_data_size,
+                       size_t * sealed_key_public_data_size,
                        size_t sealed_key_public_data_offset,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
-                       size_t *sealed_key_private_data_size,
+                       size_t * sealed_key_private_data_size,
                        size_t sealed_key_private_data_offset)
 {
   // Validate that all input data structures to be packed in preparation
@@ -651,7 +651,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 //############################################################################
 // create_ski_bytes
 //############################################################################
-int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
+int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
 {
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
@@ -909,8 +909,8 @@ Ski get_default_ski(void)
 // get_ski_block_bytes()
 //############################################################################
 int get_ski_block_bytes(char **contents,
-                        size_t *remaining,
-                        uint8_t ** block, size_t *blocksize,
+                        size_t * remaining,
+                        uint8_t ** block, size_t * blocksize,
                         char *delim, size_t delim_len,
                         char *next_delim, size_t next_delim_len)
 {
@@ -979,7 +979,7 @@ int get_ski_block_bytes(char **contents,
 //############################################################################
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size,
-                     uint8_t ** base64_data, size_t *base64_data_size)
+                     uint8_t ** base64_data, size_t * base64_data_size)
 {
   // check that there is actually data to encode, return error if not
   if (raw_data == NULL || raw_data_size == 0)
@@ -1065,7 +1065,7 @@ int encodeBase64Data(uint8_t * raw_data,
 //############################################################################
 int decodeBase64Data(uint8_t * base64_data,
                      size_t base64_data_size,
-                     uint8_t ** raw_data, size_t *raw_data_size)
+                     uint8_t ** raw_data, size_t * raw_data_size)
 {
   // check that there is actually data to decode, return error if not
   if (base64_data == NULL || base64_data_size == 0)
@@ -1134,7 +1134,7 @@ int decodeBase64Data(uint8_t * base64_data,
 //############################################################################
 // concat()
 //############################################################################
-int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
+int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
            size_t input_length)
 {
   if (input == NULL || input_length == 0) //nothing to concat
