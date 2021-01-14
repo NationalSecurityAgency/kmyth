@@ -143,7 +143,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // check_if_srk()
 //############################################################################
-int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool * isSRK)
 {
   // initialize 'isSRK' result to false - early termination should not result
   // in a true value passed back (even if the return code indicates an error)

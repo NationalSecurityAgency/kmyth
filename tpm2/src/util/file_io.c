@@ -122,7 +122,8 @@ int verifyOutputFilePath(char *path)
 //############################################################################
 // read_bytes_from_file()
 //############################################################################
-int read_bytes_from_file(char *input_path, uint8_t ** data, size_t *data_length)
+int read_bytes_from_file(char *input_path, uint8_t ** data,
+                         size_t * data_length)
 {
 
   // Create a BIO for the input file
