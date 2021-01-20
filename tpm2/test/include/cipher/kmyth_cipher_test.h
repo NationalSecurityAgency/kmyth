@@ -24,7 +24,7 @@
  * process test vector components read from a file. For example, a
  * value of 2176 (2048 + 128) supports up to a 2048 hexadecimal character
  * string that can specify a 1024-byte or 8192-bit test vector component,
- * as well as up to 128 leading trailing characters.
+ * as well as up to 128 leading/trailing characters.
  */
 #define MAX_TEST_VECTOR_COMPONENT_LENGTH 2176
 
