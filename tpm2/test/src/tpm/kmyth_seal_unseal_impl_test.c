@@ -134,14 +134,49 @@ void test_tpm2_kmyth_unseal(void){
 // test_tpm2_kmyth_seal_file
 //--------------------------------------------------------------------------------
 void test_tpm2_kmyth_seal_file(void){
-  CU_ASSERT(1);
+  char fake_input_path[] = "fake input path";
+  uint8_t* output = NULL;
+  size_t output_len = 0;
+  uint8_t* auth_bytes = NULL;
+  size_t auth_bytes_len = 0;
+  uint8_t* owner_auth_bytes = NULL;
+  size_t oa_bytes_len = 0;
+  int* pcrs = NULL;
+  size_t pcrs_len = 0;
+
+  
+  // Check a NULL input path fails and doesn't change output.
+  CU_ASSERT(tpm2_kmyth_seal_file(NULL, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 1);
+  CU_ASSERT(output == NULL);
+  CU_ASSERT(output_len == 0);
+
+  // Check a fake input path fails and doesn't change output.
+  CU_ASSERT(tpm2_kmyth_seal_file(fake_input_path, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 1);
+  CU_ASSERT(output == NULL);
+  CU_ASSERT(output_len == 0);
 }
 
 //--------------------------------------------------------------------------------
 // test_tpm2_kmyth_unseal_file
 //--------------------------------------------------------------------------------
 void test_tpm2_kmyth_unseal_file(void){
-  CU_ASSERT(1);
+  char fake_input_path[] = "fake input path";
+  uint8_t* output = NULL;
+  size_t output_len = 0;
+  uint8_t* auth_bytes = NULL;
+  size_t auth_bytes_len = 0;
+  uint8_t* owner_auth_bytes = NULL;
+  size_t oa_bytes_len = 0;
+
+  // Check a NULL input path fails and doesn't change output.
+  CU_ASSERT(tpm2_kmyth_unseal_file(NULL, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len) == 1);
+  CU_ASSERT(output == NULL);
+  CU_ASSERT(output_len == 0);
+
+  // Check a fake input path fails and doesn't change output.
+  CU_ASSERT(tpm2_kmyth_unseal_file(fake_input_path, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len) == 1);
+  CU_ASSERT(output == NULL);
+  CU_ASSERT(output_len == 0);
 }
 
 //--------------------------------------------------------------------------------
