@@ -222,33 +222,6 @@ void test_tpm2_kmyth_seal_data(void){
   // Failure with NULL length 0 data
   CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, NULL, 0, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
 
-  // Check that an invalid handle fails.
-  // I'm reasonably confident that 0 is never a valid handle.
-  TPM2_HANDLE bad_handle = 0;
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, bad_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-
-  // Check that if either authVal is uninitialized it fails.
-  TPM2B_AUTH bad_authVal = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, bad_authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, bad_authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-
-  // Check that if either PCR list isn't populated then seal fails
-  TPML_PCR_SELECTION bad_pcrList = {.count = 0};
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, bad_pcrList, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, bad_pcrList, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-
-  // Check that if the authPolicy isn't populated
-  TPM2B_DIGEST bad_authPolicy = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, bad_authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
-
-  // Check for failure if the public area isn't populated
-  TPM2B_PUBLIC bad_public = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &bad_public, &ski.wk_priv) == 1);
-
-  // Check for failure if the private area isn't populated
-  TPM2B_PRIVATE bad_private = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &bad_private) == 1);
-  
   free_tpm2_resources(&sapi_ctx);
 }
 
@@ -295,26 +268,6 @@ void test_tpm2_kmyth_unseal_data(void){
   CU_ASSERT(tpm2_kmyth_unseal_data(NULL, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
   CU_ASSERT(output_data_len == 0);
 
-  // Check that an invalid handle fails.
-  // I'm reasonably confident that 0 is never a valid handle.
-  TPM2_HANDLE bad_handle = 0;
-  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, bad_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
-  CU_ASSERT(output_data_len == 0);
-
-  // Check that if PCR list isn't populated correctly
-  TPML_PCR_SELECTION bad_pcrList = {.count = 0};
-  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, authVal, bad_pcrList, authPolicy, &output_data, &output_data_len) == 1);
-  CU_ASSERT(output_data_len == 0);
-
-  // Check for failure if the public area isn't populated
-  TPM2B_PUBLIC bad_public = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, bad_public, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
-  CU_ASSERT(output_data_len == 0);
-
-  // Check for failure if the private area isn't populated
-  TPM2B_PRIVATE bad_private = {.size = 0};
-  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, bad_private, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
-  CU_ASSERT(output_data_len == 0);
   
   free_tpm2_resources(&sapi_ctx);
 
