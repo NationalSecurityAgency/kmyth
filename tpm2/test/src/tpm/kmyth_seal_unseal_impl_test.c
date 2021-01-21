@@ -84,8 +84,7 @@ void test_tpm2_kmyth_seal(void){
   CU_ASSERT(tpm2_kmyth_seal(input, input_len, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, "fake_cipher") == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
-  
-    
+     
   // Check that NULL input with non-zero claimed length fails and output is
   // not initialized or populated
   CU_ASSERT(tpm2_kmyth_seal(NULL, 5, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 1);
@@ -97,7 +96,21 @@ void test_tpm2_kmyth_seal(void){
   CU_ASSERT(tpm2_kmyth_seal(input, 0, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
+
+  // Check that if all inputs are valid seal produces correct (or at least) unsealable output of the right
+  // length.
+  // Note that we can't hard-code the exact output because we can't control what wrapping key is used.
+  CU_ASSERT(tpm2_kmyth_seal(input, input_len, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 0);
+
+  size_t expected_output_len = 1569;
+  CU_ASSERT(output_len == expected_output_len);
     
+  uint8_t* plaintext = NULL;
+  size_t plaintext_len = 0;
+  CU_ASSERT(tpm2_kmyth_unseal(output, output_len, &plaintext, &plaintext_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len) == 0);
+  CU_ASSERT(plaintext_len == input_len);
+  CU_ASSERT(memcmp(plaintext, input, input_len) == 0);
+  
 }
 
 //--------------------------------------------------------------------------------
@@ -129,7 +142,9 @@ void test_tpm2_kmyth_unseal(void){
   CU_ASSERT(tpm2_kmyth_unseal(NULL, 5, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
- 
+
+  // Note we're not testing the seal/unseal combination here because it's tested with the
+  // tests for tpm2_kmyth_seal.
 }
 
 //--------------------------------------------------------------------------------
