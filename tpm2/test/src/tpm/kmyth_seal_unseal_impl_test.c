@@ -259,5 +259,82 @@ void test_tpm2_kmyth_seal_data(void){
 // test_tpm2_kmyth_unseal_data
 //--------------------------------------------------------------------------------
 void test_tpm2_kmyth_unseal_data(void){
-  CU_ASSERT(1);
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  init_tpm2_connection(&sapi_ctx);
+
+  Ski ski = get_default_ski();
+  TPM2B_AUTH authVal = {.size = 0};
+  create_authVal(NULL, 0, &authVal);
+
+  init_pcr_selection(sapi_ctx, NULL, 0, &ski.pcr_list);
+
+  TPM2B_DIGEST authPolicy = {.size = 0};
+  create_policy_digest(sapi_ctx, ski.pcr_list, &authPolicy);
+
+  TPM2_HANDLE srk_handle = 0;
+  get_srk_handle(sapi_ctx, &srk_handle, &authVal);
+
+  TPM2_HANDLE sk_handle = 0;
+  create_and_load_sk(sapi_ctx, srk_handle, authVal, authVal, ski.pcr_list, authPolicy, &sk_handle, &ski.sk_priv, &ski.sk_pub);
+
+  uint8_t input_data[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+  size_t input_data_len = 8;
+
+  tpm2_kmyth_seal_data(sapi_ctx, input_data, input_data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv);
+
+  uint8_t* output_data = NULL;
+  size_t output_data_len = 0;
+
+  // Check that unseal works as it should.
+  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 0);
+  CU_ASSERT(output_data_len == 8);
+  CU_ASSERT(memcmp(output_data, input_data, 8) == 0);
+
+  free(output_data);
+  output_data = NULL;
+  output_data_len = 0;
+  
+  // Check failure with NULL context.
+  CU_ASSERT(tpm2_kmyth_unseal_data(NULL, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
+  CU_ASSERT(output_data_len == 0);
+
+  // Check that an invalid handle fails.
+  // I'm reasonably confident that 0 is never a valid handle.
+  TPM2_HANDLE bad_handle = 0;
+  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, bad_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
+  CU_ASSERT(output_data_len == 0);
+
+  // Need to think through the correct behaviour here.
+  /* // Check that if authVal is uninitialized it fails. */
+  /* TPM2B_AUTH bad_authVal; */
+  /* CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, bad_authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1); */
+  /* CU_ASSERT(output_data_len == 0); */
+  
+
+  // Check that if PCR list is uninitialized it fails.
+  // Writing this I discovered that kmyth behaves very badly if the TPML_PCR_SELECTION
+  // structures are uninitialized, badly enough that it crashes the test runner. So
+  // for the moment these are commented out until we can fix that.
+  TPML_PCR_SELECTION bad_pcrList;
+  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, authVal, bad_pcrList, authPolicy, &output_data, &output_data_len) == 1);
+  CU_ASSERT(output_data_len == 0);
+
+  // Need to think through the correct behaviour here.
+  /* // Check that if the authPolicy is uninitialized it fails. */
+  /* TPM2B_DIGEST bad_authPolicy; */
+  /* CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, bad_authPolicy, &output_data, &output_data_len) == 1); */
+  /* CU_ASSERT(output_data_len == 0); */
+
+  // Check for failure if the public area is unitialized
+  TPM2B_PUBLIC bad_public;
+  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, bad_public, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
+  CU_ASSERT(output_data_len == 0);
+
+  // Check for failure if the private area is unitialized
+  TPM2B_PRIVATE bad_private;
+  CU_ASSERT(tpm2_kmyth_unseal_data(sapi_ctx, sk_handle, ski.wk_pub, bad_private, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
+  CU_ASSERT(output_data_len == 0);
+  
+  free_tpm2_resources(&sapi_ctx);
+
 }
