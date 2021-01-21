@@ -110,7 +110,9 @@ void test_tpm2_kmyth_seal(void){
   CU_ASSERT(tpm2_kmyth_unseal(output, output_len, &plaintext, &plaintext_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len) == 0);
   CU_ASSERT(plaintext_len == input_len);
   CU_ASSERT(memcmp(plaintext, input, input_len) == 0);
-  
+
+  free(output);
+  free(plaintext);
 }
 
 //--------------------------------------------------------------------------------
@@ -161,7 +163,6 @@ void test_tpm2_kmyth_seal_file(void){
   int* pcrs = NULL;
   size_t pcrs_len = 0;
 
-  
   // Check a NULL input path fails and doesn't change output.
   CU_ASSERT(tpm2_kmyth_seal_file(NULL, &output, &output_len, auth_bytes, auth_bytes_len, owner_auth_bytes, oa_bytes_len, pcrs, pcrs_len, NULL) == 1);
   CU_ASSERT(output == NULL);
@@ -282,7 +283,5 @@ void test_tpm2_kmyth_unseal_data(void){
   CU_ASSERT(tpm2_kmyth_unseal_data(NULL, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list, authPolicy, &output_data, &output_data_len) == 1);
   CU_ASSERT(output_data_len == 0);
 
-  
   free_tpm2_resources(&sapi_ctx);
-
 }
