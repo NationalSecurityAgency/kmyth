@@ -10,6 +10,10 @@
 #include <CUnit/CUnit.h>
 
 #include "kmyth.h"
+#include "pcrs.h"
+#include "formatting_tools.h"
+#include "object_tools.h"
+#include "storage_key_tools.h"
 #include "tpm2_interface.h"
 #include "kmyth_seal_unseal_impl.h"
 #include "kmyth_seal_unseal_impl_test.h"
@@ -102,15 +106,14 @@ void test_tpm2_kmyth_seal(void){
 //--------------------------------------------------------------------------------
 void test_tpm2_kmyth_unseal(void){
   uint8_t input[8] = {0};
-  size_t input_len = 0;
-
+  
   uint8_t* output = NULL;
   size_t output_len = 0;
 
   uint8_t* auth_bytes = NULL;
   size_t auth_bytes_len = 0;
 
-  uint8_t* owner_auth_bytes;
+  uint8_t* owner_auth_bytes = NULL;
   size_t oa_bytes_len = 0;
 
   // Check a NULL input with 0 length fails and output is not changed
@@ -183,7 +186,73 @@ void test_tpm2_kmyth_unseal_file(void){
 // test_tpm2_kmyth_seal_data
 //--------------------------------------------------------------------------------
 void test_tpm2_kmyth_seal_data(void){
-  CU_ASSERT(1);
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  init_tpm2_connection(&sapi_ctx);
+
+  Ski ski = get_default_ski();
+  TPM2B_AUTH authVal = {.size = 0};
+  create_authVal(NULL, 0, &authVal);
+
+  init_pcr_selection(sapi_ctx, NULL, 0, &ski.pcr_list);
+
+  TPM2B_DIGEST authPolicy = {.size = 0};
+  create_policy_digest(sapi_ctx, ski.pcr_list, &authPolicy);
+
+  TPM2_HANDLE srk_handle = 0;
+  get_srk_handle(sapi_ctx, &srk_handle, &authVal);
+
+  TPM2_HANDLE sk_handle = 0;
+  create_and_load_sk(sapi_ctx, srk_handle, authVal, authVal, ski.pcr_list, authPolicy, &sk_handle, &ski.sk_priv, &ski.sk_pub);
+
+  uint8_t data[8] = {0};
+  size_t data_len = 8;
+
+  // Check that seal with valid inputs works.
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 0);
+
+  // Check failure with NULL context.
+  CU_ASSERT(tpm2_kmyth_seal_data(NULL, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Failure with NULL data.
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, NULL, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Failure with length 0 data
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, 0, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Failure with NULL length 0 data
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, NULL, 0, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Check that an invalid handle fails.
+  // I'm reasonably confident that 0 is never a valid handle.
+  TPM2_HANDLE bad_handle = 0;
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, bad_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Check that if either authVal is uninitialized it fails.
+  TPM2B_AUTH bad_authVal;
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, bad_authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, bad_authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Check that if either PCR list is unitialized it fails.
+  // Writing this I discovered that kmyth behaves very badly if the TPML_PCR_SELECTION
+  // structures are uninitialized, badly enough that it crashes the test runner. So
+  // for the moment these are commented out until we can fix that.
+  /* TPML_PCR_SELECTION bad_pcrList; */
+  /* CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, bad_pcrList, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1); */
+  /* CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, bad_pcrList, authPolicy, &ski.wk_pub, &ski.wk_priv) == 1) */;
+
+  // Check that if the authPolicy is unitializted it fails.
+  TPM2B_DIGEST bad_authPolicy;
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, bad_authPolicy, &ski.wk_pub, &ski.wk_priv) == 1);
+
+  // Check for failure if the public area is unitialized
+  TPM2B_PUBLIC bad_public;
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &bad_public, &ski.wk_priv) == 1);
+
+  // Check for failure if the private area is unitialized
+  TPM2B_PRIVATE bad_private;
+  CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list, authVal, ski.pcr_list, authPolicy, &ski.wk_pub, &bad_private) == 1);
+  
+  free_tpm2_resources(&sapi_ctx);
 }
 
 //--------------------------------------------------------------------------------
