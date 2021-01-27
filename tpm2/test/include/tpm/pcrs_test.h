@@ -5,10 +5,8 @@
  * implemented in tpm2/src/tpm/pcrs.c
  */
 
-
 #ifndef PCRS_TEST_H
 #define PCRS_TEST_H
-
 
 /**
  * This function adds all of the tests contained in pcrs_test.c to a
@@ -21,10 +19,9 @@
  */
 int pcrs_add_tests(CU_pSuite suite);
 
-
 //****************************************************************************
-//	Tests for functions in pcrs.h, format for test names is:
-//  	test_funtion_name()
+//  Tests for functions in pcrs.h, format for test names is:
+//    test_funtion_name()
 //****************************************************************************
 void test_init_pcr_selection(void);
 void test_get_pcr_count(void);

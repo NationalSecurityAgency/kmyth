@@ -5,10 +5,8 @@
  * implemented in tpm2/src/tpm/storage_key_tools.c
  */
 
-
 #ifndef STORAGE_KEY_TOOLS_TEST_H
 #define STORAGE_KEY_TOOLS_TEST_H
-
 
 /**
  * This function adds all of the tests contained in storage_key_tools_test.c to a
@@ -21,10 +19,9 @@
  */
 int storage_key_tools_add_tests(CU_pSuite suite);
 
-
 //****************************************************************************
-//	Tests for functions in storage_key_tools.h, format for test names is:
-//  	test_funtion_name()
+//  Tests for functions in storage_key_tools.h, format for test names is:
+//    test_funtion_name()
 //****************************************************************************
 void test_get_srk_handle(void);
 void test_get_existing_srk_handle(void);

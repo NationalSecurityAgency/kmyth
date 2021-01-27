@@ -51,7 +51,7 @@ int verifyOutputFilePath(char *path);
  * @return 0 if success, 1 if error
  */
 int read_bytes_from_file(char *input_path, uint8_t ** data,
-                         size_t *data_length);
+                         size_t * data_length);
 
 /**
  * @brief Verifies output_path is valid, then writes bytes to file
