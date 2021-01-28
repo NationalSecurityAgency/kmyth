@@ -5,10 +5,8 @@
  * implemented in tpm2/src/tpm/object_tools.c
  */
 
-
 #ifndef OBJECT_TOOLS_TEST_H
 #define OBJECT_TOOLS_TEST_H
-
 
 /**
  * This function adds all of the tests contained in object_tools_test.c to a
@@ -21,7 +19,6 @@
  * @return     0 on success, 1 on failure
  */
 int object_tools_add_tests(CU_pSuite suite);
-
 
 //****************************************************************************
 // Tests

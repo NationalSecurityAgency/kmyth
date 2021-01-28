@@ -109,7 +109,7 @@ int tls_cleanup(void);
  */
 int get_key_from_tls_server(BIO * bio,
                             char *message, size_t message_length,
-                            unsigned char **key, size_t *key_size);
+                            unsigned char **key, size_t * key_size);
 
 /**
  * <pre>
@@ -132,5 +132,5 @@ int get_key_from_tls_server(BIO * bio,
  */
 int get_key_from_kmip_server(BIO * bio,
                              char *message, size_t message_length,
-                             unsigned char **key, size_t *key_size);
+                             unsigned char **key, size_t * key_size);
 #endif

@@ -39,7 +39,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
                                 size_t key_len,
                                 unsigned char *inData,
                                 size_t inData_len, unsigned char **outData,
-                                size_t *outData_len);
+                                size_t * outData_len);
 
 /**
  * @brief This function uses OpenSSL to perform AES key unwrap with padding
@@ -68,6 +68,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
                                 size_t key_len,
                                 unsigned char *inData,
                                 size_t inData_len, unsigned char **outData,
-                                size_t *outData_len);
+                                size_t * outData_len);
 
 #endif

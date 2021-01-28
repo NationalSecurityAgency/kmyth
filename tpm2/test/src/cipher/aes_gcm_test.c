@@ -17,38 +17,38 @@
 //----------------------------------------------------------------------------
 int aes_gcm_add_tests(CU_pSuite suite)
 {
-  if(NULL == CU_add_test(suite, "Test AES/GCM encryption/decryption",
-                         test_gcm_encrypt_decrypt))
+  if (NULL == CU_add_test(suite, "Test AES/GCM encryption/decryption",
+                          test_gcm_encrypt_decrypt))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM key modification",
-                         test_gcm_key_modification))
+  if (NULL == CU_add_test(suite, "Test AES/GCM key modification",
+                          test_gcm_key_modification))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM tag modification",
-                         test_gcm_tag_modification))
+  if (NULL == CU_add_test(suite, "Test AES/GCM tag modification",
+                          test_gcm_tag_modification))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM IV modification",
-                         test_gcm_iv_modification))
+  if (NULL == CU_add_test(suite, "Test AES/GCM IV modification",
+                          test_gcm_iv_modification))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "TEST AES/GCM cipher modification",
-                         test_gcm_cipher_modification))
+  if (NULL == CU_add_test(suite, "TEST AES/GCM cipher modification",
+                          test_gcm_cipher_modification))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM parameter limits",
-                         test_gcm_parameter_limits))
+  if (NULL == CU_add_test(suite, "Test AES/GCM parameter limits",
+                          test_gcm_parameter_limits))
   {
     return 1;
   }
@@ -61,24 +61,24 @@ int aes_gcm_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 void test_gcm_encrypt_decrypt(void)
 {
-  unsigned char* key        = NULL;
-  unsigned char* plaintext  = NULL;
-  unsigned char* ciphertext = NULL;
-  unsigned char* decrypt    = NULL;
+  unsigned char *key = NULL;
+  unsigned char *plaintext = NULL;
+  unsigned char *ciphertext = NULL;
+  unsigned char *decrypt = NULL;
 
   int key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
-  
+
   key = calloc(key_len, 1);
   plaintext = calloc(plaintext_len, 1);
-  
+
   CU_ASSERT(aes_gcm_encrypt(key, key_len, plaintext,
-            plaintext_len, &ciphertext, &ciphertext_len) == 0);
+                            plaintext_len, &ciphertext, &ciphertext_len) == 0);
   CU_ASSERT(ciphertext_len == plaintext_len + GCM_IV_LEN + GCM_TAG_LEN);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext,
-            ciphertext_len, &decrypt, &decrypt_len) == 0);
+                            ciphertext_len, &decrypt, &decrypt_len) == 0);
   CU_ASSERT(decrypt_len == plaintext_len);
   CU_ASSERT(memcmp(plaintext, decrypt, plaintext_len) == 0);
 
@@ -92,10 +92,10 @@ void test_gcm_encrypt_decrypt(void)
 
 void test_gcm_key_modification(void)
 {
-  unsigned char* key        = NULL;
-  unsigned char* plaintext  = NULL;
-  unsigned char* ciphertext = NULL;
-  unsigned char* decrypt    = NULL;
+  unsigned char *key = NULL;
+  unsigned char *plaintext = NULL;
+  unsigned char *ciphertext = NULL;
+  unsigned char *decrypt = NULL;
 
   int key_len = 16;
   size_t plaintext_len = 16;
@@ -126,19 +126,19 @@ void test_gcm_key_modification(void)
   free(ciphertext);
   free(key);
 }
-	    
+
 void test_gcm_tag_modification(void)
 {
-  unsigned char* key        = NULL;
-  unsigned char* plaintext  = NULL;
-  unsigned char* ciphertext = NULL;
-  unsigned char* decrypt    = NULL;
+  unsigned char *key = NULL;
+  unsigned char *plaintext = NULL;
+  unsigned char *ciphertext = NULL;
+  unsigned char *decrypt = NULL;
 
   int key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
-  
+
   key = calloc(key_len, 1);
   plaintext = calloc(plaintext_len, 1);
 
@@ -153,18 +153,18 @@ void test_gcm_tag_modification(void)
   decrypt_len = 0;
 
   // truncate tag by 2 bytes (pass wrong length) and verify decryption failure
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len-2,
+  CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len - 2,
                             &decrypt, &decrypt_len) == 1);
   decrypt_len = 0;
   decrypt = NULL;
-  
+
   // alter last byte of tag (pass correct length) and verify decryption failure
-  ciphertext[ciphertext_len-1] ^= 0x1;
+  ciphertext[ciphertext_len - 1] ^= 0x1;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
                             &decrypt, &decrypt_len) == 1);
   decrypt_len = 0;
   decrypt = NULL;
- 
+
   free(key);
   free(plaintext);
   free(ciphertext);
@@ -172,16 +172,16 @@ void test_gcm_tag_modification(void)
 
 void test_gcm_iv_modification(void)
 {
-  unsigned char* key        = NULL;
-  unsigned char* plaintext  = NULL;
-  unsigned char* ciphertext = NULL;
-  unsigned char* decrypt    = NULL;
+  unsigned char *key = NULL;
+  unsigned char *plaintext = NULL;
+  unsigned char *ciphertext = NULL;
+  unsigned char *decrypt = NULL;
 
   int key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
-  
+
   key = calloc(key_len, 1);
   plaintext = calloc(plaintext_len, 1);
 
@@ -196,10 +196,12 @@ void test_gcm_iv_modification(void)
   decrypt_len = 0;
 
   // truncate the IV and verify decryption failure
-  unsigned char* truncated_iv_cipher = ciphertext + 2;
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, truncated_iv_cipher, ciphertext_len-2,
-                            &decrypt, &decrypt_len) == 1);
- 
+  unsigned char *truncated_iv_cipher = ciphertext + 2;
+
+  CU_ASSERT(aes_gcm_decrypt
+            (key, key_len, truncated_iv_cipher, ciphertext_len - 2, &decrypt,
+             &decrypt_len) == 1);
+
   decrypt = NULL;
   decrypt_len = 0;
 
@@ -215,16 +217,16 @@ void test_gcm_iv_modification(void)
 
 void test_gcm_cipher_modification(void)
 {
-  unsigned char* key        = NULL;
-  unsigned char* plaintext  = NULL;
-  unsigned char* ciphertext = NULL;
-  unsigned char* decrypt    = NULL;
+  unsigned char *key = NULL;
+  unsigned char *plaintext = NULL;
+  unsigned char *ciphertext = NULL;
+  unsigned char *decrypt = NULL;
 
   int key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
-  
+
   key = calloc(key_len, 1);
   plaintext = calloc(plaintext_len, 1);
 
@@ -241,8 +243,8 @@ void test_gcm_cipher_modification(void)
   // modify first byte of ciphertext and verify decryption failure
   ciphertext[GCM_IV_LEN] ^= 0x1;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, ciphertext, ciphertext_len,
-            &decrypt, &decrypt_len) == 1);
-  
+                            &decrypt, &decrypt_len) == 1);
+
   free(key);
   free(plaintext);
   free(ciphertext);
@@ -250,20 +252,21 @@ void test_gcm_cipher_modification(void)
 
 void test_gcm_parameter_limits(void)
 {
-  unsigned char* key     = NULL;
-  unsigned char* inData  = NULL;
-  unsigned char* outData = NULL;
-  
+  unsigned char *key = NULL;
+  unsigned char *inData = NULL;
+  unsigned char *outData = NULL;
+
   // check that null keys produce an error
-  int    key_len     = 16;
-  size_t inData_len  = 16;
+  int key_len = 16;
+  size_t inData_len = 16;
   size_t outData_len = 0;
+
   inData = malloc(inData_len);
   CU_ASSERT(inData != NULL);
   CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
-            &outData, &outData_len) == 1);
+                            &outData, &outData_len) == 1);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
-            &outData, &outData_len) == 1);
+                            &outData, &outData_len) == 1);
 
   // check that zero length keys produce an error
   key = malloc(key_len);
@@ -282,7 +285,7 @@ void test_gcm_parameter_limits(void)
                             &outData, &outData_len) == 1);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
-  
+
   // check that an input data length being too short produces an error
   inData_len = 32;
   inData = malloc(inData_len);
@@ -300,7 +303,7 @@ void test_gcm_parameter_limits(void)
   inData_len += 1;
   key_len = 12;
   CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
-            &outData, &outData_len) == 1);
+                            &outData, &outData_len) == 1);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
 }

@@ -4,7 +4,6 @@
 // Tests for TPM 2.0 pcr utility functions in tpm2/src/tpm/pcrs.c
 //############################################################################
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
@@ -24,8 +23,7 @@ int pcrs_add_tests(CU_pSuite suite)
   {
     return 1;
   }
-  if (NULL == CU_add_test(suite, "get_pcr_count() Tests",
-                          test_get_pcr_count))
+  if (NULL == CU_add_test(suite, "get_pcr_count() Tests", test_get_pcr_count))
   {
     return 1;
   }
@@ -38,44 +36,46 @@ int pcrs_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 void test_init_pcr_selection(void)
 {
-	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-	init_tpm2_connection(&sapi_ctx);
-	bool emulator = true;
-	get_tpm2_impl_type(sapi_ctx, &emulator);
-	if(!emulator)
-	{
-		return;
-	}
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-	int pcrs[2] = {};
-	TPML_PCR_SELECTION pcrs_struct = {.count = 0,};
+  init_tpm2_connection(&sapi_ctx);
+  bool emulator = true;
 
-	//No PCRs selected
-	CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
+  get_tpm2_impl_type(sapi_ctx, &emulator);
+  if (!emulator)
+  {
+    return;
+  }
 
-	//One PCR selected
-	pcrs[0] = 5;
-	CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 0);
+  int pcrs[2] = { };
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
 
-	//Multiple PCRS selected
-	pcrs[1] = 3;
-	CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 0);
+  //No PCRs selected
+  CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
 
-	//Invalid PCR selected
-	pcrs[0] = -3;
-	CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 1);
+  //One PCR selected
+  pcrs[0] = 5;
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 0);
 
-	//Valid AND invalid PCRs
-	pcrs[0] = 2;
-	pcrs[1] = -4;
-	CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 1);
+  //Multiple PCRS selected
+  pcrs[1] = 3;
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 0);
 
-	//Check for length 0 with non-NULL pcrs array
-	pcrs[1] = 3; //make all entries valid
-	CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 0, &pcrs_struct) == 1);
+  //Invalid PCR selected
+  pcrs[0] = -3;
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 1);
 
-	//NULL TPM context
-	CU_ASSERT(init_pcr_selection(NULL, pcrs, 2, &pcrs_struct) != 0);
+  //Valid AND invalid PCRs
+  pcrs[0] = 2;
+  pcrs[1] = -4;
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 1);
+
+  //Check for length 0 with non-NULL pcrs array
+  pcrs[1] = 3;                  //make all entries valid
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 0, &pcrs_struct) == 1);
+
+  //NULL TPM context
+  CU_ASSERT(init_pcr_selection(NULL, pcrs, 2, &pcrs_struct) != 0);
 }
 
 //----------------------------------------------------------------------------
@@ -83,20 +83,23 @@ void test_init_pcr_selection(void)
 //----------------------------------------------------------------------------
 void test_get_pcr_count(void)
 {
-	TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-	init_tpm2_connection(&sapi_ctx);
-	bool emulator = true;
-	get_tpm2_impl_type(sapi_ctx, &emulator);
-	if(!emulator)
-	{
-		return;
-	}
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-	int count = 0;
-	//Valid get count
-	CU_ASSERT(get_pcr_count(sapi_ctx, &count) == 0);
-	CU_ASSERT(count > 0); //counts may vary per platform
+  init_tpm2_connection(&sapi_ctx);
+  bool emulator = true;
 
-	//Test NULL context
-	CU_ASSERT(get_pcr_count(NULL, &count) == 1);
+  get_tpm2_impl_type(sapi_ctx, &emulator);
+  if (!emulator)
+  {
+    return;
+  }
+
+  int count = 0;
+
+  //Valid get count
+  CU_ASSERT(get_pcr_count(sapi_ctx, &count) == 0);
+  CU_ASSERT(count > 0);         //counts may vary per platform
+
+  //Test NULL context
+  CU_ASSERT(get_pcr_count(NULL, &count) == 1);
 }

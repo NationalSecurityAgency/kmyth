@@ -34,9 +34,8 @@
  * @return 0 if success, 1 if error
  */
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
-                       int* pcrs,
-		       size_t pcrs_len,
-                       TPML_PCR_SELECTION * pcrs_struct);
+                       int *pcrs,
+                       size_t pcrs_len, TPML_PCR_SELECTION * pcrs_struct);
 
 /**
  * @brief Obtains the total count of available PCRs by reading the
