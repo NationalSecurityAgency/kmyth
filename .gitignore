@@ -6,3 +6,5 @@
 *_u.h
 *_t.c
 *_t.h
+
+tpm2/test/data/*
