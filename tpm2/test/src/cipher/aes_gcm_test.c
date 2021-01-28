@@ -130,7 +130,6 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         {
           key_str[--key_str_len] = '\0';  // strip any trailing '\n' or 'r'
         }
-        Key_len = key_str_len / 2;  // 2 hex chars map to a byte of key
         convert_HexString_to_ByteArray((char **) &Key,
                                        key_str,
                                        key_str_len);
