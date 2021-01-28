@@ -329,12 +329,6 @@ void test_aes_gcm_decrypt_vectors(void)
   // array of file pointers for test vector files
   FILE * test_vector_fd[MAX_VECTOR_SETS_IN_COMPILATION] = {NULL};
 
-  // counter to track number of test vectors applied from a file
-  int test_vector_count = 0;
-
-  // flag used to signal end of processing for a given test vector file
-  bool done_with_test_vector_file = false;
-
   // check that number of test vector files complies with specified maximum
   if (gcm_decrypt_vectors.count > MAX_VECTOR_SETS_IN_COMPILATION)
   {
@@ -363,6 +357,12 @@ void test_aes_gcm_decrypt_vectors(void)
     test_vector_fd[i] = fopen(gcm_decrypt_vectors.sets[i].path, "r");
     if (test_vector_fd[i] != NULL)
     {
+      // counter to track number of test vectors applied from a file
+      int test_vector_count = 0;
+
+      // flag used to signal end of processing for a given test vector file
+      bool done_with_test_vector_file = false;
+
       while ((!done_with_test_vector_file) &&
              (test_vector_count <= MAX_GCM_TEST_VECTOR_COUNT))
       {
