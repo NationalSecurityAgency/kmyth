@@ -80,9 +80,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error. 
  */
-int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx,
-                 TPM2_HANDLE handle,
-                 bool *isSRK);
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool * isSRK);
 
 /**
  * @brief Re-derives SRK with configured public key and hash algorithms
@@ -100,8 +98,7 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx,
  * @return 0 if success, 1 if error. 
  */
 int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    TPM2_HANDLE srkHandle,
-                                    TPM2B_AUTH sps_auth);
+                                    TPM2_HANDLE srkHandle, TPM2B_AUTH sps_auth);
 
 /**
  * @brief Creates and loads, into the TPM, a new storage key (SK) under the
@@ -149,7 +146,6 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                        TPML_PCR_SELECTION sk_pcrList,
                        TPM2B_DIGEST sk_authPolicy,
                        TPM2_HANDLE * sk_handle,
-                       TPM2B_PRIVATE * sk_private,
-                       TPM2B_PUBLIC * sk_public);
+                       TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public);
 
 #endif /* STORAGE_KEY_TOOLS_H */

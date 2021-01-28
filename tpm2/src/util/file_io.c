@@ -72,7 +72,7 @@ int verifyOutputFilePath(char *path)
   // check that specified output path directory exists
   char *path_copy = "\0";
 
-  if (asprintf(&path_copy, path) < 0)
+  if (asprintf(&path_copy, "%s", path) < 0)
   {
     kmyth_log(LOG_ERR, "unable to copy output file path ... exiting");
     return 1;

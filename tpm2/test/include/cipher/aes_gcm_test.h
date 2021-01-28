@@ -154,4 +154,3 @@ void test_gcm_cipher_modification(void);
 void test_gcm_parameter_limits(void);
 
 #endif
-

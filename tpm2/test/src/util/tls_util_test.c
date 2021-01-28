@@ -4,7 +4,6 @@
 // Tests for TLS utility functions in tpm2/src/util/tls_util.c
 //############################################################################
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
@@ -12,7 +11,6 @@
 
 #include "tls_util_test.h"
 #include "tls_util.h"
-
 
 //----------------------------------------------------------------------------
 // tls_util_add_tests()
@@ -52,7 +50,7 @@ int tls_util_add_tests(CU_pSuite suite)
 void test_create_tls_connection(void)
 {
   char *server_ip = "127.0.0.1";
-  unsigned char *client_private_key = (unsigned char *)"1234";
+  unsigned char *client_private_key = (unsigned char *) "1234";
   size_t client_private_key_len = 5;
   char *client_cert_path = "/path/to/client/cert";
   char *ca_cert_path = "/path/to/ca/cert";
@@ -104,29 +102,29 @@ void test_create_tls_connection(void)
 //----------------------------------------------------------------------------
 void test_tls_set_context(void)
 {
-  char* non_null_ptr = malloc(1);
+  char *non_null_ptr = malloc(1);
   SSL_CTX *ctx = NULL;
-  
+
   // A null client_private_key should produce an error
-  CU_ASSERT(tls_set_context((unsigned char*) NULL, 1, non_null_ptr,
+  CU_ASSERT(tls_set_context((unsigned char *) NULL, 1, non_null_ptr,
                             non_null_ptr, &ctx) == 1);
-  
+
   // A client_private_key of length zero should produce an error
-  CU_ASSERT(tls_set_context((unsigned char*) non_null_ptr, 0, non_null_ptr,
+  CU_ASSERT(tls_set_context((unsigned char *) non_null_ptr, 0, non_null_ptr,
                             non_null_ptr, &ctx) == 1);
 
   // A null client certificate path should produce an error
-  CU_ASSERT(tls_set_context((unsigned char*) non_null_ptr, 1, NULL,
+  CU_ASSERT(tls_set_context((unsigned char *) non_null_ptr, 1, NULL,
                             non_null_ptr, &ctx) == 1);
 
   // A null server certificate path should produce an error
-  CU_ASSERT(tls_set_context((unsigned char*) non_null_ptr, 1, non_null_ptr,
+  CU_ASSERT(tls_set_context((unsigned char *) non_null_ptr, 1, non_null_ptr,
                             NULL, &ctx) == 1);
 
   // A client private key that is too large should produce an error
-  CU_ASSERT(tls_set_context((unsigned char*) non_null_ptr,
-                           ((size_t) INT_MAX) + 1, non_null_ptr,
-                           non_null_ptr, &ctx) == 1);
+  CU_ASSERT(tls_set_context((unsigned char *) non_null_ptr,
+                            ((size_t) INT_MAX) + 1, non_null_ptr,
+                            non_null_ptr, &ctx) == 1);
 
   // TODO: tls_set_context() tests beyond invalid inputs;
 
@@ -146,8 +144,7 @@ void test_get_key_from_tls_server(void)
 
   // A null BIO should produce an error
   CU_ASSERT(get_key_from_tls_server((BIO *) NULL,
-                                    message, message_length,
-                                    &key, &key_size));
+                                    message, message_length, &key, &key_size));
 
   // Cleanup
   BIO_free_all(bio);
@@ -166,8 +163,7 @@ void test_get_key_from_kmip_server(void)
 
   // A null BIO should produce an error
   CU_ASSERT(get_key_from_kmip_server((BIO *) NULL,
-                                     message, message_length,
-                                     &key, &key_size));
+                                     message, message_length, &key, &key_size));
 
   // A message that is too big should produce an error
   CU_ASSERT(get_key_from_kmip_server(bio,
@@ -176,8 +172,7 @@ void test_get_key_from_kmip_server(void)
 
   // A message that is empty should yield no return key.
   CU_ASSERT(get_key_from_kmip_server(bio,
-                                     (char *) NULL, 0,
-                                     &key, &key_size) == 0);
+                                     (char *) NULL, 0, &key, &key_size) == 0);
   CU_ASSERT(key == NULL);
   CU_ASSERT(key_size == 0);
 
