@@ -168,7 +168,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
           ct_str[--ct_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
         convert_HexString_to_ByteArray((char **) &CT, ct_str, ct_str_len);
-        CT_len = ct_str_len / 2;  // 2 hex chars map to a byte of key
+        CT_len = ct_str_len / 2;  // 2 hex chars map to a byte of CT
         step = 4;
       }
 
@@ -187,7 +187,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         convert_HexString_to_ByteArray((char **) &AAD,
                                        aad_str,
                                        aad_str_len);
-        AAD_len = aad_str_len / 2;  // 2 hex chars map to a byte of key
+        AAD_len = aad_str_len / 2;  // 2 hex chars map to a byte of AAD
         step = 5;
       }
 
@@ -206,7 +206,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         convert_HexString_to_ByteArray((char **) &Tag,
                                        tag_str,
                                        tag_str_len);
-        Tag_len = tag_str_len / 2;  // 2 hex chars map to a byte of key
+        Tag_len = tag_str_len / 2;  // 2 hex chars map to a byte of Tag
         step = 6;
       }
 
@@ -225,7 +225,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         convert_HexString_to_ByteArray((char **) &PT,
                                                  pt_str,
                                                  pt_str_len);
-        PT_len = pt_str_len / 2;    // 2 hex chars map to a byte of key
+        PT_len = pt_str_len / 2;    // 2 hex chars map to a byte of PT
         pass_result = true;
 
         // check applicability of parsed vector to kmyth implementation
