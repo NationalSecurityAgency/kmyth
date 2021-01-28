@@ -149,23 +149,23 @@ typedef struct Ski_s
  */
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t *pcr_selection_struct_data_size,
+                       size_t * pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t *storage_key_public_data_size,
+                       size_t * storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t *storage_key_private_data_size,
+                       size_t * storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
                        TPM2B_PUBLIC * sealed_key_public_blob,
                        uint8_t ** sealed_key_public_data,
-                       size_t *sealed_key_public_data_size,
+                       size_t * sealed_key_public_data_size,
                        size_t sealed_key_public_data_offset,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
-                       size_t *sealed_key_private_data_size,
+                       size_t * sealed_key_private_data_size,
                        size_t sealed_key_private_data_offset);
 
 /**
@@ -365,8 +365,7 @@ int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
  */
 int pack_public(TPM2B_PUBLIC * public_blob_in,
                 uint8_t * packed_data_out,
-                size_t packed_data_out_size,
-                size_t packed_data_out_offset);
+                size_t packed_data_out_size, size_t packed_data_out_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a TPM 2.0
@@ -431,8 +430,7 @@ int unpack_public(TPM2B_PUBLIC * public_blob_out,
  */
 int pack_private(TPM2B_PRIVATE * private_blob_in,
                  uint8_t * packed_data_out,
-                 size_t packed_data_out_size,
-                 size_t packed_data_out_offset);
+                 size_t packed_data_out_size, size_t packed_data_out_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a TPM 2.0
@@ -466,8 +464,7 @@ int pack_private(TPM2B_PRIVATE * private_blob_in,
  */
 int unpack_private(TPM2B_PRIVATE * private_blob_out,
                    uint8_t * packed_data_in,
-                   size_t packed_data_in_size,
-                   size_t packed_data_in_offset);
+                   size_t packed_data_in_size, size_t packed_data_in_offset);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)
@@ -511,7 +508,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
  *
  * @return 0 on success, 1 on error
  */
-int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length);
+int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
 
 /**
  * @brief Frees the contents of a ski struct
@@ -564,8 +561,8 @@ Ski get_default_ski(void);
  * @return 0 on success, 1 on failure
  */
 int get_ski_block_bytes(char **contents,
-                        size_t *remaining, unsigned char **block,
-                        size_t *blocksize,
+                        size_t * remaining, unsigned char **block,
+                        size_t * blocksize,
                         char *delim, size_t delim_len,
                         char *next_delim, size_t next_delim_len);
 
@@ -591,7 +588,7 @@ int get_ski_block_bytes(char **contents,
  */
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size, uint8_t ** base64_data,
-                     size_t *base64_data_size);
+                     size_t * base64_data_size);
 
 /**
  * @brief Decodes a base-64 encoded data buffer into "raw" hex bytes.
@@ -614,7 +611,7 @@ int encodeBase64Data(uint8_t * raw_data,
  */
 int decodeBase64Data(unsigned char *base64_data,
                      size_t base64_data_size, unsigned char **raw_data,
-                     size_t *raw_data_size);
+                     size_t * raw_data_size);
 
 /**
  * @brief Concatinates two arrays of type uint8_t
@@ -631,7 +628,7 @@ int decodeBase64Data(unsigned char *base64_data,
  *
  * @return 0 if success, 1 if error
  */
-int concat(uint8_t ** dest, size_t *dest_length, uint8_t * input,
+int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
            size_t input_length);
 
 #endif /* FORMATTING_TOOLS_H */

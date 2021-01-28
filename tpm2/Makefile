@@ -25,6 +25,7 @@ MAIN_OBJECTS = $(subst $(MAIN_SRC_DIR), \
 UTIL_SRC_DIR = $(SRC_DIR)/util
 UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
 UTIL_INC_DIR = $(INC_DIR)/util
+UTIL_HEADERS = $(wildcard $(UTIL_INC)DIR/*.h)
 UTIL_OBJ_DIR = $(OBJ_DIR)/util
 UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), \
                        $(UTIL_OBJ_DIR), \
@@ -34,6 +35,7 @@ UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), \
 CIPHER_SRC_DIR = $(SRC_DIR)/cipher
 CIPHER_SOURCES = $(wildcard $(CIPHER_SRC_DIR)/*.c)
 CIPHER_INC_DIR = $(INC_DIR)/cipher
+CIPHER_HEADERS = $(wildcard $(CIPHER_INC_DIR)/*.h)
 CIPHER_OBJ_DIR = $(OBJ_DIR)/cipher
 CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), \
                          $(CIPHER_OBJ_DIR), \
@@ -43,15 +45,24 @@ CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), \
 TPM_SRC_DIR = $(SRC_DIR)/tpm
 TPM_SOURCES = $(wildcard $(TPM_SRC_DIR)/*.c)
 TPM_INC_DIR = $(INC_DIR)/tpm
+TPM_HEADERS = $(wildcard $(TPM_INC_DIR)/*.h)
 TPM_OBJ_DIR = $(OBJ_DIR)/tpm
 TPM_OBJECTS = $(subst $(TPM_SRC_DIR), \
                       $(TPM_OBJ_DIR), \
                       $(TPM_SOURCES:%.c=%.o))
 
+# Specify Kmyth source files
+SOURCE_FILES = $(wildcard $(SRC_DIR)/*.c)
+SOURCE_FILES += $(MAIN_SOURCES)
+SOURCE_FILES += $(UTIL_SOURCES)
+SOURCE_FILES += $(CIPHER_SOURCES)
+SOURCE_FILES += $(TPM_SOURCES)
+
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INC_DIR)/*.h)
-HEADER_FILES += $(wildcard $(CIPHER_INC_DIR)/*.h)
-HEADER_FILES += $(wildcard $(TPM_INC_DIR)/*.h)
+HEADER_FILES += $(UTIL_HEADERS)
+HEADER_FILES += $(CIPHER_HEADERS)
+HEADER_FILES += $(TPM_HEADERS)
 
 # Consolidate created directories to simplify mkdir call for 'pre' target
 OBJECT_DIRS = $(MAIN_OBJ_DIR)
@@ -87,12 +98,17 @@ TEST_OBJ_DIR ?= $(TEST_DIR)/obj
 TEST_DATA_DIR ?= $(TEST_DIR)/data
 
 # Specify 'testrunner' (kmyth-test) files
-TESTRUNNER_SOURCES = $(TEST_DIR)/kmyth-test.c
-TESTRUNNER_OBJECTS = $(TEST_OBJ_DIR)/kmyth-test.o
+TESTRUNNER_SOURCES = $(wildcard $(TEST_SRC_DIR)/*.c)
+TESTRUNNER_HEADERS = $(wildcard $(TEST_INC_DIR)/*.h)
+TESTRUNNER_OBJECTS = $(subst $(TEST_SRC_DIR), \
+                             $(TEST_OBJ_DIR), \
+														 $(TESTRUNNER_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth application (main) testing
 TEST_MAIN_SRC_DIR = $(TEST_SRC_DIR)/main
 TEST_MAIN_SOURCES = $(wildcard $(TEST_MAIN_SRC_DIR)/*.c)
+TEST_MAIN_INC_DIR = $(TEST_INC_DIR)/main
+TEST_MAIN_HEADERS = $(wildcard $(TEST_MAIN_INC_DIR)/*.h)
 TEST_MAIN_OBJ_DIR = $(TEST_OBJ_DIR)/main
 TEST_MAIN_OBJECTS = $(subst $(TEST_MAIN_SRC_DIR), \
                             $(TEST_MAIN_OBJ_DIR), \
@@ -102,6 +118,7 @@ TEST_MAIN_OBJECTS = $(subst $(TEST_MAIN_SRC_DIR), \
 TEST_UTIL_SRC_DIR = $(TEST_SRC_DIR)/util
 TEST_UTIL_SOURCES = $(wildcard $(TEST_UTIL_SRC_DIR)/*.c)
 TEST_UTIL_INC_DIR = $(TEST_INC_DIR)/util
+TEST_UTIL_HEADERS = $(wildcard $(TEST_UTIL_INC_DIR)/*.h)
 TEST_UTIL_OBJ_DIR = $(TEST_OBJ_DIR)/util
 TEST_UTIL_OBJECTS = $(subst $(TEST_UTIL_SRC_DIR), \
                             $(TEST_UTIL_OBJ_DIR), \
@@ -111,19 +128,21 @@ TEST_UTIL_OBJECTS = $(subst $(TEST_UTIL_SRC_DIR), \
 TEST_TPM_SRC_DIR = $(TEST_SRC_DIR)/tpm
 TEST_TPM_SOURCES = $(wildcard $(TEST_TPM_SRC_DIR)/*.c)
 TEST_TPM_INC_DIR = $(TEST_INC_DIR)/tpm
+TEST_TPM_HEADERS = $(wildcard $(TEST_TPM_INC_DIR)/*.h)
 TEST_TPM_OBJ_DIR = $(TEST_OBJ_DIR)/tpm
 TEST_TPM_OBJECTS = $(subst $(TEST_TPM_SRC_DIR), \
                            $(TEST_TPM_OBJ_DIR), \
                            $(TEST_TPM_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth cipher utility testing
-TEST_CIPHER_SRC_DIR  = $(TEST_SRC_DIR)/cipher
-TEST_CIPHER_SOURCES  = $(wildcard $(TEST_CIPHER_SRC_DIR)/*.c)
+TEST_CIPHER_SRC_DIR = $(TEST_SRC_DIR)/cipher
+TEST_CIPHER_SOURCES = $(wildcard $(TEST_CIPHER_SRC_DIR)/*.c)
 TEST_CIPHER_INC_DIR = $(TEST_INC_DIR)/cipher
-TEST_CIPHER_OBJ_DIR  = $(TEST_OBJ_DIR)/cipher
-TEST_CIPHER_OBJECTS  = $(subst $(TEST_CIPHER_SRC_DIR), \
-                               $(TEST_CIPHER_OBJ_DIR), \
-                               $(TEST_CIPHER_SOURCES:%.c=%.o))
+TEST_CIPHER_HEADERS = $(wildcard $(TEST_CIPHER_INC_DIR)/*.h)
+TEST_CIPHER_OBJ_DIR = $(TEST_OBJ_DIR)/cipher
+TEST_CIPHER_OBJECTS = $(subst $(TEST_CIPHER_SRC_DIR), \
+                              $(TEST_CIPHER_OBJ_DIR), \
+                              $(TEST_CIPHER_SOURCES:%.c=%.o))
 
 # Create consolidated list of test source files
 TEST_SOURCES = $(TESTRUNNER_SOURCES)
@@ -131,6 +150,13 @@ TEST_SOURCES += $(TEST_MAIN_SOURCES)
 TEST_SOURCES += $(TEST_UTIL_SOURCES)
 TEST_SOURCES += $(TEST_TPM_SOURCES)
 TEST_SOURCES += $(TEST_CIPHER_SOURCES)
+
+# Create consolidated list of test header files
+TEST_HEADERS = $(TESTRUNNER_HEADERS)
+TEST_HEADERS += $(TEST_MAIN_HEADERS)
+TEST_HEADERS += $(TEST_UTIL_HEADERS)
+TEST_HEADERS += $(TEST_TPM_HEADERS)
+TEST_HEADERS += $(TEST_CIPHER_HEADERS)
 
 # Create consolidated list of test object files
 TEST_OBJECTS = $(TESTRUNNER_OBJECTS)
@@ -303,10 +329,12 @@ $(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
 
 .PHONY: pre
 pre:
-	indent $(INDENT_OPTS) src/*/*.c
-	indent $(INDENT_OPTS) include/*.h
+	indent $(INDENT_OPTS) $(SOURCE_FILES)
+	indent $(INDENT_OPTS) $(HEADER_FILES)
+	rm -f src/*.c~
 	rm -f src/*/*.c~
 	rm -f include/*.h~
+	rm -f include/*/*.h~
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJECT_DIRS)
 	mkdir -p $(LIB_DIR)
@@ -342,6 +370,12 @@ uninstall-test-vectors:
 
 .PHONY: pretest
 pretest:
+	indent $(INDENT_OPTS) $(TEST_SOURCES)
+	indent $(INDENT_OPTS) $(TEST_HEADERS)
+	rm -f test/src/*.c~
+	rm -f test/src/*/*.c~
+	rm -f test/include/*.h~
+	rm -f test/include/*/*.h~
 	mkdir -p $(TEST_OBJECT_DIRS)
 
 kmyth-test: $(TEST_OBJECTS)
