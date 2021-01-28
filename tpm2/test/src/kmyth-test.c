@@ -22,6 +22,7 @@
 #include "tpm2_interface_test.h"
 #include "storage_key_tools_test.h"
 #include "pcrs_test.h"
+#include "kmyth_seal_unseal_impl_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -101,11 +102,12 @@ int main(int argc, char **argv)
   object_tools_test_suite = CU_add_suite("TPM Object Tools Test Suite",
                                          init_suite, clean_suite);
   if (NULL == object_tools_test_suite)
-  {
-    CU_cleanup_registry();
-    return CU_get_error();
-  }
+    {
+      CU_cleanup_registry();
+      return CU_get_error();
+    }
   if (object_tools_add_tests(object_tools_test_suite))
+
   {
     CU_cleanup_registry();
     return CU_get_error();
