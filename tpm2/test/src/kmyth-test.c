@@ -23,6 +23,7 @@
 #include "storage_key_tools_test.h"
 #include "pcrs_test.h"
 #include "kmyth_seal_unseal_impl_test.h"
+#include "cipher_test.h"
 
 /**
  * Use trivial (do nothing) init_suite and clean_suite functionality
@@ -102,10 +103,10 @@ int main(int argc, char **argv)
   object_tools_test_suite = CU_add_suite("TPM Object Tools Test Suite",
                                          init_suite, clean_suite);
   if (NULL == object_tools_test_suite)
-    {
-      CU_cleanup_registry();
-      return CU_get_error();
-    }
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
   if (object_tools_add_tests(object_tools_test_suite))
 
   {
@@ -187,6 +188,22 @@ int main(int argc, char **argv)
     return CU_get_error();
   }
   if (pcrs_add_tests(pcrs_test_suite))
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  // Create and configure cipher utility test suite
+  CU_pSuite cipher_test_suite = NULL;
+
+  cipher_test_suite = CU_add_suite("Cipher Utility Test Suite", init_suite,
+                                   clean_suite);
+  if (NULL == cipher_test_suite)
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (cipher_add_tests(cipher_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error();
