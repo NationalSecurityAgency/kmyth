@@ -4,7 +4,6 @@
 // Tests for TPM 2.0 object utility functions in tpm2/src/tpm/object_tools.c
 //############################################################################
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
@@ -54,8 +53,8 @@ int object_tools_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 void test_init_kmyth_object_sensitive(void)
 {
-  TPM2B_AUTH object_auth = {0};
-  TPM2B_SENSITIVE_CREATE sensitiveArea = {0};
+  TPM2B_AUTH object_auth = { 0 };
+  TPM2B_SENSITIVE_CREATE sensitiveArea = { 0 };
 
   // A null sensitive area should produce an error
   CU_ASSERT(init_kmyth_object_sensitive(object_auth, (uint8_t *) NULL, 0,
@@ -70,7 +69,7 @@ void test_init_kmyth_object_sensitive(void)
 
   // Non-empty object auth and data should yield a valid sensitive area
   object_auth.size = 4;
-  uint8_t object_data[] = {1, 2, 3, 4};
+  uint8_t object_data[] = { 1, 2, 3, 4 };
   size_t object_dataSize = 4;
 
   CU_ASSERT(init_kmyth_object_sensitive(object_auth, object_data,
@@ -89,17 +88,16 @@ void test_init_kmyth_object_sensitive(void)
 //----------------------------------------------------------------------------
 void test_init_kmyth_object_template(void)
 {
-  TPM2B_DIGEST emptyAuthPolicy = {0};
-  TPMT_PUBLIC pubArea = {0};
-  static const TPMT_PUBLIC emptyPubArea = {0};
+  TPM2B_DIGEST emptyAuthPolicy = { 0 };
+  TPMT_PUBLIC pubArea = { 0 };
+  static const TPMT_PUBLIC emptyPubArea = { 0 };
 
   // A null public area should produce an error
   CU_ASSERT(init_kmyth_object_template(false, emptyAuthPolicy,
                                        (TPMT_PUBLIC *) NULL) == 1);
 
   // An object template for a non-key should be initialized in a certain way
-  CU_ASSERT(init_kmyth_object_template(false, emptyAuthPolicy,
-                                       &pubArea) == 0);
+  CU_ASSERT(init_kmyth_object_template(false, emptyAuthPolicy, &pubArea) == 0);
   CU_ASSERT(pubArea.type == KMYTH_DATA_PUBKEY_ALG);
   CU_ASSERT(pubArea.nameAlg == KMYTH_HASH_ALG);
   CU_ASSERT(pubArea.authPolicy.size == 0);
@@ -107,7 +105,7 @@ void test_init_kmyth_object_template(void)
   // An object template for a key should be initialized in a certain way with
   // a non-empty auth policy
   pubArea = emptyPubArea;
-  TPM2B_DIGEST authPolicy = {.size = 4, .buffer = {1, 2, 3, 4}};
+  TPM2B_DIGEST authPolicy = {.size = 4,.buffer = {1, 2, 3, 4} };
   CU_ASSERT(init_kmyth_object_template(true, authPolicy, &pubArea) == 0);
   CU_ASSERT(pubArea.type == KMYTH_KEY_PUBKEY_ALG);
   CU_ASSERT(pubArea.nameAlg == KMYTH_HASH_ALG);
@@ -129,8 +127,7 @@ void test_init_kmyth_object_attributes(void)
   // The object attribute for a non-key should be initialized a certain way
   CU_ASSERT(init_kmyth_object_attributes(false, &objectAttrib) == 0);
   CU_ASSERT(objectAttrib == (TPMA_OBJECT_USERWITHAUTH |
-                             TPMA_OBJECT_FIXEDTPM |
-                             TPMA_OBJECT_FIXEDPARENT));
+                             TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT));
 
   // The object attribute for a key should be initialized a certain way
   CU_ASSERT(init_kmyth_object_attributes(true, &objectAttrib) == 0);
@@ -138,8 +135,7 @@ void test_init_kmyth_object_attributes(void)
                              TPMA_OBJECT_DECRYPT |
                              TPMA_OBJECT_SENSITIVEDATAORIGIN |
                              TPMA_OBJECT_USERWITHAUTH |
-                             TPMA_OBJECT_FIXEDTPM |
-                             TPMA_OBJECT_FIXEDPARENT));
+                             TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT));
 }
 
 //----------------------------------------------------------------------------
@@ -148,8 +144,8 @@ void test_init_kmyth_object_attributes(void)
 void test_init_kmyth_object_parameters(void)
 {
   TPMI_ALG_PUBLIC objectType = 0;
-  TPMU_PUBLIC_PARMS objectParams = {0};
-  static const TPMU_PUBLIC_PARMS emptyObjectParams = {0};
+  TPMU_PUBLIC_PARMS objectParams = { 0 };
+  static const TPMU_PUBLIC_PARMS emptyObjectParams = { 0 };
 
   // A null parameters object should produce an error
   CU_ASSERT(init_kmyth_object_parameters(objectType,
@@ -206,12 +202,11 @@ void test_init_kmyth_object_parameters(void)
 void test_init_kmyth_object_unique(void)
 {
   TPMI_ALG_PUBLIC objectType = 0;
-  TPMU_PUBLIC_ID objectUnique = {0};
-  static const TPMU_PUBLIC_ID emptyObjectUnique = {0};
+  TPMU_PUBLIC_ID objectUnique = { 0 };
+  static const TPMU_PUBLIC_ID emptyObjectUnique = { 0 };
 
   // A null unique object should produce an error
-  CU_ASSERT(init_kmyth_object_unique(objectType,
-                                     (TPMU_PUBLIC_ID *) NULL) == 1);
+  CU_ASSERT(init_kmyth_object_unique(objectType, (TPMU_PUBLIC_ID *) NULL) == 1);
 
   // An unrecognized object type should produce an error
   CU_ASSERT(init_kmyth_object_unique(objectType, &objectUnique) == 1);

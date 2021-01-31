@@ -170,7 +170,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator);
 
 /**
  * @brief Translates error string from hex into human readable.
@@ -349,8 +349,7 @@ int check_response_auth(SESSION * authSession,
  * @return 0 if success, 1 if error
  */
 int create_authVal(uint8_t * auth_bytes,
-                   size_t auth_bytes_len,
-                   TPM2B_AUTH * authValOut);
+                   size_t auth_bytes_len, TPM2B_AUTH * authValOut);
 
 /**
  * @brief Computes command parameter hash that is one of the inputs used for
@@ -388,8 +387,7 @@ int create_authVal(uint8_t * auth_bytes,
 int compute_cpHash(TPM2_CC cmdCode,
                    TPM2B_NAME authEntityName,
                    uint8_t * cmdParams,
-                   size_t cmdParams_size,
-                   TPM2B_DIGEST * cpHash_out);
+                   size_t cmdParams_size, TPM2B_DIGEST * cpHash_out);
 
 /**
  * @brief Computes response parameter hash that is one of the inputs to the
@@ -425,8 +423,7 @@ int compute_cpHash(TPM2_CC cmdCode,
 int compute_rpHash(TPM2_RC rspCode,
                    TPM2_CC cmdCode,
                    uint8_t * cmdParams,
-                   size_t cmdParams_size,
-                   TPM2B_DIGEST * rpHash_out);
+                   size_t cmdParams_size, TPM2B_DIGEST * rpHash_out);
 
 /**
  * @brief Computes the authorization HMAC value required for command and
@@ -513,8 +510,7 @@ int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
  * @return 0 if success, 1 if error. 
  */
 int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                              SESSION * session,
-                              TPM2_SE session_type);
+                              SESSION * session, TPM2_SE session_type);
 
 /**
  * @brief Executes the Kmyth-specific authorization policy steps and updates

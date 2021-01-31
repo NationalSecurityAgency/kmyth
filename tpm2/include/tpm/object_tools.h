@@ -46,9 +46,9 @@
  * @return 0 if success, 1 if error.
  */
 int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
-                                 uint8_t * object_data,
-                                 size_t object_dataSize,
-                                 TPM2B_SENSITIVE_CREATE * sensitiveArea);
+                                uint8_t * object_data,
+                                size_t object_dataSize,
+                                TPM2B_SENSITIVE_CREATE * sensitiveArea);
 
 /**
  * @brief Fill in public template used to create Kmyth object.
@@ -397,8 +397,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                       TPM2B_AUTH parent_auth,
                       TPML_PCR_SELECTION parent_pcrList,
                       TPM2B_PRIVATE * in_private,
-                      TPM2B_PUBLIC * in_public,
-                      TPM2_HANDLE * object_handle);
+                      TPM2B_PUBLIC * in_public, TPM2_HANDLE * object_handle);
 
 /**
  * @brief Unseals a Kmyth TPM data object 

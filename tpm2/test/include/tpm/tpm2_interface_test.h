@@ -5,10 +5,8 @@
  * implemented in tpm2/src/tpm/tpm2_interface.c
  */
 
-
 #ifndef TPM2_INTERFACE_TEST_H
 #define TPM2_INTERFACE_TEST_H
-
 
 /**
  * This function adds all of the tests contained in tpm2_interface_test.c to a
@@ -21,10 +19,9 @@
  */
 int tpm2_interface_add_tests(CU_pSuite suite);
 
-
 //****************************************************************************
-//	Tests for functions in tpm2_interface.h, format for test names is:
-//  	test_funtion_name()
+//  Tests for functions in tpm2_interface.h, format for test names is:
+//    test_funtion_name()
 //****************************************************************************
 void test_init_tpm2_connection(void);
 void test_init_tcti_abrmd(void);

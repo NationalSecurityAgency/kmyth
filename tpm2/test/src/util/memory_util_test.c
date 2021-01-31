@@ -4,7 +4,6 @@
 // Tests for kmyth memory utility functions in tpm2/src/util/memory_util.c
 //############################################################################
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -15,22 +14,20 @@
 #include "memory_util_test.h"
 #include "memory_util.h"
 
-
 //----------------------------------------------------------------------------
 // memory_util_add_tests()
 //----------------------------------------------------------------------------
 int memory_util_add_tests(CU_pSuite suite)
 {
-  if (NULL == CU_add_test(suite, "Kmyth Memory Clear Tests",
-                          test_kmyth_clear))
+  if (NULL == CU_add_test(suite, "Kmyth Memory Clear Tests", test_kmyth_clear))
   {
-    return 1; 
+    return 1;
   }
 
   if (NULL == CU_add_test(suite, "Kmyth Memory 'Clear and Free' Tests",
                           test_kmyth_clear_and_free))
   {
-    return 1; 
+    return 1;
   }
 
 //  if (NULL == CU_add_test(suite, "Kmyth Secure Memory Set Tests",
@@ -42,7 +39,6 @@ int memory_util_add_tests(CU_pSuite suite)
   return 0;
 }
 
-
 //----------------------------------------------------------------------------
 // test_kmyth_clear()
 //----------------------------------------------------------------------------
@@ -52,7 +48,8 @@ void test_kmyth_clear(void)
 
   // Create block of allocated, non-zero memory
   size_t tmp1_size = 64;
-  unsigned char * tmp1 = malloc(tmp1_size);
+  unsigned char *tmp1 = malloc(tmp1_size);
+
   for (int i = 0; i < tmp1_size; i++)
   {
     *(tmp1 + i) = 0xff;
@@ -86,7 +83,6 @@ void test_kmyth_clear(void)
 
 }
 
-
 //----------------------------------------------------------------------------
 // test_kmyth_clear_and_free()
 //----------------------------------------------------------------------------
@@ -104,9 +100,8 @@ void test_kmyth_clear_and_free(void)
 
   // Test that kmyth_clear_and_free() for a NULL pointer does not crash
   kmyth_clear_and_free(NULL, 16);
-  CU_ASSERT(true);    // if execution reaches here, test did not crash
+  CU_ASSERT(true);              // if execution reaches here, test did not crash
 }
-
 
 //----------------------------------------------------------------------------
 // test_secure_memset()
@@ -117,10 +112,11 @@ void test_secure_memset(void)
 
   // Create block of allocated memory set to alternating ones/zeros
   size_t tmp1_size = 31;
-  unsigned char * tmp1 = malloc(tmp1_size);
+  unsigned char *tmp1 = malloc(tmp1_size);
+
   for (int i = 0; i < tmp1_size; i++)
   {
-    *(tmp1+i) = 0x55;
+    *(tmp1 + i) = 0x55;
   }
 
   // secure_memset() of zero bytes should just return (do nothing)
@@ -149,4 +145,3 @@ void test_secure_memset(void)
   }
   CU_ASSERT(result);
 }
-

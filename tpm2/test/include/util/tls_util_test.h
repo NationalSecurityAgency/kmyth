@@ -5,10 +5,8 @@
  * tpm2/src/util/tls_util.c
  */
 
-
 #ifndef TLS_UTIL_TEST__H
 #define TLS_UTIL_TEST__H
-
 
 /**
  * This function adds all of the tests contained in tls_util_test.c to a test
@@ -21,7 +19,6 @@
  * @return     0 on success, 1 on failure
  */
 int tls_util_add_tests(CU_pSuite suite);
-
 
 //****************************************************************************
 // Tests
@@ -48,4 +45,3 @@ void test_get_key_from_tls_server(void);
 void test_get_key_from_kmip_server(void);
 
 #endif
-
