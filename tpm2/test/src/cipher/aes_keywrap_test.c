@@ -343,12 +343,6 @@ void test_aes_keywrap_vectors(void)
   // array of file pointers for test vector files
   FILE *test_vector_fd[MAX_VECTOR_SETS_IN_COMPILATION] = { NULL };
 
-  // counter to track number of test vectors applied from a file
-  int test_vector_count = 0;
-
-  // flag used to signal end of processing for a given test vector file
-  bool done_with_test_vector_file = false;
-
   // check that number of test vector files complies with specified maximum
   if (aes_keywrap_vectors.count > MAX_VECTOR_SETS_IN_COMPILATION)
   {
@@ -375,8 +369,16 @@ void test_aes_keywrap_vectors(void)
     test_vector_fd[i] = fopen(aes_keywrap_vectors.sets[i].path, "r");
     if (test_vector_fd[i] != NULL)
     {
-      while ((!done_with_test_vector_file) &&
-             (test_vector_count <= MAX_KEYWRAP_TEST_VECTOR_COUNT))
+      // counter to track number of test vectors applied from this file
+      int test_vector_count = 0;
+
+      // flag used to signal stop processing test vector file
+      //   - invalid kmyth "function to test" associated with vector set
+      //   - EOF reached (get_aes_keywrap_vector_from_file() failed)
+      //   - test count limit exceeded
+      bool done_with_test_vector_file = false;
+
+      while (!done_with_test_vector_file)
       {
         // Parse next vector from file
         if (get_aes_keywrap_vector_from_file(test_vector_fd[i],
@@ -391,12 +393,14 @@ void test_aes_keywrap_vectors(void)
           unsigned char *out = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
           size_t out_len = 0;
 
-          // increment count of test vectors applied
+          // increment count of test vectors applied and test if limit reached
+          // if the test vector count limit is reached, this will be the last
+          // test vector retrieved from this file and parsed
           test_vector_count++;
-
-          // create flag to aggregate pass/fail result
-          // (initialize true but latch in false for any unexpected result)
-          bool vector_passed = true;
+          if (test_vector_count > MAX_KEYWRAP_TEST_VECTOR_COUNT)
+          {
+            done_with_test_vector_file = true;
+          }
 
           // create variable to hold response code from function being tested
           int rc = -1;
@@ -449,26 +453,24 @@ void test_aes_keywrap_vectors(void)
 
           else
           {
-            printf("ERROR: test vector set for file (%s) associated with ",
-                   aes_keywrap_vectors.sets[i].path);
-            printf("function to test(%s)\n",
-                   aes_keywrap_vectors.sets[i].func_to_test);
             CU_FAIL("Test vector file linked to invalid function to test");
             // don't get any more vectors from this file - can't apply them
             done_with_test_vector_file = true;
           }
 
-          // if vector successfully applied
+          // consolidate results of applying test vector into a single assertion
+          // create flag to aggregate pass/fail result
+          // (initialize true but latch in false for any unexpected result)
+          bool vector_passed = true;
+
           if (rc != -1)
           {
-            // consolidate results of applying test vector into a single assertion
             if (result_bool == false)
             {
               // check if a test vector expected to fail, passed
               if (rc == 0)
               {
                 vector_passed = false;
-                printf("expected fail, passed: %d\n", test_vector_count);
               }
             }
             else
@@ -477,14 +479,12 @@ void test_aes_keywrap_vectors(void)
               if (rc != 0)
               {
                 vector_passed = false;
-                printf("expected pass, failed: %d\n", test_vector_count);
               }
 
               // check for unexpected size of decrypted result
               if (out_len != exp_result_len)
               {
                 vector_passed = false;
-                printf("unexpected size for result: %d\n", test_vector_count);
               }
 
               // check that expected result matches (byte for byte)
@@ -493,12 +493,9 @@ void test_aes_keywrap_vectors(void)
                 if (out[j] != exp_result[j])
                 {
                   vector_passed = false;
-                  printf("expected result mismatch at byte %d: %d\n", j,
-                         test_vector_count);
                 }
               }
             }
-
             CU_ASSERT(vector_passed);
 
             // clean-up output_data byte array
@@ -507,11 +504,15 @@ void test_aes_keywrap_vectors(void)
               free(out);
             }
           }
+          else
+          {
+            CU_FAIL("Test vector was not applied");
+          }
         }
 
         else
         {
-          // get_aes_gcm_test_vector_from_file() returned error - must be done
+          // get_aes_gcm_test_vector_from_file() returned error - must be EOF
           done_with_test_vector_file = true;
         }
       }
@@ -522,10 +523,6 @@ void test_aes_keywrap_vectors(void)
       // Provide INFO: message indicating how many test vectors were applied
       printf("INFO: %s - %d test vectors applied\n",
              aes_keywrap_vectors.sets[i].path, test_vector_count);
-
-      // reset flag/counters for processing of next (if any) test vector file
-      done_with_test_vector_file = false;
-      test_vector_count = 0;
     }
 
     else
