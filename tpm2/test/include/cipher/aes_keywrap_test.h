@@ -103,9 +103,7 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
                                      uint8_t ** P_vec,
                                      size_t * P_vec_len,
                                      uint8_t ** C_vec,
-                                     size_t * C_vec_len,
-                                     bool * expect_pass);
-
+                                     size_t * C_vec_len, bool * expect_pass);
 
 //--------------------- Tests ------------------------------------------------
 
@@ -124,4 +122,3 @@ void test_aes_keywrap_parameters(void);
 void test_aes_keywrap_vectors(void);
 
 #endif
-

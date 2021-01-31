@@ -30,9 +30,9 @@
 
 typedef struct cipher_vector_set
 {
-  char * desc;
-  char * func_to_test;
-  char * path;
+  char *desc;
+  char *func_to_test;
+  char *path;
 } cipher_vector_set;
 
 typedef struct cipher_vector_compilation
@@ -40,7 +40,6 @@ typedef struct cipher_vector_compilation
   size_t count;
   cipher_vector_set sets[MAX_VECTOR_SETS_IN_COMPILATION];
 } cipher_vector_compilation;
-
 
 /**
  * As the NIST test vectors are specified as hexadecimal values, the
@@ -60,4 +59,3 @@ typedef struct cipher_vector_compilation
 int convert_HexString_to_ByteArray(char **result, char *hex_str, int str_size);
 
 #endif
-

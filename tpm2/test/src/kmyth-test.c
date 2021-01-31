@@ -103,10 +103,10 @@ int main(int argc, char **argv)
   object_tools_test_suite = CU_add_suite("TPM Object Tools Test Suite",
                                          init_suite, clean_suite);
   if (NULL == object_tools_test_suite)
-    {
-      CU_cleanup_registry();
-      return CU_get_error();
-    }
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
   if (object_tools_add_tests(object_tools_test_suite))
 
   {
@@ -164,22 +164,24 @@ int main(int argc, char **argv)
 
   // Create and configure the AES Key Wrap cipher test suite
   CU_pSuite aes_keywrap_test_suite = NULL;
+
   aes_keywrap_test_suite = CU_add_suite("AES Key Wrap Cipher Test Suite",
-				                                init_suite, clean_suite);
+                                        init_suite, clean_suite);
   if (NULL == aes_keywrap_test_suite)
   {
     CU_cleanup_registry();
     return CU_get_error();
   }
-  if(aes_keywrap_add_tests(aes_keywrap_test_suite))
+  if (aes_keywrap_add_tests(aes_keywrap_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error();
   }
 
-	// Create and configure the tpm2 interface test suite
-	CU_pSuite tpm2_interface_test_suite = NULL;
-	tpm2_interface_test_suite = CU_add_suite("TPM2 Interface Test Suite",
+  // Create and configure the tpm2 interface test suite
+  CU_pSuite tpm2_interface_test_suite = NULL;
+
+  tpm2_interface_test_suite = CU_add_suite("TPM2 Interface Test Suite",
                                            init_suite, clean_suite);
   if (NULL == tpm2_interface_test_suite)
   {

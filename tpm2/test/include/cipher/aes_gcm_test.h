@@ -11,7 +11,6 @@
 #ifndef AES_GCM_TEST_H
 #define AES_GCM_TEST_H
 
-
 //--------------------- Test Utilities ---------------------------------------
 
 /**
@@ -87,9 +86,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
                                  uint8_t ** input_vec,
                                  size_t * input_vec_len,
                                  uint8_t ** result_vec,
-                                 size_t * result_vec_len,
-                                 bool * expect_pass);
-
+                                 size_t * result_vec_len, bool * expect_pass);
 
 //---------------------- Test Suite Setup ------------------------------------
 
@@ -105,7 +102,6 @@ int get_aes_gcm_vector_from_file(FILE * fid,
  * @return     0 on success, 1 on error
  */
 int aes_gcm_add_tests(CU_pSuite suite);
-
 
 //---------------------- Tests -----------------------------------------------
 
