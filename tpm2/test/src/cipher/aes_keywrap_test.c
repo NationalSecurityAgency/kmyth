@@ -235,38 +235,48 @@ void test_aes_keywrap_parameters(void)
   key_len = 16;
   CU_ASSERT(aes_keywrap_3394nopad_encrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
   CU_ASSERT(aes_keywrap_3394nopad_decrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
 
   // Test failure on key of length 0
   key = malloc(16);
   key_len = 0;
   CU_ASSERT(aes_keywrap_3394nopad_encrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
   CU_ASSERT(aes_keywrap_3394nopad_decrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
 
   // Test failure on input data of length 0
   key_len = 16;
   inData_len = 0;
   CU_ASSERT(aes_keywrap_3394nopad_encrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
   CU_ASSERT(aes_keywrap_3394nopad_decrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
 
   // Test failure with input data too short
   inData_len = 8;
   CU_ASSERT(aes_keywrap_3394nopad_encrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
   CU_ASSERT(aes_keywrap_3394nopad_decrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
 
   // Test failure with input data that's not a multiple of 8 bytes long
   inData_len = 17;
   CU_ASSERT(aes_keywrap_3394nopad_encrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
   CU_ASSERT(aes_keywrap_3394nopad_decrypt
             (key, key_len, inData, inData_len, &outData, &outData_len) == 1);
+  CU_ASSERT((outData == NULL) && (outData_len == 0));
 
   free(key);
   free(inData);
