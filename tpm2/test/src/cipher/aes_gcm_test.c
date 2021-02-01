@@ -12,21 +12,20 @@
 #include "kmyth_cipher_test.h"
 #include "aes_gcm.h"
 
-
 //----------------------------------------------------------------------------
 // aes_gcm_add_tests()
 //----------------------------------------------------------------------------
 int aes_gcm_add_tests(CU_pSuite suite)
 {
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM decryption vectors",
-                         test_aes_gcm_decrypt_vectors))
+  if (NULL == CU_add_test(suite, "Test AES/GCM decryption vectors",
+                          test_aes_gcm_decrypt_vectors))
   {
     return 1;
   }
 
-  if(NULL == CU_add_test(suite, "Test AES/GCM encryption/decryption",
-                         test_gcm_encrypt_decrypt))
+  if (NULL == CU_add_test(suite, "Test AES/GCM encryption/decryption",
+                          test_gcm_encrypt_decrypt))
   {
     return 1;
   }
@@ -73,8 +72,7 @@ int get_aes_gcm_vector_from_file(FILE * fid,
                                  uint8_t ** input_vec,
                                  size_t * input_vec_len,
                                  uint8_t ** result_vec,
-                                 size_t * result_vec_len,
-                                 bool * expect_pass)
+                                 size_t * result_vec_len, bool * expect_pass)
 {
   // create buffer to hold vector data read in from file a line at a time
   // specify buffer size to handle largest vector component (must include
@@ -83,17 +81,17 @@ int get_aes_gcm_vector_from_file(FILE * fid,
   char buffer[MAX_TEST_VECTOR_COMPONENT_LENGTH];
 
   // create stack variables to buffer the components in a single test vector
-  uint8_t  * Key = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *Key = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t Key_len = 0;
-  uint8_t * IV = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *IV = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t IV_len = 0;
-  uint8_t * CT = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *CT = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t CT_len = 0;
-  uint8_t * AAD = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *AAD = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t AAD_len = 0;
-  uint8_t * Tag = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *Tag = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t Tag_len = 0;
-  uint8_t * PT = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  uint8_t *PT = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t PT_len = 0;
   bool pass_result = false;
 
@@ -119,34 +117,32 @@ int get_aes_gcm_vector_from_file(FILE * fid,
   {
     if (fgets(buffer, MAX_TEST_VECTOR_COMPONENT_LENGTH, fid) != NULL)
     {
-      if ((strncmp(buffer, "Key = ", 6) == 0) &&
-          (step == 1))
+      if ((strncmp(buffer, "Key = ", 6) == 0) && (step == 1))
       {
         // process 'Key' component of this test vector
-        char * key_str = buffer + 6;  // strip preceding 'Key = ' sub-string
+        char *key_str = buffer + 6; // strip preceding 'Key = ' sub-string
         int key_str_len = strlen(key_str);
-        while ( (key_str_len > 0) &&
-                ((key_str[key_str_len-1] == '\n') ||
-                 (key_str[key_str_len-1] == '\r')) )
+
+        while ((key_str_len > 0) &&
+               ((key_str[key_str_len - 1] == '\n') ||
+                (key_str[key_str_len - 1] == '\r')))
         {
           key_str[--key_str_len] = '\0';  // strip any trailing '\n' or 'r'
         }
-        convert_HexString_to_ByteArray((char **) &Key,
-                                       key_str,
-                                       key_str_len);
+        convert_HexString_to_ByteArray((char **) &Key, key_str, key_str_len);
         Key_len = key_str_len / 2;  // 2 hex chars map to a byte of key
         step = 2;
       }
-      
-      else if ((strncmp(buffer, "IV = ", 5) == 0) &&
-               (step == 2))
+
+      else if ((strncmp(buffer, "IV = ", 5) == 0) && (step == 2))
       {
         // process IV component of test vector
-        char * iv_str = buffer + 5; // strip preceding 'IV = ' sub-string
+        char *iv_str = buffer + 5;  // strip preceding 'IV = ' sub-string
         int iv_str_len = strlen(iv_str);
-        while ( (iv_str_len > 0) &&
-                ((iv_str[iv_str_len-1] == '\n') ||
-                 (iv_str[iv_str_len-1] == '\r')) )
+
+        while ((iv_str_len > 0) &&
+               ((iv_str[iv_str_len - 1] == '\n') ||
+                (iv_str[iv_str_len - 1] == '\r')))
         {
           iv_str[--iv_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
@@ -155,15 +151,15 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         step = 3;
       }
 
-      else if ((strncmp(buffer, "CT = ", 5) == 0) &&
-               (step == 3))
+      else if ((strncmp(buffer, "CT = ", 5) == 0) && (step == 3))
       {
         // process 'CT' component of test vector
-        char * ct_str = buffer + 5;  // strip preceding 'CT = ' sub-string
+        char *ct_str = buffer + 5;  // strip preceding 'CT = ' sub-string
         int ct_str_len = strlen(ct_str);
-        while ( (ct_str_len > 0) &&
-                ((ct_str[ct_str_len-1] == '\n') ||
-                 (ct_str[ct_str_len-1] == '\r')) )
+
+        while ((ct_str_len > 0) &&
+               ((ct_str[ct_str_len - 1] == '\n') ||
+                (ct_str[ct_str_len - 1] == '\r')))
         {
           ct_str[--ct_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
@@ -172,60 +168,54 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         step = 4;
       }
 
-      else if ((strncmp(buffer, "AAD = ", 6) == 0) &&
-               (step == 4))
+      else if ((strncmp(buffer, "AAD = ", 6) == 0) && (step == 4))
       {
         // process 'AAD' component of test vector
-        char * aad_str = buffer + 6;  // strip preceding 'AAD = ' sub-string
+        char *aad_str = buffer + 6; // strip preceding 'AAD = ' sub-string
         int aad_str_len = strlen(aad_str);
-        while ( (aad_str_len > 0) &&
-                ((aad_str[aad_str_len-1] == '\n') ||
-                 (aad_str[aad_str_len-1] == '\r')) )
+
+        while ((aad_str_len > 0) &&
+               ((aad_str[aad_str_len - 1] == '\n') ||
+                (aad_str[aad_str_len - 1] == '\r')))
         {
           aad_str[--aad_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &AAD,
-                                       aad_str,
-                                       aad_str_len);
+        convert_HexString_to_ByteArray((char **) &AAD, aad_str, aad_str_len);
         AAD_len = aad_str_len / 2;  // 2 hex chars map to a byte of AAD
         step = 5;
       }
 
-      else if ((strncmp(buffer, "Tag = ", 6) == 0) &&
-               (step == 5))
+      else if ((strncmp(buffer, "Tag = ", 6) == 0) && (step == 5))
       {
         // process 'Tag' component of test vector
-        char * tag_str = buffer + 6;  // strip preceding 'Tag = ' sub-string
+        char *tag_str = buffer + 6; // strip preceding 'Tag = ' sub-string
         int tag_str_len = strlen(tag_str);
-        while ( (tag_str_len > 0) &&
-                ((tag_str[tag_str_len-1] == '\n') ||
-                 (tag_str[tag_str_len-1] == '\r')) )
+
+        while ((tag_str_len > 0) &&
+               ((tag_str[tag_str_len - 1] == '\n') ||
+                (tag_str[tag_str_len - 1] == '\r')))
         {
-          tag_str[--tag_str_len] = '\0'; // strip any trailing '\n' or '\r'
+          tag_str[--tag_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &Tag,
-                                       tag_str,
-                                       tag_str_len);
+        convert_HexString_to_ByteArray((char **) &Tag, tag_str, tag_str_len);
         Tag_len = tag_str_len / 2;  // 2 hex chars map to a byte of Tag
         step = 6;
       }
 
-      else if ((strncmp(buffer, "PT = ", 5) == 0) &&
-               (step == 6))
+      else if ((strncmp(buffer, "PT = ", 5) == 0) && (step == 6))
       {
         // process 'PT' component of test vector
-        char * pt_str = buffer + 5;  // strip preceding 'PT = ' sub-string
+        char *pt_str = buffer + 5;  // strip preceding 'PT = ' sub-string
         int pt_str_len = strlen(pt_str);
+
         while ((pt_str_len > 0) &&
-               ((pt_str[pt_str_len-1] == '\n') ||
-                (pt_str[pt_str_len-1] == '\r')))
+               ((pt_str[pt_str_len - 1] == '\n') ||
+                (pt_str[pt_str_len - 1] == '\r')))
         {
           pt_str[--pt_str_len] = '\0';  // strip any trailing '\n' of '\r'
         }
-        convert_HexString_to_ByteArray((char **) &PT,
-                                                 pt_str,
-                                                 pt_str_len);
-        PT_len = pt_str_len / 2;    // 2 hex chars map to a byte of PT
+        convert_HexString_to_ByteArray((char **) &PT, pt_str, pt_str_len);
+        PT_len = pt_str_len / 2;  // 2 hex chars map to a byte of PT
         pass_result = true;
 
         // check applicability of parsed vector to kmyth implementation
@@ -233,18 +223,16 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         //   - kmyth uses hard-coded IV length (GCM_IV_LEN)
         //   - kmyth uses hard-coded Tag length (GCM_TAG_LEN)
         if ((AAD_len == 0) &&
-            (IV_len == GCM_IV_LEN) &&
-            (Tag_len == GCM_TAG_LEN))
+            (IV_len == GCM_IV_LEN) && (Tag_len == GCM_TAG_LEN))
         {
-            test_vector_found = true;
+          test_vector_found = true;
         }
 
         // after either completing the six-step parsing procedure or
         // encountering an unexpected input line, return to initial step
         step = 1;
       }
-      else if ((strncmp(buffer, "FAIL", 4) == 0) &&
-               (step == 6))
+      else if ((strncmp(buffer, "FAIL", 4) == 0) && (step == 6))
       {
         // process 'FAIL' result component of vector
         PT_len = 0;
@@ -255,10 +243,9 @@ int get_aes_gcm_vector_from_file(FILE * fid,
         //   - kmyth uses hard-coded IV length (GCM_IV_LEN)
         //   - kmyth uses hard-coded Tag length (GCM_TAG_LEN)
         if ((AAD_len == 0) &&
-            (IV_len == GCM_IV_LEN) &&
-            (Tag_len == GCM_TAG_LEN))
+            (IV_len == GCM_IV_LEN) && (Tag_len == GCM_TAG_LEN))
         {
-            test_vector_found = true;
+          test_vector_found = true;
         }
         // after either completing the six-step parsing procedure or
         // encountering an unexpected input line, return to initial step
@@ -302,7 +289,6 @@ int get_aes_gcm_vector_from_file(FILE * fid,
   return 0;
 }
 
-
 //----------------------------------------------------------------------------
 // test_aes_gcm_decrypt_vectors()
 //----------------------------------------------------------------------------
@@ -312,42 +298,43 @@ void test_aes_gcm_decrypt_vectors(void)
   // decrypt cipher testing.
   const cipher_vector_compilation gcm_decrypt_vectors = {
     .count = 3,
-    .sets = 
-    {
-      { .desc = "AES-128, Galois Counter Mode (GCM), decryption",
-        .func_to_test = "aes_gcm_decrypt",
-        .path = "./test/data/gcmtestvectors/gcmDecrypt128.rsp" },
-      { .desc = "AES-192, Galois Counter Mode (GCM), decryption",
-        .func_to_test = "aes_gcm_decrypt",
-        .path = "./test/data/gcmtestvectors/gcmDecrypt192.rsp" },
-      { .desc = "AES-256, Galois Counter Mode (GCM), decryption",
-        .func_to_test = "aes_gcm_decrypt",
-        .path = "./test/data/gcmtestvectors/gcmDecrypt256.rsp" }
-    }
+    .sets = {
+             {.desc = "AES-128, Galois Counter Mode (GCM), decryption",
+              .func_to_test = "aes_gcm_decrypt",
+              .path = "./test/data/gcmtestvectors/gcmDecrypt128.rsp"},
+             {.desc = "AES-192, Galois Counter Mode (GCM), decryption",
+              .func_to_test = "aes_gcm_decrypt",
+              .path = "./test/data/gcmtestvectors/gcmDecrypt192.rsp"},
+             {.desc = "AES-256, Galois Counter Mode (GCM), decryption",
+              .func_to_test = "aes_gcm_decrypt",
+              .path = "./test/data/gcmtestvectors/gcmDecrypt256.rsp"}
+             }
   };
 
   // array of file pointers for test vector files
-  FILE * test_vector_fd[MAX_VECTOR_SETS_IN_COMPILATION] = {NULL};
+  FILE *test_vector_fd[MAX_VECTOR_SETS_IN_COMPILATION] = { NULL };
 
   // check that number of test vector files complies with specified maximum
   if (gcm_decrypt_vectors.count > MAX_VECTOR_SETS_IN_COMPILATION)
   {
-    fprintf(stderr,
-            "ERROR: too many (%ld) vector set mappings (%d max)",
-            gcm_decrypt_vectors.count,
-            MAX_VECTOR_SETS_IN_COMPILATION);
     CU_FAIL("AES GCM Decrypt Test Vector File Count Exceeds Limit");
     return;
   }
 
+  // create counters to track the number of:
+  //   - configured test vector files parsed (partially or fully)
+  //   - test vectors applied (cumulative count)
+  size_t parsed_test_vector_files = 0;
+  size_t cumulative_test_vector_count = 0;
+
   // allocate memory to hold a single test vector - re-use these buffers
   // for all test vectors used during these tests
-  unsigned char * key_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  unsigned char *key_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t key_data_len = 0;
-  unsigned char * input_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH +
-                                      GCM_IV_LEN + GCM_TAG_LEN, 1);
+  unsigned char *input_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH +
+                                     GCM_IV_LEN + GCM_TAG_LEN, 1);
   size_t input_data_len = 0;
-  unsigned char * result_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+  unsigned char *result_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t result_data_len = 0;
   bool result_bool = false;
 
@@ -360,11 +347,21 @@ void test_aes_gcm_decrypt_vectors(void)
       // counter to track number of test vectors applied from a file
       int test_vector_count = 0;
 
-      // flag used to signal end of processing for a given test vector file
+      // flag used to signal stop processing test vector file, set true if:
+      //   - invalid kmyth "function to test" associated with vector set
+      //   - EOF reached (get_aes_gcm_vector_from_file() failed)
+      //   - test count limit exceeded
       bool done_with_test_vector_file = false;
 
-      while ((!done_with_test_vector_file) &&
-             (test_vector_count <= MAX_GCM_TEST_VECTOR_COUNT))
+      if (strncmp(gcm_decrypt_vectors.sets[i].func_to_test,
+                  "aes_gcm_decrypt", 15) != 0)
+      {
+        CU_FAIL("Test vector file linked to invalid function to test");
+        // don't get vectors from this file - can't apply them
+        done_with_test_vector_file = true;
+      }
+
+      while (!done_with_test_vector_file)
       {
         // Parse next vector from file
         if (get_aes_gcm_vector_from_file(test_vector_fd[i],
@@ -373,18 +370,26 @@ void test_aes_gcm_decrypt_vectors(void)
                                          &input_data,
                                          &input_data_len,
                                          &result_data,
-                                         &result_data_len,
-                                         &result_bool) == 0)
+                                         &result_data_len, &result_bool) == 0)
         {
           // Create a new buffer to hold the decryption result for each vector
           // applied. This is necessary because on an error condition, the
           // aes_gcm_decrypt() function clears and frees this memory.
-          unsigned char * output_data = NULL;
+          unsigned char *output_data = NULL;
+
           output_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
           size_t output_data_len = 0;
 
-          // apply test vector
+          // increment count of test vectors applied and test if limit reached
+          // if the test vector count limit is reached, this will be the last
+          // test vector retrieved from this file and parsed
           test_vector_count++;
+          if (test_vector_count > MAX_GCM_TEST_VECTOR_COUNT)
+          {
+            done_with_test_vector_file = true;
+          }
+
+          // apply test vector
           int rc = aes_gcm_decrypt(key_data,
                                    key_data_len,
                                    input_data,
@@ -399,7 +404,7 @@ void test_aes_gcm_decrypt_vectors(void)
           {
             // check if a test vector expected to fail, passed
             if (rc == 0)
-            { 
+            {
               vector_passed = false;
             }
           }
@@ -438,7 +443,7 @@ void test_aes_gcm_decrypt_vectors(void)
 
         else
         {
-          // get_aes_gcm_test_vector_from_file() returned error - must be done
+          // get_aes_gcm_test_vector_from_file() returned error - must be EOF
           done_with_test_vector_file = true;
         }
       }
@@ -446,20 +451,18 @@ void test_aes_gcm_decrypt_vectors(void)
       // Done with the test vector file (processed all vectors or reached max)
       fclose(test_vector_fd[i]);
 
-      // Provide INFO: message indicating how many test vectors were applied
-      printf("INFO: %s - %d test vectors applied\n",
-              gcm_decrypt_vectors.sets[i].path, test_vector_count);
+      // update test vector tracking counters
+      parsed_test_vector_files++;
+      cumulative_test_vector_count += test_vector_count;
+    }
+  }
 
-      // reset flag/counters for potential processing of new test vector file
-      done_with_test_vector_file = false;
-      test_vector_count = 0;
-    }
-    else
-    {
-      printf("INFO: test vector file (%s) not installed ... ",
-              gcm_decrypt_vectors.sets[i].path);
-      printf("skipping these tests\n");
-    }
+  // print message to inform about optional tests run
+  printf("\nINFO: %ld of %ld optional AES/GCM decrypt test vector files %s\n",
+         parsed_test_vector_files, gcm_decrypt_vectors.count, "parsed");
+  if (cumulative_test_vector_count > 0)
+  {
+    printf("      %ld test vectors applied\n", cumulative_test_vector_count);
   }
 
   // clean-up memory allocated for test vector
@@ -665,10 +668,10 @@ void test_gcm_cipher_modification(void)
 void test_gcm_parameter_limits(void)
 {
 
-  unsigned char * key     = NULL;
-  unsigned char * inData  = NULL;
-  unsigned char * outData = NULL;
-  
+  unsigned char *key = NULL;
+  unsigned char *inData = NULL;
+  unsigned char *outData = NULL;
+
   // check that null keys produce an error
   int key_len = 16;
   size_t inData_len = 16;
@@ -698,7 +701,7 @@ void test_gcm_parameter_limits(void)
                             &outData, &outData_len) == 1);
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
-  
+
   // check that an empty (zero length) PT data input to encrypt succeeds
   // output data should be concatenation of IV and tag
   inData = malloc(GCM_IV_LEN + GCM_TAG_LEN);
@@ -731,6 +734,5 @@ void test_gcm_parameter_limits(void)
   key_len = 12;
   CU_ASSERT(inData != NULL);
   CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
-            &outData, &outData_len) == 1);
+                            &outData, &outData_len) == 1);
 }
-

@@ -30,9 +30,9 @@
 
 typedef struct cipher_vector_set
 {
-  char * desc;
-  char * func_to_test;
-  char * path;
+  char *desc;
+  char *func_to_test;
+  char *path;
 } cipher_vector_set;
 
 typedef struct cipher_vector_compilation
@@ -41,13 +41,14 @@ typedef struct cipher_vector_compilation
   cipher_vector_set sets[MAX_VECTOR_SETS_IN_COMPILATION];
 } cipher_vector_compilation;
 
-
 /**
- * As the NIST test vectors are specified as hexadecimal values, the
- * bytes encrypted or decrypted by the kmyth keywrap cipher
- * implementation must be converted into a hex format for comparison
- * with the expected result. This simple utility provides that
- * functionality.
+ * The NIST test vectors are specified as strings representing hexadecimal
+ * values. These hex strings, read from the test vector files, must be
+ * converted to byte arrays with the corresponding value, in order to
+ * comply with kmyth's cipher API. This simple utility provides the
+ * hexadecimal string to byte array format conversion required to pass the
+ * specified input parameters to kmyth cipher functions and/or compare
+ * resultant output parameters to the expected result.
  *
  * @param[out] result  - Byte array corresponding to input hex string value
  *
@@ -60,4 +61,3 @@ typedef struct cipher_vector_compilation
 int convert_HexString_to_ByteArray(char **result, char *hex_str, int str_size);
 
 #endif
-

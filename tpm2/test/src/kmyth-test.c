@@ -19,6 +19,7 @@
 #include "formatting_tools_test.h"
 #include "tls_util_test.h"
 #include "aes_gcm_test.h"
+#include "aes_keywrap_test.h"
 #include "tpm2_interface_test.h"
 #include "storage_key_tools_test.h"
 #include "pcrs_test.h"
@@ -102,10 +103,10 @@ int main(int argc, char **argv)
   object_tools_test_suite = CU_add_suite("TPM Object Tools Test Suite",
                                          init_suite, clean_suite);
   if (NULL == object_tools_test_suite)
-    {
-      CU_cleanup_registry();
-      return CU_get_error();
-    }
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
   if (object_tools_add_tests(object_tools_test_suite))
 
   {
@@ -156,6 +157,22 @@ int main(int argc, char **argv)
     return CU_get_error();
   }
   if (aes_gcm_add_tests(aes_gcm_test_suite))
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  // Create and configure the AES Key Wrap cipher test suite
+  CU_pSuite aes_keywrap_test_suite = NULL;
+
+  aes_keywrap_test_suite = CU_add_suite("AES Key Wrap Cipher Test Suite",
+                                        init_suite, clean_suite);
+  if (NULL == aes_keywrap_test_suite)
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (aes_keywrap_add_tests(aes_keywrap_test_suite))
   {
     CU_cleanup_registry();
     return CU_get_error();
