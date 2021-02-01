@@ -346,12 +346,15 @@ void test_aes_keywrap_vectors(void)
   // check that number of test vector files complies with specified maximum
   if (aes_keywrap_vectors.count > MAX_VECTOR_SETS_IN_COMPILATION)
   {
-    fprintf(stderr,
-            "ERROR: too many (%ld) vector set mappings (%d max)",
-            aes_keywrap_vectors.count, MAX_VECTOR_SETS_IN_COMPILATION);
     CU_FAIL("AES Key Wrap Test Vector File Count Exceeds Limit");
     return;
   }
+
+  // create counters to track the number of:
+  //   - configured test vector files parsed (partially or fully)
+  //   - test vectors applied (cumulative count)
+  size_t parsed_test_vector_files = 0;
+  size_t cumulative_test_vector_count = 0;
 
   // allocate memory to hold a single test vector - re-use these buffers
   // for all test vectors used during these tests
@@ -520,17 +523,18 @@ void test_aes_keywrap_vectors(void)
       // Done with the test vector file (processed all vectors or reached max)
       fclose(test_vector_fd[i]);
 
-      // Provide INFO: message indicating how many test vectors were applied
-      printf("INFO: %s - %d test vectors applied\n",
-             aes_keywrap_vectors.sets[i].path, test_vector_count);
+      // update test vector tracking counters
+      parsed_test_vector_files++;
+      cumulative_test_vector_count += test_vector_count;
     }
+  }
 
-    else
-    {
-      printf("INFO: test vector file (%s) not installed ... ",
-             aes_keywrap_vectors.sets[i].path);
-      printf("skipping these tests\n");
-    }
+  // print message to inform about optional tests run
+  printf("\nINFO: %ld of %ld optional AES keywrap test vector files parsed\n",
+         parsed_test_vector_files, aes_keywrap_vectors.count);
+  if (cumulative_test_vector_count > 0)
+  {
+    printf("      %ld test vectors applied\n", cumulative_test_vector_count);
   }
 
   // clean-up allocated test vector memory

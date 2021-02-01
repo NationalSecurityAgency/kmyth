@@ -317,12 +317,15 @@ void test_aes_gcm_decrypt_vectors(void)
   // check that number of test vector files complies with specified maximum
   if (gcm_decrypt_vectors.count > MAX_VECTOR_SETS_IN_COMPILATION)
   {
-    fprintf(stderr,
-            "ERROR: too many (%ld) vector set mappings (%d max)",
-            gcm_decrypt_vectors.count, MAX_VECTOR_SETS_IN_COMPILATION);
     CU_FAIL("AES GCM Decrypt Test Vector File Count Exceeds Limit");
     return;
   }
+
+  // create counters to track the number of:
+  //   - configured test vector files parsed (partially or fully)
+  //   - test vectors applied (cumulative count)
+  size_t parsed_test_vector_files = 0;
+  size_t cumulative_test_vector_count = 0;
 
   // allocate memory to hold a single test vector - re-use these buffers
   // for all test vectors used during these tests
@@ -344,11 +347,21 @@ void test_aes_gcm_decrypt_vectors(void)
       // counter to track number of test vectors applied from a file
       int test_vector_count = 0;
 
-      // flag used to signal end of processing for a given test vector file
+      // flag used to signal stop processing test vector file, set true if:
+      //   - invalid kmyth "function to test" associated with vector set
+      //   - EOF reached (get_aes_gcm_vector_from_file() failed)
+      //   - test count limit exceeded
       bool done_with_test_vector_file = false;
 
-      while ((!done_with_test_vector_file) &&
-             (test_vector_count <= MAX_GCM_TEST_VECTOR_COUNT))
+      if (strncmp(gcm_decrypt_vectors.sets[i].func_to_test,
+                  "aes_gcm_decrypt", 15) != 0)
+      {
+        CU_FAIL("Test vector file linked to invalid function to test");
+        // don't get vectors from this file - can't apply them
+        done_with_test_vector_file = true;
+      }
+
+      while (!done_with_test_vector_file)
       {
         // Parse next vector from file
         if (get_aes_gcm_vector_from_file(test_vector_fd[i],
@@ -367,8 +380,16 @@ void test_aes_gcm_decrypt_vectors(void)
           output_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
           size_t output_data_len = 0;
 
-          // apply test vector
+          // increment count of test vectors applied and test if limit reached
+          // if the test vector count limit is reached, this will be the last
+          // test vector retrieved from this file and parsed
           test_vector_count++;
+          if (test_vector_count > MAX_GCM_TEST_VECTOR_COUNT)
+          {
+            done_with_test_vector_file = true;
+          }
+
+          // apply test vector
           int rc = aes_gcm_decrypt(key_data,
                                    key_data_len,
                                    input_data,
@@ -422,7 +443,7 @@ void test_aes_gcm_decrypt_vectors(void)
 
         else
         {
-          // get_aes_gcm_test_vector_from_file() returned error - must be done
+          // get_aes_gcm_test_vector_from_file() returned error - must be EOF
           done_with_test_vector_file = true;
         }
       }
@@ -430,20 +451,18 @@ void test_aes_gcm_decrypt_vectors(void)
       // Done with the test vector file (processed all vectors or reached max)
       fclose(test_vector_fd[i]);
 
-      // Provide INFO: message indicating how many test vectors were applied
-      printf("INFO: %s - %d test vectors applied\n",
-             gcm_decrypt_vectors.sets[i].path, test_vector_count);
+      // update test vector tracking counters
+      parsed_test_vector_files++;
+      cumulative_test_vector_count += test_vector_count;
+    }
+  }
 
-      // reset flag/counters for potential processing of new test vector file
-      done_with_test_vector_file = false;
-      test_vector_count = 0;
-    }
-    else
-    {
-      printf("INFO: test vector file (%s) not installed ... ",
-             gcm_decrypt_vectors.sets[i].path);
-      printf("skipping these tests\n");
-    }
+  // print message to inform about optional tests run
+  printf("\nINFO: %ld of %ld optional AES/GCM decrypt test vector files %s\n",
+         parsed_test_vector_files, gcm_decrypt_vectors.count, "parsed");
+  if (cumulative_test_vector_count > 0)
+  {
+    printf("      %ld test vectors applied\n", cumulative_test_vector_count);
   }
 
   // clean-up memory allocated for test vector
