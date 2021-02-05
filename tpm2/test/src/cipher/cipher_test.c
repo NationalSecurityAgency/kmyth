@@ -1,6 +1,8 @@
 //############################################################################
 // cipher_test.c
 //
+// General utilities for kmyth cipher testing:
+//   - convert hexadecimal valued strings in vector files to byte arrays
 // Tests for cipher utility functions in tpm2/src/cipher/cipher.c
 //############################################################################
 
@@ -9,6 +11,35 @@
 #include "cipher/aes_gcm.h"
 #include "cipher/cipher.h"
 #include "cipher_test.h"
+
+//############ General Utilities supporting Cipher Testing ###################
+
+//----------------------------------------------------------------------------
+// convert_HexString_to_ByteArray()
+//----------------------------------------------------------------------------
+int convert_HexString_to_ByteArray(char **result, char *hex_str, int str_size)
+{
+  if ((str_size % 2) != 0)
+  {
+    fprintf(stderr, "ERROR: Invalid hex string size, must be even.\n");
+    return 1;
+  }
+
+  size_t bufSize = ((str_size) / 2);
+  char *buf = (char *) calloc(bufSize + 1, sizeof(char));
+
+  for (int i = 0; i < bufSize; i++)
+  {
+    sscanf(hex_str + (i * 2), "%02hhx", &buf[i]);
+  }
+  buf[bufSize] = '\0';
+
+  *result = buf;
+
+  return 0;
+}
+
+//############ Cipher Utility Function Test Configuration ####################
 
 //----------------------------------------------------------------------------
 // cipher_add_tests()
@@ -41,6 +72,8 @@ int cipher_add_tests(CU_pSuite suite)
 
   return 0;
 }
+
+//############ Cipher Utility Function Tests #################################
 
 //----------------------------------------------------------------------------
 // test_kmyth_get_cipher_t_from_string()
