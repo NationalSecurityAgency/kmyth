@@ -12,7 +12,7 @@
 #include <CUnit/CUnit.h>
 
 #include "aes_keywrap_test.h"
-#include "kmyth_cipher_test.h"
+#include "cipher_test.h"
 #include "aes_keywrap_3394nopad.h"
 #include "aes_keywrap_5649pad.h"
 

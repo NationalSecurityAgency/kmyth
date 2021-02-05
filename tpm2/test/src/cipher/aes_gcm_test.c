@@ -9,7 +9,7 @@
 #include <CUnit/CUnit.h>
 
 #include "aes_gcm_test.h"
-#include "kmyth_cipher_test.h"
+#include "cipher_test.h"
 #include "aes_gcm.h"
 
 //----------------------------------------------------------------------------
