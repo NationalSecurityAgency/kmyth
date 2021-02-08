@@ -287,7 +287,7 @@ void log_event(const char *src_file,
   setlogmask(LOG_UPTO(log_settings.syslog_severity_threshold));
   openlog(log_settings.app_name,
           LOG_CONS | LOG_PID | LOG_NDELAY, log_settings.syslog_facility);
-  syslog(severity, out);
+  syslog(severity, "%s", out);
   closelog();
 
   // application logging
