@@ -445,5 +445,6 @@ clean:
 	rm -rf $(DOC_DIR)
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
+	rm -rf $(LOGGER_OBJ_DIR)
 
 #====================== END: RULES =========================================
