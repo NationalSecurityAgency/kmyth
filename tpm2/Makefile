@@ -69,7 +69,6 @@ LOGGER_SRC_DIR = $(LOGGER_DIR)/src
 LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
 LOGGER_INC_DIR = $(LOGGER_DIR)/include
 LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
-LOGGER_LIB_DIR = $(LOGGER_DIR)/lib
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), \
                          $(LOGGER_OBJ_DIR), \
                          $(LOGGER_SOURCES:%.c=%.o))
@@ -83,7 +82,10 @@ TPM_UTIL_LIB_LOCAL_DEST = $(LIB_DIR)/$(TPM_UTIL_LIB_SONAME)
 # Specify details for optional kmyth logger shared (.so) library
 LOGGER_LIB_NAME = kmyth-logger
 LOGGER_LIB_SONAME = lib$(LOGGER_LIB_NAME).so
-LOGGER_LIB_LOCAL_DEST = $(LOGGER_LIB_DIR)/$(LOGGER_LIB_SONAME)
+LOGGER_LIB_LOCAL_DEST = $(LIB_DIR)/$(LOGGER_LIB_SONAME)
+
+# Specify backup files to be cleaned up
+BACKUP_FILES = $(shell find -name "*~" -print)
 
 #====================== END: BUILD ENVIRONMENT DEFINITION ====================
 
@@ -253,16 +255,26 @@ INDENT_OPTS += -l80#                     max non-comment line length is 80
 #====================== START: RULES =========================================
 
 .PHONY: all
-all: pre tpm-util-lib kmyth-seal kmyth-unseal kmyth-getkey
+all: pre clean-backups logger-lib tpm-util-lib \
+     $(BIN_DIR)/kmyth-seal \
+     $(BIN_DIR)/kmyth-unseal \
+     $(BIN_DIR)/kmyth-getkey
 
 .PHONY: pre
 pre:
 	indent $(INDENT_OPTS) $(SOURCE_FILES)
 	indent $(INDENT_OPTS) $(HEADER_FILES)
-	rm -f $(shell find -name "*~" -print)
+
+.PHONY: logger-lib
+logger-lib: pre  clean-backups $(LOGGER_OBJECTS) | $(LIB_DIR)
+	$(CC) $(SOFLAGS) \
+	      $(LOGGER_OBJECTS) \
+	      -o $(LOGGER_LIB_LOCAL_DEST) \
+	      $(LDLIBS)
 
 .PHONY: tpm-util-lib
-tpm-util-lib: $(UTIL_OBJECTS) \
+tpm-util-lib: pre clean-backups logger-lib \
+              $(UTIL_OBJECTS) \
 	            $(CIPHER_OBJECTS) \
               $(TPM_OBJECTS) \
               $(LOGGER_OBJECTS) | \
@@ -273,30 +285,32 @@ tpm-util-lib: $(UTIL_OBJECTS) \
 	      $(CIPHER_OBJECTS) \
 	      $(TPM_OBJECTS) \
 	      -o $(TPM_UTIL_LIB_LOCAL_DEST) \
+	      $(LDFLAGS) \
 	      $(LDLIBS) \
+	      -lkmyth-logger
 
-.PHONY: kmyth-seal
-kmyth-seal: $(MAIN_OBJ_DIR)/seal.o | $(BIN_DIR)
+$(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o | $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/seal.o \
 	      -o $(BIN_DIR)/kmyth-seal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+	      -lkmyth-logger \
 	      -lkmyth-tpm
 
-.PHONY: kmyth-unseal
-kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o | $(BIN_DIR)
+$(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o | $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/unseal.o \
 	      -o $(BIN_DIR)/kmyth-unseal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+	      -lkmyth-logger \
 	      -lkmyth-tpm
 
-.PHONY: kmyth-getkey
-kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o | $(BIN_DIR)
+$(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o | $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+	      -lkmyth-logger \
 	      -lkmyth-tpm
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) \
@@ -359,16 +373,6 @@ $(TPM_OBJ_DIR):
 $(LOGGER_OBJ_DIR):
 	mkdir -p $(LOGGER_OBJ_DIR)
 
-.PHONY: logger-lib
-logger-lib: $(LOGGER_OBJECTS) | $(LOGGER_LIB_DIR)
-	$(CC) $(SOFLAGS) \
-	      $(LOGGER_OBJECTS) \
-	      -o $(LOGGER_LIB_LOCAL_DEST) \
-	      $(LDLIBS)
-
-$(LOGGER_LIB_DIR):
-	mkdir -p $(LOGGER_LIB_DIR)
-
 .PHONY: doc
 doc: $(HEADER_FILES) \
      $(UTIL_SOURCES) \
@@ -381,14 +385,13 @@ doc: $(HEADER_FILES) \
 	doxygen Doxyfile
 
 .PHONY: test
-test: pretest kmyth-test
+test: pretest clean-backups kmyth-test
 	./bin/kmyth-test 2>/dev/null
 
 .PHONY: pretest
 pretest:
 	indent $(INDENT_OPTS) $(TEST_SOURCES)
 	indent $(INDENT_OPTS) $(TEST_HEADERS)
-	rm -f $(shell find $(TEST_DIR) -name "*~" -print)
 
 .PHONY: kmyth-test
 kmyth-test: $(TEST_OBJECTS)
@@ -445,25 +448,37 @@ $(TEST_TPM_OBJ_DIR):
 $(TEST_CIPHER_OBJ_DIR):
 	mkdir -p $(TEST_CIPHER_OBJ_DIR)
 
-
 .PHONY: install
 install:
+ifeq ($(wildcard $(LOGGER_LIB_LOCAL_DEST)), $(LOGGER_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
-	install -m 755 $(LIB_DIR)/$(TPM_UTIL_LIB_SONAME) $(DESTDIR)$(PREFIX)/lib/
-	install -d $(DESTDIR)$(PREFIX)/include/kmyth/
+	install -m 755 $(LOGGER_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth
 	install -m 644 $(LOGGER_INC_DIR)/kmyth_log.h \
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
+	ldconfig
+endif
+ifeq ($(wildcard $(TPM_UTIL_LIB_LOCAL_DEST)), $(TPM_UTIL_LIB_LOCAL_DEST))
+	install -d $(DESTDIR)$(PREFIX)/lib
+	install -m 755 $(TPM_UTIL_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth
 	install -m 644 $(INC_DIR)/kmyth.h $(DESTDIR)$(PREFIX)/include/kmyth/
+	ldconfig
+endif
+ifeq ($(wildcard $(BIN_DIR)/kmyth-seal), $(BIN_DIR)/kmyth-seal)
 	install -d $(DESTDIR)$(PREFIX)/bin
 	install -m 755 $(BIN_DIR)/kmyth-seal $(DESTDIR)$(PREFIX)/bin/
+endif
+ifeq ($(wildcard $(BIN_DIR)/kmyth-unseal), $(BIN_DIR)/kmyth-unseal)
+	install -d $(DESTDIR)$(PREFIX)/bin
 	install -m 755 $(BIN_DIR)/kmyth-unseal $(DESTDIR)$(PREFIX)/bin/
-	ldconfig
+endif
 
 .PHONY: uninstall
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_UTIL_LIB_SONAME)
-	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
-	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
+	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
@@ -482,14 +497,18 @@ uninstall-test-vectors:
 	rm -rf $(TEST_VEC_DIRS)
 
 .PHONY: clean
-clean:
+clean: clean-backups
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
 	rm -rf $(DOC_DIR)
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
 	rm -rf $(LOGGER_OBJ_DIR)
-	rm -rf $(LOGGER_LIB_DIR)
-	rm -f $(shell find -name "*~" -print)
+
+.PHONY: clean-backups
+clean-backups:
+ifneq ($(BACKUP_FILES),)
+	rm -f $(BACKUP_FILES)
+endif
 
 #====================== END: RULES =========================================

@@ -100,7 +100,8 @@ Once the dependencies are installed:
    documentation is put in ./doc.
 
 3. In the `tpm2` directory run *make* or  *make all* to create:
-  * ./lib/libkmyth.so
+  * ./lib/libkmyth-logger.so
+  * ./lib/libkmyth-tpm.so
   * ./bin/kmyth-seal
   * ./bin/kmyth-unseal
   * ./bin/kmyth-getkey
@@ -108,19 +109,37 @@ Once the dependencies are installed:
 4. The existing build (executables, object files, and documentation) can be
    cleared away to support a fresh build by using *make clean*.
 
-5. To install the `kmyth` headers, library, and the executables run *sudo make install*. By default this installs:
-  * /usr/local/include/kmyth_log.h
-  * /usr/local/include/kmyth.h
+5. To install the `kmyth` headers, library, and the executables run
+   *sudo make install*. By default this installs:
+  * /usr/local/include/kmyth/kmyth_log.h
+  * /usr/local/include/kmyth/kmyth.h
+  * /usr/local/lib/libkmyth-logger.so
   * /usr/local/lib/libkmyth-tpm.so
   * /usr/local/bin/kmyth-seal
   * /usr/local/bin/kmyth-unseal
 
-These can be uninstalled by running *sudo make uninstall*.
+In addition to a normal (full) build/installation, the following two partial
+approaches are also supported for those applications needing more granular
+control of the process:
 
-6. To build the optional shared library containing only the kmyth logger
-   functionality, run *make logger-lib*. This creates:
+1. To build only the 'kmyth-logger' library run *make logger-lib*. This might
+   be useful if only the logging functionality is required. It creates:
   * ./logger/lib/libkmyth-logger.so
+   Running *sudo make install* after this will install:
+  * /usr/local/lib/libkmyth-logger.so
+  * /uae/local/include/kmyth/kmyth_log.h
 
+2. To build both kmyth shared libraries, but not the kmyth applications, run
+   *make tpm-util-lib*. This will create:
+  * ./lib/libkmyth-logger.so
+  * ./lib/libkmyth-tpm.so
+   Running *sudo make install* after this will install:
+  * /usr/local/include/kmyth/kmyth_log.h
+  * /usr/local/include/kmyth/kmyth.h
+  * /usr/local/lib/libkmyth-logger.so
+  * /usr/local/lib/libkmyth-tpm.so
+
+Any installed files can be uninstalled by running *sudo make uninstall*.
 
 ##### Running Kmyth Unit Tests
 
