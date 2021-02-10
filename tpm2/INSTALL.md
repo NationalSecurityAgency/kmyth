@@ -111,11 +111,15 @@ Once the dependencies are installed:
 5. To install the `kmyth` headers, library, and the executables run *sudo make install*. By default this installs:
   * /usr/local/include/kmyth_log.h
   * /usr/local/include/kmyth.h
-  * /usr/local/lib/libkmyth.so
+  * /usr/local/lib/libkmyth-tpm.so
   * /usr/local/bin/kmyth-seal
   * /usr/local/bin/kmyth-unseal
-  
+
 These can be uninstalled by running *sudo make uninstall*.
+
+6. To build the optional shared library containing only the kmyth logger
+   functionality, run *make logger-lib*. This creates:
+  * ./logger/lib/libkmyth-logger.so
 
 
 ##### Running Kmyth Unit Tests
