@@ -478,7 +478,11 @@ endif
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_UTIL_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
+ifeq ($(wildcard $(DESTDIR)$(PREFIX)/include/kmyth/*.h),)
 	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
+endif
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
