@@ -394,7 +394,7 @@ pretest:
 	indent $(INDENT_OPTS) $(TEST_HEADERS)
 
 .PHONY: kmyth-test
-kmyth-test: $(TEST_OBJECTS)
+kmyth-test: $(TEST_OBJECTS) | $(BIN_DIR)
 	$(CC) $(TEST_OBJECTS) \
 	      -o $(BIN_DIR)/kmyth-test \
 	      $(LDFLAGS) \
