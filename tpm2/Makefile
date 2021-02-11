@@ -255,32 +255,38 @@ INDENT_OPTS += -l80#                     max non-comment line length is 80
 #====================== START: RULES =========================================
 
 .PHONY: all
-all: pre clean-backups logger-lib tpm-util-lib \
+all: pre clean-backups \
      $(BIN_DIR)/kmyth-seal \
      $(BIN_DIR)/kmyth-unseal \
-     $(BIN_DIR)/kmyth-getkey
+     $(BIN_DIR)/kmyth-getkey \
+     $(LIB_DIR)/libkmyth-logger.so \
+     $(LIB_DIR)/libkmyth-tpm.so
 
 .PHONY: pre
 pre:
 	indent $(INDENT_OPTS) $(SOURCE_FILES)
 	indent $(INDENT_OPTS) $(HEADER_FILES)
 
+.PHONY: libs
+libs: pre clean-backups \
+      $(LIB_DIR)/libkmyth-logger.so \
+      $(LIB_DIR)/libkmyth-tpm.so
+
 .PHONY: logger-lib
-logger-lib: pre  clean-backups $(LOGGER_OBJECTS) | $(LIB_DIR)
+logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-logger.so
+
+$(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
 	      $(LOGGER_OBJECTS) \
 	      -o $(LOGGER_LIB_LOCAL_DEST) \
 	      $(LDLIBS)
 
-.PHONY: tpm-util-lib
-tpm-util-lib: pre clean-backups logger-lib \
-              $(UTIL_OBJECTS) \
-	            $(CIPHER_OBJECTS) \
-              $(TPM_OBJECTS) \
-              $(LOGGER_OBJECTS) | \
-	            $(LIB_DIR)
+$(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
+                            $(CIPHER_OBJECTS) \
+                            $(TPM_OBJECTS) \
+                            $(LIB_DIR)/libkmyth-logger.so | \
+                            $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
-				$(LOGGER_OBJECTS) \
 	      $(UTIL_OBJECTS) \
 	      $(CIPHER_OBJECTS) \
 	      $(TPM_OBJECTS) \
@@ -289,7 +295,11 @@ tpm-util-lib: pre clean-backups logger-lib \
 	      $(LDLIBS) \
 	      -lkmyth-logger
 
-$(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o | $(BIN_DIR)
+
+$(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
+                       $(LIB_DIR)/libkmyth-logger.so \
+                       $(LIB_DIR)/libkmyth-tpm.so | \
+                       $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/seal.o \
 	      -o $(BIN_DIR)/kmyth-seal \
 	      $(LDFLAGS) \
@@ -297,7 +307,10 @@ $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o | $(BIN_DIR)
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
-$(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o | $(BIN_DIR)
+$(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o \
+                         $(LIB_DIR)/libkmyth-logger.so \
+                         $(LIB_DIR)/libkmyth-tpm.so | \
+												 $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/unseal.o \
 	      -o $(BIN_DIR)/kmyth-unseal \
 	      $(LDFLAGS) \
@@ -305,7 +318,10 @@ $(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o | $(BIN_DIR)
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
-$(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o | $(BIN_DIR)
+$(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o \
+                         $(LIB_DIR)/libkmyth-logger.so \
+                         $(LIB_DIR)/libkmyth-tpm.so | \
+                         $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
 	      $(LDFLAGS) \

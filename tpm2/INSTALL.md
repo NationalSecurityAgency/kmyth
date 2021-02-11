@@ -128,9 +128,11 @@ control of the process:
    Running *sudo make install* after this will install:
   * /usr/local/lib/libkmyth-logger.so
   * /uae/local/include/kmyth/kmyth_log.h
+   Note: As this option does not build the kmyth TPM utilities library, unit
+   testing will not be possible (*make test* will fail).
 
 2. To build both kmyth shared libraries, but not the kmyth applications, run
-   *make tpm-util-lib*. This will create:
+   *make libs*. This will create:
   * ./lib/libkmyth-logger.so
   * ./lib/libkmyth-tpm.so
    Running *sudo make install* after this will install:
@@ -138,6 +140,8 @@ control of the process:
   * /usr/local/include/kmyth/kmyth.h
   * /usr/local/lib/libkmyth-logger.so
   * /usr/local/lib/libkmyth-tpm.so
+   Note: as this option builds all kmyth library functionality, unit testing
+   should be possible (*make test* should run unit tests).
 
 Any installed files can be uninstalled by running *sudo make uninstall*.
 
