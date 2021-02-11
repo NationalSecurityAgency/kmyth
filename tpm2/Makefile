@@ -401,7 +401,7 @@ doc: $(HEADER_FILES) \
 	doxygen Doxyfile
 
 .PHONY: test
-test: pretest clean-backups kmyth-test
+test: pretest clean-backups $(BIN_DIR)/kmyth-test
 	./bin/kmyth-test 2>/dev/null
 
 .PHONY: pretest
@@ -409,8 +409,8 @@ pretest:
 	indent $(INDENT_OPTS) $(TEST_SOURCES)
 	indent $(INDENT_OPTS) $(TEST_HEADERS)
 
-.PHONY: kmyth-test
-kmyth-test: $(TEST_OBJECTS) | $(BIN_DIR)
+
+$(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) | $(BIN_DIR)
 	$(CC) $(TEST_OBJECTS) \
 	      -o $(BIN_DIR)/kmyth-test \
 	      $(LDFLAGS) \
@@ -418,8 +418,7 @@ kmyth-test: $(TEST_OBJECTS) | $(BIN_DIR)
 	      -lcunit \
 	      -lkmyth-tpm
 
-$(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | \
-                              $(TEST_OBJ_DIR)
+$(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
 $(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c \
