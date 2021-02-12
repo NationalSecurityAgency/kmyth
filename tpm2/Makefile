@@ -297,7 +297,6 @@ $(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
 
 
 $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
-                       $(LIB_DIR)/libkmyth-logger.so \
                        $(LIB_DIR)/libkmyth-tpm.so | \
                        $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/seal.o \
@@ -308,7 +307,6 @@ $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
 	      -lkmyth-tpm
 
 $(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o \
-                         $(LIB_DIR)/libkmyth-logger.so \
                          $(LIB_DIR)/libkmyth-tpm.so | \
 												 $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/unseal.o \
@@ -319,7 +317,6 @@ $(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o \
 	      -lkmyth-tpm
 
 $(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o \
-                         $(LIB_DIR)/libkmyth-logger.so \
                          $(LIB_DIR)/libkmyth-tpm.so | \
                          $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/getkey.o \
@@ -410,7 +407,9 @@ pretest:
 	indent $(INDENT_OPTS) $(TEST_HEADERS)
 
 
-$(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) | $(BIN_DIR)
+$(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
+                       $(LIB_DIR)/libkmyth-tpm.so | \
+                       $(BIN_DIR)
 	$(CC) $(TEST_OBJECTS) \
 	      -o $(BIN_DIR)/kmyth-test \
 	      $(LDFLAGS) \
