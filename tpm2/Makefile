@@ -386,6 +386,9 @@ $(TPM_OBJ_DIR):
 $(LOGGER_OBJ_DIR):
 	mkdir -p $(LOGGER_OBJ_DIR)
 
+$(DOC_DIR):
+	mkdir -p $(DOC_DIR)
+
 .PHONY: doc
 doc: $(HEADER_FILES) \
      $(UTIL_SOURCES) \
@@ -393,8 +396,8 @@ doc: $(HEADER_FILES) \
      $(MAIN_SOURCES) \
      $(LOGGER_HEADERS) \
      $(LOGGER_SOURCES) \
-     Doxyfile
-	mkdir -p $(DOC_DIR)
+     Doxyfile | \
+		 $(DOC_DIR)
 	doxygen Doxyfile
 
 .PHONY: test
