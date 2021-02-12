@@ -69,6 +69,54 @@ uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 //----------------------------------------------------------------------------
 int formatting_tools_add_tests(CU_pSuite suite)
 {
+  if (NULL == CU_add_test(suite, "marshal_skiObjects() Tests",
+                          test_marshal_skiObjects))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "unmarshal_skiObjects() Tests",
+                          test_unmarshal_skiObjects))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "pack_pcr() Tests", test_pack_pcr))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "unpack_pcr() Tests", test_unpack_pcr))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "pack_public() Tests", test_pack_public))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "unpack_public() Tests", test_unpack_public))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "pack_private() Tests", test_pack_private))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "unpack_private() Tests", test_unpack_private))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "unpack_uint32_to_str() Tests",
+                          test_unpack_uint32_to_str))
+  {
+    return 1;
+  }
+
   if (NULL ==
       CU_add_test(suite, "parse_ski_bytes() Tests", test_parse_ski_bytes))
   {
@@ -116,6 +164,78 @@ int formatting_tools_add_tests(CU_pSuite suite)
   }
 
   return 0;
+}
+
+//----------------------------------------------------------------------------
+// test_marshal_skiObjects
+//----------------------------------------------------------------------------
+void test_marshal_skiObjects(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_unmarshal_skiObjects
+//----------------------------------------------------------------------------
+void test_unmarshal_skiObjects(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_pack_pcr
+//----------------------------------------------------------------------------
+void test_pack_pcr(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_unpack_pcr
+//----------------------------------------------------------------------------
+void test_unpack_pcr(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_pack_public
+//----------------------------------------------------------------------------
+void test_pack_public(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_unpack_public
+//----------------------------------------------------------------------------
+void test_unpack_public(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_pack_private
+//----------------------------------------------------------------------------
+void test_pack_private(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_unpack_private
+//----------------------------------------------------------------------------
+void test_unpack_private(void)
+{
+
+}
+
+//----------------------------------------------------------------------------
+// test_unpack_uint32_to_str
+//----------------------------------------------------------------------------
+void test_unpack_uint32_to_str(void)
+{
+
 }
 
 //----------------------------------------------------------------------------

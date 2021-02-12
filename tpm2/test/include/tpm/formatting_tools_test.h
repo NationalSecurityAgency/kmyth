@@ -25,6 +25,15 @@ int formatting_tools_add_tests(CU_pSuite suite);
 
 //Tests for functions in formatting_tools.h, format for test names is:
 //    test_funtion_name()
+void test_marshal_skiObjects(void);
+void test_unmarshal_skiObjects(void);
+void test_pack_pcr(void);
+void test_unpack_pcr(void);
+void test_pack_public(void);
+void test_unpack_public(void);
+void test_pack_private(void);
+void test_unpack_private(void);
+void test_unpack_uint32_to_str(void);
 void test_parse_ski_bytes(void);
 void test_create_ski_bytes(void);
 void test_free_ski(void);
