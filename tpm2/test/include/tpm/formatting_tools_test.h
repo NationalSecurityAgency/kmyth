@@ -27,7 +27,7 @@ int formatting_tools_add_tests(CU_pSuite suite);
 //    test_funtion_name()
 void test_marshal_skiObjects(void);
 void test_unmarshal_skiObjects(void);
-void test_pack_pcr(void);
+void test_pack_unpack_pcr(void);
 void test_unpack_pcr(void);
 void test_pack_public(void);
 void test_unpack_public(void);

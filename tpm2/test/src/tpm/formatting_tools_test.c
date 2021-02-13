@@ -81,12 +81,8 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "pack_pcr() Tests", test_pack_pcr))
-  {
-    return 1;
-  }
-
-  if (NULL == CU_add_test(suite, "unpack_pcr() Tests", test_unpack_pcr))
+  if (NULL == CU_add_test(suite, "pack_unpack_pcr() Tests",
+                          test_pack_unpack_pcr))
   {
     return 1;
   }
@@ -183,19 +179,81 @@ void test_unmarshal_skiObjects(void)
 }
 
 //----------------------------------------------------------------------------
-// test_pack_pcr
+// test_pack_unpack_pcr
 //----------------------------------------------------------------------------
-void test_pack_pcr(void)
+void test_pack_unpack_pcr(void)
 {
+  TPML_PCR_SELECTION test_in, test_out;
 
-}
+  // initialize test PCR selection struct (test input to pack_pcr())
+  test_in.count = 1;
+  test_in.pcrSelections[0].hash = KMYTH_HASH_ALG;
+  test_in.pcrSelections[0].sizeofSelect = 3;
+  test_in.pcrSelections[0].pcrSelect[0] = 0xAA;
+  test_in.pcrSelections[0].pcrSelect[1] = 0x55;
+  test_in.pcrSelections[0].pcrSelect[2] = 0xAA;
 
-//----------------------------------------------------------------------------
-// test_unpack_pcr
-//----------------------------------------------------------------------------
-void test_unpack_pcr(void)
-{
+  size_t test_packed_pcr_data_offset = 2;
+  size_t test_packed_pcr_data_size = 10 + test_packed_pcr_data_offset;
 
+  // allocate variable to hold packed version of test PCR selection struct
+  uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_data_size, 1);
+
+  // pack the PCR selection struct test value
+  int ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+                         test_packed_pcr_data_size,
+                         test_packed_pcr_data_offset);
+
+  // check that pack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  uint32_t packed_count_val = 0;
+  int index = test_packed_pcr_data_offset;
+
+  // check that the count portion of the packed value matches original count
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 24);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 16);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 8);
+  packed_count_val |= (uint32_t) test_packed_pcr_data[index++];
+  CU_ASSERT(packed_count_val == test_in.count);
+
+  uint16_t packed_hash_alg_id = 0;
+
+  // check that the hash algorithm ID of the packed value matches input value
+  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data[index++] << 8);
+  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data[index++];
+  CU_ASSERT(packed_hash_alg_id == test_in.pcrSelections[0].hash);
+
+  // check that TPMS_PCR_SELECT struct was packed as expected
+  CU_ASSERT(test_packed_pcr_data[index++] ==
+            test_in.pcrSelections[0].sizeofSelect);
+  CU_ASSERT(test_packed_pcr_data[index++] ==
+            test_in.pcrSelections[0].pcrSelect[0]);
+  CU_ASSERT(test_packed_pcr_data[index++] ==
+            test_in.pcrSelections[0].pcrSelect[1]);
+  CU_ASSERT(test_packed_pcr_data[index++] ==
+            test_in.pcrSelections[0].pcrSelect[2]);
+
+  // unpack the packed PCR selection struct test value
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_data_size, test_packed_pcr_data_offset);
+
+  // check that unpack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the unpacked struct matches original input
+  CU_ASSERT(test_out.count == test_in.count);
+  CU_ASSERT(test_out.pcrSelections[0].hash == test_in.pcrSelections[0].hash);
+  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect ==
+            test_in.pcrSelections[0].sizeofSelect);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] ==
+            test_in.pcrSelections[0].pcrSelect[0]);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] ==
+            test_in.pcrSelections[0].pcrSelect[1]);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
+            test_in.pcrSelections[0].pcrSelect[2]);
+
+  free(test_packed_pcr_data);
 }
 
 //----------------------------------------------------------------------------
