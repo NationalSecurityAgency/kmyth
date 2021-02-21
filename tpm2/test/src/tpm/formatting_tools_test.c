@@ -10,6 +10,7 @@
 
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
+#include "object_tools.h"
 #include "defines.h"
 
 const char *CONST_SKI_BYTES = "\
@@ -81,18 +82,14 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "pack_unpack_pcr() Tests",
+  if (NULL == CU_add_test(suite, "pack_pcr() / unpack_pcr() Tests",
                           test_pack_unpack_pcr))
   {
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "pack_public() Tests", test_pack_public))
-  {
-    return 1;
-  }
-
-  if (NULL == CU_add_test(suite, "unpack_public() Tests", test_unpack_public))
+  if (NULL == CU_add_test(suite, "pack_public() / unpack_public() Tests",
+                          test_pack_unpack_public))
   {
     return 1;
   }
@@ -193,22 +190,23 @@ void test_pack_unpack_pcr(void)
   test_in.pcrSelections[0].pcrSelect[1] = 0x55;
   test_in.pcrSelections[0].pcrSelect[2] = 0xAA;
 
-  size_t test_packed_pcr_data_offset = 2;
-  size_t test_packed_pcr_data_size = 10 + test_packed_pcr_data_offset;
+  size_t test_packed_pcr_offset = 2;
+  size_t test_packed_pcr_size = 10 + test_packed_pcr_offset;
 
   // allocate variable to hold packed version of test PCR selection struct
-  uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_data_size, 1);
+  uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_size, 1);
 
   // pack the PCR selection struct test value
   int ret_val = pack_pcr(&test_in, test_packed_pcr_data,
-                         test_packed_pcr_data_size,
-                         test_packed_pcr_data_offset);
+                         test_packed_pcr_size, test_packed_pcr_offset);
 
   // check that pack operation did not return error
   CU_ASSERT(ret_val == 0);
 
+  // account for any offset passed as a pack_pcr() parameter
+  int index = test_packed_pcr_offset;
+
   uint32_t packed_count_val = 0;
-  int index = test_packed_pcr_data_offset;
 
   // check that the count portion of the packed value matches original count
   packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 24);
@@ -236,7 +234,7 @@ void test_pack_unpack_pcr(void)
 
   // unpack the packed PCR selection struct test value
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_data_size, test_packed_pcr_data_offset);
+                       test_packed_pcr_size, test_packed_pcr_offset);
 
   // check that unpack operation did not return error
   CU_ASSERT(ret_val == 0);
@@ -257,18 +255,202 @@ void test_pack_unpack_pcr(void)
 }
 
 //----------------------------------------------------------------------------
-// test_pack_public
+// test_pack_unpack_public
 //----------------------------------------------------------------------------
-void test_pack_public(void)
+void test_pack_unpack_public(void)
 {
+  TPM2B_PUBLIC test_in = {.size = 0 };
+  TPM2B_DIGEST empty_authPolicy = {.size = 0 };
 
-}
+  // initialize test public blob struct (test input to pack_public())
+  //   - for this test, struct values are set to kmyth default values (in
+  //     defines.h) for sealing key objects (init_kmyth_object_template).
+  //   - The RSA key value is set to an incrementing byte pattern.
+  //   - The 'size' member of the struct is calculated by adding
+  //     up the sizes for each field in the 'publicArea' member.
+  if (init_kmyth_object_template(true, empty_authPolicy, &test_in.publicArea))
+  {
+    CU_FAIL("test public object template struct initialization error");
+  }
+  test_in.publicArea.unique.rsa.size = (uint16_t) KMYTH_RSA_KEY_LEN / 8;
+  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
+  {
+    test_in.publicArea.unique.rsa.buffer[i] = i % 256;
+  }
+  test_in.size += sizeof(TPMI_ALG_PUBLIC);  // type
+  test_in.size += sizeof(TPMI_ALG_HASH);  // nameAlg
+  test_in.size += sizeof(TPMA_OBJECT);  // objectAttributes
+  test_in.size += sizeof(uint16_t); // authPolicy.size = 0 (empty buffer)
+  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.symmetric.algorithm
+  test_in.size += sizeof(TPM2_KEY_BITS);  // parameters.symmetric.keyBits.aes
+  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.symmetric.mode.aes
+  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.rsaDetail.scheme
+  test_in.size += sizeof(TPM2_KEY_BITS);  // parameters.rsaDetail.keyBits
+  test_in.size += sizeof(uint32_t); // parameters.rsaDetail.exponent
+  test_in.size += sizeof(uint16_t); // unique.rsa.size
+  test_in.size += test_in.publicArea.unique.rsa.size; // unique.rsa.buffer
 
-//----------------------------------------------------------------------------
-// test_unpack_public
-//----------------------------------------------------------------------------
-void test_unpack_public(void)
-{
+  size_t test_packed_public_offset = 3;
+  size_t test_packed_public_size = sizeof(uint16_t) + test_in.size +
+    test_packed_public_offset;
+
+  // allocate variable to hold packed version of test TPM2_PUBLIC struct
+  uint8_t *test_packed_public_data = calloc(test_packed_public_size, 1);
+
+  // pack the TPM2_PUBLIC struct test value
+  int ret_val = pack_public(&test_in, test_packed_public_data,
+                            test_packed_public_size, test_packed_public_offset);
+
+  // check that pack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // account for any offset passed as a pack_public() parameter
+  int index = test_packed_public_offset;
+
+  uint16_t packed_struct_size = 0;
+
+  // check packed 'size' bytes
+  packed_struct_size |= (test_packed_public_data[index++] << 8);
+  packed_struct_size |= test_packed_public_data[index++];
+  CU_ASSERT(packed_struct_size == test_in.size);
+
+  uint16_t packed_type = 0;
+
+  // check packed 'publicArea.type' bytes
+  packed_type |= (test_packed_public_data[index++] << 8);
+  packed_type |= test_packed_public_data[index++];
+  CU_ASSERT(packed_type == test_in.publicArea.type);
+
+  uint16_t packed_nameAlg = 0;
+
+  // check packed 'publicArea.nameAlg' bytes
+  packed_nameAlg |= (test_packed_public_data[index++] << 8);
+  packed_nameAlg |= test_packed_public_data[index++];
+  CU_ASSERT(packed_nameAlg == test_in.publicArea.nameAlg);
+
+  uint32_t packed_objectAttributes = 0;
+
+  // check packed 'publicArea.objectAttributes' bytes
+  packed_objectAttributes |= (test_packed_public_data[index++] << 24);
+  packed_objectAttributes |= (test_packed_public_data[index++] << 16);
+  packed_objectAttributes |= (test_packed_public_data[index++] << 8);
+  packed_objectAttributes |= test_packed_public_data[index++];
+  CU_ASSERT(packed_objectAttributes == test_in.publicArea.objectAttributes);
+
+  uint16_t packed_authPolicy_size = 0;
+
+  // check packed 'publicArea.authPolicy' bytes
+  // (passed in empty authPolicy so 'size' should be zero and 'buffer' empty)
+  packed_authPolicy_size |= (test_packed_public_data[index++] << 8);
+  packed_authPolicy_size |= test_packed_public_data[index++];
+  CU_ASSERT(packed_authPolicy_size == test_in.publicArea.authPolicy.size);
+
+  uint16_t packed_sym_alg = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.algorithm' bytes
+  packed_sym_alg |= (test_packed_public_data[index++] << 8);
+  packed_sym_alg |= test_packed_public_data[index++];
+  CU_ASSERT(packed_sym_alg ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
+
+  uint16_t packed_sym_keyBits = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.keyBits.aes' bytes
+  packed_sym_keyBits |= (test_packed_public_data[index++] << 8);
+  packed_sym_keyBits |= test_packed_public_data[index++];
+  CU_ASSERT(packed_sym_keyBits ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
+
+  uint16_t packed_sym_mode = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.mode.aes' bytes
+  packed_sym_mode |= (test_packed_public_data[index++] << 8);
+  packed_sym_mode |= test_packed_public_data[index++];
+  CU_ASSERT(packed_sym_mode ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
+
+  uint16_t packed_rsa_scheme = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.scheme.scheme' bytes
+  packed_rsa_scheme |= (test_packed_public_data[index++] << 8);
+  packed_rsa_scheme |= test_packed_public_data[index++];
+  CU_ASSERT(packed_rsa_scheme ==
+            test_in.publicArea.parameters.rsaDetail.scheme.scheme);
+
+  uint16_t packed_rsa_keyBits = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.keyBits' bytes
+  packed_rsa_keyBits |= (test_packed_public_data[index++] << 8);
+  packed_rsa_keyBits |= test_packed_public_data[index++];
+  CU_ASSERT(packed_rsa_keyBits ==
+            test_in.publicArea.parameters.rsaDetail.keyBits);
+
+  uint32_t packed_rsa_exponent = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.exponent' bytes
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 24);
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 16);
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 8);
+  packed_rsa_exponent |= test_packed_public_data[index++];
+  CU_ASSERT(packed_rsa_exponent ==
+            test_in.publicArea.parameters.rsaDetail.exponent);
+
+  uint16_t packed_rsa_unique_size = 0;
+
+  // check packed 'publicArea.unique.rsa.size' bytes
+  packed_rsa_unique_size |= (test_packed_public_data[index++] << 8);
+  packed_rsa_unique_size |= test_packed_public_data[index++];
+  CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
+
+  bool packed_rsa_unique_bytes_match = true;
+
+  // check packed 'publicArea.unique.rsa.buffer' bytes
+  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
+  {
+    if (test_packed_public_data[index++] !=
+        test_in.publicArea.unique.rsa.buffer[i])
+    {
+      packed_rsa_unique_bytes_match = false;
+      break;
+    }
+  }
+  CU_ASSERT(packed_rsa_unique_bytes_match);
+
+  // declare struct for unpack_public() result
+  TPM2B_PUBLIC test_out = {.size = 0 };
+
+  // unpack the packed PCR selection struct test value
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size, test_packed_public_offset);
+
+  // check that unpack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the unpacked struct matches original input
+  CU_ASSERT(test_out.size == test_in.size);
+  CU_ASSERT(test_out.publicArea.type == test_in.publicArea.type);
+  CU_ASSERT(test_out.publicArea.nameAlg == test_in.publicArea.nameAlg);
+  CU_ASSERT(test_out.publicArea.objectAttributes ==
+            test_in.publicArea.objectAttributes);
+  CU_ASSERT(test_out.publicArea.authPolicy.size ==
+            test_in.publicArea.authPolicy.size);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.algorithm ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.keyBits ==
+            test_in.publicArea.parameters.rsaDetail.keyBits);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.exponent ==
+            test_in.publicArea.parameters.rsaDetail.exponent);
+  CU_ASSERT(test_out.publicArea.unique.rsa.size ==
+            test_in.publicArea.unique.rsa.size);
+  CU_ASSERT(memcmp(test_out.publicArea.unique.rsa.buffer,
+                   test_in.publicArea.unique.rsa.buffer,
+                   test_in.publicArea.unique.rsa.size) == 0);
+
+  free(test_packed_public_data);
 
 }
 
@@ -607,7 +789,7 @@ void test_get_ski_block_bytes(void)
 
   //Test empty block
   const char *empty_block =
-    "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n";
+    "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n ";
   position = (uint8_t *) empty_block;
   remaining = strlen(empty_block);;
   raw_pcr_select_list_size = 0;
@@ -648,15 +830,15 @@ void test_encodeBase64Data(void)
 
   //Test different inputs don't produce the same base64 output
   //First entry has a bit flipped
-  uint8_t wrong_pcr[] = { 1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  uint8_t wrong_pcr[] = {
+    1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
   };
   CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
   CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
@@ -666,14 +848,14 @@ void test_encodeBase64Data(void)
   pcr64_len = 0;
 
   //Test that different length raw data results in different length base64
-  uint8_t short_pcr[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  uint8_t short_pcr[] = {
+    0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
   };
   CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
   CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
@@ -708,9 +890,7 @@ void test_decodeBase64Data(void)
 
   //Test that different input decodes to different output
   char *modified =
-    "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+    "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
   CU_ASSERT(decodeBase64Data
             ((uint8_t *) modified, strlen(modified), &pcr, &pcr_len) == 0);
   CU_ASSERT(pcr_len == RAW_PCR_LEN);
@@ -721,8 +901,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
 
   //Test that different length base64 result in different length raw data
   char *shorter =
-    "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+    "BAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n ";
   CU_ASSERT(decodeBase64Data
             ((uint8_t *) shorter, strlen(shorter), &pcr, &pcr_len) == 0);
   CU_ASSERT(pcr_len != RAW_PCR_LEN);
