@@ -94,12 +94,8 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "pack_private() Tests", test_pack_private))
-  {
-    return 1;
-  }
-
-  if (NULL == CU_add_test(suite, "unpack_private() Tests", test_unpack_private))
+  if (NULL == CU_add_test(suite, "pack_private() / unpack_private() Tests",
+                          test_pack_unpack_private))
   {
     return 1;
   }
@@ -191,7 +187,12 @@ void test_pack_unpack_pcr(void)
   test_in.pcrSelections[0].pcrSelect[2] = 0xAA;
 
   size_t test_packed_pcr_offset = 2;
-  size_t test_packed_pcr_size = 10 + test_packed_pcr_offset;
+  size_t test_packed_pcr_size = sizeof(uint32_t); // 'count'
+
+  test_packed_pcr_size += sizeof(uint16_t); // 'pcrSelections[0].hash'
+  test_packed_pcr_size += sizeof(uint8_t);  // 'pcrSelections[0].sizeofSelect'
+  test_packed_pcr_size += test_in.pcrSelections[0].sizeofSelect;
+  test_packed_pcr_size += test_packed_pcr_offset;
 
   // allocate variable to hold packed version of test PCR selection struct
   uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_size, 1);
@@ -251,7 +252,94 @@ void test_pack_unpack_pcr(void)
   CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
             test_in.pcrSelections[0].pcrSelect[2]);
 
+  // clear results from previous tests
+  memset(test_packed_pcr_data, 0, test_packed_pcr_size);
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, test_packed_pcr_offset);
+
+  // check that unpacking an all-zero byte array of packed data should be
+  // valid and that all fields for the resulting unpacked struct are zero
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.count == 0); // all result struct members should be zero
+  CU_ASSERT(test_out.pcrSelections[0].hash == 0);
+  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] == 0);
+
+  // check that passing a NULL input (value to be packed or unpacked) errors
+  ret_val = pack_pcr(NULL, test_packed_pcr_data,
+                     test_packed_pcr_size, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_pcr(&test_out, NULL,
+                       test_packed_pcr_size, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a packed byte array size of zero errors
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data, 0, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       0, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a non-zero, but too small, packed byte array errors
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+                     test_packed_pcr_size - 1, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size - 1, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // allocate second variable with more space than necessary
+  size_t test_packed_pcr_size2 = test_packed_pcr_size + 8;
+  uint8_t *test_packed_pcr_data2 = calloc(test_packed_pcr_size2, 1);
+
+  // check that packing into a larger byte array than necessary
+  // is less space efficient, but works
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data2,
+                     test_packed_pcr_size2, test_packed_pcr_offset);
+  CU_ASSERT(ret_val == 0);
+  index = test_packed_pcr_offset;
+  packed_count_val = 0;
+  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 24);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 16);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 8);
+  packed_count_val |= (uint32_t) test_packed_pcr_data2[index++];
+  packed_hash_alg_id = 0;
+  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data2[index++] << 8);
+  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data2[index++];
+  CU_ASSERT(packed_hash_alg_id == test_in.pcrSelections[0].hash);
+  CU_ASSERT(test_packed_pcr_data2[index++] ==
+            test_in.pcrSelections[0].sizeofSelect);
+  CU_ASSERT(test_packed_pcr_data2[index++] ==
+            test_in.pcrSelections[0].pcrSelect[0]);
+  CU_ASSERT(test_packed_pcr_data2[index++] ==
+            test_in.pcrSelections[0].pcrSelect[1]);
+  CU_ASSERT(test_packed_pcr_data2[index++] ==
+            test_in.pcrSelections[0].pcrSelect[2]);
+  while (index < test_packed_pcr_size2)
+  {
+    CU_ASSERT(test_packed_pcr_data2[index++] == 0);
+  }
+
+  // check that unpacking from a byte array with excess capacity also works
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data2,
+                       test_packed_pcr_size2, test_packed_pcr_offset);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.count == test_in.count);
+  CU_ASSERT(test_out.pcrSelections[0].hash == test_in.pcrSelections[0].hash);
+  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect ==
+            test_in.pcrSelections[0].sizeofSelect);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] ==
+            test_in.pcrSelections[0].pcrSelect[0]);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] ==
+            test_in.pcrSelections[0].pcrSelect[1]);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
+            test_in.pcrSelections[0].pcrSelect[2]);
+
+  // clean-up - free allocated memory
   free(test_packed_pcr_data);
+  free(test_packed_pcr_data2);
 }
 
 //----------------------------------------------------------------------------
@@ -455,17 +543,9 @@ void test_pack_unpack_public(void)
 }
 
 //----------------------------------------------------------------------------
-// test_pack_private
+// test_pack_unpack_private
 //----------------------------------------------------------------------------
-void test_pack_private(void)
-{
-
-}
-
-//----------------------------------------------------------------------------
-// test_unpack_private
-//----------------------------------------------------------------------------
-void test_unpack_private(void)
+void test_pack_unpack_private(void)
 {
 
 }
