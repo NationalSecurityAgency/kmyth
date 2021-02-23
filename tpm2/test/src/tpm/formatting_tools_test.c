@@ -260,7 +260,7 @@ void test_pack_unpack_pcr(void)
   // check that unpacking an all-zero byte array of packed data should be
   // valid and that all fields for the resulting unpacked struct are zero
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.count == 0); // all result struct members should be zero
+  CU_ASSERT(test_out.count == 0);
   CU_ASSERT(test_out.pcrSelections[0].hash == 0);
   CU_ASSERT(test_out.pcrSelections[0].sizeofSelect == 0);
   CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] == 0);
@@ -538,7 +538,161 @@ void test_pack_unpack_public(void)
                    test_in.publicArea.unique.rsa.buffer,
                    test_in.publicArea.unique.rsa.size) == 0);
 
+  // clear results from previous tests
+  test_out.size = 0;
+  test_out.publicArea.type = 0;
+  test_out.publicArea.nameAlg = 0;
+  test_out.publicArea.objectAttributes = 0;
+  test_out.publicArea.authPolicy.size = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.algorithm = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes = 0;
+  test_out.publicArea.parameters.rsaDetail.keyBits = 0;
+  test_out.publicArea.parameters.rsaDetail.exponent = 0;
+  memset(test_out.publicArea.unique.rsa.buffer, 0,
+         test_out.publicArea.unique.rsa.size);
+  test_out.publicArea.unique.rsa.size = 0;
+  memset(test_packed_public_data, 0, test_packed_public_size);
+
+  // check that passing a null input value errors
+  ret_val = pack_public(NULL, test_packed_public_data,
+                        test_packed_public_size, test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_public(&test_out, NULL,
+                          test_packed_public_size, test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a packed byte array size of zero errors
+  ret_val = pack_public(&test_in, test_packed_public_data,
+                        0, test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          0, test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a non-zero, but too small, packed byte array errors
+  ret_val = pack_public(&test_in, test_packed_public_data,
+                        test_packed_public_size - 1, test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size - 1,
+                          test_packed_public_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // allocate second variable with more space than necessary
+  size_t test_packed_public_size2 = test_packed_public_size + 5;
+  uint8_t *test_packed_public_data2 = calloc(test_packed_public_size2, 1);
+
+  // check that packing into a larger byte array than necessary
+  // is less space efficient, but works
+  ret_val = pack_public(&test_in, test_packed_public_data2,
+                        test_packed_public_size2, test_packed_public_offset);
+  CU_ASSERT(ret_val == 0);
+  index = test_packed_public_offset;
+  packed_struct_size = 0;
+  packed_struct_size |= (test_packed_public_data2[index++] << 8);
+  packed_struct_size |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_struct_size == test_in.size);
+  packed_type = 0;
+  packed_type |= (test_packed_public_data2[index++] << 8);
+  packed_type |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_type == test_in.publicArea.type);
+  packed_nameAlg = 0;
+  packed_nameAlg |= (test_packed_public_data2[index++] << 8);
+  packed_nameAlg |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_nameAlg == test_in.publicArea.nameAlg);
+  packed_objectAttributes = 0;
+  packed_objectAttributes |= (test_packed_public_data2[index++] << 24);
+  packed_objectAttributes |= (test_packed_public_data2[index++] << 16);
+  packed_objectAttributes |= (test_packed_public_data2[index++] << 8);
+  packed_objectAttributes |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_objectAttributes == test_in.publicArea.objectAttributes);
+  packed_authPolicy_size = 0;
+  packed_authPolicy_size |= (test_packed_public_data2[index++] << 8);
+  packed_authPolicy_size |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_authPolicy_size == test_in.publicArea.authPolicy.size);
+  packed_sym_alg = 0;
+  packed_sym_alg |= (test_packed_public_data2[index++] << 8);
+  packed_sym_alg |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_sym_alg ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
+  packed_sym_keyBits = 0;
+  packed_sym_keyBits |= (test_packed_public_data2[index++] << 8);
+  packed_sym_keyBits |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_sym_keyBits ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
+  packed_sym_mode = 0;
+  packed_sym_mode |= (test_packed_public_data2[index++] << 8);
+  packed_sym_mode |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_sym_mode ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
+  packed_rsa_scheme = 0;
+  packed_rsa_scheme |= (test_packed_public_data2[index++] << 8);
+  packed_rsa_scheme |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_rsa_scheme ==
+            test_in.publicArea.parameters.rsaDetail.scheme.scheme);
+  packed_rsa_keyBits = 0;
+  packed_rsa_keyBits |= (test_packed_public_data2[index++] << 8);
+  packed_rsa_keyBits |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_rsa_keyBits ==
+            test_in.publicArea.parameters.rsaDetail.keyBits);
+  packed_rsa_exponent = 0;
+  packed_rsa_exponent |= (test_packed_public_data2[index++] << 24);
+  packed_rsa_exponent |= (test_packed_public_data2[index++] << 16);
+  packed_rsa_exponent |= (test_packed_public_data2[index++] << 8);
+  packed_rsa_exponent |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_rsa_exponent ==
+            test_in.publicArea.parameters.rsaDetail.exponent);
+  packed_rsa_unique_size = 0;
+  packed_rsa_unique_size |= (test_packed_public_data2[index++] << 8);
+  packed_rsa_unique_size |= test_packed_public_data2[index++];
+  CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
+  packed_rsa_unique_bytes_match = true;
+  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
+  {
+    if (test_packed_public_data2[index++] !=
+        test_in.publicArea.unique.rsa.buffer[i])
+    {
+      packed_rsa_unique_bytes_match = false;
+      break;
+    }
+  }
+  CU_ASSERT(packed_rsa_unique_bytes_match);
+  while (index < test_packed_public_size2)
+  {
+    CU_ASSERT(test_packed_public_data2[index++] == 0);
+  }
+
+  // check that unpacking from a byte array with excess capacity also works
+  ret_val = unpack_public(&test_out, test_packed_public_data2,
+                          test_packed_public_size2, test_packed_public_offset);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.size == test_in.size);
+  CU_ASSERT(test_out.publicArea.type == test_in.publicArea.type);
+  CU_ASSERT(test_out.publicArea.nameAlg == test_in.publicArea.nameAlg);
+  CU_ASSERT(test_out.publicArea.objectAttributes ==
+            test_in.publicArea.objectAttributes);
+  CU_ASSERT(test_out.publicArea.authPolicy.size ==
+            test_in.publicArea.authPolicy.size);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.algorithm ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes ==
+            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.keyBits ==
+            test_in.publicArea.parameters.rsaDetail.keyBits);
+  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.exponent ==
+            test_in.publicArea.parameters.rsaDetail.exponent);
+  CU_ASSERT(test_out.publicArea.unique.rsa.size ==
+            test_in.publicArea.unique.rsa.size);
+  CU_ASSERT(memcmp(test_out.publicArea.unique.rsa.buffer,
+                   test_in.publicArea.unique.rsa.buffer,
+                   test_in.publicArea.unique.rsa.size) == 0);
+
+  // clean-up - free heap allocated memory
   free(test_packed_public_data);
+  free(test_packed_public_data2);
 
 }
 
