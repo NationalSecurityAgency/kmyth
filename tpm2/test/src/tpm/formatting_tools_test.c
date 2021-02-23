@@ -323,7 +323,6 @@ void test_pack_unpack_pcr(void)
             test_in.pcrSelections[0].pcrSelect[2]);
   while (index < test_packed_pcr_size)
   {
-    printf("extra PCR Select byte\n");
     CU_ASSERT(test_packed_pcr_data[index++] == 0);
   }
 
@@ -678,7 +677,6 @@ void test_pack_unpack_public(void)
   CU_ASSERT(match);
   while (index < test_packed_public_size)
   {
-    printf("extra public byte\n");
     CU_ASSERT(test_packed_public_data[index++] == 0);
   }
 
@@ -846,7 +844,6 @@ void test_pack_unpack_private(void)
   }
   while (index < test_packed_private_size)
   {
-    printf("extra private byte\n");
     CU_ASSERT(test_packed_private_data[index++] == 0);
   }
 
@@ -875,7 +872,39 @@ void test_pack_unpack_private(void)
 //----------------------------------------------------------------------------
 void test_unpack_uint32_to_str(void)
 {
+  char *test_str = NULL;
 
+  // check that zero input produces empty string
+  // (output string passed in with NULL value)
+  int ret_val = unpack_uint32_to_str(0, &test_str);
+
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(strncmp(test_str, "", 4) == 0);
+
+  // check uint input with four valid ASCII chars produces expected string
+  // (output string passed in with empty string value)
+  ret_val = unpack_uint32_to_str(0x54332474, &test_str);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(strlen(test_str) == 4);
+  CU_ASSERT(strncmp(test_str, "T3$t", 4) == 0);
+
+  // check uint input with four non-ASCII chars produces expected string
+  // (output string passed in with previous 4-character string result value)
+  ret_val = unpack_uint32_to_str(0xfcfdfeff, &test_str);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(strlen(test_str) == 4);
+  CU_ASSERT(strncmp(test_str, "\xfc\xfd\xfe\xff", 4) == 0);
+
+  // check when output variable passed in as unallocated, non-NULL pointer
+  free(test_str);
+  CU_ASSERT(test_str != NULL);
+  ret_val = unpack_uint32_to_str(0x54504D32, &test_str);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(strlen(test_str) == 4);
+  CU_ASSERT(strncmp(test_str, "TPM2", 4) == 0);
+
+  // clean-up - free heap allocated memory
+  free(test_str);
 }
 
 //----------------------------------------------------------------------------
