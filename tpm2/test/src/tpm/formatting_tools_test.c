@@ -252,21 +252,6 @@ void test_pack_unpack_pcr(void)
   CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
             test_in.pcrSelections[0].pcrSelect[2]);
 
-  // clear results from previous tests
-  memset(test_packed_pcr_data, 0, test_packed_pcr_size);
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_size, test_packed_pcr_offset);
-
-  // check that unpacking an all-zero byte array of packed data should be
-  // valid and that all fields for the resulting unpacked struct are zero
-  CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.count == 0);
-  CU_ASSERT(test_out.pcrSelections[0].hash == 0);
-  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] == 0);
-
   // check that passing a NULL input (value to be packed or unpacked) errors
   ret_val = pack_pcr(NULL, test_packed_pcr_data,
                      test_packed_pcr_size, test_packed_pcr_offset);
@@ -290,41 +275,61 @@ void test_pack_unpack_pcr(void)
                        test_packed_pcr_size - 1, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
-  // allocate second variable with more space than necessary
-  size_t test_packed_pcr_size2 = test_packed_pcr_size + 8;
-  uint8_t *test_packed_pcr_data2 = calloc(test_packed_pcr_size2, 1);
+  // clear results from previous tests
+  memset(test_packed_pcr_data, 0, test_packed_pcr_size);
+  test_out.count = 0;
+  test_out.pcrSelections[0].hash = 0;
+  test_out.pcrSelections[0].sizeofSelect = 0;
+  for (int i = 0; i < test_in.pcrSelections[0].sizeofSelect; i++)
+  {
+    test_out.pcrSelections[0].pcrSelect[i] = 0;
+  }
+
+  // check that unpacking an all-zero byte array of packed data should be
+  // valid and that all fields for the resulting unpacked struct are zero
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, test_packed_pcr_offset);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.count == 0);
+  CU_ASSERT(test_out.pcrSelections[0].hash == 0);
+  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] == 0);
 
   // check that packing into a larger byte array than necessary
   // is less space efficient, but works
-  ret_val = pack_pcr(&test_in, test_packed_pcr_data2,
-                     test_packed_pcr_size2, test_packed_pcr_offset);
+  // Note: changing offset from a positive number to zero creates extra
+  //       bytes at the end of the packed data byte array)
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data, test_packed_pcr_size, 0);
   CU_ASSERT(ret_val == 0);
-  index = test_packed_pcr_offset;
+  index = 0;
   packed_count_val = 0;
-  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 24);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 16);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data2[index++] << 8);
-  packed_count_val |= (uint32_t) test_packed_pcr_data2[index++];
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 24);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 16);
+  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 8);
+  packed_count_val |= (uint32_t) test_packed_pcr_data[index++];
   packed_hash_alg_id = 0;
-  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data2[index++] << 8);
-  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data2[index++];
+  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data[index++] << 8);
+  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data[index++];
   CU_ASSERT(packed_hash_alg_id == test_in.pcrSelections[0].hash);
-  CU_ASSERT(test_packed_pcr_data2[index++] ==
+  CU_ASSERT(test_packed_pcr_data[index++] ==
             test_in.pcrSelections[0].sizeofSelect);
-  CU_ASSERT(test_packed_pcr_data2[index++] ==
+  CU_ASSERT(test_packed_pcr_data[index++] ==
             test_in.pcrSelections[0].pcrSelect[0]);
-  CU_ASSERT(test_packed_pcr_data2[index++] ==
+  CU_ASSERT(test_packed_pcr_data[index++] ==
             test_in.pcrSelections[0].pcrSelect[1]);
-  CU_ASSERT(test_packed_pcr_data2[index++] ==
+  CU_ASSERT(test_packed_pcr_data[index++] ==
             test_in.pcrSelections[0].pcrSelect[2]);
-  while (index < test_packed_pcr_size2)
+  while (index < test_packed_pcr_size)
   {
-    CU_ASSERT(test_packed_pcr_data2[index++] == 0);
+    printf("extra PCR Select byte\n");
+    CU_ASSERT(test_packed_pcr_data[index++] == 0);
   }
 
   // check that unpacking from a byte array with excess capacity also works
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data2,
-                       test_packed_pcr_size2, test_packed_pcr_offset);
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, 0);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(test_out.count == test_in.count);
   CU_ASSERT(test_out.pcrSelections[0].hash == test_in.pcrSelections[0].hash);
@@ -339,7 +344,6 @@ void test_pack_unpack_pcr(void)
 
   // clean-up - free allocated memory
   free(test_packed_pcr_data);
-  free(test_packed_pcr_data2);
 }
 
 //----------------------------------------------------------------------------
@@ -490,7 +494,7 @@ void test_pack_unpack_public(void)
   packed_rsa_unique_size |= test_packed_public_data[index++];
   CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
 
-  bool packed_rsa_unique_bytes_match = true;
+  bool match = true;
 
   // check packed 'publicArea.unique.rsa.buffer' bytes
   for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
@@ -498,16 +502,16 @@ void test_pack_unpack_public(void)
     if (test_packed_public_data[index++] !=
         test_in.publicArea.unique.rsa.buffer[i])
     {
-      packed_rsa_unique_bytes_match = false;
+      match = false;
       break;
     }
   }
-  CU_ASSERT(packed_rsa_unique_bytes_match);
+  CU_ASSERT(match);
 
   // declare struct for unpack_public() result
   TPM2B_PUBLIC test_out = {.size = 0 };
 
-  // unpack the packed PCR selection struct test value
+  // unpack the packed TPM2B_PUBLIC struct test value
   ret_val = unpack_public(&test_out, test_packed_public_data,
                           test_packed_public_size, test_packed_public_offset);
 
@@ -579,93 +583,108 @@ void test_pack_unpack_public(void)
                           test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
 
-  // allocate second variable with more space than necessary
-  size_t test_packed_public_size2 = test_packed_public_size + 5;
-  uint8_t *test_packed_public_data2 = calloc(test_packed_public_size2, 1);
+  // clear data resulting from previous tests
+  test_out.size = 0;
+  test_out.publicArea.type = 0;
+  test_out.publicArea.nameAlg = 0;
+  test_out.publicArea.objectAttributes = 0;
+  test_out.publicArea.authPolicy.size = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.algorithm = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes = 0;
+  test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes = 0;
+  test_out.publicArea.parameters.rsaDetail.keyBits = 0;
+  test_out.publicArea.parameters.rsaDetail.exponent = 0;
+  memset(test_out.publicArea.unique.rsa.buffer, 0,
+         test_out.publicArea.unique.rsa.size);
+  test_out.publicArea.unique.rsa.size = 0;
+  memset(test_packed_public_data, 0, test_packed_public_size);
 
   // check that packing into a larger byte array than necessary
   // is less space efficient, but works
-  ret_val = pack_public(&test_in, test_packed_public_data2,
-                        test_packed_public_size2, test_packed_public_offset);
+  // Note: changing offset from a positive number to zero creates extra
+  //       bytes at the end of the packed data byte array)
+  ret_val = pack_public(&test_in, test_packed_public_data,
+                        test_packed_public_size, 0);
   CU_ASSERT(ret_val == 0);
-  index = test_packed_public_offset;
+  index = 0;
   packed_struct_size = 0;
-  packed_struct_size |= (test_packed_public_data2[index++] << 8);
-  packed_struct_size |= test_packed_public_data2[index++];
+  packed_struct_size |= (test_packed_public_data[index++] << 8);
+  packed_struct_size |= test_packed_public_data[index++];
   CU_ASSERT(packed_struct_size == test_in.size);
   packed_type = 0;
-  packed_type |= (test_packed_public_data2[index++] << 8);
-  packed_type |= test_packed_public_data2[index++];
+  packed_type |= (test_packed_public_data[index++] << 8);
+  packed_type |= test_packed_public_data[index++];
   CU_ASSERT(packed_type == test_in.publicArea.type);
   packed_nameAlg = 0;
-  packed_nameAlg |= (test_packed_public_data2[index++] << 8);
-  packed_nameAlg |= test_packed_public_data2[index++];
+  packed_nameAlg |= (test_packed_public_data[index++] << 8);
+  packed_nameAlg |= test_packed_public_data[index++];
   CU_ASSERT(packed_nameAlg == test_in.publicArea.nameAlg);
   packed_objectAttributes = 0;
-  packed_objectAttributes |= (test_packed_public_data2[index++] << 24);
-  packed_objectAttributes |= (test_packed_public_data2[index++] << 16);
-  packed_objectAttributes |= (test_packed_public_data2[index++] << 8);
-  packed_objectAttributes |= test_packed_public_data2[index++];
+  packed_objectAttributes |= (test_packed_public_data[index++] << 24);
+  packed_objectAttributes |= (test_packed_public_data[index++] << 16);
+  packed_objectAttributes |= (test_packed_public_data[index++] << 8);
+  packed_objectAttributes |= test_packed_public_data[index++];
   CU_ASSERT(packed_objectAttributes == test_in.publicArea.objectAttributes);
   packed_authPolicy_size = 0;
-  packed_authPolicy_size |= (test_packed_public_data2[index++] << 8);
-  packed_authPolicy_size |= test_packed_public_data2[index++];
+  packed_authPolicy_size |= (test_packed_public_data[index++] << 8);
+  packed_authPolicy_size |= test_packed_public_data[index++];
   CU_ASSERT(packed_authPolicy_size == test_in.publicArea.authPolicy.size);
   packed_sym_alg = 0;
-  packed_sym_alg |= (test_packed_public_data2[index++] << 8);
-  packed_sym_alg |= test_packed_public_data2[index++];
+  packed_sym_alg |= (test_packed_public_data[index++] << 8);
+  packed_sym_alg |= test_packed_public_data[index++];
   CU_ASSERT(packed_sym_alg ==
             test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
   packed_sym_keyBits = 0;
-  packed_sym_keyBits |= (test_packed_public_data2[index++] << 8);
-  packed_sym_keyBits |= test_packed_public_data2[index++];
+  packed_sym_keyBits |= (test_packed_public_data[index++] << 8);
+  packed_sym_keyBits |= test_packed_public_data[index++];
   CU_ASSERT(packed_sym_keyBits ==
             test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
   packed_sym_mode = 0;
-  packed_sym_mode |= (test_packed_public_data2[index++] << 8);
-  packed_sym_mode |= test_packed_public_data2[index++];
+  packed_sym_mode |= (test_packed_public_data[index++] << 8);
+  packed_sym_mode |= test_packed_public_data[index++];
   CU_ASSERT(packed_sym_mode ==
             test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
   packed_rsa_scheme = 0;
-  packed_rsa_scheme |= (test_packed_public_data2[index++] << 8);
-  packed_rsa_scheme |= test_packed_public_data2[index++];
+  packed_rsa_scheme |= (test_packed_public_data[index++] << 8);
+  packed_rsa_scheme |= test_packed_public_data[index++];
   CU_ASSERT(packed_rsa_scheme ==
             test_in.publicArea.parameters.rsaDetail.scheme.scheme);
   packed_rsa_keyBits = 0;
-  packed_rsa_keyBits |= (test_packed_public_data2[index++] << 8);
-  packed_rsa_keyBits |= test_packed_public_data2[index++];
+  packed_rsa_keyBits |= (test_packed_public_data[index++] << 8);
+  packed_rsa_keyBits |= test_packed_public_data[index++];
   CU_ASSERT(packed_rsa_keyBits ==
             test_in.publicArea.parameters.rsaDetail.keyBits);
   packed_rsa_exponent = 0;
-  packed_rsa_exponent |= (test_packed_public_data2[index++] << 24);
-  packed_rsa_exponent |= (test_packed_public_data2[index++] << 16);
-  packed_rsa_exponent |= (test_packed_public_data2[index++] << 8);
-  packed_rsa_exponent |= test_packed_public_data2[index++];
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 24);
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 16);
+  packed_rsa_exponent |= (test_packed_public_data[index++] << 8);
+  packed_rsa_exponent |= test_packed_public_data[index++];
   CU_ASSERT(packed_rsa_exponent ==
             test_in.publicArea.parameters.rsaDetail.exponent);
   packed_rsa_unique_size = 0;
-  packed_rsa_unique_size |= (test_packed_public_data2[index++] << 8);
-  packed_rsa_unique_size |= test_packed_public_data2[index++];
+  packed_rsa_unique_size |= (test_packed_public_data[index++] << 8);
+  packed_rsa_unique_size |= test_packed_public_data[index++];
   CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
-  packed_rsa_unique_bytes_match = true;
+  match = true;
   for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
   {
-    if (test_packed_public_data2[index++] !=
+    if (test_packed_public_data[index++] !=
         test_in.publicArea.unique.rsa.buffer[i])
     {
-      packed_rsa_unique_bytes_match = false;
+      match = false;
       break;
     }
   }
-  CU_ASSERT(packed_rsa_unique_bytes_match);
-  while (index < test_packed_public_size2)
+  CU_ASSERT(match);
+  while (index < test_packed_public_size)
   {
-    CU_ASSERT(test_packed_public_data2[index++] == 0);
+    printf("extra public byte\n");
+    CU_ASSERT(test_packed_public_data[index++] == 0);
   }
 
   // check that unpacking from a byte array with excess capacity also works
-  ret_val = unpack_public(&test_out, test_packed_public_data2,
-                          test_packed_public_size2, test_packed_public_offset);
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size, 0);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(test_out.size == test_in.size);
   CU_ASSERT(test_out.publicArea.type == test_in.publicArea.type);
@@ -692,8 +711,6 @@ void test_pack_unpack_public(void)
 
   // clean-up - free heap allocated memory
   free(test_packed_public_data);
-  free(test_packed_public_data2);
-
 }
 
 //----------------------------------------------------------------------------
@@ -701,7 +718,156 @@ void test_pack_unpack_public(void)
 //----------------------------------------------------------------------------
 void test_pack_unpack_private(void)
 {
+  // Note: A TPM2B_PRIVATE struct contains a _PRIVATE struct with three
+  //       elements:
+  //         - integrityOuter (TPM2B_DIGEST)
+  //         - integrityInner (TPM2B_DIGEST or TPM2B_IV)
+  //         - sensitive (TPM2B_SENSITIVE)
+  //
+  //       These elements, however, are not directly marshalled or
+  //       unmarshalled. Instead, the 'buffer' portion of a TPM2B_PUBLIC
+  //       struct is marshalled/unmarshalled as a simple byte array
 
+  TPM2B_PRIVATE test_in, test_out;
+
+  test_in.size = 15;
+  for (int i = 0; i < test_in.size; i++)
+  {
+    test_in.buffer[i] = i % 256;
+  }
+
+  size_t test_packed_private_offset = 17;
+  size_t test_packed_private_size = sizeof(uint16_t) + test_in.size +
+    test_packed_private_offset;
+
+  // allocate variable to hold packed version of test TPM2_PRIVATE struct
+  uint8_t *test_packed_private_data = calloc(test_packed_private_size, 1);
+
+  // pack the TPM2_PRIVATE struct test value
+  int ret_val = pack_private(&test_in, test_packed_private_data,
+                             test_packed_private_size,
+                             test_packed_private_offset);
+
+  // check that pack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // account for any offset passed as a pack_private() parameter
+  int index = test_packed_private_offset;
+
+  uint16_t packed_struct_size = 0;
+
+  // check packed 'size' bytes
+  packed_struct_size |= (test_packed_private_data[index++] << 8);
+  packed_struct_size |= test_packed_private_data[index++];
+  CU_ASSERT(packed_struct_size == test_in.size);
+
+  // check packed 'buffer' bytes
+  bool match = true;
+
+  for (int i = 0; i < test_in.size; i++)
+  {
+    if (test_packed_private_data[index++] != test_in.buffer[i])
+    {
+      match = false;
+      break;
+    }
+  }
+  CU_ASSERT(match);
+
+  // unpack the packed TPM2B_PRIVATE struct test value
+  ret_val = unpack_private(&test_out, test_packed_private_data,
+                           test_packed_private_size,
+                           test_packed_private_offset);
+
+  // check that unpack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the unpacked struct matches original input
+  CU_ASSERT(test_out.size == test_in.size);
+  CU_ASSERT(memcmp(test_out.buffer, test_in.buffer, test_in.size) == 0);
+
+  // check that passing a null input value errors
+  ret_val = pack_private(NULL, test_packed_private_data,
+                         test_packed_private_size, test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_private(&test_out, NULL, test_packed_private_size,
+                           test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a packed byte array size of zero errors
+  ret_val = pack_private(&test_in, test_packed_private_data,
+                         0, test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_private(&test_out, test_packed_private_data,
+                           0, test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a non-zero, but too small, packed byte array errors
+  ret_val = pack_private(&test_in, test_packed_private_data,
+                         test_packed_private_size - 1,
+                         test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_private(&test_out, test_packed_private_data,
+                           test_packed_private_size - 1,
+                           test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // clear results from previous tests
+  memset(test_packed_private_data, 0, test_packed_private_size);
+  for (int i = 0; i < test_out.size; i++)
+  {
+    test_out.buffer[i] = 0;
+  }
+  test_out.size = 0;
+
+  // check that unpacking an all-zero byte array of packed data should be
+  // valid and that all fields for the resulting unpacked struct are zero
+  ret_val = unpack_private(&test_out, test_packed_private_data,
+                           test_packed_private_size,
+                           test_packed_private_offset);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.size == 0);
+
+  // check that packing into a larger byte array than necessary
+  // is less space efficient, but works
+  // Note: changing offset from a positive number to zero creates extra
+  //       bytes at the end of the packed data byte array)
+  ret_val = pack_private(&test_in, test_packed_private_data,
+                         test_packed_private_size, 0);
+  CU_ASSERT(ret_val == 0);
+  index = 0;
+  packed_struct_size = 0;
+  packed_struct_size |= (uint16_t) (test_packed_private_data[index++] << 8);
+  packed_struct_size |= (uint16_t) test_packed_private_data[index++];
+  CU_ASSERT(packed_struct_size == test_in.size);
+  for (int i = 0; i < test_in.size; i++)
+  {
+    CU_ASSERT(test_packed_private_data[index++] == test_in.buffer[i]);
+  }
+  while (index < test_packed_private_size)
+  {
+    printf("extra private byte\n");
+    CU_ASSERT(test_packed_private_data[index++] == 0);
+  }
+
+  // check that unpacking from a byte array with excess capacity also works
+  ret_val = unpack_private(&test_out, test_packed_private_data,
+                           test_packed_private_size, 0);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.size == test_in.size);
+  match = true;
+  for (int i = 0; i < test_in.size; i++)
+  {
+    if (test_out.buffer[i] != test_in.buffer[i])
+    {
+      match = false;
+      break;
+    }
+  }
+  CU_ASSERT(match);
+
+  // clean-up - free heap allocated memory
+  free(test_packed_private_data);
 }
 
 //----------------------------------------------------------------------------
