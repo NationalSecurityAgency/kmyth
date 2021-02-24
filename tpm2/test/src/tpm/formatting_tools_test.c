@@ -156,6 +156,84 @@ int formatting_tools_add_tests(CU_pSuite suite)
 }
 
 //----------------------------------------------------------------------------
+// get_test_pcrSelect
+//----------------------------------------------------------------------------
+size_t get_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset)
+{
+  // initialize test PCR selection struct (test input to pack_pcr())
+  test_pcrSelect->count = 1;
+  test_pcrSelect->pcrSelections[0].hash = KMYTH_HASH_ALG;
+  test_pcrSelect->pcrSelections[0].sizeofSelect = 3;
+  test_pcrSelect->pcrSelections[0].pcrSelect[0] = 0xAA;
+  test_pcrSelect->pcrSelections[0].pcrSelect[1] = 0x55;
+  test_pcrSelect->pcrSelections[0].pcrSelect[2] = 0xAA;
+
+  size_t struct_size = 0;
+
+  // compute required byte array size for packed test PCR Selection struct
+  //   - test_pcrSelect->count: UINT32 (4 bytes)
+  //   - test_pcrSelect->pcrSelections[0].hash: UINT16 (2 bytes)
+  //   - test_pcrSelect->pcrSelections[0].sizeofSelect: UINT8 (1 byte)
+  //   - test_pcrSelect->pcrSelections[0].pcrSelect[]: 'sizeofSelect' bytes
+  struct_size += sizeof(uint32_t);
+  struct_size += sizeof(uint16_t);
+  struct_size += sizeof(uint8_t);
+  struct_size += test_pcrSelect->pcrSelections[0].sizeofSelect;
+
+  // required byte array size for packed TPML_PCR_SELECTION struct includes:
+  //   - number of bytes needed for struct members: struct_size
+  //   - specified offset bytes: 'offset' extra bytes at beginning of array
+  return (struct_size + offset);
+}
+
+//----------------------------------------------------------------------------
+// get_test_public
+//----------------------------------------------------------------------------
+size_t get_test_public(TPM2B_PUBLIC * test_public, size_t offset)
+{
+  TPM2B_DIGEST empty_authPolicy = {.size = 0 };
+
+  // initialize test public blob struct (test input to pack_public())
+  //   - struct values are set to kmyth default values (in defines.h)
+  //     for sealing key objects (init_kmyth_object_template).
+  //   - RSA key value is set to an incrementing byte pattern.
+  //   - 'size' member of the struct is calculated by adding
+  //     up the sizes for each field in the 'publicArea' member.
+  if (init_kmyth_object_template(true, empty_authPolicy,
+                                 &test_public->publicArea))
+  {
+    CU_FAIL("test public object template struct initialization error");
+  }
+
+  test_public->publicArea.unique.rsa.size = (uint16_t) KMYTH_RSA_KEY_LEN / 8;
+  for (int i = 0; i < test_public->publicArea.unique.rsa.size; i++)
+  {
+    test_public->publicArea.unique.rsa.buffer[i] = i % 256;
+  }
+
+  // compute test_public->buffer size (contains a TPMT_PUBLIC struct)
+  test_public->size = 0;
+  test_public->size += sizeof(TPMI_ALG_PUBLIC); // type
+  test_public->size += sizeof(TPMI_ALG_HASH); // nameAlg
+  test_public->size += sizeof(TPMA_OBJECT); // objectAttributes
+  test_public->size += sizeof(uint16_t);  // authPolicy.size = 0 (empty buffer)
+  test_public->size += sizeof(TPM2_ALG_ID); // parameters.symmetric.algorithm
+  test_public->size += sizeof(TPM2_KEY_BITS); // parameters.symmetric.keyBits.aes
+  test_public->size += sizeof(TPM2_ALG_ID); // parameters.symmetric.mode.aes
+  test_public->size += sizeof(TPM2_ALG_ID); // parameters.rsaDetail.scheme
+  test_public->size += sizeof(TPM2_KEY_BITS); // parameters.rsaDetail.keyBits
+  test_public->size += sizeof(uint32_t);  // parameters.rsaDetail.exponent
+  test_public->size += sizeof(uint16_t);  // unique.rsa.size
+  test_public->size += test_public->publicArea.unique.rsa.size; // unique.rsa
+
+  // required byte array size for packed test TPM2B_PUBLIC struct includes:
+  //   - test_public->size member: UINT16 (2 bytes)
+  //   - test_public->buffer: test_public->size bytes
+  //   - specified offset bytes: 'offset' extra bytes at beginning of array
+  return (sizeof(uint16_t) + test_public->size + offset);
+}
+
+//----------------------------------------------------------------------------
 // test_marshal_skiObjects
 //----------------------------------------------------------------------------
 void test_marshal_skiObjects(void)
@@ -176,25 +254,14 @@ void test_unmarshal_skiObjects(void)
 //----------------------------------------------------------------------------
 void test_pack_unpack_pcr(void)
 {
-  TPML_PCR_SELECTION test_in, test_out;
-
-  // initialize test PCR selection struct (test input to pack_pcr())
-  test_in.count = 1;
-  test_in.pcrSelections[0].hash = KMYTH_HASH_ALG;
-  test_in.pcrSelections[0].sizeofSelect = 3;
-  test_in.pcrSelections[0].pcrSelect[0] = 0xAA;
-  test_in.pcrSelections[0].pcrSelect[1] = 0x55;
-  test_in.pcrSelections[0].pcrSelect[2] = 0xAA;
-
+  TPML_PCR_SELECTION test_in = {.count = 0 };
   size_t test_packed_pcr_offset = 2;
-  size_t test_packed_pcr_size = sizeof(uint32_t); // 'count'
 
-  test_packed_pcr_size += sizeof(uint16_t); // 'pcrSelections[0].hash'
-  test_packed_pcr_size += sizeof(uint8_t);  // 'pcrSelections[0].sizeofSelect'
-  test_packed_pcr_size += test_in.pcrSelections[0].sizeofSelect;
-  test_packed_pcr_size += test_packed_pcr_offset;
+  // initialize test PCR Selection struct input
+  size_t test_packed_pcr_size = get_test_pcrSelect(&test_in,
+                                                   test_packed_pcr_offset);
 
-  // allocate variable to hold packed version of test PCR selection struct
+  // allocate variable to hold packed version of test PCR seolection struct
   uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_size, 1);
 
   // pack the PCR selection struct test value
@@ -232,6 +299,8 @@ void test_pack_unpack_pcr(void)
             test_in.pcrSelections[0].pcrSelect[1]);
   CU_ASSERT(test_packed_pcr_data[index++] ==
             test_in.pcrSelections[0].pcrSelect[2]);
+
+  TPML_PCR_SELECTION test_out;
 
   // unpack the packed PCR selection struct test value
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
@@ -351,46 +420,17 @@ void test_pack_unpack_pcr(void)
 void test_pack_unpack_public(void)
 {
   TPM2B_PUBLIC test_in = {.size = 0 };
-  TPM2B_DIGEST empty_authPolicy = {.size = 0 };
-
-  // initialize test public blob struct (test input to pack_public())
-  //   - for this test, struct values are set to kmyth default values (in
-  //     defines.h) for sealing key objects (init_kmyth_object_template).
-  //   - The RSA key value is set to an incrementing byte pattern.
-  //   - The 'size' member of the struct is calculated by adding
-  //     up the sizes for each field in the 'publicArea' member.
-  if (init_kmyth_object_template(true, empty_authPolicy, &test_in.publicArea))
-  {
-    CU_FAIL("test public object template struct initialization error");
-  }
-  test_in.publicArea.unique.rsa.size = (uint16_t) KMYTH_RSA_KEY_LEN / 8;
-  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
-  {
-    test_in.publicArea.unique.rsa.buffer[i] = i % 256;
-  }
-  test_in.size += sizeof(TPMI_ALG_PUBLIC);  // type
-  test_in.size += sizeof(TPMI_ALG_HASH);  // nameAlg
-  test_in.size += sizeof(TPMA_OBJECT);  // objectAttributes
-  test_in.size += sizeof(uint16_t); // authPolicy.size = 0 (empty buffer)
-  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.symmetric.algorithm
-  test_in.size += sizeof(TPM2_KEY_BITS);  // parameters.symmetric.keyBits.aes
-  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.symmetric.mode.aes
-  test_in.size += sizeof(TPM2_ALG_ID);  // parameters.rsaDetail.scheme
-  test_in.size += sizeof(TPM2_KEY_BITS);  // parameters.rsaDetail.keyBits
-  test_in.size += sizeof(uint32_t); // parameters.rsaDetail.exponent
-  test_in.size += sizeof(uint16_t); // unique.rsa.size
-  test_in.size += test_in.publicArea.unique.rsa.size; // unique.rsa.buffer
-
   size_t test_packed_public_offset = 3;
-  size_t test_packed_public_size = sizeof(uint16_t) + test_in.size +
-    test_packed_public_offset;
+  size_t test_packed_public_size = get_test_public(&test_in,
+                                                   test_packed_public_offset);
 
   // allocate variable to hold packed version of test TPM2_PUBLIC struct
   uint8_t *test_packed_public_data = calloc(test_packed_public_size, 1);
 
   // pack the TPM2_PUBLIC struct test value
   int ret_val = pack_public(&test_in, test_packed_public_data,
-                            test_packed_public_size, test_packed_public_offset);
+                            test_packed_public_size,
+                            test_packed_public_offset);
 
   // check that pack operation did not return error
   CU_ASSERT(ret_val == 0);
@@ -875,7 +915,7 @@ void test_unpack_uint32_to_str(void)
   char *test_str = NULL;
 
   // check that zero input produces empty string
-  // (output string passed in with NULL value)
+  // (output string passed in unallocated with NULL value)
   int ret_val = unpack_uint32_to_str(0, &test_str);
 
   CU_ASSERT(ret_val == 0);
