@@ -234,11 +234,72 @@ size_t get_test_public(TPM2B_PUBLIC * test_public, size_t offset)
 }
 
 //----------------------------------------------------------------------------
+// get_test_private
+//----------------------------------------------------------------------------
+size_t get_test_private(TPM2B_PRIVATE * test_private,
+                        size_t buffer_size, size_t offset)
+{
+  test_private->size = buffer_size;
+  for (int i = 0; i < buffer_size; i++)
+  {
+    test_private->buffer[i] = 255 - (i % 256);
+  }
+
+  // required byte array size for packed test TPM2B_PRIVATE struct includes:
+  //   - test_private->size member: UINT16 (2 bytes)
+  //   - test_private->buffer: test_private->size bytes
+  //   - specified offset bytes: 'offset' extra bytes at beginning of array
+  return (sizeof(uint16_t) + test_private->size + offset);
+}
+
+//----------------------------------------------------------------------------
 // test_marshal_skiObjects
 //----------------------------------------------------------------------------
 void test_marshal_skiObjects(void)
 {
+  // test input parameter - structs to be marshaled
+  TPML_PCR_SELECTION test_pcr_select = {.count = 0 };
+  TPM2B_PUBLIC test_sk_public = {.size = 0 };
+  TPM2B_PRIVATE test_sk_private = {.size = 0 };
+  TPM2B_PUBLIC test_sealed_key_public = {.size = 0 };
+  TPM2B_PRIVATE test_sealed_key_private = {.size = 0 };
 
+  // define test offset values for output byte arrays
+  size_t pcr_selection_offset = 5;
+  size_t sk_public_offset = 4;
+  size_t sk_private_offset = 3;
+  size_t sealed_key_public_offset = 2;
+  size_t sealed_key_private_offset = 1;
+
+  // define lengths of test private key values
+  size_t sk_private_len = 32;
+  size_t sealed_key_private_len = 64;
+
+  // initialize test structs, get required byte array sizes
+  size_t pcr_selection_size = get_test_pcrSelect(&test_pcr_select,
+                                                 pcr_selection_offset);
+  size_t sk_public_size = get_test_public(&test_sk_public, sk_public_offset);
+  size_t sk_private_size = get_test_private(&test_sk_private, sk_private_len,
+                                            sk_private_offset);
+  size_t sealed_key_public_size = get_test_public(&test_sealed_key_public,
+                                                  sealed_key_public_offset);
+  size_t sealed_key_private_size = get_test_private(&test_sealed_key_private,
+                                                    sealed_key_private_len,
+                                                    sealed_key_private_offset);
+
+  // allocate memory for byte arrays to hold marsalled data
+  uint8_t *pcr_selection_data = calloc(pcr_selection_size, 1);
+  uint8_t *sk_public_data = calloc(sk_public_size, 1);
+  uint8_t *sk_private_data = calloc(sk_private_size, 1);
+  uint8_t *sealed_key_public_data = calloc(sealed_key_public_size, 1);
+  uint8_t *sealed_key_private_data = calloc(sealed_key_private_size, 1);
+
+  // clean-up - free allocated memory
+  free(pcr_selection_data);
+  free(sk_public_data);
+  free(sk_private_data);
+  free(sealed_key_public_data);
+  free(sealed_key_private_data);
 }
 
 //----------------------------------------------------------------------------
@@ -767,16 +828,13 @@ void test_pack_unpack_private(void)
   //       struct is marshalled/unmarshalled as a simple byte array
 
   TPM2B_PRIVATE test_in, test_out;
-
-  test_in.size = 15;
-  for (int i = 0; i < test_in.size; i++)
-  {
-    test_in.buffer[i] = i % 256;
-  }
-
   size_t test_packed_private_offset = 17;
-  size_t test_packed_private_size = sizeof(uint16_t) + test_in.size +
-    test_packed_private_offset;
+  size_t test_private_value_len = 15;
+  size_t test_packed_private_size = 0;
+
+  // initialize 'test_in' struct and get required size for packed data
+  test_packed_private_size = get_test_private(&test_in, test_private_value_len,
+                                              test_packed_private_offset);
 
   // allocate variable to hold packed version of test TPM2_PRIVATE struct
   uint8_t *test_packed_private_data = calloc(test_packed_private_size, 1);
