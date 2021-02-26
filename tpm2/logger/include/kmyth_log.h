@@ -120,7 +120,7 @@
  * @brief maximum message length of a log entry
  *        (note: this does not include the string's null termination character)
  */
-#define MAX_LOG_MSG_LEN 128
+#define DEFAULT_MAX_LOG_MSG_LEN 128
 
 //--------------------------Templates-----------------------------------------
 
@@ -132,6 +132,7 @@ struct log_params
   size_t app_version_len;
   char applog_path[MAX_APPLOG_PATH_LEN + 1];
   size_t applog_path_len;
+  int applog_max_msg_len;
   int applog_output_mode;
   int applog_severity_threshold;
   int syslog_facility;
@@ -166,6 +167,15 @@ void set_app_version(char *new_app_version);
  * @return None
  */
 void set_applog_path(char *new_applog_path);
+
+/**
+ * @brief sets new max log message length for the application log messages in file
+ *
+ * @param[in]  new_max_log_mesg_len  integer specifying the max log message length
+ *
+ * @return None
+ */
+void set_applog_max_msg_len(int new_max_log_msg_len);
 
 /**
  * @brief sets "output mode" value for application logging

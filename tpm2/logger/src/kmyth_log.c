@@ -22,6 +22,7 @@ static struct log_params log_settings = {
   .app_version_len = strlen(DEFAULT_APP_VERSION),
   .applog_path = DEFAULT_APPLOG_PATH,
   .applog_path_len = strlen(DEFAULT_APPLOG_PATH),
+  .applog_max_msg_len = DEFAULT_MAX_LOG_MSG_LEN,
   .applog_output_mode = KMYTH_APPLOG_OUTPUT_MODE_DEFAULT,
   .applog_severity_threshold = KMYTH_APPLOG_SEVERITY_THRESHOLD_DEFAULT,
   .syslog_facility = SYSLOG_FACILITY_DEFAULT,
@@ -119,6 +120,26 @@ void set_applog_path(char *new_applog_path)
     fprintf(stderr, "input \"%s\" exceeds maximum length ", new_applog_path);
     fprintf(stderr, "(%d) - application log path ", MAX_APPLOG_PATH_LEN);
     fprintf(stderr, "remains \"%s\"\n", log_settings.applog_path);
+  }
+}
+
+
+//############################################################################
+// set_applog_max_msg_len()
+//   - valid values: 0 thru 1024
+//############################################################################
+void set_applog_max_msg_len(int new_max_log_msg_len)
+{
+  if ((new_max_log_msg_len >= 0) && (new_max_log_msg_len <= 1024))
+  {
+    log_settings.applog_max_msg_len = new_max_log_msg_len;
+  }
+  else
+  {
+    // do nothing if invalid, but warn user
+    fprintf(stderr, "set_applog_max_msg_len(): ");
+    fprintf(stderr, "input (%d) invalid ", new_max_log_msg_len);
+    fprintf(stderr, "- unchanged (%d)\n", log_settings.applog_max_msg_len);
   }
 }
 
@@ -273,11 +294,11 @@ void log_event(const char *src_file,
 {
 
   // format log message (vsnprintf() count parameter includes null terminator)
-  char out[MAX_LOG_MSG_LEN + 1];
+  char out[log_settings.applog_max_msg_len + 1];
   va_list args;
 
   va_start(args, message);
-  vsnprintf(out, MAX_LOG_MSG_LEN + 1, message, args);
+  vsnprintf(out, log_settings.applog_max_msg_len + 1, message, args);
   va_end(args);
 
   // force severity to a valid value by masking (only use three lowest bits)
