@@ -230,7 +230,7 @@ SOFLAGS += -fPIC#
 
 # Specify linker flags
 LDFLAGS += -Llib#                        libkmyth
-LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth.soa
+LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth.so
 
 # Specify indentation options
 INDENT_OPTS = -bli0#                     indent braces zero spaces
@@ -278,8 +278,7 @@ logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-logger.so
 $(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
 	      $(LOGGER_OBJECTS) \
-	      -o $(LOGGER_LIB_LOCAL_DEST) \
-	      $(LDLIBS)
+	      -o $(LOGGER_LIB_LOCAL_DEST)
 
 $(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
                             $(CIPHER_OBJECTS) \
