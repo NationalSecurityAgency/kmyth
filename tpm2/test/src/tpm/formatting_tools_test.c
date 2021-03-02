@@ -642,7 +642,7 @@ void test_marshal_unmarshal_skiObjects(void)
                                                      sealed_key_private_len,
                                                      sealed_key_private_offset);
 
-  // allocate memory for byte arrays to hold marsalled data
+  // allocate memory for byte arrays to hold marshalled data
   uint8_t *pcr_selection_data = calloc(pcr_selection_size, 1);
   uint8_t *sk_public_data = calloc(sk_public_size, 1);
   uint8_t *sk_private_data = calloc(sk_private_size, 1);
@@ -1227,7 +1227,7 @@ void test_pack_unpack_public(void)
   CU_ASSERT(ret_val != 0);
 
   // check that undersize output byte array for pack_public() errors:
-  //   - case where size is non-zero, but too small
+  //   - for case where size is non-zero, but too small
   ret_val = pack_public(&test_in, test_packed_public_data,
                         test_packed_public_size - 1, test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
