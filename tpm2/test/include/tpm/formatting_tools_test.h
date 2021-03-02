@@ -51,6 +51,11 @@ size_t init_test_private(TPM2B_PRIVATE * test_private,
 /**
  * These utilities are used to compare two structs (of the same type).
  *
+ * Note: this comparison makes assumptions about how the struct was
+ *       initialized, these utilities are not intended for generic use and
+ *       modfications to how the test struct is initialized may require
+ *       modification to these utilities.
+ *
  * @param[in]  a  first struct for comparison
  *
  * @param[in]  b  second struct for comparison
@@ -63,6 +68,11 @@ bool match_private(TPM2B_PRIVATE a, TPM2B_PRIVATE b);
 
 /**
  * These utilities are used to validate a packed byte array result.
+ *
+ * Note: this validation makes assumptions about how the struct that the
+ *       packed data represents was initializaed - these utilities not
+ *       intended for generic use and modifications to how the test
+ *       struct is initialized may require modification to these utilities.
  *
  * @param[in]  in            struct that packed data array represents
  *
@@ -86,7 +96,7 @@ bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
 //****************************************************************************
 // Tests - validate functionality in tpm2/src/tpm/formatting_tools.c
 //
-// format for test names is test_<function_name>
+// format for test names is test_<function_name>()
 //****************************************************************************
 void test_marshal_unmarshal_skiObjects(void);
 void test_pack_unpack_pcr(void);
