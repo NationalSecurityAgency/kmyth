@@ -1586,6 +1586,7 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
+
   orig = ski.sk_priv.size;
   ski.sk_priv.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
@@ -1633,7 +1634,6 @@ void test_create_ski_bytes(void)
   uint8_t *data = malloc(ski.enc_data_size);
 
   memcpy(data, ski.enc_data, ski.enc_data_size);
-
   ski.enc_data = NULL;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
@@ -1660,6 +1660,7 @@ void test_free_ski(void)
   Ski ski = get_default_ski();
 
   parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);  //get valid ski struct
+
   CU_ASSERT(ski.enc_data != NULL);
   CU_ASSERT(ski.enc_data_size > 0);
   free_ski(&ski);
@@ -1695,6 +1696,7 @@ void test_get_ski_block_bytes(void)
   uint8_t *sb = malloc(sb_len * sizeof(char));
 
   memcpy(sb, CONST_SKI_BYTES, sb_len);
+
   uint8_t *position = sb;
   size_t remaining = sb_len;
   uint8_t *raw_pcr_select_list_data = NULL;
@@ -1793,7 +1795,7 @@ void test_get_ski_block_bytes(void)
 
   //Test empty block
   const char *empty_block =
-    "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n ";
+    "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n";
   position = (uint8_t *) empty_block;
   remaining = strlen(empty_block);
   raw_pcr_select_list_size = 0;
@@ -1802,8 +1804,7 @@ void test_get_ski_block_bytes(void)
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
                                 KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen
-                                (KMYTH_DELIM_PCR_SELECTION_LIST),
+                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
                                 KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                                 strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
   CU_ASSERT(raw_pcr_select_list_data == NULL);
@@ -1835,8 +1836,7 @@ void test_encodeBase64Data(void)
 
   //Test different inputs don't produce the same base64 output
   //First entry has a bit flipped
-  uint8_t wrong_pcr[] = {
-    1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  uint8_t wrong_pcr[] = { 1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1854,8 +1854,7 @@ void test_encodeBase64Data(void)
   pcr64_len = 0;
 
   //Test that different length raw data results in different length base64
-  uint8_t short_pcr[] = {
-    0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  uint8_t short_pcr[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
