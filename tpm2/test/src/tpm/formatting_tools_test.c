@@ -70,14 +70,9 @@ uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 //----------------------------------------------------------------------------
 int formatting_tools_add_tests(CU_pSuite suite)
 {
-  if (NULL == CU_add_test(suite, "marshal_skiObjects() Tests",
-                          test_marshal_skiObjects))
-  {
-    return 1;
-  }
-
-  if (NULL == CU_add_test(suite, "unmarshal_skiObjects() Tests",
-                          test_unmarshal_skiObjects))
+  if (NULL == CU_add_test(suite,
+                          "marshal_skiObjects / unmarshal_skiObjects Tests",
+                          test_marshal_unmarshal_skiObjects))
   {
     return 1;
   }
@@ -156,9 +151,9 @@ int formatting_tools_add_tests(CU_pSuite suite)
 }
 
 //----------------------------------------------------------------------------
-// get_test_pcrSelect
+// init_test_pcrSelect
 //----------------------------------------------------------------------------
-size_t get_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset)
+size_t init_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset)
 {
   // initialize test PCR selection struct (test input to pack_pcr())
   test_pcrSelect->count = 1;
@@ -187,9 +182,116 @@ size_t get_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset)
 }
 
 //----------------------------------------------------------------------------
-// get_test_public
+// match_pcrSelect
 //----------------------------------------------------------------------------
-size_t get_test_public(TPM2B_PUBLIC * test_public, size_t offset)
+bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b)
+{
+  if (a.count != b.count)
+  {
+    return false;
+  }
+
+  for (int i = 0; i < a.count; i++)
+  {
+    if (a.pcrSelections[i].hash != b.pcrSelections[i].hash)
+    {
+      return false;
+    }
+
+    if (a.pcrSelections[i].sizeofSelect != b.pcrSelections[i].sizeofSelect)
+    {
+      return false;
+    }
+
+    for (int j = 0; j < a.pcrSelections[i].sizeofSelect; j++)
+    {
+      if (a.pcrSelections[i].pcrSelect[j] != b.pcrSelections[i].pcrSelect[j])
+      {
+        return false;
+      }
+    }
+  }
+
+  // if execution reaches here, check passed
+  return true;
+}
+
+//----------------------------------------------------------------------------
+// check_packed_pcrSelect
+//----------------------------------------------------------------------------
+bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
+                            size_t packed_size, size_t packed_offset)
+{
+  // make sure packed byte array is large enough to hold packed struct
+  //   - in.count is a UINT32 and needs four bytes
+  //   - in.pcrSelections needs:
+  //       * in.count * (2 bytes for hash alg ID + 1 bytee for sizeofSelect)
+  //       * sum of sizeofSelect values bytes for actual PCR mask(s)
+  int pcr_mask_byte_count = 0;
+
+  for (int i = 0; i < in.count; i++)
+  {
+    pcr_mask_byte_count += in.pcrSelections[i].sizeofSelect;
+  }
+  if (packed_size < (sizeof(uint32_t) +
+                     (in.count * (sizeof(uint16_t) + sizeof(uint8_t))) +
+                     pcr_mask_byte_count))
+  {
+    return false;
+  }
+
+  // account for specified offset
+  int index = packed_offset;
+
+  uint32_t packed_count_val = 0;
+
+  // check that the count portion of the packed value matches original count
+  packed_count_val |= (uint32_t) (packed_data[index++] << 24);
+  packed_count_val |= (uint32_t) (packed_data[index++] << 16);
+  packed_count_val |= (uint32_t) (packed_data[index++] << 8);
+  packed_count_val |= (uint32_t) packed_data[index++];
+  if (packed_count_val != in.count)
+  {
+    return false;
+  }
+
+  // for all sets of PCR selection data
+  for (int i = 0; i < in.count; i++)
+  {
+    uint16_t packed_hash_alg_id = 0;
+
+    // check that the hash algorithm ID of the packed value matches input value
+    packed_hash_alg_id |= (uint16_t) (packed_data[index++] << 8);
+    packed_hash_alg_id |= (uint16_t) packed_data[index++];
+    if (packed_hash_alg_id != in.pcrSelections[i].hash)
+    {
+      return false;
+    }
+
+    // check the packed size (in bytes) of the PCR selection mask matches
+    if (packed_data[index++] != in.pcrSelections[i].sizeofSelect)
+    {
+      return false;
+    }
+
+    // check that the packed PCR selection maske bytes match
+    for (int j = 0; j < in.pcrSelections[i].sizeofSelect; j++)
+    {
+      if (packed_data[index++] != in.pcrSelections[i].pcrSelect[j])
+      {
+        return false;
+      }
+    }
+  }
+
+  // if execution reaches here, the check passed
+  return true;
+}
+
+//----------------------------------------------------------------------------
+// init_test_public
+//----------------------------------------------------------------------------
+size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset)
 {
   TPM2B_DIGEST empty_authPolicy = {.size = 0 };
 
@@ -234,10 +336,201 @@ size_t get_test_public(TPM2B_PUBLIC * test_public, size_t offset)
 }
 
 //----------------------------------------------------------------------------
-// get_test_private
+// match_public
 //----------------------------------------------------------------------------
-size_t get_test_private(TPM2B_PRIVATE * test_private,
-                        size_t buffer_size, size_t offset)
+bool match_public(TPM2B_PUBLIC a, TPM2B_PUBLIC b)
+{
+  return (a.size == b.size) &&
+    (a.publicArea.type == b.publicArea.type) &&
+    (a.publicArea.nameAlg == b.publicArea.nameAlg) &&
+    (a.publicArea.objectAttributes == b.publicArea.objectAttributes) &&
+    (a.publicArea.authPolicy.size == b.publicArea.authPolicy.size) &&
+    (a.publicArea.parameters.rsaDetail.symmetric.algorithm ==
+     b.publicArea.parameters.rsaDetail.symmetric.algorithm) &&
+    (a.publicArea.parameters.rsaDetail.symmetric.keyBits.aes ==
+     b.publicArea.parameters.rsaDetail.symmetric.keyBits.aes) &&
+    (a.publicArea.parameters.rsaDetail.symmetric.mode.aes ==
+     b.publicArea.parameters.rsaDetail.symmetric.mode.aes) &&
+    (a.publicArea.parameters.rsaDetail.keyBits ==
+     b.publicArea.parameters.rsaDetail.keyBits) &&
+    (a.publicArea.parameters.rsaDetail.exponent ==
+     b.publicArea.parameters.rsaDetail.exponent) &&
+    (a.publicArea.unique.rsa.size == b.publicArea.unique.rsa.size) &&
+    (memcmp(a.publicArea.unique.rsa.buffer,
+            b.publicArea.unique.rsa.buffer, a.publicArea.unique.rsa.size) == 0);
+}
+
+//----------------------------------------------------------------------------
+// check_packed_public
+//----------------------------------------------------------------------------
+bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
+                         size_t packed_size, size_t packed_offset)
+{
+  // make sure packed byte array is large enough to hold packed struct
+  //   - in.size is a UINT16 and needs two bytes
+  //   - in.publicArea needs in.size bytes
+  if (packed_size < (sizeof(uint16_t) + in.size))
+  {
+    return false;
+  }
+
+  // account for any offset passed as a pack_public() parameter
+  int index = packed_offset;
+
+  uint16_t packed_struct_size = 0;
+
+  // check packed 'size' bytes
+  packed_struct_size |= (packed_data[index++] << 8);
+  packed_struct_size |= packed_data[index++];
+  if (packed_struct_size != in.size)
+  {
+    return false;
+  }
+
+  uint16_t packed_type = 0;
+
+  // check packed 'publicArea.type' bytes
+  packed_type |= (packed_data[index++] << 8);
+  packed_type |= packed_data[index++];
+  if (packed_type != in.publicArea.type)
+  {
+    return false;
+  }
+
+  uint16_t packed_nameAlg = 0;
+
+  // check packed 'publicArea.nameAlg' bytes
+  packed_nameAlg |= (packed_data[index++] << 8);
+  packed_nameAlg |= packed_data[index++];
+  if (packed_nameAlg != in.publicArea.nameAlg)
+  {
+    return false;
+  }
+
+  uint32_t packed_objectAttributes = 0;
+
+  // check packed 'publicArea.objectAttributes' bytes
+  packed_objectAttributes |= (packed_data[index++] << 24);
+  packed_objectAttributes |= (packed_data[index++] << 16);
+  packed_objectAttributes |= (packed_data[index++] << 8);
+  packed_objectAttributes |= packed_data[index++];
+  if (packed_objectAttributes != in.publicArea.objectAttributes)
+  {
+    return false;
+  }
+
+  uint16_t packed_authPolicy_size = 0;
+
+  // check packed 'publicArea.authPolicy' bytes
+  // (passed in empty authPolicy so 'size' should be zero and 'buffer' empty)
+  packed_authPolicy_size |= (packed_data[index++] << 8);
+  packed_authPolicy_size |= packed_data[index++];
+  if (packed_authPolicy_size != in.publicArea.authPolicy.size)
+  {
+    return false;
+  }
+
+  uint16_t packed_sym_alg = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.algorithm' bytes
+  packed_sym_alg |= (packed_data[index++] << 8);
+  packed_sym_alg |= packed_data[index++];
+  if (packed_sym_alg != in.publicArea.parameters.rsaDetail.symmetric.algorithm)
+  {
+    return false;
+  }
+
+  uint16_t packed_sym_keyBits = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.keyBits.aes' bytes
+  packed_sym_keyBits |= (packed_data[index++] << 8);
+  packed_sym_keyBits |= packed_data[index++];
+  if (packed_sym_keyBits !=
+      in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes)
+  {
+    return false;
+  }
+
+  uint16_t packed_sym_mode = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.symmetric.mode.aes' bytes
+  packed_sym_mode |= (packed_data[index++] << 8);
+  packed_sym_mode |= packed_data[index++];
+  if (packed_sym_mode != in.publicArea.parameters.rsaDetail.symmetric.mode.aes)
+  {
+    return false;
+  }
+
+  uint16_t packed_rsa_scheme = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.scheme.scheme' bytes
+  packed_rsa_scheme |= (packed_data[index++] << 8);
+  packed_rsa_scheme |= packed_data[index++];
+  if (packed_rsa_scheme != in.publicArea.parameters.rsaDetail.scheme.scheme)
+  {
+    return false;
+  }
+
+  uint16_t packed_rsa_keyBits = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.keyBits' bytes
+  packed_rsa_keyBits |= (packed_data[index++] << 8);
+  packed_rsa_keyBits |= packed_data[index++];
+  if (packed_rsa_keyBits != in.publicArea.parameters.rsaDetail.keyBits)
+  {
+    return false;
+  }
+
+  uint32_t packed_rsa_exponent = 0;
+
+  // check packed 'publicArea.parameters.rsaDetail.exponent' bytes
+  packed_rsa_exponent |= (packed_data[index++] << 24);
+  packed_rsa_exponent |= (packed_data[index++] << 16);
+  packed_rsa_exponent |= (packed_data[index++] << 8);
+  packed_rsa_exponent |= packed_data[index++];
+  if (packed_rsa_exponent != in.publicArea.parameters.rsaDetail.exponent)
+  {
+    return false;
+  }
+
+  uint16_t packed_rsa_unique_size = 0;
+
+  // check packed 'publicArea.unique.rsa.size' bytes
+  packed_rsa_unique_size |= (packed_data[index++] << 8);
+  packed_rsa_unique_size |= packed_data[index++];
+  if (packed_rsa_unique_size != in.publicArea.unique.rsa.size)
+  {
+    return false;
+  }
+
+  // check packed 'publicArea.unique.rsa.buffer' bytes
+  for (int i = 0; i < in.publicArea.unique.rsa.size; i++)
+  {
+    if (packed_data[index++] != in.publicArea.unique.rsa.buffer[i])
+    {
+      return false;
+    }
+  }
+
+  // check potential 'extra bytes' in packed byte array
+  // Note: assumes that they were cleared on initialization (e.g., calloc)
+  while (index < packed_size)
+  {
+    if (packed_data[index++] != 0)
+    {
+      return false;
+    }
+  }
+
+  // if execution reaches here, the check passes
+  return true;
+}
+
+//----------------------------------------------------------------------------
+// init_test_private
+//----------------------------------------------------------------------------
+size_t init_test_private(TPM2B_PRIVATE * test_private,
+                         size_t buffer_size, size_t offset)
 {
   test_private->size = buffer_size;
   for (int i = 0; i < buffer_size; i++)
@@ -253,16 +546,71 @@ size_t get_test_private(TPM2B_PRIVATE * test_private,
 }
 
 //----------------------------------------------------------------------------
-// test_marshal_skiObjects
+// match_private
 //----------------------------------------------------------------------------
-void test_marshal_skiObjects(void)
+bool match_private(TPM2B_PRIVATE a, TPM2B_PRIVATE b)
 {
-  // test input parameter - structs to be marshaled
-  TPML_PCR_SELECTION test_pcr_select = {.count = 0 };
-  TPM2B_PUBLIC test_sk_public = {.size = 0 };
-  TPM2B_PRIVATE test_sk_private = {.size = 0 };
-  TPM2B_PUBLIC test_sealed_key_public = {.size = 0 };
-  TPM2B_PRIVATE test_sealed_key_private = {.size = 0 };
+  return (a.size == b.size) && (memcmp(a.buffer, b.buffer, a.size) == 0);
+}
+
+//----------------------------------------------------------------------------
+// check_packed_private
+//----------------------------------------------------------------------------
+bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
+                          size_t packed_size, size_t packed_offset)
+{
+  // make sure packed byte array is large enough to hold packed struct
+  //   - in.size is a UINT16 and needs two bytes
+  //   - in.buffer needs in.size bytes
+  if (packed_size < (sizeof(uint16_t) + in.size))
+  {
+    return false;
+  }
+
+  // account for any offset passed as a pack_private() parameter
+  int index = packed_offset;
+
+  uint16_t packed_struct_size = 0;
+
+  // check packed 'size' bytes
+  packed_struct_size |= (packed_data[index++] << 8);
+  packed_struct_size |= packed_data[index++];
+  if (packed_struct_size != in.size)
+  {
+    return false;
+  }
+
+  // check packed 'buffer' bytes
+  for (int i = 0; i < in.size; i++)
+  {
+    if (packed_data[index++] != in.buffer[i])
+    {
+      return false;
+    }
+  }
+
+  // if execution reaches here, the check passed
+  return true;
+}
+
+//----------------------------------------------------------------------------
+// test_marshal_unmarshal_skiObjects
+//----------------------------------------------------------------------------
+void test_marshal_unmarshal_skiObjects(void)
+{
+  // test input/output struct parameters
+  TPML_PCR_SELECTION pcr_selection_in = {.count = 0 };
+  TPML_PCR_SELECTION pcr_selection_out = {.count = 0 };
+  TPM2B_PUBLIC sk_public_in = {.size = 0 };
+  TPM2B_PUBLIC sk_public_out = {.size = 0 };
+  TPM2B_PRIVATE sk_private_in = {.size = 0 };
+  TPM2B_PRIVATE sk_private_out = {.size = 0 };
+  TPM2B_PUBLIC sealed_key_public_in = {.size = 0 };
+  TPM2B_PUBLIC sealed_key_public_out = {.size = 0 };
+  TPM2B_PRIVATE sealed_key_private_in = {.size = 0 };
+  TPM2B_PRIVATE sealed_key_private_out = {.size = 0 };
+  uint16_t temp_size = 0;
+  uint8_t *null_data_ptr = NULL;
 
   // define test offset values for output byte arrays
   size_t pcr_selection_offset = 5;
@@ -276,16 +624,16 @@ void test_marshal_skiObjects(void)
   size_t sealed_key_private_len = 64;
 
   // initialize test structs, get required byte array sizes
-  size_t pcr_selection_size = get_test_pcrSelect(&test_pcr_select,
-                                                 pcr_selection_offset);
-  size_t sk_public_size = get_test_public(&test_sk_public, sk_public_offset);
-  size_t sk_private_size = get_test_private(&test_sk_private, sk_private_len,
-                                            sk_private_offset);
-  size_t sealed_key_public_size = get_test_public(&test_sealed_key_public,
-                                                  sealed_key_public_offset);
-  size_t sealed_key_private_size = get_test_private(&test_sealed_key_private,
-                                                    sealed_key_private_len,
-                                                    sealed_key_private_offset);
+  size_t pcr_selection_size = init_test_pcrSelect(&pcr_selection_in,
+                                                  pcr_selection_offset);
+  size_t sk_public_size = init_test_public(&sk_public_in, sk_public_offset);
+  size_t sk_private_size = init_test_private(&sk_private_in, sk_private_len,
+                                             sk_private_offset);
+  size_t sealed_key_public_size = init_test_public(&sealed_key_public_in,
+                                                   sealed_key_public_offset);
+  size_t sealed_key_private_size = init_test_private(&sealed_key_private_in,
+                                                     sealed_key_private_len,
+                                                     sealed_key_private_offset);
 
   // allocate memory for byte arrays to hold marsalled data
   uint8_t *pcr_selection_data = calloc(pcr_selection_size, 1);
@@ -294,20 +642,459 @@ void test_marshal_skiObjects(void)
   uint8_t *sealed_key_public_data = calloc(sealed_key_public_size, 1);
   uint8_t *sealed_key_private_data = calloc(sealed_key_private_size, 1);
 
+  size_t max_byte_array_size = 0;
+
+  // create all-zero buffer sized for largest packed byte array
+  // (can be used for comparison against all packed byte arrays)
+  if (pcr_selection_size > max_byte_array_size)
+  {
+    max_byte_array_size = pcr_selection_size;
+  }
+  if (sk_public_size > max_byte_array_size)
+  {
+    max_byte_array_size = sk_public_size;
+  }
+  if (sk_private_size > max_byte_array_size)
+  {
+    max_byte_array_size = sk_private_size;
+  }
+  if (sealed_key_public_size > max_byte_array_size)
+  {
+    max_byte_array_size = sealed_key_public_size;
+  }
+  if (sealed_key_private_size > max_byte_array_size)
+  {
+    max_byte_array_size = sealed_key_private_size;
+  }
+  uint8_t *zerobuf = calloc(max_byte_array_size, 1);
+
+  // check that NULL PCR selection struct input errors
+  int ret_val = marshal_skiObjects(NULL,
+                                   &pcr_selection_data,
+                                   &pcr_selection_size,
+                                   pcr_selection_offset,
+                                   &sk_public_in,
+                                   &sk_public_data,
+                                   &sk_public_size,
+                                   sk_public_offset,
+                                   &sk_private_in,
+                                   &sk_private_data,
+                                   &sk_private_size,
+                                   sk_private_offset,
+                                   &sealed_key_public_in,
+                                   &sealed_key_public_data,
+                                   &sealed_key_public_size,
+                                   sealed_key_public_offset,
+                                   &sealed_key_private_in,
+                                   &sealed_key_private_data,
+                                   &sealed_key_private_size,
+                                   sealed_key_private_offset);
+
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL storage key public struct input errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               NULL,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL storage key private struct input errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               NULL,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sealed key public struct input errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               NULL,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sealed key private struct input errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               NULL,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that empty (zero size) storage key public struct input errors
+  temp_size = sk_public_in.size;
+  sk_public_in.size = 0;
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+  sk_public_in.size = temp_size;
+
+  // check that empty (zero size) storage key private struct input errors
+  temp_size = sk_private_in.size;
+  sk_private_in.size = 0;
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+  sk_private_in.size = temp_size;
+
+  // check that empty (zero size) sealed key public struct input errors
+  temp_size = sealed_key_public_in.size;
+  sealed_key_public_in.size = 0;
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+  sealed_key_public_in.size = temp_size;
+
+  // check that empty (zero size) sealed key private struct input errors
+  temp_size = sealed_key_private_in.size;
+  sealed_key_private_in.size = 0;
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+  sealed_key_private_in.size = temp_size;
+
+  // check that NULL pcr_selection_data output byte array pointer errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &null_data_ptr,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sk_public_data output byte array pointer errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &null_data_ptr,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sk_private_data output byte array pointer errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &null_data_ptr,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sealed_key_public_data array pointer errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &null_data_ptr,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL sealed_key_private output byte array pointer errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &null_data_ptr,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // now check the results for a valid set of inputs
+  //   - check that the output arrays are initially all-zero
+  //   - check for a successful return value
+  //   - check that the output packed byte arrays match expected results
+  memset(pcr_selection_data, 0, pcr_selection_size);
+  CU_ASSERT(memcmp(pcr_selection_data, zerobuf, pcr_selection_size) == 0);
+  memset(sk_public_data, 0, sk_public_size);
+  CU_ASSERT(memcmp(sk_public_data, zerobuf, sk_public_size) == 0);
+  memset(sk_private_data, 0, sk_private_size);
+  CU_ASSERT(memcmp(sk_private_data, zerobuf, sk_private_size) == 0);
+  memset(sealed_key_public_data, 0, sealed_key_public_size);
+  CU_ASSERT(memcmp(sealed_key_public_data, zerobuf,
+                   sealed_key_public_size) == 0);
+  memset(sealed_key_private_data, 0, sealed_key_private_size);
+  CU_ASSERT(memcmp(sealed_key_private_data, zerobuf,
+                   sealed_key_private_size) == 0);
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sealed_key_public_in,
+                               &sealed_key_public_data,
+                               &sealed_key_public_size,
+                               sealed_key_public_offset,
+                               &sealed_key_private_in,
+                               &sealed_key_private_data,
+                               &sealed_key_private_size,
+                               sealed_key_private_offset);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(check_packed_pcrSelect(pcr_selection_in, pcr_selection_data,
+                                   pcr_selection_size, pcr_selection_offset));
+  CU_ASSERT(check_packed_public(sk_public_in, sk_public_data,
+                                sk_public_size, sk_public_offset));
+  CU_ASSERT(check_packed_private(sk_private_in, sk_private_data,
+                                 sk_private_size, sk_private_offset));
+  CU_ASSERT(check_packed_public(sealed_key_public_in, sealed_key_public_data,
+                                sealed_key_public_size,
+                                sealed_key_public_offset));
+  CU_ASSERT(check_packed_private
+            (sealed_key_private_in, sealed_key_private_data,
+             sealed_key_private_size, sealed_key_private_offset));
+
+  // check that 'unmarshal_skiObjects()':
+  //   - starts with output struct parameters that are not initially correct
+  //   - returns a successful response code (zero)
+  //   - returns the original input struct values
+  CU_ASSERT(pcr_selection_out.count == 0);
+  CU_ASSERT(sk_public_out.size == 0);
+  CU_ASSERT(sk_private_out.size == 0);
+  CU_ASSERT(sealed_key_public_out.size == 0);
+  CU_ASSERT(sealed_key_private_out.size == 0);
+  ret_val = unmarshal_skiObjects(&pcr_selection_out,
+                                 pcr_selection_data,
+                                 pcr_selection_size,
+                                 pcr_selection_offset,
+                                 &sk_public_out,
+                                 sk_public_data,
+                                 sk_public_size,
+                                 sk_public_offset,
+                                 &sk_private_out,
+                                 sk_private_data,
+                                 sk_private_size,
+                                 sk_private_offset,
+                                 &sealed_key_public_out,
+                                 sealed_key_public_data,
+                                 sealed_key_public_size,
+                                 sealed_key_public_offset,
+                                 &sealed_key_private_out,
+                                 sealed_key_private_data,
+                                 sealed_key_private_size,
+                                 sealed_key_private_offset);
+  CU_ASSERT(match_pcrSelect(pcr_selection_out, pcr_selection_in));
+  CU_ASSERT(match_public(sk_public_out, sk_public_in));
+  CU_ASSERT(match_private(sk_private_out, sk_private_in));
+  CU_ASSERT(match_public(sealed_key_public_out, sealed_key_public_in));
+  CU_ASSERT(match_private(sealed_key_private_out, sealed_key_private_in));
+
   // clean-up - free allocated memory
   free(pcr_selection_data);
   free(sk_public_data);
   free(sk_private_data);
   free(sealed_key_public_data);
   free(sealed_key_private_data);
-}
-
-//----------------------------------------------------------------------------
-// test_unmarshal_skiObjects
-//----------------------------------------------------------------------------
-void test_unmarshal_skiObjects(void)
-{
-
+  free(zerobuf);
 }
 
 //----------------------------------------------------------------------------
@@ -315,76 +1102,21 @@ void test_unmarshal_skiObjects(void)
 //----------------------------------------------------------------------------
 void test_pack_unpack_pcr(void)
 {
-  TPML_PCR_SELECTION test_in = {.count = 0 };
-  size_t test_packed_pcr_offset = 2;
+  TPML_PCR_SELECTION test_in = { 0 };
+  TPML_PCR_SELECTION test_out = { 0 };
+  size_t test_packed_pcr_offset = 8;
+  size_t test_packed_pcr_size = 0;
 
-  // initialize test PCR Selection struct input
-  size_t test_packed_pcr_size = get_test_pcrSelect(&test_in,
-                                                   test_packed_pcr_offset);
+  // initialize test PCR Selection struct input, get required byte array size
+  test_packed_pcr_size = init_test_pcrSelect(&test_in, test_packed_pcr_offset);
 
-  // allocate variable to hold packed version of test PCR seolection struct
+  // allocate variable to hold packed version of test PCR selection struct
   uint8_t *test_packed_pcr_data = calloc(test_packed_pcr_size, 1);
 
-  // pack the PCR selection struct test value
-  int ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+  // check that passing a NULL input (value to be packed or unpacked) errors
+  int ret_val = pack_pcr(NULL, test_packed_pcr_data,
                          test_packed_pcr_size, test_packed_pcr_offset);
 
-  // check that pack operation did not return error
-  CU_ASSERT(ret_val == 0);
-
-  // account for any offset passed as a pack_pcr() parameter
-  int index = test_packed_pcr_offset;
-
-  uint32_t packed_count_val = 0;
-
-  // check that the count portion of the packed value matches original count
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 24);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 16);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 8);
-  packed_count_val |= (uint32_t) test_packed_pcr_data[index++];
-  CU_ASSERT(packed_count_val == test_in.count);
-
-  uint16_t packed_hash_alg_id = 0;
-
-  // check that the hash algorithm ID of the packed value matches input value
-  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data[index++] << 8);
-  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data[index++];
-  CU_ASSERT(packed_hash_alg_id == test_in.pcrSelections[0].hash);
-
-  // check that TPMS_PCR_SELECT struct was packed as expected
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].sizeofSelect);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[0]);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[1]);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[2]);
-
-  TPML_PCR_SELECTION test_out;
-
-  // unpack the packed PCR selection struct test value
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_size, test_packed_pcr_offset);
-
-  // check that unpack operation did not return error
-  CU_ASSERT(ret_val == 0);
-
-  // check that the unpacked struct matches original input
-  CU_ASSERT(test_out.count == test_in.count);
-  CU_ASSERT(test_out.pcrSelections[0].hash == test_in.pcrSelections[0].hash);
-  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect ==
-            test_in.pcrSelections[0].sizeofSelect);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] ==
-            test_in.pcrSelections[0].pcrSelect[0]);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] ==
-            test_in.pcrSelections[0].pcrSelect[1]);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
-            test_in.pcrSelections[0].pcrSelect[2]);
-
-  // check that passing a NULL input (value to be packed or unpacked) errors
-  ret_val = pack_pcr(NULL, test_packed_pcr_data,
-                     test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
   ret_val = unpack_pcr(&test_out, NULL,
                        test_packed_pcr_size, test_packed_pcr_offset);
@@ -393,39 +1125,70 @@ void test_pack_unpack_pcr(void)
   // check that passing a packed byte array size of zero errors
   ret_val = pack_pcr(&test_in, test_packed_pcr_data, 0, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       0, test_packed_pcr_offset);
+  ret_val =
+    unpack_pcr(&test_out, test_packed_pcr_data, 0, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that passing a non-zero, but too small, packed byte array errors
   ret_val = pack_pcr(&test_in, test_packed_pcr_data,
                      test_packed_pcr_size - 1, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_size - 1, test_packed_pcr_offset);
+  ret_val =
+    unpack_pcr(&test_out, test_packed_pcr_data,
+               test_packed_pcr_size - 1, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
-  // clear results from previous tests
-  memset(test_packed_pcr_data, 0, test_packed_pcr_size);
-  test_out.count = 0;
-  test_out.pcrSelections[0].hash = 0;
-  test_out.pcrSelections[0].sizeofSelect = 0;
-  for (int i = 0; i < test_in.pcrSelections[0].sizeofSelect; i++)
-  {
-    test_out.pcrSelections[0].pcrSelect[i] = 0;
-  }
+  // check that passing a non-zero, but too small, packed byte array errors
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+                     test_packed_pcr_size - 1, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val =
+    unpack_pcr(&test_out, test_packed_pcr_data,
+               test_packed_pcr_size - 1, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // pack the PCR selection struct test value with correct parameters
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+                     test_packed_pcr_size, test_packed_pcr_offset);
+
+  // check that pack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the result was packed as expected
+  CU_ASSERT(check_packed_pcrSelect(test_in, test_packed_pcr_data,
+                                   test_packed_pcr_size,
+                                   test_packed_pcr_offset));
+
+  // unpack the packed PCR selection struct test value just generated
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, test_packed_pcr_offset);
+
+  // check that unpack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the unpacked struct matches original input
+  CU_ASSERT(match_pcrSelect(test_out, test_in));
+
+  // check that unpacking with too small an offset produces wrong result
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, test_packed_pcr_offset - 1);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(!match_pcrSelect(test_out, test_in));
+
+  // check that unpacking with too large an offset produces an error
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
+                       test_packed_pcr_size, test_packed_pcr_offset + 1);
+  CU_ASSERT(ret_val != 0);
 
   // check that unpacking an all-zero byte array of packed data should be
   // valid and that all fields for the resulting unpacked struct are zero
+  memset(test_packed_pcr_data, 0, test_packed_pcr_size);
+  test_out.count = 0xffffffff;  // initialize output to wrong result
+  CU_ASSERT(test_out.count == 0xffffffff);
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
                        test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(test_out.count == 0);
-  CU_ASSERT(test_out.pcrSelections[0].hash == 0);
-  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] == 0);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] == 0);
 
   // check that packing into a larger byte array than necessary
   // is less space efficient, but works
@@ -433,43 +1196,14 @@ void test_pack_unpack_pcr(void)
   //       bytes at the end of the packed data byte array)
   ret_val = pack_pcr(&test_in, test_packed_pcr_data, test_packed_pcr_size, 0);
   CU_ASSERT(ret_val == 0);
-  index = 0;
-  packed_count_val = 0;
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 24);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 16);
-  packed_count_val |= (uint32_t) (test_packed_pcr_data[index++] << 8);
-  packed_count_val |= (uint32_t) test_packed_pcr_data[index++];
-  packed_hash_alg_id = 0;
-  packed_hash_alg_id |= (uint16_t) (test_packed_pcr_data[index++] << 8);
-  packed_hash_alg_id |= (uint16_t) test_packed_pcr_data[index++];
-  CU_ASSERT(packed_hash_alg_id == test_in.pcrSelections[0].hash);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].sizeofSelect);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[0]);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[1]);
-  CU_ASSERT(test_packed_pcr_data[index++] ==
-            test_in.pcrSelections[0].pcrSelect[2]);
-  while (index < test_packed_pcr_size)
-  {
-    CU_ASSERT(test_packed_pcr_data[index++] == 0);
-  }
+  CU_ASSERT(check_packed_pcrSelect(test_in, test_packed_pcr_data,
+                                   test_packed_pcr_size, 0));
 
   // check that unpacking from a byte array with excess capacity also works
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
                        test_packed_pcr_size, 0);
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.count == test_in.count);
-  CU_ASSERT(test_out.pcrSelections[0].hash == test_in.pcrSelections[0].hash);
-  CU_ASSERT(test_out.pcrSelections[0].sizeofSelect ==
-            test_in.pcrSelections[0].sizeofSelect);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[0] ==
-            test_in.pcrSelections[0].pcrSelect[0]);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[1] ==
-            test_in.pcrSelections[0].pcrSelect[1]);
-  CU_ASSERT(test_out.pcrSelections[0].pcrSelect[2] ==
-            test_in.pcrSelections[0].pcrSelect[2]);
+  CU_ASSERT(match_pcrSelect(test_out, test_in));
 
   // clean-up - free allocated memory
   free(test_packed_pcr_data);
@@ -480,198 +1214,33 @@ void test_pack_unpack_pcr(void)
 //----------------------------------------------------------------------------
 void test_pack_unpack_public(void)
 {
-  TPM2B_PUBLIC test_in = {.size = 0 };
-  size_t test_packed_public_offset = 3;
-  size_t test_packed_public_size = get_test_public(&test_in,
-                                                   test_packed_public_offset);
+  TPM2B_PUBLIC test_in = { 0 };
+  TPM2B_PUBLIC test_out = { 0 };
+  size_t test_packed_public_offset = 11;
+  size_t test_packed_public_size = 0;
+
+  // initialize 'test_in' and get required size for packed byte array
+  test_packed_public_size = init_test_public(&test_in,
+                                             test_packed_public_offset);
 
   // allocate variable to hold packed version of test TPM2_PUBLIC struct
   uint8_t *test_packed_public_data = calloc(test_packed_public_size, 1);
 
-  // pack the TPM2_PUBLIC struct test value
-  int ret_val = pack_public(&test_in, test_packed_public_data,
-                            test_packed_public_size,
-                            test_packed_public_offset);
-
-  // check that pack operation did not return error
-  CU_ASSERT(ret_val == 0);
-
-  // account for any offset passed as a pack_public() parameter
-  int index = test_packed_public_offset;
-
-  uint16_t packed_struct_size = 0;
-
-  // check packed 'size' bytes
-  packed_struct_size |= (test_packed_public_data[index++] << 8);
-  packed_struct_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_struct_size == test_in.size);
-
-  uint16_t packed_type = 0;
-
-  // check packed 'publicArea.type' bytes
-  packed_type |= (test_packed_public_data[index++] << 8);
-  packed_type |= test_packed_public_data[index++];
-  CU_ASSERT(packed_type == test_in.publicArea.type);
-
-  uint16_t packed_nameAlg = 0;
-
-  // check packed 'publicArea.nameAlg' bytes
-  packed_nameAlg |= (test_packed_public_data[index++] << 8);
-  packed_nameAlg |= test_packed_public_data[index++];
-  CU_ASSERT(packed_nameAlg == test_in.publicArea.nameAlg);
-
-  uint32_t packed_objectAttributes = 0;
-
-  // check packed 'publicArea.objectAttributes' bytes
-  packed_objectAttributes |= (test_packed_public_data[index++] << 24);
-  packed_objectAttributes |= (test_packed_public_data[index++] << 16);
-  packed_objectAttributes |= (test_packed_public_data[index++] << 8);
-  packed_objectAttributes |= test_packed_public_data[index++];
-  CU_ASSERT(packed_objectAttributes == test_in.publicArea.objectAttributes);
-
-  uint16_t packed_authPolicy_size = 0;
-
-  // check packed 'publicArea.authPolicy' bytes
-  // (passed in empty authPolicy so 'size' should be zero and 'buffer' empty)
-  packed_authPolicy_size |= (test_packed_public_data[index++] << 8);
-  packed_authPolicy_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_authPolicy_size == test_in.publicArea.authPolicy.size);
-
-  uint16_t packed_sym_alg = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.symmetric.algorithm' bytes
-  packed_sym_alg |= (test_packed_public_data[index++] << 8);
-  packed_sym_alg |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_alg ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
-
-  uint16_t packed_sym_keyBits = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.symmetric.keyBits.aes' bytes
-  packed_sym_keyBits |= (test_packed_public_data[index++] << 8);
-  packed_sym_keyBits |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_keyBits ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
-
-  uint16_t packed_sym_mode = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.symmetric.mode.aes' bytes
-  packed_sym_mode |= (test_packed_public_data[index++] << 8);
-  packed_sym_mode |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_mode ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
-
-  uint16_t packed_rsa_scheme = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.scheme.scheme' bytes
-  packed_rsa_scheme |= (test_packed_public_data[index++] << 8);
-  packed_rsa_scheme |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_scheme ==
-            test_in.publicArea.parameters.rsaDetail.scheme.scheme);
-
-  uint16_t packed_rsa_keyBits = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.keyBits' bytes
-  packed_rsa_keyBits |= (test_packed_public_data[index++] << 8);
-  packed_rsa_keyBits |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_keyBits ==
-            test_in.publicArea.parameters.rsaDetail.keyBits);
-
-  uint32_t packed_rsa_exponent = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.exponent' bytes
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 24);
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 16);
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 8);
-  packed_rsa_exponent |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_exponent ==
-            test_in.publicArea.parameters.rsaDetail.exponent);
-
-  uint16_t packed_rsa_unique_size = 0;
-
-  // check packed 'publicArea.unique.rsa.size' bytes
-  packed_rsa_unique_size |= (test_packed_public_data[index++] << 8);
-  packed_rsa_unique_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
-
-  bool match = true;
-
-  // check packed 'publicArea.unique.rsa.buffer' bytes
-  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
-  {
-    if (test_packed_public_data[index++] !=
-        test_in.publicArea.unique.rsa.buffer[i])
-    {
-      match = false;
-      break;
-    }
-  }
-  CU_ASSERT(match);
-
-  // declare struct for unpack_public() result
-  TPM2B_PUBLIC test_out = {.size = 0 };
-
-  // unpack the packed TPM2B_PUBLIC struct test value
-  ret_val = unpack_public(&test_out, test_packed_public_data,
-                          test_packed_public_size, test_packed_public_offset);
-
-  // check that unpack operation did not return error
-  CU_ASSERT(ret_val == 0);
-
-  // check that the unpacked struct matches original input
-  CU_ASSERT(test_out.size == test_in.size);
-  CU_ASSERT(test_out.publicArea.type == test_in.publicArea.type);
-  CU_ASSERT(test_out.publicArea.nameAlg == test_in.publicArea.nameAlg);
-  CU_ASSERT(test_out.publicArea.objectAttributes ==
-            test_in.publicArea.objectAttributes);
-  CU_ASSERT(test_out.publicArea.authPolicy.size ==
-            test_in.publicArea.authPolicy.size);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.algorithm ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.keyBits ==
-            test_in.publicArea.parameters.rsaDetail.keyBits);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.exponent ==
-            test_in.publicArea.parameters.rsaDetail.exponent);
-  CU_ASSERT(test_out.publicArea.unique.rsa.size ==
-            test_in.publicArea.unique.rsa.size);
-  CU_ASSERT(memcmp(test_out.publicArea.unique.rsa.buffer,
-                   test_in.publicArea.unique.rsa.buffer,
-                   test_in.publicArea.unique.rsa.size) == 0);
-
-  // clear results from previous tests
-  test_out.size = 0;
-  test_out.publicArea.type = 0;
-  test_out.publicArea.nameAlg = 0;
-  test_out.publicArea.objectAttributes = 0;
-  test_out.publicArea.authPolicy.size = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.algorithm = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes = 0;
-  test_out.publicArea.parameters.rsaDetail.keyBits = 0;
-  test_out.publicArea.parameters.rsaDetail.exponent = 0;
-  memset(test_out.publicArea.unique.rsa.buffer, 0,
-         test_out.publicArea.unique.rsa.size);
-  test_out.publicArea.unique.rsa.size = 0;
-  memset(test_packed_public_data, 0, test_packed_public_size);
-
   // check that passing a null input value errors
-  ret_val = pack_public(NULL, test_packed_public_data,
-                        test_packed_public_size, test_packed_public_offset);
+  int ret_val = pack_public(NULL, test_packed_public_data,
+                            test_packed_public_size, test_packed_public_offset);
+
   CU_ASSERT(ret_val != 0);
-  ret_val = unpack_public(&test_out, NULL,
-                          test_packed_public_size, test_packed_public_offset);
+  ret_val = unpack_public(&test_out, NULL, test_packed_public_size,
+                          test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that passing a packed byte array size of zero errors
-  ret_val = pack_public(&test_in, test_packed_public_data,
-                        0, test_packed_public_offset);
+  ret_val = pack_public(&test_in, test_packed_public_data, 0,
+                        test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
-  ret_val = unpack_public(&test_out, test_packed_public_data,
-                          0, test_packed_public_offset);
+  ret_val = unpack_public(&test_out, test_packed_public_data, 0,
+                          test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that passing a non-zero, but too small, packed byte array errors
@@ -683,130 +1252,60 @@ void test_pack_unpack_public(void)
                           test_packed_public_offset);
   CU_ASSERT(ret_val != 0);
 
-  // clear data resulting from previous tests
-  test_out.size = 0;
-  test_out.publicArea.type = 0;
-  test_out.publicArea.nameAlg = 0;
-  test_out.publicArea.objectAttributes = 0;
-  test_out.publicArea.authPolicy.size = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.algorithm = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes = 0;
-  test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes = 0;
-  test_out.publicArea.parameters.rsaDetail.keyBits = 0;
-  test_out.publicArea.parameters.rsaDetail.exponent = 0;
-  memset(test_out.publicArea.unique.rsa.buffer, 0,
-         test_out.publicArea.unique.rsa.size);
-  test_out.publicArea.unique.rsa.size = 0;
-  memset(test_packed_public_data, 0, test_packed_public_size);
+  // pack the TPM2_PUBLIC struct test value using valid parameters
+  ret_val = pack_public(&test_in, test_packed_public_data,
+                        test_packed_public_size, test_packed_public_offset);
+
+  // check that pack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the expected pack result was obtained
+  CU_ASSERT(check_packed_public(test_in, test_packed_public_data,
+                                test_packed_public_size,
+                                test_packed_public_offset));
+
+  // unpack the packed TPM2B_PUBLIC struct test value
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size, test_packed_public_offset);
+
+  // check that unpack operation did not return error
+  CU_ASSERT(ret_val == 0);
+
+  // check that the unpacked struct matches original input
+  CU_ASSERT(match_public(test_out, test_in));
+
+  // check that unpacking with too small an offset produces the wrong result
+  memset(&test_out, 0, sizeof(test_out));
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size,
+                          test_packed_public_offset - 1);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(!match_public(test_out, test_in));
+
+  // check that unpacking with too large an offset produces an error
+  memset(&test_out, 0, sizeof(test_out));
+  ret_val = unpack_public(&test_out, test_packed_public_data,
+                          test_packed_public_size,
+                          test_packed_public_offset + 1);
+  CU_ASSERT(ret_val != 0);
 
   // check that packing into a larger byte array than necessary
   // is less space efficient, but works
   // Note: changing offset from a positive number to zero creates extra
   //       bytes at the end of the packed data byte array)
+  memset(test_packed_public_data, 0, test_packed_public_size);
   ret_val = pack_public(&test_in, test_packed_public_data,
                         test_packed_public_size, 0);
   CU_ASSERT(ret_val == 0);
-  index = 0;
-  packed_struct_size = 0;
-  packed_struct_size |= (test_packed_public_data[index++] << 8);
-  packed_struct_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_struct_size == test_in.size);
-  packed_type = 0;
-  packed_type |= (test_packed_public_data[index++] << 8);
-  packed_type |= test_packed_public_data[index++];
-  CU_ASSERT(packed_type == test_in.publicArea.type);
-  packed_nameAlg = 0;
-  packed_nameAlg |= (test_packed_public_data[index++] << 8);
-  packed_nameAlg |= test_packed_public_data[index++];
-  CU_ASSERT(packed_nameAlg == test_in.publicArea.nameAlg);
-  packed_objectAttributes = 0;
-  packed_objectAttributes |= (test_packed_public_data[index++] << 24);
-  packed_objectAttributes |= (test_packed_public_data[index++] << 16);
-  packed_objectAttributes |= (test_packed_public_data[index++] << 8);
-  packed_objectAttributes |= test_packed_public_data[index++];
-  CU_ASSERT(packed_objectAttributes == test_in.publicArea.objectAttributes);
-  packed_authPolicy_size = 0;
-  packed_authPolicy_size |= (test_packed_public_data[index++] << 8);
-  packed_authPolicy_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_authPolicy_size == test_in.publicArea.authPolicy.size);
-  packed_sym_alg = 0;
-  packed_sym_alg |= (test_packed_public_data[index++] << 8);
-  packed_sym_alg |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_alg ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
-  packed_sym_keyBits = 0;
-  packed_sym_keyBits |= (test_packed_public_data[index++] << 8);
-  packed_sym_keyBits |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_keyBits ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
-  packed_sym_mode = 0;
-  packed_sym_mode |= (test_packed_public_data[index++] << 8);
-  packed_sym_mode |= test_packed_public_data[index++];
-  CU_ASSERT(packed_sym_mode ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
-  packed_rsa_scheme = 0;
-  packed_rsa_scheme |= (test_packed_public_data[index++] << 8);
-  packed_rsa_scheme |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_scheme ==
-            test_in.publicArea.parameters.rsaDetail.scheme.scheme);
-  packed_rsa_keyBits = 0;
-  packed_rsa_keyBits |= (test_packed_public_data[index++] << 8);
-  packed_rsa_keyBits |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_keyBits ==
-            test_in.publicArea.parameters.rsaDetail.keyBits);
-  packed_rsa_exponent = 0;
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 24);
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 16);
-  packed_rsa_exponent |= (test_packed_public_data[index++] << 8);
-  packed_rsa_exponent |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_exponent ==
-            test_in.publicArea.parameters.rsaDetail.exponent);
-  packed_rsa_unique_size = 0;
-  packed_rsa_unique_size |= (test_packed_public_data[index++] << 8);
-  packed_rsa_unique_size |= test_packed_public_data[index++];
-  CU_ASSERT(packed_rsa_unique_size == test_in.publicArea.unique.rsa.size);
-  match = true;
-  for (int i = 0; i < test_in.publicArea.unique.rsa.size; i++)
-  {
-    if (test_packed_public_data[index++] !=
-        test_in.publicArea.unique.rsa.buffer[i])
-    {
-      match = false;
-      break;
-    }
-  }
-  CU_ASSERT(match);
-  while (index < test_packed_public_size)
-  {
-    CU_ASSERT(test_packed_public_data[index++] == 0);
-  }
+  CU_ASSERT(check_packed_public(test_in, test_packed_public_data,
+                                test_packed_public_size, 0));
 
   // check that unpacking from a byte array with excess capacity also works
+  memset(&test_out, 0, sizeof(test_out));
   ret_val = unpack_public(&test_out, test_packed_public_data,
                           test_packed_public_size, 0);
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.size == test_in.size);
-  CU_ASSERT(test_out.publicArea.type == test_in.publicArea.type);
-  CU_ASSERT(test_out.publicArea.nameAlg == test_in.publicArea.nameAlg);
-  CU_ASSERT(test_out.publicArea.objectAttributes ==
-            test_in.publicArea.objectAttributes);
-  CU_ASSERT(test_out.publicArea.authPolicy.size ==
-            test_in.publicArea.authPolicy.size);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.algorithm ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.algorithm);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.keyBits.aes ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.symmetric.mode.aes ==
-            test_in.publicArea.parameters.rsaDetail.symmetric.mode.aes);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.keyBits ==
-            test_in.publicArea.parameters.rsaDetail.keyBits);
-  CU_ASSERT(test_out.publicArea.parameters.rsaDetail.exponent ==
-            test_in.publicArea.parameters.rsaDetail.exponent);
-  CU_ASSERT(test_out.publicArea.unique.rsa.size ==
-            test_in.publicArea.unique.rsa.size);
-  CU_ASSERT(memcmp(test_out.publicArea.unique.rsa.buffer,
-                   test_in.publicArea.unique.rsa.buffer,
-                   test_in.publicArea.unique.rsa.size) == 0);
+  CU_ASSERT(match_public(test_out, test_in));
 
   // clean-up - free heap allocated memory
   free(test_packed_public_data);
@@ -827,48 +1326,69 @@ void test_pack_unpack_private(void)
   //       unmarshalled. Instead, the 'buffer' portion of a TPM2B_PUBLIC
   //       struct is marshalled/unmarshalled as a simple byte array
 
-  TPM2B_PRIVATE test_in, test_out;
+  TPM2B_PRIVATE test_in = { 0 };
+  TPM2B_PRIVATE empty = { 0 };
+  TPM2B_PRIVATE test_out = { 0 };
   size_t test_packed_private_offset = 17;
   size_t test_private_value_len = 15;
   size_t test_packed_private_size = 0;
+  int ret_val = -1;
 
   // initialize 'test_in' struct and get required size for packed data
-  test_packed_private_size = get_test_private(&test_in, test_private_value_len,
-                                              test_packed_private_offset);
+  test_packed_private_size = init_test_private(&test_in,
+                                               test_private_value_len,
+                                               test_packed_private_offset);
 
   // allocate variable to hold packed version of test TPM2_PRIVATE struct
   uint8_t *test_packed_private_data = calloc(test_packed_private_size, 1);
 
-  // pack the TPM2_PRIVATE struct test value
-  int ret_val = pack_private(&test_in, test_packed_private_data,
-                             test_packed_private_size,
-                             test_packed_private_offset);
+  // check that passing a null input value errors
+  ret_val = pack_private(NULL, test_packed_private_data,
+                         test_packed_private_size, test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+  ret_val = unpack_private(&test_out, NULL, test_packed_private_size,
+                           test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that passing a empty input produces packed array containing only
+  // the zero .size member (UINT16 is two bytes)
+  ret_val = pack_private(&empty, test_packed_private_data, 2, 0);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT((test_packed_private_data[0] == 0) &&
+            (test_packed_private_data[1] == 0));
+
+  // check that unwrapping previous result returns empty struct
+  test_out.size = 0xffff;
+  CU_ASSERT(test_out.size == 0xffff);
+  ret_val = unpack_private(&test_out, test_packed_private_data, 2, 0);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.size == 0);
+
+  // check that zero-size byte array input to unpack_private() errors
+  ret_val = unpack_private(&test_out, test_packed_private_data, 0, 0);
+  CU_ASSERT(ret_val != 0);
+
+  // check that zero-size output byte array for pack_private() errors
+  ret_val = pack_private(&empty, test_packed_private_data, 0, 0);
+  CU_ASSERT(ret_val != 0);
+
+  // check passing a non-zero, but too small, packed byte array errors pack
+  ret_val = pack_private(&test_in, test_packed_private_data,
+                         test_packed_private_size - 1,
+                         test_packed_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // pack the TPM2_PRIVATE struct test value using valid parameters
+  ret_val = pack_private(&test_in, test_packed_private_data,
+                         test_packed_private_size, test_packed_private_offset);
 
   // check that pack operation did not return error
   CU_ASSERT(ret_val == 0);
 
-  // account for any offset passed as a pack_private() parameter
-  int index = test_packed_private_offset;
-
-  uint16_t packed_struct_size = 0;
-
-  // check packed 'size' bytes
-  packed_struct_size |= (test_packed_private_data[index++] << 8);
-  packed_struct_size |= test_packed_private_data[index++];
-  CU_ASSERT(packed_struct_size == test_in.size);
-
-  // check packed 'buffer' bytes
-  bool match = true;
-
-  for (int i = 0; i < test_in.size; i++)
-  {
-    if (test_packed_private_data[index++] != test_in.buffer[i])
-    {
-      match = false;
-      break;
-    }
-  }
-  CU_ASSERT(match);
+  // check that the packed data matches expected result
+  CU_ASSERT(check_packed_private(test_in, test_packed_private_data,
+                                 test_packed_private_size,
+                                 test_packed_private_offset));
 
   // unpack the packed TPM2B_PRIVATE struct test value
   ret_val = unpack_private(&test_out, test_packed_private_data,
@@ -879,45 +1399,16 @@ void test_pack_unpack_private(void)
   CU_ASSERT(ret_val == 0);
 
   // check that the unpacked struct matches original input
-  CU_ASSERT(test_out.size == test_in.size);
-  CU_ASSERT(memcmp(test_out.buffer, test_in.buffer, test_in.size) == 0);
+  CU_ASSERT(match_private(test_out, test_in));
 
-  // check that passing a null input value errors
-  ret_val = pack_private(NULL, test_packed_private_data,
-                         test_packed_private_size, test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
-  ret_val = unpack_private(&test_out, NULL, test_packed_private_size,
-                           test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
-
-  // check that passing a packed byte array size of zero errors
-  ret_val = pack_private(&test_in, test_packed_private_data,
-                         0, test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
-  ret_val = unpack_private(&test_out, test_packed_private_data,
-                           0, test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
-
-  // check that passing a non-zero, but too small, packed byte array errors
-  ret_val = pack_private(&test_in, test_packed_private_data,
-                         test_packed_private_size - 1,
-                         test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
+  // check passing a non-zero, but too small, packed byte array errors unpack
   ret_val = unpack_private(&test_out, test_packed_private_data,
                            test_packed_private_size - 1,
                            test_packed_private_offset);
-  CU_ASSERT(ret_val != 0);
-
-  // clear results from previous tests
-  memset(test_packed_private_data, 0, test_packed_private_size);
-  for (int i = 0; i < test_out.size; i++)
-  {
-    test_out.buffer[i] = 0;
-  }
-  test_out.size = 0;
 
   // check that unpacking an all-zero byte array of packed data should be
-  // valid and that all fields for the resulting unpacked struct are zero
+  // valid and that a struct with a zero-valued '.size' member is produced
+  memset(test_packed_private_data, 0, test_packed_private_size);
   ret_val = unpack_private(&test_out, test_packed_private_data,
                            test_packed_private_size,
                            test_packed_private_offset);
@@ -928,38 +1419,19 @@ void test_pack_unpack_private(void)
   // is less space efficient, but works
   // Note: changing offset from a positive number to zero creates extra
   //       bytes at the end of the packed data byte array)
+  CU_ASSERT((sizeof(uint16_t) + test_in.size) < test_packed_private_size);
   ret_val = pack_private(&test_in, test_packed_private_data,
                          test_packed_private_size, 0);
   CU_ASSERT(ret_val == 0);
-  index = 0;
-  packed_struct_size = 0;
-  packed_struct_size |= (uint16_t) (test_packed_private_data[index++] << 8);
-  packed_struct_size |= (uint16_t) test_packed_private_data[index++];
-  CU_ASSERT(packed_struct_size == test_in.size);
-  for (int i = 0; i < test_in.size; i++)
-  {
-    CU_ASSERT(test_packed_private_data[index++] == test_in.buffer[i]);
-  }
-  while (index < test_packed_private_size)
-  {
-    CU_ASSERT(test_packed_private_data[index++] == 0);
-  }
+  CU_ASSERT(check_packed_private(test_in, test_packed_private_data,
+                                 test_packed_private_size, 0));
 
   // check that unpacking from a byte array with excess capacity also works
+  CU_ASSERT(!match_private(test_out, test_in));
   ret_val = unpack_private(&test_out, test_packed_private_data,
                            test_packed_private_size, 0);
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.size == test_in.size);
-  match = true;
-  for (int i = 0; i < test_in.size; i++)
-  {
-    if (test_out.buffer[i] != test_in.buffer[i])
-    {
-      match = false;
-      break;
-    }
-  }
-  CU_ASSERT(match);
+  CU_ASSERT(match_private(test_out, test_in));
 
   // clean-up - free heap allocated memory
   free(test_packed_private_data);
@@ -971,11 +1443,11 @@ void test_pack_unpack_private(void)
 void test_unpack_uint32_to_str(void)
 {
   char *test_str = NULL;
+  int ret_val = -1;
 
   // check that zero input produces empty string
   // (output string passed in unallocated with NULL value)
-  int ret_val = unpack_uint32_to_str(0, &test_str);
-
+  ret_val = unpack_uint32_to_str(0, &test_str);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(strncmp(test_str, "", 4) == 0);
 
@@ -1011,11 +1483,9 @@ void test_unpack_uint32_to_str(void)
 void test_parse_ski_bytes(void)
 {
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
-
   uint8_t *ski_bytes = malloc(ski_bytes_len * sizeof(char));
 
   memcpy(ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
-
   Ski output = get_default_ski();
 
   //Valid ski test  
@@ -1086,7 +1556,6 @@ void test_parse_ski_bytes(void)
 void test_create_ski_bytes(void)
 {
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
-
   Ski ski = get_default_ski();
 
   parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);  //get valid ski struct
@@ -1114,7 +1583,6 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
-
   orig = ski.sk_priv.size;
   ski.sk_priv.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
@@ -1125,7 +1593,6 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
-
   orig = ski.wk_pub.size;
   ski.wk_pub.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
@@ -1136,7 +1603,6 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
-
   orig = ski.wk_priv.size;
   ski.wk_priv.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
@@ -1147,7 +1613,6 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
-
   orig = ski.enc_data_size;
   ski.enc_data_size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
@@ -1158,7 +1623,6 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
-
   uint8_t *data = malloc(ski.enc_data_size);
 
   memcpy(data, ski.enc_data, ski.enc_data_size);
@@ -1188,7 +1652,6 @@ void test_free_ski(void)
   Ski ski = get_default_ski();
 
   parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);  //get valid ski struct
-
   CU_ASSERT(ski.enc_data != NULL);
   CU_ASSERT(ski.enc_data_size > 0);
   free_ski(&ski);
@@ -1224,7 +1687,6 @@ void test_get_ski_block_bytes(void)
   uint8_t *sb = malloc(sb_len * sizeof(char));
 
   memcpy(sb, CONST_SKI_BYTES, sb_len);
-
   uint8_t *position = sb;
   size_t remaining = sb_len;
   uint8_t *raw_pcr_select_list_data = NULL;
@@ -1236,7 +1698,8 @@ void test_get_ski_block_bytes(void)
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
                                 KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                                strlen
+                                (KMYTH_DELIM_PCR_SELECTION_LIST),
                                 KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                                 strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
   CU_ASSERT(raw_pcr_select_list_size == strlen(RAW_PCR64));
@@ -1256,24 +1719,23 @@ void test_get_ski_block_bytes(void)
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
                                 KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                                strlen
+                                (KMYTH_DELIM_PCR_SELECTION_LIST),
                                 KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
-    CU_ASSERT(raw_pcr_select_list_data == NULL);
+                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+  CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
-
   position = sb;
   remaining = sb_len;
   sb[0] = '-';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
-    free(raw_pcr_select_list_data);
+  CU_ASSERT(get_ski_block_bytes
+            ((char **) &position, &remaining,
+             &raw_pcr_select_list_data, &raw_pcr_select_list_size,
+             KMYTH_DELIM_PCR_SELECTION_LIST,
+             strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+             KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+             strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) ==
+            0) free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
 
   //Invalid second delim
@@ -1286,49 +1748,59 @@ void test_get_ski_block_bytes(void)
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
                                 KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                                strlen
+                                (KMYTH_DELIM_PCR_SELECTION_LIST),
                                 KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
-    CU_ASSERT(raw_pcr_select_list_data == NULL);
+                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+  CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
-
   position = sb;
   remaining = sb_len;
   sb[208] = '-';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0)
-    free(raw_pcr_select_list_data);
+  CU_ASSERT(get_ski_block_bytes
+            ((char **) &position, &remaining,
+             &raw_pcr_select_list_data, &raw_pcr_select_list_size,
+             KMYTH_DELIM_PCR_SELECTION_LIST,
+             strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+             KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+             strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
+  free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
 
   //Check to verify unexpected end of file
   position = sb;
   remaining = sb_len;
   raw_pcr_select_list_size = 0;
-  CU_ASSERT(get_ski_block_bytes((char **) &position, &remaining, &raw_pcr_select_list_data, &raw_pcr_select_list_size, KMYTH_DELIM_PCR_SELECTION_LIST, strlen(KMYTH_DELIM_PCR_SELECTION_LIST), KMYTH_DELIM_STORAGE_KEY_PUBLIC, remaining + 1) == 1) //next_delim_len > remaining
-    CU_ASSERT(raw_pcr_select_list_data == NULL);
+  CU_ASSERT(get_ski_block_bytes((char **) &position,
+                                &remaining,
+                                &raw_pcr_select_list_data,
+                                &raw_pcr_select_list_size,
+                                KMYTH_DELIM_PCR_SELECTION_LIST,
+                                strlen
+                                (KMYTH_DELIM_PCR_SELECTION_LIST),
+                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                                remaining + 1) == 1);
+
+  //next_delim_len > remaining
+  CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
 
   //Test empty block
   const char *empty_block =
     "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n ";
   position = (uint8_t *) empty_block;
-  remaining = strlen(empty_block);;
+  remaining = strlen(empty_block);
   raw_pcr_select_list_size = 0;
   CU_ASSERT(get_ski_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
                                 KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                                strlen
+                                (KMYTH_DELIM_PCR_SELECTION_LIST),
                                 KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1)
-    CU_ASSERT(raw_pcr_select_list_data == NULL);
+                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+  CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
   free(sb);
 }
@@ -1398,8 +1870,8 @@ void test_decodeBase64Data(void)
   size_t pcr_len = 0;
 
   //Test valid decode
-  CU_ASSERT(decodeBase64Data
-            ((uint8_t *) RAW_PCR64, strlen(RAW_PCR64), &pcr, &pcr_len) == 0);
+  CU_ASSERT(decodeBase64Data((uint8_t *) RAW_PCR64,
+                             strlen(RAW_PCR64), &pcr, &pcr_len) == 0);
   CU_ASSERT(pcr_len == RAW_PCR_LEN);
   CU_ASSERT(memcmp(pcr, RAW_PCR, pcr_len) == 0);
   free(pcr);
@@ -1408,10 +1880,11 @@ void test_decodeBase64Data(void)
 
   //Test invalid input
   CU_ASSERT(decodeBase64Data(NULL, strlen(RAW_PCR64), &pcr, &pcr_len) == 1);
-  CU_ASSERT(decodeBase64Data((uint8_t *) RAW_PCR64, 0, &pcr, &pcr_len) == 1)
-    //INT_MAX+1
-    CU_ASSERT(decodeBase64Data
-              ((uint8_t *) RAW_PCR64, -2147483648, &pcr, &pcr_len) == 1);
+  CU_ASSERT(decodeBase64Data((uint8_t *) RAW_PCR64, 0, &pcr, &pcr_len) == 1);
+
+  //INT_MAX+1
+  CU_ASSERT(decodeBase64Data
+            ((uint8_t *) RAW_PCR64, -2147483648, &pcr, &pcr_len) == 1);
   CU_ASSERT(pcr == NULL);
   CU_ASSERT(pcr_len == 0);
 
@@ -1447,7 +1920,6 @@ void test_concat(void)
   size_t chile_len = 5;
   uint8_t *result = (uint8_t *) "greenchile";
   size_t result_len = 10;
-
   size_t dest_len = green_len;
   uint8_t *dest = malloc(dest_len);
 
@@ -1463,17 +1935,15 @@ void test_concat(void)
   free(dest);
   dest = malloc(dest_len);
   memcpy(dest, green, dest_len);
-
   CU_ASSERT(concat(&dest, &dest_len, NULL, chile_len) == 0);
   CU_ASSERT(green_len == dest_len);
   CU_ASSERT(memcmp(dest, green, dest_len) == 0);
-
   CU_ASSERT(concat(&dest, &dest_len, chile, 0) == 0);
   CU_ASSERT(green_len == dest_len);
   CU_ASSERT(memcmp(dest, green, dest_len) == 0);
 
   //Test invalid input
-  //The -1 sould trigger overflows here:    if (new_dest_len < *dest_length)
+  //The -1 should trigger overflows here:    if (new_dest_len < *dest_length)
   CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
   free(dest);
 }
