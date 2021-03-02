@@ -599,16 +599,16 @@ bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
 void test_marshal_unmarshal_skiObjects(void)
 {
   // test input/output struct parameters
-  TPML_PCR_SELECTION pcr_selection_in = {.count = 0 };
-  TPML_PCR_SELECTION pcr_selection_out = {.count = 0 };
-  TPM2B_PUBLIC sk_public_in = {.size = 0 };
-  TPM2B_PUBLIC sk_public_out = {.size = 0 };
-  TPM2B_PRIVATE sk_private_in = {.size = 0 };
-  TPM2B_PRIVATE sk_private_out = {.size = 0 };
-  TPM2B_PUBLIC sealed_key_public_in = {.size = 0 };
-  TPM2B_PUBLIC sealed_key_public_out = {.size = 0 };
-  TPM2B_PRIVATE sealed_key_private_in = {.size = 0 };
-  TPM2B_PRIVATE sealed_key_private_out = {.size = 0 };
+  TPML_PCR_SELECTION pcr_selection_in = { 0 };
+  TPML_PCR_SELECTION pcr_selection_out = { 0 };
+  TPM2B_PUBLIC sk_public_in = { 0 };
+  TPM2B_PUBLIC sk_public_out = { 0 };
+  TPM2B_PRIVATE sk_private_in = { 0 };
+  TPM2B_PRIVATE sk_private_out = { 0 };
+  TPM2B_PUBLIC sealed_key_public_in = { 0 };
+  TPM2B_PUBLIC sealed_key_public_out = { 0 };
+  TPM2B_PRIVATE sealed_key_private_in = { 0 };
+  TPM2B_PRIVATE sealed_key_private_out = { 0 };
 
   // support saving/restoring a structs '.size' value
   uint16_t temp_size = 0;
@@ -1013,18 +1013,23 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sealed_key_private_size,
                                sealed_key_private_offset);
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT(check_packed_pcrSelect(pcr_selection_in, pcr_selection_data,
+  CU_ASSERT(check_packed_pcrSelect(pcr_selection_in,
+                                   pcr_selection_data,
                                    pcr_selection_size, pcr_selection_offset));
-  CU_ASSERT(check_packed_public(sk_public_in, sk_public_data,
+  CU_ASSERT(check_packed_public(sk_public_in,
+                                sk_public_data,
                                 sk_public_size, sk_public_offset));
-  CU_ASSERT(check_packed_private(sk_private_in, sk_private_data,
+  CU_ASSERT(check_packed_private(sk_private_in,
+                                 sk_private_data,
                                  sk_private_size, sk_private_offset));
-  CU_ASSERT(check_packed_public(sealed_key_public_in, sealed_key_public_data,
+  CU_ASSERT(check_packed_public(sealed_key_public_in,
+                                sealed_key_public_data,
                                 sealed_key_public_size,
                                 sealed_key_public_offset));
-  CU_ASSERT(check_packed_private
-            (sealed_key_private_in, sealed_key_private_data,
-             sealed_key_private_size, sealed_key_private_offset));
+  CU_ASSERT(check_packed_private(sealed_key_private_in,
+                                 sealed_key_private_data,
+                                 sealed_key_private_size,
+                                 sealed_key_private_offset));
 
   // check that 'unmarshal_skiObjects()':
   //   - starts with output struct parameters that are not initially correct
@@ -1117,13 +1122,9 @@ void test_pack_unpack_pcr(void)
   ret_val = pack_pcr(&empty, test_packed_pcr_data, 0, 0);
   CU_ASSERT(ret_val != 0);
 
-  // check that passing a non-zero, but too small, packed byte array errors
+  // check that a non-zero-sized, but too small, output array errors pack
   ret_val = pack_pcr(&test_in, test_packed_pcr_data,
                      test_packed_pcr_size - 1, test_packed_pcr_offset);
-  CU_ASSERT(ret_val != 0);
-  ret_val = unpack_pcr(&test_out,
-                       test_packed_pcr_data,
-                       test_packed_pcr_size - 1, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
   // pack the PCR selection struct test value with correct parameters
@@ -1147,6 +1148,12 @@ void test_pack_unpack_pcr(void)
 
   // check that the unpacked struct matches original input
   CU_ASSERT(match_pcrSelect(test_out, test_in));
+
+  // check that a non-zero-sized, but too small, input array errors unpack
+  ret_val = unpack_pcr(&test_out,
+                       test_packed_pcr_data,
+                       test_packed_pcr_size - 1, test_packed_pcr_offset);
+  CU_ASSERT(ret_val != 0);
 
   // check that unpacking with too small an offset produces wrong result
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,

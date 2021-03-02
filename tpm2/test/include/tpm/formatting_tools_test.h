@@ -70,7 +70,7 @@ bool match_private(TPM2B_PRIVATE a, TPM2B_PRIVATE b);
  * These utilities are used to validate a packed byte array result.
  *
  * Note: this validation makes assumptions about how the struct that the
- *       packed data represents was initializaed - these utilities not
+ *       packed data represents was initialized - these utilities are not
  *       intended for generic use and modifications to how the test
  *       struct is initialized may require modification to these utilities.
  *
