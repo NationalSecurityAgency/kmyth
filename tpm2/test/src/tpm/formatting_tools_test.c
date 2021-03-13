@@ -1192,7 +1192,6 @@ void test_pack_unpack_pcr(void)
 void test_pack_unpack_public(void)
 {
   TPM2B_PUBLIC test_in = { 0 };
-  TPM2B_PUBLIC empty = { 0 };
   TPM2B_PUBLIC test_out = { 0 };
   size_t test_packed_public_offset = 11;
   size_t test_packed_public_size = 0;
@@ -1219,11 +1218,6 @@ void test_pack_unpack_public(void)
   CU_ASSERT(ret_val != 0);
   ret_val = unpack_public(&test_out, test_packed_public_data, 0,
                           test_packed_public_offset);
-  CU_ASSERT(ret_val != 0);
-
-  // check that passing a empty input struct to "pack_public() is invalid
-  ret_val = pack_public(&empty, test_packed_public_data,
-                        test_packed_public_size, 0);
   CU_ASSERT(ret_val != 0);
 
   // check that undersize output byte array for pack_public() errors:
@@ -1344,7 +1338,7 @@ void test_pack_unpack_private(void)
                            test_packed_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that passing a empty input produces packed array containing only
+  // check that passing a empty input produces packed array containing
   // the zero .size member (UINT16 is two bytes)
   ret_val = pack_private(&empty, test_packed_private_data, 2, 0);
   CU_ASSERT(ret_val == 0);
