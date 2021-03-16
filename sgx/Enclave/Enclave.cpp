@@ -17,6 +17,9 @@ static inline uint32_t calc_sealed_data_size(uint32_t in_size)
 // EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t *size)
 {
+    if(size == NULL){
+      return SGX_ERROR_INVALID_PARAMETER;
+    } 
     *size = 0;
 
     uint32_t sealedsz = calc_sealed_data_size(in_size);
@@ -31,6 +34,9 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t *size)
 // `out_data` is user_check
 int enc_seal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data, uint32_t out_size)
 {
+    if (in_data == NULL || out_data == NULL){
+      return SGX_ERROR_INVALID_PARAMETER;
+    }
     if (!sgx_is_outside_enclave(out_data, out_size))
         return SGX_ERROR_INVALID_PARAMETER;
 
@@ -66,6 +72,9 @@ Out:
 
 int enc_unseal_data(const uint8_t *in_data, uint32_t in_size, uint8_t *out_data, uint32_t out_size)
 {
+    if(in_data == NULL || out_data == NULL){
+        return SGX_ERROR_INVALID_PARAMETER;
+    }
     if (!sgx_is_outside_enclave(out_data, out_size))
         return SGX_ERROR_INVALID_PARAMETER;
 
