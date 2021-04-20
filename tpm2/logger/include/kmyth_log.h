@@ -140,7 +140,9 @@ struct log_params
 };
 
 //--------------------------Function Declarations-----------------------------
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
  * @brief sets new name string to identify application being logged
  *
@@ -328,5 +330,7 @@ FILE *get_stddest(int severity_val_in);
 void log_event(const char *src_file,
                const char *src_func, const int src_line, int severity,
                const char *message, ...);
-
+#ifdef __cplusplus
+}
+#endif
 #endif // KMYTH_LOG_H

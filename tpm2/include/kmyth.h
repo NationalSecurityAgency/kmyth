@@ -8,6 +8,10 @@
 #ifndef KMYTH_H
 #define KMYTH_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /**
  * @brief High-level function implementing kmyth-seal using TPM 2.0.
  *
@@ -48,11 +52,11 @@
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
-                    uint8_t ** output, size_t * output_len,
-                    uint8_t * auth_bytes, size_t auth_bytes_len,
-                    uint8_t * owner_auth_bytes, size_t oa_bytes_len,
-                    int *pcrs, size_t pcrs_len, char *cipher_string);
+  int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
+                      uint8_t ** output, size_t * output_len,
+                      uint8_t * auth_bytes, size_t auth_bytes_len,
+                      uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                      int *pcrs, size_t pcrs_len, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal using TPM 2.0.
@@ -81,10 +85,10 @@ int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
-                      uint8_t ** output, size_t * output_len,
-                      uint8_t * auth_bytes, size_t auth_bytes_len,
-                      uint8_t * owner_auth_bytes, size_t oa_bytes_len);
+  int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
+                        uint8_t ** output, size_t * output_len,
+                        uint8_t * auth_bytes, size_t auth_bytes_len,
+                        uint8_t * owner_auth_bytes, size_t oa_bytes_len);
 
 /**
  * @brief High-level function implementing kmyth-seal for files using TPM 2.0.
@@ -123,11 +127,11 @@ int tpm2_kmyth_unseal(uint8_t * input, size_t input_len,
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_seal_file(char *input_path,
-                         uint8_t ** output, size_t * output_len,
-                         uint8_t * auth_bytes, size_t auth_bytes_len,
-                         uint8_t * owner_auth_bytes, size_t oa_bytes_len,
-                         int *pcrs, size_t pcrs_len, char *cipher_string);
+  int tpm2_kmyth_seal_file(char *input_path,
+                           uint8_t ** output, size_t * output_len,
+                           uint8_t * auth_bytes, size_t auth_bytes_len,
+                           uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                           int *pcrs, size_t pcrs_len, char *cipher_string);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.
@@ -156,9 +160,11 @@ int tpm2_kmyth_seal_file(char *input_path,
  *
  * @return 0 on success, 1 on error
  */
-int tpm2_kmyth_unseal_file(char *input_path,
-                           uint8_t ** output, size_t * output_length,
-                           uint8_t * auth_bytes, size_t auth_bytes_len,
-                           uint8_t * owner_auth_bytes, size_t oa_bytes_len);
-
-#endif /* KMYTH_H */
+  int tpm2_kmyth_unseal_file(char *input_path,
+                             uint8_t ** output, size_t * output_length,
+                             uint8_t * auth_bytes, size_t auth_bytes_len,
+                             uint8_t * owner_auth_bytes, size_t oa_bytes_len);
+#ifdef __cplusplus
+}
+#endif
+#endif                          /* KMYTH_H */
