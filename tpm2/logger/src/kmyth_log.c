@@ -32,7 +32,7 @@ static struct log_params log_settings = {
 //############################################################################
 // set_app_name()
 //############################################################################
-void set_app_name(char *new_app_name)
+void set_app_name(const char *new_app_name)
 {
   bool truncated = false;
   size_t temp_len = 0;
@@ -65,7 +65,7 @@ void set_app_name(char *new_app_name)
 //############################################################################
 // set_app_version()
 //############################################################################
-void set_app_version(char *new_app_version)
+void set_app_version(const char *new_app_version)
 {
   bool truncated = false;
   size_t temp_len = 0;
@@ -99,7 +99,7 @@ void set_app_version(char *new_app_version)
 //############################################################################
 // set_applog_path()
 //############################################################################
-void set_applog_path(char *new_applog_path)
+void set_applog_path(const char *new_applog_path)
 {
   size_t temp_len = 0;
 

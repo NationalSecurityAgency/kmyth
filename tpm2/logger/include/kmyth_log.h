@@ -150,7 +150,7 @@ extern "C" {
  *
  * @return None
  */
-void set_app_name(char *new_app_name);
+void set_app_name(const char *new_app_name);
 
 /**
  * @brief sets new version string for application being logged
@@ -159,7 +159,7 @@ void set_app_name(char *new_app_name);
  *
  * @return None
  */
-void set_app_version(char *new_app_version);
+void set_app_version(const char *new_app_version);
 
 /**
  * @brief sets new path string for application log file
@@ -168,7 +168,7 @@ void set_app_version(char *new_app_version);
  *
  * @return None
  */
-void set_applog_path(char *new_applog_path);
+void set_applog_path(const char *new_applog_path);
 
 /**
  * @brief sets new max log message length for the application log messages in file
