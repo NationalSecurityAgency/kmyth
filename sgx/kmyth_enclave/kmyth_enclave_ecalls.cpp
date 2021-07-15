@@ -4,8 +4,6 @@
 #include "sgx_tseal.h"
 #include "sgx_lfence.h"
 
-#include "Enclave_t.h"
-
 static const uint8_t *addl_data = NULL;
 static const uint32_t addl_data_sz = 0;
 
