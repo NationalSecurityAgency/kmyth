@@ -399,6 +399,14 @@ int retrieve_key_with_session_key(int socket_fd,
 
   // Read response from B; decrypt with S
   unsigned char *encrypted_response = calloc(8192, sizeof(unsigned char));
+
+  if (NULL == encrypted_response)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocate the encrypted response buffer.");
+    kmip_destroy(&kmip_context);
+    return 1;
+  }
+
   size_t encrypted_response_len = 8192 * sizeof(unsigned char);
 
   int read_result = read(socket_fd, encrypted_response, encrypted_response_len);
@@ -406,6 +414,7 @@ int retrieve_key_with_session_key(int socket_fd,
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to read the key response.");
+    kmyth_clear_and_free(encrypted_response, encrypted_response_len);
     kmip_destroy(&kmip_context);
     return 1;
   }
@@ -418,6 +427,7 @@ int retrieve_key_with_session_key(int socket_fd,
   result = aes_gcm_decrypt(session_key, session_key_len,
                            encrypted_response, read_result,
                            &response, &response_len);
+  kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to decrypt the KMIP key response.");
@@ -456,6 +466,13 @@ int send_key_with_session_key(int socket_fd,
                               size_t key_len)
 {
   unsigned char *encrypted_request = calloc(8192, sizeof(unsigned char));
+
+  if (NULL == encrypted_request)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocated the encrypted request buffer.");
+    return 1;
+  }
+
   size_t encrypted_request_len = 8192 * sizeof(unsigned char);
 
   struct sockaddr_storage peer_addr;

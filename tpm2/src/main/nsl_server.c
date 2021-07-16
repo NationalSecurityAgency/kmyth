@@ -18,10 +18,10 @@ static void usage(const char *prog)
           "\nusage: %s [options]\n\n"
           "options are :\n\n"
           "Server Information --\n"
-          "  -k or --key   Path to the file containing the server's private key.\n"
+          "  -r or --priv   Path to the file containing the server's private key.\n"
           "  -p or --port  The port number to connect to.\n"
           "Client Information --\n"
-          "  -c or --cert  Path to the file containing the client's public key.\n"
+          "  -u or --pub  Path to the file containing the client's public key.\n"
           "Misc --\n" "  -h or --help  Help (displays this usage).\n\n", prog);
 }
 
@@ -37,10 +37,10 @@ int check_string_arg(const char *arg, size_t arg_len,
 
 const struct option longopts[] = {
   // Server info
-  {"key", required_argument, 0, 'k'},
+  {"priv", required_argument, 0, 'r'},
   {"port", required_argument, 0, 'p'},
   // Client info
-  {"cert", required_argument, 0, 'c'},
+  {"pub", required_argument, 0, 'u'},
   // Misc
   {"help", no_argument, 0, 'h'},
   {0, 0, 0, 0}
@@ -63,19 +63,19 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "k:p:c:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:p:u:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
       // Server info
-    case 'k':
+    case 'r':
       key = optarg;
       break;
     case 'p':
       port = optarg;
       break;
       // Client info
-    case 'c':
+    case 'u':
       cert = optarg;
       break;
       // Misc
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     }
   }
 
-  //set_applog_severity_threshold(7);
+  set_applog_severity_threshold(LOG_INFO);
 
   // Create server socket
   kmyth_log(LOG_INFO, "Setting up server socket");

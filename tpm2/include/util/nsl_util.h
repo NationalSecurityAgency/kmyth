@@ -7,9 +7,6 @@
 #ifndef NSL_UTIL_H
 #define NSL_UTIL_H
 
-/* // OpenSSL libraries for TLS connection */
-#include <openssl/bio.h>
-
 /**
  * <pre>
  * This function encrypts plaintext using the provided EVP keypair context.

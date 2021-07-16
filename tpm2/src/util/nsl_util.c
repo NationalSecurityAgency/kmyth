@@ -17,6 +17,10 @@
 #include <openssl/engine.h>
 
 #include "defines.h"
+#include "memory_util.h"
+
+#define NSL_NONCE_LEN 32
+#define NSL_SESSION_KEY_LEN 32
 
 //
 // encrypt_with_key_pair()
@@ -114,6 +118,16 @@ int build_nonce_request(EVP_PKEY_CTX * ctx,
                         unsigned char *id, size_t id_len,
                         unsigned char **request, size_t *request_len)
 {
+  if (NSL_NONCE_LEN != nonce_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Invalid nonce length provided; received: %zd, expected: %zd",
+              nonce_len, NSL_NONCE_LEN);
+    return 1;
+  }
+
+  // TODO Add a length check for the ID as well.
+
   // Allocate the unencrypted request buffer.
   unsigned char *message = NULL;
   size_t message_len = id_len + nonce_len + (2 * sizeof(size_t));
@@ -140,8 +154,7 @@ int build_nonce_request(EVP_PKEY_CTX * ctx,
   int result =
     encrypt_with_key_pair(ctx, message, message_len, request, request_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   // Handle encryption errors if any occurred.
   if (result)
@@ -184,8 +197,7 @@ int parse_nonce_request(EVP_PKEY_CTX * ctx,
 
     *nonce_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
@@ -200,22 +212,19 @@ int parse_nonce_request(EVP_PKEY_CTX * ctx,
   {
     kmyth_log(LOG_ERR, "Failed to allocate the ID buffer.");
 
-    memset(*nonce, 0, *nonce_len);
-    free(*nonce);
+    kmyth_clear_and_free(*nonce, *nonce_len);
     *nonce = NULL;
     *nonce_len = 0;
 
     *id_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
   memcpy(*id, index, *id_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   return 0;
 }
@@ -259,8 +268,7 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
   int result =
     encrypt_with_key_pair(ctx, message, message_len, response, response_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   // Handle encryption errors if any occurred.
   if (result)
@@ -292,11 +300,24 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
     kmyth_log(LOG_ERR, "Failed to decrypt the nonce response.");
     return 1;
   }
+
+  // TODO Check and validate the length of the decrypted response message
+  // before proceeding with the parse.
+
   unsigned char *index = message;
 
   // Parse out the first nonce.
   memcpy(nonce_a_len, index, sizeof(size_t));
   index += sizeof(size_t);
+  if (NSL_NONCE_LEN != *nonce_a_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Unexpected length for nonce A; received: %zd bytes, expected: %zd bytes",
+              *nonce_a_len, NSL_NONCE_LEN);
+    *nonce_a_len = 0;
+    kmyth_clear_and_free(message, message_len);
+    return 1;
+  }
   *nonce_a = calloc(*nonce_a_len, sizeof(unsigned char));
   if (*nonce_a == NULL)
   {
@@ -304,8 +325,7 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
 
     *nonce_a_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
@@ -315,6 +335,20 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
   // Parse out the second nonce.
   memcpy(nonce_b_len, index, sizeof(size_t));
   index += sizeof(size_t);
+  if (NSL_NONCE_LEN != *nonce_b_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Unexpected length for nonce B; received: %zd bytes, expected: %zd bytes",
+              *nonce_b_len, NSL_NONCE_LEN);
+
+    *nonce_a_len = 0;
+    *nonce_b_len = 0;
+
+    kmyth_clear_and_free(nonce_a, *nonce_a_len);
+    kmyth_clear_and_free(message, message_len);
+
+    return 1;
+  }
   *nonce_b = calloc(*nonce_b_len, sizeof(unsigned char));
   if (*nonce_b == NULL)
   {
@@ -322,13 +356,11 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
 
     *nonce_b_len = 0;
 
-    memset(*nonce_a, 0, *nonce_a_len);
-    free(*nonce_a);
+    kmyth_clear_and_free(*nonce_a, *nonce_a_len);
     *nonce_a = NULL;
     *nonce_a_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
@@ -343,27 +375,23 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
   {
     kmyth_log(LOG_ERR, "Failed to allocate the ID buffer.");
 
-    memset(*nonce_a, 0, *nonce_a_len);
-    free(*nonce_a);
+    kmyth_clear_and_free(*nonce_a, *nonce_a_len);
     *nonce_a = NULL;
     *nonce_a_len = 0;
 
-    memset(*nonce_b, 0, *nonce_b_len);
-    free(*nonce_b);
+    kmyth_clear_and_free(*nonce_b, *nonce_b_len);
     *nonce_b = NULL;
     *nonce_b_len = 0;
 
     *id_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
   memcpy(*id, index, *id_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   return 0;
 }
@@ -376,6 +404,14 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char **confirmation,
                              size_t *confirmation_len)
 {
+  if (NSL_NONCE_LEN != nonce_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Invalid nonce length provided; received: %zd, expected: %zd",
+              nonce_len, NSL_NONCE_LEN);
+    return 1;
+  }
+
   // Allocate the unencrypted confirmation buffer.
   unsigned char *message = NULL;
   size_t message_len = nonce_len + sizeof(size_t);
@@ -399,8 +435,7 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
   int result = encrypt_with_key_pair(ctx, message, message_len, confirmation,
                                      confirmation_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   // Handle encryption errors if any occurred.
   if (result)
@@ -444,15 +479,13 @@ int parse_nonce_confirmation(EVP_PKEY_CTX * ctx,
 
     *nonce_len = 0;
 
-    memset(message, 0, message_len);
-    free(message);
+    kmyth_clear_and_free(message, message_len);
 
     return 1;
   }
   memcpy(*nonce, index, *nonce_len);
 
-  memset(message, 0, message_len);
-  free(message);
+  kmyth_clear_and_free(message, message_len);
 
   return 0;
 }
@@ -557,9 +590,31 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
                          unsigned char *nonce_b, size_t nonce_b_len,
                          unsigned char **key, size_t *key_len)
 {
+  if (NSL_NONCE_LEN != nonce_a_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Invalid nonce A length provided; received: %zd, expected: %zd",
+              nonce_a_len, NSL_NONCE_LEN);
+    return 1;
+  }
+  if (NSL_NONCE_LEN != nonce_b_len)
+  {
+    kmyth_log(LOG_ERR,
+              "Invalid nonce B length provided; received: %zd, expected: %zd",
+              nonce_b_len, NSL_NONCE_LEN);
+    return 1;
+  }
+
   // Build the combined nonce as the base for key generation.
   size_t len = nonce_a_len + nonce_b_len;
   unsigned char *nonces = calloc(len, sizeof(unsigned char));
+
+  if (NULL == nonces)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocated the nonces buffer.");
+    return 1;
+  }
+  size_t nonces_len = len * sizeof(unsigned char);
   unsigned char *index = nonces;
 
   memcpy(index, nonce_a, nonce_a_len);
@@ -567,14 +622,12 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
   memcpy(index, nonce_b, nonce_b_len);
 
   // Setup the message digest context.
-  //const EVP_MD *type = EVP_sha3_512();
   const EVP_MD *type = EVP_shake256();
 
   if (NULL == type)
   {
-    //kmyth_log(LOG_ERR, "Failed to obtain the SHA512 MD.");
     kmyth_log(LOG_ERR, "Failed to obtain the SHAKE-256 MD.");
-    free(nonces);
+    kmyth_clear_and_free(nonces, nonces_len);
     return 1;
   }
   EVP_MD_CTX *ctx = EVP_MD_CTX_new();
@@ -582,7 +635,7 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
   if (NULL == ctx)
   {
     kmyth_log(LOG_ERR, "Failed to create the MD context.");
-    free(nonces);
+    kmyth_clear_and_free(nonces, nonces_len);
     return 1;
   }
 
@@ -594,7 +647,7 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
   {
     kmyth_log(LOG_ERR, "Failed to initialize the MD context.");
     EVP_MD_CTX_free(ctx);
-    free(nonces);
+    kmyth_clear_and_free(nonces, nonces_len);
     return 1;
   }
 
@@ -603,41 +656,41 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
   {
     kmyth_log(LOG_ERR, "Failed to update the MD context.");
     EVP_MD_CTX_free(ctx);
-    free(nonces);
+    kmyth_clear_and_free(nonces, nonces_len);
     return 1;
   }
 
-  free(nonces);
-
   *key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
-  *key_len = EVP_MAX_MD_SIZE;
+  if (NULL == key)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocated the key buffer.");
+    EVP_MD_CTX_free(ctx);
+    kmyth_clear_and_free(nonces, nonces_len);
+    return 1;
+  }
+  *key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
 
   result = EVP_DigestFinal_ex(ctx, *key, (unsigned int *) key_len);
   if (0 == result)
   {
     kmyth_log(LOG_ERR, "Failed to finalize the MD context.");
     EVP_MD_CTX_free(ctx);
-    free(key);
-    *key = NULL;
-    *key_len = 0;
+    kmyth_clear_and_free(nonces, nonces_len);
+    kmyth_clear_and_free(*key, *key_len);
     return 1;
   }
 
   EVP_MD_CTX_free(ctx);
+  kmyth_clear_and_free(nonces, nonces_len);
 
-  //if (*key_len != 64)
-  if (*key_len != 32)
+  if (*key_len != NSL_SESSION_KEY_LEN)
   {
-    kmyth_log(LOG_ERR, "The generated key length must be 32, not %zd.",
-              *key_len);
-    free(key);
-    *key = NULL;
-    *key_len = 0;
+    kmyth_log(LOG_ERR,
+              "The generated key length must be %zd bytes, not %zd bytes.",
+              NSL_SESSION_KEY_LEN, *key_len);
+    kmyth_clear_and_free(*key, *key_len);
     return 1;
   }
-
-  // Only use the top half of the generated key.
-  //*key_len = *key_len / 2;
 
   return 0;
 }
@@ -656,16 +709,22 @@ int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
   }
 
   *nonce_len = size * sizeof(int);
-  unsigned char *buffer = calloc(size, sizeof(int));
-  unsigned char *index = buffer;
+  unsigned int *buffer = calloc(size, sizeof(int));
+
+  if (NULL == buffer)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocated the nonce buffer.");
+    return 1;
+  }
+  unsigned int *index = buffer;
 
   for (size_t i = 0; i < size; i++)
   {
-    *index = (unsigned char) rand();
-    index += sizeof(int);
+    *index = rand();
+    index += 1;
   }
 
-  *nonce = buffer;
+  *nonce = (unsigned char *) buffer;
   return 0;
 }
 
@@ -685,7 +744,7 @@ int negotiate_client_session_key(int socket_fd,
   unsigned char *nonce_a = NULL;
   size_t nonce_a_len = 0;
 
-  int result = generate_nonce(32, &nonce_a, &nonce_a_len);
+  int result = generate_nonce(NSL_NONCE_LEN, &nonce_a, &nonce_a_len);
 
   if (result)
   {
@@ -701,7 +760,14 @@ int negotiate_client_session_key(int socket_fd,
   size_t request_len = 0;
 
   unsigned char *response = calloc(8192, sizeof(unsigned char));
-  size_t response_len = 8192;
+
+  if (NULL == response)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocate the response buffer.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    return 1;
+  }
+  size_t response_len = 8192 * sizeof(unsigned char);
 
   kmyth_log(LOG_INFO, "Sending nonce A: %zd bytes", nonce_a_len);
 
@@ -711,12 +777,16 @@ int negotiate_client_session_key(int socket_fd,
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to build the nonce request.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
   if (write(socket_fd, request, request_len) != request_len)
   {
     kmyth_log(LOG_ERR, "Failed to fully send nonce request message.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
@@ -727,12 +797,14 @@ int negotiate_client_session_key(int socket_fd,
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to read the nonce response message.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
   kmyth_log(LOG_INFO, "Received %zd bytes", read_result);
 
-  free(request);
+  kmyth_clear_and_free(request, request_len);
   request = NULL;
   request_len = 0;
 
@@ -747,9 +819,11 @@ int negotiate_client_session_key(int socket_fd,
                                 &received_nonce_a, &received_nonce_a_len,
                                 &nonce_b, &nonce_b_len,
                                 &received_id, &received_id_len);
+  kmyth_clear_and_free(response, response_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to parse the nonce response.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
     return 1;
   }
 
@@ -760,6 +834,19 @@ int negotiate_client_session_key(int socket_fd,
   if (nonce_a_len != received_nonce_a_len)
   {
     kmyth_log(LOG_ERR, "The received nonce A length is invalid.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_id, received_id_len);
+    return 1;
+  }
+  if (nonce_b_len != nonce_a_len)
+  {
+    kmyth_log(LOG_ERR, "The received nonce B length is invalid.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_id, received_id_len);
     return 1;
   }
   if (strncmp
@@ -768,16 +855,27 @@ int negotiate_client_session_key(int socket_fd,
   {
     kmyth_log(LOG_ERR, "The received nonce A is invalid.");
     kmyth_log(LOG_ERR, "Expected nonce A: %zd bytes", nonce_a_len);
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_id, received_id_len);
     return 1;
   }
+
+  kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
 
   if (strncmp
       ((const char *) received_id, (const char *) expected_id,
        expected_id_len) != 0)
   {
     kmyth_log(LOG_ERR, "The received ID is invalid.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_id, received_id_len);
     return 1;
   }
+
+  kmyth_clear_and_free(received_id, received_id_len);
 
   result = build_nonce_confirmation(public_key_ctx,
                                     nonce_b, nonce_b_len,
@@ -785,16 +883,21 @@ int negotiate_client_session_key(int socket_fd,
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to build the nonce confirmation.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
     return 1;
   }
 
   if (write(socket_fd, request, request_len) != request_len)
   {
     kmyth_log(LOG_ERR, "Failed to fully send the nonce confirmation.");
+    kmyth_clear_and_free(nonce_a, nonce_a_len);
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(request, request_len);
     return 1;
   }
 
-  free(request);
+  kmyth_clear_and_free(request, request_len);
   request = NULL;
   request_len = 0;
 
@@ -802,6 +905,8 @@ int negotiate_client_session_key(int socket_fd,
   result = generate_session_key(nonce_a, nonce_a_len,
                                 nonce_b, nonce_b_len,
                                 session_key, session_key_len);
+  kmyth_clear_and_free(nonce_a, nonce_a_len);
+  kmyth_clear_and_free(nonce_b, nonce_b_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to generate the session key.");
@@ -825,7 +930,7 @@ int negotiate_server_session_key(int socket_fd,
   unsigned char *nonce_b = NULL;
   size_t nonce_b_len = 0;
 
-  int result = generate_nonce(32, &nonce_b, &nonce_b_len);
+  int result = generate_nonce(NSL_NONCE_LEN, &nonce_b, &nonce_b_len);
 
   if (result)
   {
@@ -835,6 +940,13 @@ int negotiate_server_session_key(int socket_fd,
 
   // Conduct NSL to obtain nonce A
   unsigned char *response = calloc(8192, sizeof(unsigned char));
+
+  if (NULL == response)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocate the response buffer.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    return 1;
+  }
   size_t response_len = 8192;
 
   struct sockaddr_storage peer_addr;
@@ -849,6 +961,8 @@ int negotiate_server_session_key(int socket_fd,
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce request.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
@@ -861,6 +975,8 @@ int negotiate_server_session_key(int socket_fd,
   if (0 != s)
   {
     kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
@@ -879,8 +995,10 @@ int negotiate_server_session_key(int socket_fd,
                                &received_id, &received_id_len);
 
   kmyth_log(LOG_INFO, "Received nonce A: %zd bytes", received_nonce_a_len);
+  kmyth_log(LOG_INFO, "Received ID: %.*s", received_id_len, received_id);
 
-  free(response);
+  kmyth_clear_and_free(received_id, received_id_len);
+  kmyth_clear_and_free(response, response_len);
   response = NULL;
   response_len = 0;
 
@@ -893,6 +1011,8 @@ int negotiate_server_session_key(int socket_fd,
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to build the nonce response.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
     return 1;
   }
 
@@ -904,12 +1024,22 @@ int negotiate_server_session_key(int socket_fd,
   if (response_len != send_result)
   {
     kmyth_log(LOG_ERR, "Failed to fully send the nonce response.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
-  free(response);
+  kmyth_clear_and_free(response, response_len);
+
   response = calloc(8192, sizeof(unsigned char));
-  response_len = 8192;
+  if (NULL == response)
+  {
+    kmyth_log(LOG_ERR, "Failed to re-allocate the response buffer.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    return 1;
+  }
+  response_len = 8192 * sizeof(unsigned char);
 
   read_result = recvfrom(socket_fd,
                          response, response_len,
@@ -917,6 +1047,9 @@ int negotiate_server_session_key(int socket_fd,
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce confirmation.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
@@ -925,6 +1058,9 @@ int negotiate_server_session_key(int socket_fd,
   if (0 != s)
   {
     kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(response, response_len);
     return 1;
   }
 
@@ -937,14 +1073,20 @@ int negotiate_server_session_key(int socket_fd,
   result = parse_nonce_confirmation(private_key_ctx,
                                     response, read_result,
                                     &received_nonce_b, &received_nonce_b_len);
+  kmyth_clear_and_free(response, response_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to parse the nonce confirmation.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
     return 1;
   }
   if (nonce_b_len != received_nonce_b_len)
   {
     kmyth_log(LOG_ERR, "The received nonce B length is invalid.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(received_nonce_b, received_nonce_b_len);
     return 1;
   }
   if (strncmp
@@ -952,32 +1094,26 @@ int negotiate_server_session_key(int socket_fd,
        nonce_b_len) != 0)
   {
     kmyth_log(LOG_ERR, "The received nonce B is invalid.");
+    kmyth_clear_and_free(nonce_b, nonce_b_len);
+    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
+    kmyth_clear_and_free(received_nonce_b, received_nonce_b_len);
     return 1;
   }
 
+  kmyth_clear_and_free(received_nonce_b, received_nonce_b_len);
   kmyth_log(LOG_INFO, "Received nonce B: %zd bytes", nonce_b_len);
 
   // Use nonces to generate shared session key S
   result = generate_session_key(received_nonce_a, received_nonce_a_len,
                                 nonce_b, nonce_b_len,
                                 session_key, session_key_len);
+  kmyth_clear_and_free(nonce_b, nonce_b_len);
+  kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to generate the session key.");
     return 1;
   }
 
-  return 0;
-}
-
-//############################################################################
-// get_key_using_nsl()
-//
-// Retrieve a key using the Needham-Schroeder-Lowe protocol.
-//############################################################################
-
-int get_key_using_nsl(char *message, size_t message_length,
-                      unsigned char **key, size_t *key_size)
-{
   return 0;
 }
