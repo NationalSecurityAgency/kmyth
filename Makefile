@@ -259,6 +259,10 @@ all: pre clean-backups \
      $(BIN_DIR)/kmyth-seal \
      $(BIN_DIR)/kmyth-unseal \
      $(BIN_DIR)/kmyth-getkey \
+
+     $(BIN_DIR)/nsl-client \
+     $(BIN_DIR)/nsl-server \
+
      $(LIB_DIR)/libkmyth-logger.so \
      $(LIB_DIR)/libkmyth-tpm.so
 
@@ -320,6 +324,27 @@ $(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o \
                          $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
+	      $(LDFLAGS) \
+	      $(LDLIBS) \
+	      -lkmyth-logger \
+	      -lkmyth-tpm
+
+
+$(BIN_DIR)/nsl-client: $(MAIN_OBJ_DIR)/nsl_client.o \
+                       $(LIB_DIR)/libkmyth-tpm.so | \
+                       $(BIN_DIR)
+	$(CC) $(MAIN_OBJ_DIR)/nsl_client.o \
+	      -o $(BIN_DIR)/nsl-client \
+	      $(LDFLAGS) \
+	      $(LDLIBS) \
+	      -lkmyth-logger \
+	      -lkmyth-tpm
+
+$(BIN_DIR)/nsl-server: $(MAIN_OBJ_DIR)/nsl_server.o \
+                       $(LIB_DIR)/libkmyth-tpm.so | \
+                       $(BIN_DIR)
+	$(CC) $(MAIN_OBJ_DIR)/nsl_server.o \
+	      -o $(BIN_DIR)/nsl-server \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lkmyth-logger \
