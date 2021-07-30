@@ -368,14 +368,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_pcr_select_list_data,
-                          &raw_pcr_select_list_size,
-                          KMYTH_DELIM_PCR_SELECTION_LIST,
-                          strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_pcr_select_list_data,
+                      &raw_pcr_select_list_size,
+                      KMYTH_DELIM_PCR_SELECTION_LIST,
+                      strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                      KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                      strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
   {
     kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
     free(raw_pcr_select_list_data);
@@ -386,14 +386,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sk_pub_data = NULL;
   size_t raw_sk_pub_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_sk_pub_data,
-                          &raw_sk_pub_size,
-                          KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC),
-                          KMYTH_DELIM_STORAGE_KEY_PRIVATE,
-                          strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_sk_pub_data,
+                      &raw_sk_pub_size,
+                      KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                      strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC),
+                      KMYTH_DELIM_STORAGE_KEY_PRIVATE,
+                      strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE)))
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(raw_pcr_select_list_data);
@@ -405,14 +405,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sk_priv_data = NULL;
   size_t raw_sk_priv_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_sk_priv_data,
-                          &raw_sk_priv_size,
-                          KMYTH_DELIM_STORAGE_KEY_PRIVATE,
-                          strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE),
-                          KMYTH_DELIM_CIPHER_SUITE,
-                          strlen(KMYTH_DELIM_CIPHER_SUITE)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_sk_priv_data,
+                      &raw_sk_priv_size,
+                      KMYTH_DELIM_STORAGE_KEY_PRIVATE,
+                      strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE),
+                      KMYTH_DELIM_CIPHER_SUITE,
+                      strlen(KMYTH_DELIM_CIPHER_SUITE)))
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
     free(raw_pcr_select_list_data);
@@ -425,14 +425,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_cipher_str_data = NULL;
   size_t raw_cipher_str_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_cipher_str_data,
-                          &raw_cipher_str_size,
-                          KMYTH_DELIM_CIPHER_SUITE,
-                          strlen(KMYTH_DELIM_CIPHER_SUITE),
-                          KMYTH_DELIM_SYM_KEY_PUBLIC,
-                          strlen(KMYTH_DELIM_SYM_KEY_PUBLIC)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_cipher_str_data,
+                      &raw_cipher_str_size,
+                      KMYTH_DELIM_CIPHER_SUITE,
+                      strlen(KMYTH_DELIM_CIPHER_SUITE),
+                      KMYTH_DELIM_SYM_KEY_PUBLIC,
+                      strlen(KMYTH_DELIM_SYM_KEY_PUBLIC)))
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
     free(raw_pcr_select_list_data);
@@ -462,14 +462,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sym_pub_data = NULL;
   size_t raw_sym_pub_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_sym_pub_data,
-                          &raw_sym_pub_size,
-                          KMYTH_DELIM_SYM_KEY_PUBLIC,
-                          strlen(KMYTH_DELIM_SYM_KEY_PUBLIC),
-                          KMYTH_DELIM_SYM_KEY_PRIVATE,
-                          strlen(KMYTH_DELIM_SYM_KEY_PRIVATE)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_sym_pub_data,
+                      &raw_sym_pub_size,
+                      KMYTH_DELIM_SYM_KEY_PUBLIC,
+                      strlen(KMYTH_DELIM_SYM_KEY_PUBLIC),
+                      KMYTH_DELIM_SYM_KEY_PRIVATE,
+                      strlen(KMYTH_DELIM_SYM_KEY_PRIVATE)))
   {
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free_ski(&temp_ski);
@@ -484,13 +484,13 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   unsigned char *raw_sym_priv_data = NULL;
   size_t raw_sym_priv_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_sym_priv_data,
-                          &raw_sym_priv_size,
-                          KMYTH_DELIM_SYM_KEY_PRIVATE,
-                          strlen(KMYTH_DELIM_SYM_KEY_PRIVATE),
-                          KMYTH_DELIM_ENC_DATA, strlen(KMYTH_DELIM_ENC_DATA)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_sym_priv_data,
+                      &raw_sym_priv_size,
+                      KMYTH_DELIM_SYM_KEY_PRIVATE,
+                      strlen(KMYTH_DELIM_SYM_KEY_PRIVATE),
+                      KMYTH_DELIM_ENC_DATA, strlen(KMYTH_DELIM_ENC_DATA)))
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free_ski(&temp_ski);
@@ -506,12 +506,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   unsigned char *raw_enc_data = NULL;
   size_t raw_enc_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
-                          &remaining,
-                          &raw_enc_data, &raw_enc_size,
-                          KMYTH_DELIM_ENC_DATA,
-                          strlen(KMYTH_DELIM_ENC_DATA),
-                          KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE)))
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_enc_data, &raw_enc_size,
+                      KMYTH_DELIM_ENC_DATA,
+                      strlen(KMYTH_DELIM_ENC_DATA),
+                      KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE)))
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free_ski(&temp_ski);
@@ -906,13 +906,13 @@ Ski get_default_ski(void)
 }
 
 //############################################################################
-// get_ski_block_bytes()
+// get_block_bytes()
 //############################################################################
-int get_ski_block_bytes(char **contents,
-                        size_t * remaining,
-                        uint8_t ** block, size_t * blocksize,
-                        char *delim, size_t delim_len,
-                        char *next_delim, size_t next_delim_len)
+int get_block_bytes(char **contents,
+                    size_t * remaining,
+                    uint8_t ** block, size_t * blocksize,
+                    char *delim, size_t delim_len,
+                    char *next_delim, size_t next_delim_len)
 {
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, delim_len))
@@ -928,7 +928,7 @@ int get_ski_block_bytes(char **contents,
 
   if (next_delim_len > *remaining)
   {
-    kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
+    kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
     return 1;
   }
   while (strncmp(*contents + size, next_delim, next_delim_len))
@@ -936,7 +936,7 @@ int get_ski_block_bytes(char **contents,
     size++;
     if (size + next_delim_len > *remaining)
     {
-      kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
+      kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
       return 1;
     }
   }
@@ -944,7 +944,7 @@ int get_ski_block_bytes(char **contents,
   // check that the block is not empty
   if (size == 0)
   {
-    kmyth_log(LOG_ERR, "empty .ski block ... exiting");
+    kmyth_log(LOG_ERR, "empty block ... exiting");
     return 1;
   }
 
@@ -970,6 +970,50 @@ int get_ski_block_bytes(char **contents,
     *contents += size;
     *remaining -= size;
   }
+
+  return 0;
+}
+
+//############################################################################
+// create_nkl_bytes()
+//############################################################################
+int create_nkl_bytes(uint8_t * input, size_t input_length,
+                     uint8_t ** output, size_t * output_length)
+{
+  // validate that all data to be written is non-NULL and non-empty
+  if (input == NULL || input_length == 0)
+  {
+    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
+    return 1;
+  }
+
+  //Encode each portion of the file in base64
+  uint8_t *nkl_data = NULL;
+  size_t nkl_data_length = 0;
+
+  if (encodeBase64Data(input, input_length, &nkl_data, &nkl_data_size))
+  {
+    kmyth_log(LOG_ERR, "error base64 encoding nkl string ... exiting");
+    free(nkl_data);
+    return 1;
+  }
+
+  //At this point the data is all formatted, it's time to create the string
+
+  uint8_t *out = NULL;
+  size_t out_length = 0;
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_NKL_DATA,
+         strlen(KMYTH_DELIM_NKL_DATA));
+  concat(&out, &out_length, nkl_data, nlk_data_size);
+  free(nlk_data);
+  nkl_data = NULL;
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_END_NKL,
+         strlen(KMYTH_DELIM_END_NKL));
+
+  *output = out;
+  *output_length = out_length;
 
   return 0;
 }
