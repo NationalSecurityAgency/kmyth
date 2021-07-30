@@ -527,8 +527,8 @@ Ski get_default_ski(void);
 
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
- *        block formated file, if the delimiter for the current file block
- *        matches the expected delimiter value.
+ *        .ski file, if the delimiter for the current file block matches the
+ *        expected delimiter value.
  *
  * A .ski file is partitioned into "blocks" by delimiters and this function
  * uses that structure to parse a requested block from a data buffer
@@ -560,11 +560,27 @@ Ski get_default_ski(void);
  * @param[in] next_delim_len Length of the next expected delimeter
  * @return 0 on success, 1 on failure
  */
-int get_block_bytes(char **contents,
-                    size_t * remaining, unsigned char **block,
-                    size_t * blocksize,
-                    char *delim, size_t delim_len,
-                    char *next_delim, size_t next_delim_len);
+int get_ski_block_bytes(char **contents,
+                        size_t * remaining, unsigned char **block,
+                        size_t * blocksize,
+                        char *delim, size_t delim_len,
+                        char *next_delim, size_t next_delim_len);
+
+/**
+ * @brief Creates a byte array in .nkl format from a input string
+ *
+ * @param[in]  input          The input string to be converted
+ *
+ * @param[in]  input_length   The number of bytes in input
+ *
+ * @param[out] output         The bytes in .nkl format
+ *
+ * @param[out] output_length  The number of bytes in output
+ *
+ * @return 0 on success, 1 on error
+ */
+int create_nkl_bytes(uint8_t * input, size_t input_length,
+                     uint8_t ** output, size_t * output_length);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained

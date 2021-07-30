@@ -14,7 +14,7 @@
 #include "file_io.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
-#include "formating_tools.h"
+#include "formatting_tools.h"
 
 static void usage(const char *prog)
 {
@@ -23,7 +23,7 @@ static void usage(const char *prog)
           "options are: \n\n"
           " -i or --input         Path to file containing the data to be sealed.\n"
           " -o or --output        Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
-		  " -f or --force         Force the overwrite of an existing .ski file when using default output.\n"
+          " -f or --force         Force the overwrite of an existing .ski file when using default output.\n"
           " -v or --verbose       Enable detailed logging.\n"
           " -h or --help          Help (displays this usage).\n", prog);
 }
@@ -55,14 +55,14 @@ int main(int argc, char **argv)
   char *inPath = NULL;
   char *outPath = NULL;
   size_t outPath_size = 0;
+  bool forceOverwrite = false;
 
   // Parse and apply command line options
   int options;
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "i:o:fhv", longopts,
-                      &option_index)) != -1)
+          getopt_long(argc, argv, "i:o:fhv", longopts, &option_index)) != -1)
   {
     switch (options)
     {
@@ -182,12 +182,12 @@ int main(int argc, char **argv)
   uint8_t *output = NULL;
   size_t output_length = 0;
 
-  if (create_nkl_bytes(data, data_len, &output, output_length))
+  if (create_nkl_bytes(data, data_len, &output, &output_length))
   {
-	kmyth_log(LOG_ERR, "kmyth-seal error ... exiting")
-	free(outPath);
-	free(output);
-	return 1;
+    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
+    free(outPath);
+    free(output);
+    return 1;
   }
 
   if (write_bytes_to_file(outPath, output, output_length))
