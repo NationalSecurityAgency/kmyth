@@ -1,5 +1,5 @@
 enclave {
-
+    from "sgx_tsgxssl.edl" import *;
     trusted {
 
         public int enc_seal_data(
@@ -18,6 +18,15 @@ enclave {
                 uint32_t in_size,
                 [out, count=1] uint32_t *size);
 
+        public int enc_run_dh_key_exchange(
+                [in, size=private_host_key_len] unsigned char *private_host_key,
+                size_t private_host_key_len,
+                [in, size=public_peer_key_len] unsigned char *public_peer_key,
+                size_t public_peer_key_len,
+                [user_check] unsigned char **key,
+                [out, count=1] size_t *key_len,
+                [out, size=error_buffer_len] char *error_buffer,
+                size_t error_buffer_len);
     };
 
 };
