@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-#include <pelz_log.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
@@ -20,7 +18,7 @@ int clean_suite(void){
 }
 
 void test_enclave_seal_unseal(void){
-  return 0;
+  return;
 }
 
 int main(void){

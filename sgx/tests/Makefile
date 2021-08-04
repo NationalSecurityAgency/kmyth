@@ -75,11 +75,11 @@ endif
 
 App_Name := bin/kmyth_enclave_tests
 
-App_Cpp_Files := src/kmyth_enclave_tests.c
+App_Cpp_Files := src/kmyth_sgx_test.c
 
 App_Include_Paths := -Iinclude -Isgx -I$(SGX_SDK)/include 
 
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DPELZ_SGX_UNTRUSTED
+App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 # Three configuration modes - Debug, prerelease, release
 #   Debug - Macro DEBUG enabled.
@@ -94,17 +94,13 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name)
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
 else
 	App_Link_Flags += -lsgx_uae_service
 endif
-
-App_Name := pelz-sgx
-
-App_Name_Test := pelz-test
 
 ######## Enclave Settings ########
 
@@ -128,10 +124,10 @@ Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefau
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \
 
-Enclave_Name := kmyth_test_enclave.so
-Enclave_Signing_Key := kmyth_test_enclave_private.pem
-Signed_Enclave_Name := kmyth_test_enclave.signed.so
-Enclave_Config_File := kmyth_test_enclave.config.xml
+Enclave_Name := kmyth_sgx_test_enclave.so
+Enclave_Signing_Key := kmyth_sgx_test_enclave_private.pem
+Signed_Enclave_Name := kmyth_sgx_test_enclave.signed.so
+Enclave_Config_File := kmyth_sgx_test_enclave.config.xml
 
 ifeq ($(SGX_MODE), HW)
 ifneq ($(SGX_DEBUG), 1)
@@ -171,53 +167,33 @@ endif
 
 ######## App Objects ########
 
-sgx/pelz_enclave_u.c: $(SGX_EDGER8R) sgx/pelz_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --untrusted pelz_enclave.edl --search-path . --search-path include --search-path $(SGX_SDK)/include --search-path $(SGX_SSL_INCLUDE_PATH) --search-path ../include
+sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
+	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave
 	@echo "GEN  =>  $@"
 
-sgx/pelz_enclave_u.o: sgx/pelz_enclave_u.c
+sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-bin/$(App_Name): $(App_Name_File) $(App_Cpp_Files) sgx/pelz_enclave_u.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) -Isgx $(App_C_Flags) $(App_Link_Flags) -Lsgx -lcrypto -lcjson -lpthread
-	@echo "LINK =>  $@"
-
-test/bin/$(App_Name_Test): $(App_Cpp_Test_Files) $(App_Cpp_Files) sgx/pelz_enclave_u.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) -Itest/include -Isgx $(App_C_Flags) $(App_Link_Flags) -Lsgx -lcrypto -lcjson -lpthread -lcunit
+$(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
 
-sgx/pelz_enclave_t.c: $(SGX_EDGER8R) sgx/pelz_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --trusted pelz_enclave.edl --search-path . --search-path $(SGX_SDK)/include --search-path $(SGX_SSL_INCLUDE_PATH) --search-path ../include
-	@echo "GEN => $@"
+sgx/kmyth_sgx_test_enclave_t.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
+	@cd sgx && $(SGX_EDGER8R) --trusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave
+	@echo "GEN  =>  $@"
 
-sgx/pelz_enclave_t.o: sgx/pelz_enclave_t.c
+sgx/kmyth_sgx_test_enclave_t.o: sgx/kmyth_sgx_test_enclave_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/key_table.o: src/util/key_table.c
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
+sgx/kmyth_enclave_ecalls.o: ../../sgx/kmyth_enclave/kmyth_enclave_ecalls.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
 
-sgx/aes_keywrap_3394nopad.o: src/util/aes_keywrap_3394nopad.c
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
-
-sgx/pelz_request_handler.o: src/util/pelz_request_handler.c
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
-
-sgx/charbuf.o: src/util/charbuf.c
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
-
-sgx/util.o: src/util/util.c
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <= $<"
-
-sgx/$(Enclave_Name): sgx/pelz_enclave_t.o sgx/key_table.o sgx/aes_keywrap_3394nopad.o sgx/pelz_request_handler.o sgx/charbuf.o sgx/util.o
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_ecalls.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -225,7 +201,7 @@ sgx/$(Enclave_Signing_Key):
 	$(error $(err_no_enclave_signing_key))
 
 sgx/$(Signed_Enclave_Name): sgx/$(Enclave_Name) sgx/$(Enclave_Signing_Key)
-	@$(SGX_ENCLAVE_SIGNER) sign -key sgx/$(Enclave_Signing_Key) -enclave sgx/$(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@$(SGX_ENCLAVE_SIGNER) sign -key sgx/$(Enclave_Signing_Key) -enclave sgx/$(Enclave_Name) -out $@ -config sgx/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 .PHONY: test
@@ -236,4 +212,4 @@ test: all
 .PHONY: clean
 
 clean:
-	@rm -f bin/pelz-sgx test/bin/pelz-test sgx/pelz_enclave.signed.so sgx/pelz_enclave.so sgx/*_u.* sgx/*_t.* sgx/*.o test/log/*
+	@rm -f sgx/*.h sgx/*.c sgx/*.o sgx/*.so bin/*
