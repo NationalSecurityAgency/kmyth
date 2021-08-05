@@ -18,15 +18,15 @@ sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
 	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave
 	@echo "GEN  =>  $@"
 ```
-* The kmyth enclave ecalls are built as part of building the Enclave Objects in the ```Makefile```:
+* The trusted portion of the kmyth enclave is built as part of building the Enclave Objects in the ```Makefile```:
 ```
-sgx/kmyth_enclave_ecalls.o: ../../sgx/kmyth_enclave/kmyth_enclave_ecalls.cpp
+sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 ```
 * The kmyth enclave ecalls object file is linked against enclave:
 ```
-sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_ecalls.o
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_trusted.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 ```
