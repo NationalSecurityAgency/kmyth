@@ -29,6 +29,30 @@
 #
 #
 
+# Specify indentation options
+INDENT_OPTS = -bli0#                     indent braces zero spaces
+INDENT_OPTS += -bap#                     blank lines after procedure bodies
+INDENT_OPTS += -bad#                     blank lines after declarations
+INDENT_OPTS += -sob#                     swallow optional blank lines
+INDENT_OPTS += -cli0#                    case label indent of zero spaces
+INDENT_OPTS += -npcs#                    no space after function in calls
+INDENT_OPTS += -nbc#                     don't force newlines after commas
+INDENT_OPTS += -bls#                     put braces on line after struct decl
+INDENT_OPTS += -blf#                     put braces on line after func def
+INDENT_OPTS += -lp#                      align continued lines at parentheses
+INDENT_OPTS += -ip0#                     indent parameter types zero spaces
+INDENT_OPTS += -ts2#                     set tab size to two spaces
+INDENT_OPTS += -nut#                     use spaces instead of tabs
+INDENT_OPTS += -npsl#                    type of proc on same line as name
+INDENT_OPTS += -bbo#                     prefer break before boolean operator
+INDENT_OPTS += -l80#                     max non-comment line length is 80
+
+.PHONY: pre
+pre:
+	indent $(INDENT_OPTS) src/*.c
+	rm -f src/*~
+
+
 ######## SGX SDK Settings ########
 
 SGX_SDK ?= /opt/intel/sgxsdk
@@ -156,7 +180,7 @@ all: $(App_Name) $(Enclave_Name)
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: bin/$(App_Name) test/bin/$(App_Name_Test) sgx/$(Signed_Enclave_Name)
+all: pre $(App_Name) sgx/$(Signed_Enclave_Name)
 endif
 
 run: all
@@ -207,7 +231,7 @@ sgx/$(Signed_Enclave_Name): sgx/$(Enclave_Name) sgx/$(Enclave_Signing_Key)
 .PHONY: test
 
 test: all
-	./test/bin/pelz-test 2> /dev/null
+	./bin/kmyth_enclave_tests 2> /dev/null
 
 .PHONY: clean
 
