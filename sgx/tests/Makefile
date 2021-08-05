@@ -49,6 +49,7 @@ INDENT_OPTS += -l80#                     max non-comment line length is 80
 
 .PHONY: pre
 pre:
+	mkdir -p bin 
 	indent $(INDENT_OPTS) src/*.c
 	rm -f src/*~
 
