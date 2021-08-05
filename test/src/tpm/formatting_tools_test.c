@@ -134,11 +134,11 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "create_nkl_bytes() Tests", test_create_nkl_bytes))
-  {
-    return 1;
-  }
+  /*if (NULL ==
+     CU_add_test(suite, "create_nkl_bytes() Tests", test_create_nkl_bytes))
+     {
+     return 1;
+     } */
 
   if (NULL ==
       CU_add_test(suite, "encodeBase64Data() Tests", test_encodeBase64Data))

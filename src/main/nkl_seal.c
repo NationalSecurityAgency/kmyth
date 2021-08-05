@@ -198,7 +198,37 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  uint8_t *file_data = NULL;
+  size_t file_data_length = 0;
+
+  if (read_bytes_from_file(outPath, &file_data, &file_data_length))
+  {
+    kmyth_log(LOG_ERR, "error reading data from .nkl file ... exiting");
+    free(outPath);
+    free(output);
+    return 1;
+  }
+
+  uint8_t *block = NULL;
+  size_t blocksize = 0;
+
+  if (get_ski_block_bytes
+      ((char **) &file_data, &file_data_length, &block, &blocksize,
+       KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA), KMYTH_DELIM_END_NKL,
+       strlen(KMYTH_DELIM_END_NKL)))
+  {
+    kmyth_log(LOG_ERR, "error getting blocke bytes ... exiting");
+    free(outPath);
+    free(output);
+    free(file_data);
+    return 1;
+  }
+
+  printf("Nickel file contents: %s", block);
+
   free(outPath);
   free(output);
+  free(file_data);
+  free(block);
   return 0;
 }
