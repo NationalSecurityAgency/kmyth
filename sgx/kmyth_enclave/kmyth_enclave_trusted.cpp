@@ -153,7 +153,6 @@ int enc_unseal_data(const uint8_t * in_data, uint32_t in_size,
   // Retire checks in `malloc` against `plain_len`, influenced by `sealed_blob`
   sgx_lfence();
 
-  //XXX If a different key policy is desired (e.g., MRENCLAVE), must use sgx_unseal_data_ex()
   //tSeal checks the sgx_sealed_data_t `sealed_blob` (speculative-safe)
   sgx_ret =
     sgx_unseal_data(sealed_blob, NULL, &mac_len, plain_data, &plain_len);
