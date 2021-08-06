@@ -29,18 +29,12 @@ int sgx_seal(int eid, uint8_t * input, size_t input_len,
     return 1;
   }
 
-  printf("Output from Seal Data: %d, %.*s\n", (int) data_size, (int) data_size,
-         (char *) data);
-  kmyth_log(LOG_DEBUG, "SGX Seal Data Complete");
-
   if (create_nkl_bytes(data, data_size, output, output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .nkl format ... exiting");
     free(data);
     return 1;
   }
-
-  kmyth_log(LOG_DEBUG, "Create Nickel Bytes Complete");
 
   return 0;
 }
@@ -63,8 +57,6 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
     return 1;
   }
 
-  kmyth_log(LOG_DEBUG, "Get Block Bytes Complete");
-
   uint8_t *data = NULL;
   size_t data_size = 0;
 
@@ -75,8 +67,6 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
     return 1;
   }
 
-  kmyth_log(LOG_DEBUG, "Base64 Decode Complete");
-
   if (sgx_unseal_data(eid, data, data_size, output, output_len))
   {
     kmyth_log(LOG_ERR, "error sgx unseal of data ... exiting");
@@ -84,8 +74,6 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
     free(data);
     return 1;
   }
-
-  kmyth_log(LOG_DEBUG, "SGX Unseal Data Complete");
 
   return 0;
 }
@@ -129,9 +117,6 @@ int sgx_seal_file(int eid, char *input_path,
     return (1);
   }
 
-  printf("Output from Seal: %ld,\n%.*s\n", *output_len, (int) *output_len,
-         (char *) *output);
-  kmyth_log(LOG_DEBUG, "SGX Seal Complete");
   free(data);
   return 0;
 }
@@ -160,7 +145,6 @@ int sgx_unseal_file(int eid, char *input_path,
     return (1);
   }
 
-  kmyth_log(LOG_DEBUG, "SGX Unseal Complete");
   free(data);
   return 0;
 }
@@ -171,21 +155,14 @@ int sgx_unseal_file(int eid, char *input_path,
 int sgx_seal_data(int eid, uint8_t * in_data, size_t in_size,
                   uint8_t ** out_data, size_t * out_size)
 {
-  /*int ret;
+  int ret;
 
-     enc_seal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
-     if (ret == 1)
-     {
-     kmyth_log(LOG_ERR, "Unable to seal contents ... exiting");
-     return 1;
-     } */
-
-  *out_size = in_size;
-  *out_data = malloc(*out_size * sizeof(char));
-  memcpy(*out_data, in_data, *out_size);
-  printf("In Data: %ld, %.*s\n", in_size, (int) in_size, (char *) in_data);
-  printf("Out Data: %ld, %.*s\n", *out_size, (int) *out_size,
-         (char *) *out_data);
+  enc_seal_data(eid, &ret, in_data, in_size, out_data, out_size);
+  if (ret == 1)
+  {
+    kmyth_log(LOG_ERR, "Unable to seal contents ... exiting");
+    return 1;
+  }
   return 0;
 }
 
@@ -195,20 +172,13 @@ int sgx_seal_data(int eid, uint8_t * in_data, size_t in_size,
 int sgx_unseal_data(int eid, uint8_t * in_data, size_t in_size,
                     uint8_t ** out_data, size_t * out_size)
 {
-  /*int ret;
+  int ret;
 
-     enc_unseal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
-     if (ret == 1)
-     {
-     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
-     return 1;
-     } */
-
-  *out_size = in_size;
-  *out_data = malloc(*out_size * sizeof(char));
-  memcpy(*out_data, in_data, *out_size);
-  printf("In Data: %ld, %.*s\n", in_size, (int) in_size, (char *) in_data);
-  printf("Out Data: %ld, %.*s\n", *out_size, (int) *out_size,
-         (char *) *out_data);
+  enc_unseal_data(eid, &ret, in_data, in_size, out_data, out_size);
+  if (ret == 1)
+  {
+    kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
+    return 1;
+  }
   return 0;
 }
