@@ -74,10 +74,12 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
   // enclave is initialized.
   // THE SGX_FLAGS_DEBUG flag corresponds to checking if it is a DEBUG
   // enclave or not.
+  // This combination is recommended by the SGX Developer Guide
   attribute_mask.flags = SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
 
   // attribute_mask.xfrm can be used to specify information about processor
-  // extensions the enclave uses. 
+  // extensions the enclave uses.
+  // This value is recommended by the SGX Developer Guide
   attribute_mask.xfrm = 0x0;
 
   // The key policy can be either
