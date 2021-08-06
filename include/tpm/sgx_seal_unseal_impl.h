@@ -29,8 +29,8 @@
  *
  * @return 0 on success, 1 on error
  */
-int sgx_seal_data(int eid, uint8_t * in_data, uint32_t in_size,
-                  uint8_t ** out_data, uint32_t * out_size);
+int sgx_seal_data(int eid, uint8_t * in_data, size_t in_size,
+                  uint8_t ** out_data, size_t * out_size);
 
 /**
  * @brief Unseal data using SGX
@@ -50,8 +50,8 @@ int sgx_seal_data(int eid, uint8_t * in_data, uint32_t in_size,
  *
  * @return 0 on success, 1 on error
  */
-int sgx_unseal_data(int eid, uint8_t * in_data, uint32_t in_size,
-                    uint8_t * out_data, uint32_t out_size);
+int sgx_unseal_data(int eid, uint8_t * in_data, size_t in_size,
+                    uint8_t ** out_data, size_t * out_size);
 
 /**
  * @brief High-level function implementing sgx-seal using SGX.

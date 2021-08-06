@@ -164,6 +164,9 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  printf("SGX Seal File: %ld,\n%.*s\n", output_len, (int) output_len,
+         (char *) output);
+
   if (write_bytes_to_file(outPath, output, output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .nkl file ... exiting");
@@ -183,7 +186,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  printf("Nickel file contents: %s", file_data);
+  printf("Nickel file contents: %s\n", file_data);
 
   free(outPath);
   free(output);
