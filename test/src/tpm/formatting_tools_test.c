@@ -303,6 +303,7 @@ bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
 size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset)
 {
   TPM2B_DIGEST empty_authPolicy = {.size = 0 };
+
   // initialize test public blob struct (test input to pack_public())
   //   - struct values are set to kmyth default values (in defines.h)
   //     for sealing key objects (init_kmyth_object_template).
@@ -1984,6 +1985,7 @@ void test_concat(void)
   CU_ASSERT(concat(&dest, &dest_len, NULL, chile_len) == 0);
   CU_ASSERT(green_len == dest_len);
   CU_ASSERT(memcmp(dest, green, dest_len) == 0);
+
   CU_ASSERT(concat(&dest, &dest_len, chile, 0) == 0);
   CU_ASSERT(green_len == dest_len);
   CU_ASSERT(memcmp(dest, green, dest_len) == 0);
