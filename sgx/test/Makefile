@@ -168,7 +168,9 @@ pre:
 	mkdir -p bin 
 	openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072
 	indent $(INDENT_OPTS) src/*.c
+	indent $(INDENT_OPTS) ../kmyth_enclave/*.cpp
 	rm -f src/*~
+	rm -f ../kmyth_enclave/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Name)
