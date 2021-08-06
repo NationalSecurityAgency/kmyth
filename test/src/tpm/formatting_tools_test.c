@@ -66,7 +66,7 @@ uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 const char *RAW_NKL = "ASDFGHJKLL;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-		      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 //----------------------------------------------------------------------------
 // formatting_tools_add_tests()
@@ -134,11 +134,11 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  /*if (NULL ==
-     CU_add_test(suite, "create_nkl_bytes() Tests", test_create_nkl_bytes))
-     {
-     return 1;
-     } */
+  if (NULL ==
+      CU_add_test(suite, "create_nkl_bytes() Tests", test_create_nkl_bytes))
+  {
+    return 1;
+  }
 
   if (NULL ==
       CU_add_test(suite, "encodeBase64Data() Tests", test_encodeBase64Data))
@@ -1758,6 +1758,8 @@ void test_create_nkl_bytes(void)
 
   uint8_t *position = nfb;
   size_t remaining = nfb_len;
+  uint8_t *nkl64_data = NULL;
+  size_t nkl64_size = 0;
   uint8_t *raw_nkl_data = NULL;
   size_t raw_nkl_size = 0;
 
@@ -1769,10 +1771,13 @@ void test_create_nkl_bytes(void)
                                 strlen(KMYTH_DELIM_NKL_DATA),
                                 KMYTH_DELIM_END_NKL,
                                 strlen(KMYTH_DELIM_END_NKL)) == 0);
-  CU_ASSERT(nkl_bytes_len == raw_nkl_size);
-  CU_ASSERT(memcmp(raw_nkl_data, (uint8_t *) RAW_NKL, raw_nkl_size) == 0);
+  CU_ASSERT(decodeBase64Data
+            (raw_nkl_data, raw_nkl_size, &nkl64_data,
+             &nkl64_size) == 0) CU_ASSERT(nkl_bytes_len == nkl64_size);
+  CU_ASSERT(memcmp(nkl64_data, (uint8_t *) RAW_NKL, nkl64_size) == 0);
   free(nfb);
   free(raw_nkl_data);
+  free(nkl64_data);
 }
 
 //----------------------------------------------------------------------------
