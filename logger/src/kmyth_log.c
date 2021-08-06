@@ -340,10 +340,10 @@ void log_event(const char *src_file,
       //
       //   for stddest:
       //     - timestamp is always omitted
-      //     - if logging severity threshold is <= LOG_INFO (<= 5), simplify
+      //     - if logging severity threshold is <= LOG_INFO (<= 6), simplify
       //       prefix to the severity level and content to the actual message
       //       (routine logging to a user's screen will be simplified).
-      //     - if logging severity threshold is > LOG_INFO (>5), include the
+      //     - if logging severity threshold is > LOG_INFO (> 6), include the
       //       full prefix (with application name/version) and enhance message
       //       with source location information. User can turn on detailed
       //       logging by using the --verbose (or -v) command line option.
@@ -384,10 +384,10 @@ void log_event(const char *src_file,
       //
       //   for stddest:
       //     - timestamp is always omitted
-      //     - if logging severity threshold is <= LOG_INFO (<= 5), simplify
+      //     - if logging severity threshold is <= LOG_INFO (<= 6), simplify
       //       prefix to the severity level and content to the actual message
       //       (routine logging to a user's screen will be simplified).
-      //     - if logging severity threshold is > LOG_INFO (>5), include the
+      //     - if logging severity threshold is > LOG_INFO (> 6), include the
       //       full prefix (with application name/version) and enhance message
       //       with source location information. User can turn on detailed
       //       logging by using the --verbose (or -v) command line option.
