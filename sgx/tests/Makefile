@@ -47,12 +47,6 @@ INDENT_OPTS += -npsl#                    type of proc on same line as name
 INDENT_OPTS += -bbo#                     prefer break before boolean operator
 INDENT_OPTS += -l80#                     max non-comment line length is 80
 
-.PHONY: pre
-pre:
-	mkdir -p bin 
-	indent $(INDENT_OPTS) src/*.c
-	rm -f src/*~
-
 
 ######## SGX SDK Settings ########
 
@@ -169,8 +163,12 @@ Generate or install sgx/$(Enclave_Signing_Key)
 e.g., run 'openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072'
 endef
 
-
-.PHONY: all run
+.PHONY: pre all run
+pre:
+	mkdir -p bin 
+	openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072
+	indent $(INDENT_OPTS) src/*.c
+	rm -f src/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Name)
@@ -237,4 +235,4 @@ test: all
 .PHONY: clean
 
 clean:
-	@rm -f sgx/*.h sgx/*.c sgx/*.o sgx/*.so bin/*
+	@rm -f sgx/*.h sgx/*.c sgx/*.o sgx/*.so bin/* sgx/*.pem
