@@ -217,7 +217,7 @@ int main(int argc, char **argv)
        KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA), KMYTH_DELIM_END_NKL,
        strlen(KMYTH_DELIM_END_NKL)))
   {
-    kmyth_log(LOG_ERR, "error getting blocke bytes ... exiting");
+    kmyth_log(LOG_ERR, "error getting block bytes ... exiting");
     free(outPath);
     free(output);
     free(file_data);

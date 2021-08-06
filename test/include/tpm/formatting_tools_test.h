@@ -107,7 +107,7 @@ void test_parse_ski_bytes(void);
 void test_create_ski_bytes(void);
 void test_free_ski(void);
 void test_get_default_ski(void);
-void test_get_ski_block_bytes(void);
+void test_get_block_bytes(void);
 void test_create_nkl_bytes(void);
 void test_encodeBase64Data(void);
 void test_decodeBase64Data(void);

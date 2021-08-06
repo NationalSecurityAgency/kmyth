@@ -368,7 +368,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_pcr_select_list_data,
                           &raw_pcr_select_list_size,
@@ -386,7 +386,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sk_pub_data = NULL;
   size_t raw_sk_pub_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_sk_pub_data,
                           &raw_sk_pub_size,
@@ -405,7 +405,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sk_priv_data = NULL;
   size_t raw_sk_priv_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_sk_priv_data,
                           &raw_sk_priv_size,
@@ -425,7 +425,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_cipher_str_data = NULL;
   size_t raw_cipher_str_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_cipher_str_data,
                           &raw_cipher_str_size,
@@ -462,7 +462,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_sym_pub_data = NULL;
   size_t raw_sym_pub_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_sym_pub_data,
                           &raw_sym_pub_size,
@@ -484,7 +484,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   unsigned char *raw_sym_priv_data = NULL;
   size_t raw_sym_priv_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_sym_priv_data,
                           &raw_sym_priv_size,
@@ -506,7 +506,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   unsigned char *raw_enc_data = NULL;
   size_t raw_enc_size = 0;
 
-  if (get_ski_block_bytes((char **) &position,
+  if (get_block_bytes((char **) &position,
                           &remaining,
                           &raw_enc_data, &raw_enc_size,
                           KMYTH_DELIM_ENC_DATA,
@@ -906,9 +906,9 @@ Ski get_default_ski(void)
 }
 
 //############################################################################
-// get_ski_block_bytes()
+// get_block_bytes()
 //############################################################################
-int get_ski_block_bytes(char **contents,
+int get_block_bytes(char **contents,
                         size_t * remaining,
                         uint8_t ** block, size_t * blocksize,
                         char *delim, size_t delim_len,

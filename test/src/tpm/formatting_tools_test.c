@@ -128,8 +128,8 @@ int formatting_tools_add_tests(CU_pSuite suite)
   }
 
   if (NULL ==
-      CU_add_test(suite, "get_ski_block_bytes() Tests",
-                  test_get_ski_block_bytes))
+      CU_add_test(suite, "get_block_bytes() Tests",
+                  test_get_block_bytes))
   {
     return 1;
   }
@@ -1623,9 +1623,9 @@ void test_get_default_ski(void)
 }
 
 //----------------------------------------------------------------------------
-// test_get_ski_block_bytes
+// test_get_block_bytes
 //----------------------------------------------------------------------------
-void test_get_ski_block_bytes(void)
+void test_get_block_bytes(void)
 {
   //NOTE: We do not test every required block here, because each specific 
   //      block is tested in parse_ski_bytes.
@@ -1640,7 +1640,7 @@ void test_get_ski_block_bytes(void)
   size_t raw_pcr_select_list_size = 0;
 
   //Valid parse test
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1659,7 +1659,7 @@ void test_get_ski_block_bytes(void)
   remaining = sb_len;
   raw_pcr_select_list_size = 0;
   sb[0] = '!';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1672,7 +1672,7 @@ void test_get_ski_block_bytes(void)
   position = sb;
   remaining = sb_len;
   sb[0] = '-';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1687,7 +1687,7 @@ void test_get_ski_block_bytes(void)
   remaining = sb_len;
   raw_pcr_select_list_size = 0;
   sb[208] = '!';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1700,7 +1700,7 @@ void test_get_ski_block_bytes(void)
   position = sb;
   remaining = sb_len;
   sb[208] = '-';
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1714,7 +1714,7 @@ void test_get_ski_block_bytes(void)
   position = sb;
   remaining = sb_len;
   raw_pcr_select_list_size = 0;
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1731,7 +1731,7 @@ void test_get_ski_block_bytes(void)
   position = (uint8_t *) empty_block;
   remaining = strlen(empty_block);
   raw_pcr_select_list_size = 0;
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_pcr_select_list_data,
                                 &raw_pcr_select_list_size,
@@ -1761,7 +1761,7 @@ void test_create_nkl_bytes(void)
   uint8_t *raw_nkl_data = NULL;
   size_t raw_nkl_size = 0;
 
-  CU_ASSERT(get_ski_block_bytes((char **) &position,
+  CU_ASSERT(get_block_bytes((char **) &position,
                                 &remaining,
                                 &raw_nkl_data,
                                 &raw_nkl_size,
