@@ -365,7 +365,7 @@
  */
 #define KMYTH_DELIM_ENC_DATA "-----ENC DATA-----\n"
 
-/**
+/** 
  * @ingroup block_delim
  *
  * @brief   Indicates the end of the file
