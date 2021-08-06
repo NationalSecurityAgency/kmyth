@@ -128,8 +128,7 @@ int formatting_tools_add_tests(CU_pSuite suite)
   }
 
   if (NULL ==
-      CU_add_test(suite, "get_block_bytes() Tests",
-                  test_get_block_bytes))
+      CU_add_test(suite, "get_block_bytes() Tests", test_get_block_bytes))
   {
     return 1;
   }
@@ -1641,13 +1640,13 @@ void test_get_block_bytes(void)
 
   //Valid parse test
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
   CU_ASSERT(raw_pcr_select_list_size == strlen(RAW_PCR64));
   CU_ASSERT(memcmp
             (raw_pcr_select_list_data, RAW_PCR64,
@@ -1660,26 +1659,26 @@ void test_get_block_bytes(void)
   raw_pcr_select_list_size = 0;
   sb[0] = '!';
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
   CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
   position = sb;
   remaining = sb_len;
   sb[0] = '-';
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
   free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
   //Invalid second delim
@@ -1688,26 +1687,26 @@ void test_get_block_bytes(void)
   raw_pcr_select_list_size = 0;
   sb[208] = '!';
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
   CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
   position = sb;
   remaining = sb_len;
   sb[208] = '-';
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
   free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
   //Check to verify unexpected end of file
@@ -1715,13 +1714,13 @@ void test_get_block_bytes(void)
   remaining = sb_len;
   raw_pcr_select_list_size = 0;
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                remaining + 1) == 1);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            remaining + 1) == 1);
   //next_delim_len > remaining
   CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
@@ -1732,13 +1731,13 @@ void test_get_block_bytes(void)
   remaining = strlen(empty_block);
   raw_pcr_select_list_size = 0;
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_pcr_select_list_data,
-                                &raw_pcr_select_list_size,
-                                KMYTH_DELIM_PCR_SELECTION_LIST,
-                                strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                                KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                                strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
+                            &remaining,
+                            &raw_pcr_select_list_data,
+                            &raw_pcr_select_list_size,
+                            KMYTH_DELIM_PCR_SELECTION_LIST,
+                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
   CU_ASSERT(raw_pcr_select_list_data == NULL);
   CU_ASSERT(raw_pcr_select_list_size == 0);
   free(sb);
@@ -1764,13 +1763,13 @@ void test_create_nkl_bytes(void)
   size_t raw_nkl_size = 0;
 
   CU_ASSERT(get_block_bytes((char **) &position,
-                                &remaining,
-                                &raw_nkl_data,
-                                &raw_nkl_size,
-                                KMYTH_DELIM_NKL_DATA,
-                                strlen(KMYTH_DELIM_NKL_DATA),
-                                KMYTH_DELIM_END_NKL,
-                                strlen(KMYTH_DELIM_END_NKL)) == 0);
+                            &remaining,
+                            &raw_nkl_data,
+                            &raw_nkl_size,
+                            KMYTH_DELIM_NKL_DATA,
+                            strlen(KMYTH_DELIM_NKL_DATA),
+                            KMYTH_DELIM_END_NKL,
+                            strlen(KMYTH_DELIM_END_NKL)) == 0);
   CU_ASSERT(decodeBase64Data
             (raw_nkl_data, raw_nkl_size, &nkl64_data,
              &nkl64_size) == 0) CU_ASSERT(nkl_bytes_len == nkl64_size);

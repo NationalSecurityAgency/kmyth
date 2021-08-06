@@ -82,7 +82,7 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
 // sgx_seal_file()
 //############################################################################
 int sgx_seal_file(int eid, char *input_path,
-		          uint8_t ** output, size_t * output_len)
+                  uint8_t ** output, size_t * output_len)
 {
   // Verify input path exists with read permissions
   if (verifyInputFilePath(input_path))
@@ -125,7 +125,7 @@ int sgx_seal_file(int eid, char *input_path,
 // sgx_unseal_file()
 //############################################################################
 int sgx_unseal_file(int eid, char *input_path,
-		            uint8_t ** output, size_t * output_length)
+                    uint8_t ** output, size_t * output_length)
 {
 
   uint8_t *data = NULL;
@@ -151,16 +151,19 @@ int sgx_unseal_file(int eid, char *input_path,
 // sgx_seal_data
 //############################################################################
 int sgx_seal_data(int eid, uint8_t * in_data, uint32_t in_size,
-		          uint8_t ** out_data, uint32_t * out_size)
+                  uint8_t ** out_data, uint32_t * out_size)
 {
-  int ret;
+  /*int ret;
 
-  enc_seal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
-  if (ret == 1)
-  {
-	kmyth_log(LOG_ERR, "Unable to seal contents ... exiting");
-	return 1;
-  }
+     enc_seal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
+     if (ret == 1)
+     {
+     kmyth_log(LOG_ERR, "Unable to seal contents ... exiting");
+     return 1;
+     } */
+
+  out_data = in_data;
+  out_size = in_size;
 
   return 0;
 }
@@ -168,17 +171,20 @@ int sgx_seal_data(int eid, uint8_t * in_data, uint32_t in_size,
 //############################################################################
 // sgx_unseal_data()
 //############################################################################
-int sgx_unseal_data(int eid, uint8_t *in_data, uint32_t in_size,
-                    uint8_t *out_data, uint32_t out_size)
+int sgx_unseal_data(int eid, uint8_t * in_data, uint32_t in_size,
+                    uint8_t * out_data, uint32_t out_size)
 {
-  int ret;
+  /*int ret;
 
-  enc_unseal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
-  if (ret == 1)
-  {
-	kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
-	return 1;
-  }
+     enc_unseal_data(eid, &ret, in_data, in_size, &out_data, &out_size);
+     if (ret == 1)
+     {
+     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
+     return 1;
+     } */
+
+  out_data = in_data;
+  out_size = in_size;
 
   return 0;
 }

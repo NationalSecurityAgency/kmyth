@@ -103,7 +103,7 @@ TESTRUNNER_SOURCES = $(wildcard $(TEST_SRC_DIR)/*.c)
 TESTRUNNER_HEADERS = $(wildcard $(TEST_INC_DIR)/*.h)
 TESTRUNNER_OBJECTS = $(subst $(TEST_SRC_DIR), \
                              $(TEST_OBJ_DIR), \
-														 $(TESTRUNNER_SOURCES:%.c=%.o))
+			     $(TESTRUNNER_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth application (main) testing
 TEST_MAIN_SRC_DIR = $(TEST_SRC_DIR)/main

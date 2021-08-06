@@ -527,12 +527,12 @@ Ski get_default_ski(void);
 
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
- *        .ski file, if the delimiter for the current file block matches the
+ *         block file, if the delimiter for the current file block matches the
  *        expected delimiter value.
  *
  * A .ski file is partitioned into "blocks" by delimiters and this function
  * uses that structure to parse a requested block from a data buffer
- * containing the contents (full or remaining) of the data read from a .ski
+ * containing the contents (full or remaining) of the data read from a block
  * file.
  *
  * @param[in/out] contents   Data buffer containing the contents (or partial
@@ -560,11 +560,11 @@ Ski get_default_ski(void);
  * @param[in] next_delim_len Length of the next expected delimeter
  * @return 0 on success, 1 on failure
  */
-int get_ski_block_bytes(char **contents,
-                        size_t * remaining, unsigned char **block,
-                        size_t * blocksize,
-                        char *delim, size_t delim_len,
-                        char *next_delim, size_t next_delim_len);
+int get_block_bytes(char **contents,
+                    size_t * remaining, unsigned char **block,
+                    size_t * blocksize,
+                    char *delim, size_t delim_len,
+                    char *next_delim, size_t next_delim_len);
 
 /**
  * @brief Creates a byte array in .nkl format from a input string

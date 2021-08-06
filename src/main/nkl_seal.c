@@ -14,7 +14,7 @@
 #include "file_io.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
-#include "formatting_tools.h"
+#include "sgx_seal_unseal_impl.h"
 
 static void usage(const char *prog)
 {
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
   uint8_t *file_data = NULL;
   size_t file_data_len = 0;
 
-  if (sgx_unseal_file(outPath, &file_data, &file_data_len))
+  if (sgx_unseal_file(eid, outPath, &file_data, &file_data_len))
   {
     kmyth_log(LOG_ERR, "error reading data from .nkl file ... exiting");
     free(outPath);
