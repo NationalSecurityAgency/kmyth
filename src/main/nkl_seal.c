@@ -153,44 +153,18 @@ int main(int argc, char **argv)
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
-  // Verify input path exists with read permissions
-  if (verifyInputFilePath(inPath))
-  {
-    kmyth_log(LOG_ERR, "input path (%s) is not valid ... exiting", inPath);
-    return 1;
-  }
-
-  uint8_t *data = NULL;
-  size_t data_len = 0;
-
-  if (read_bytes_from_file(inPath, &data, &data_len))
-  {
-    kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
-    free(data);
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_len);
-
-  // validate non-empty plaintext buffer specified
-  if (data_len == 0 || data == NULL)
-  {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
-    free(data);
-    return 1;
-  }
-
+  int eid = 0;
   uint8_t *output = NULL;
-  size_t output_length = 0;
+  size_t output_len = 0;
 
-  if (create_nkl_bytes(data, data_len, &output, &output_length))
+  if (sgx_seal_file(eid, inPath, &output, &output_len))
   {
-    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
+    kmyth_log(LOG_ERR, "sgx-seal error ... exiting");
     free(outPath);
-    free(output);
     return 1;
   }
 
-  if (write_bytes_to_file(outPath, output, output_length))
+  if (write_bytes_to_file(outPath, output, output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .nkl file ... exiting");
     free(outPath);
@@ -199,9 +173,9 @@ int main(int argc, char **argv)
   }
 
   uint8_t *file_data = NULL;
-  size_t file_data_length = 0;
+  size_t file_data_len = 0;
 
-  if (read_bytes_from_file(outPath, &file_data, &file_data_length))
+  if (sgx_unseal_file(outPath, &file_data, &file_data_len))
   {
     kmyth_log(LOG_ERR, "error reading data from .nkl file ... exiting");
     free(outPath);
@@ -209,26 +183,10 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  uint8_t *block = NULL;
-  size_t blocksize = 0;
-
-  if (get_ski_block_bytes
-      ((char **) &file_data, &file_data_length, &block, &blocksize,
-       KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA), KMYTH_DELIM_END_NKL,
-       strlen(KMYTH_DELIM_END_NKL)))
-  {
-    kmyth_log(LOG_ERR, "error getting block bytes ... exiting");
-    free(outPath);
-    free(output);
-    free(file_data);
-    return 1;
-  }
-
-  printf("Nickel file contents: %s", block);
+  printf("Nickel file contents: %s", file_data);
 
   free(outPath);
   free(output);
   free(file_data);
-  free(block);
   return 0;
 }
