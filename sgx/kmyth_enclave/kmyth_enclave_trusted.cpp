@@ -68,9 +68,16 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
   // to use in key derivation. 
   sgx_attributes_t attribute_mask;
 
-  // I'm still trying to work out what exactly these do, but without
-  // these flags set the seal doesn't work.
+  // attribute_mask.flags indicates which enclave attributes the
+  // sealing key should be bound to.
+  // The SGX_FLAGS_INITTED flag corresponds to checking if the
+  // enclave is initialized.
+  // THE SGX_FLAGS_DEBUG flag corresponds to checking if it is a DEBUG
+  // enclave or not.
   attribute_mask.flags = SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
+
+  // attribute_mask.xfrm can be used to specify information about processor
+  // extensions the enclave uses. 
   attribute_mask.xfrm = 0x0;
 
   // The key policy can be either
@@ -92,8 +99,11 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
        SGX_KEYPOLICY_ISVEXTPRODID);
   }
 
+  // This 0 value is currently unused by SGX.
+  const sgx_misc_select_t misc_mask = 0;
+
   sgx_ret =
-    sgx_seal_data_ex(key_policy, attribute_mask, 0xF0000000, 0, NULL, in_size,
+    sgx_seal_data_ex(key_policy, attribute_mask, misc_mask, 0, NULL, in_size,
                      in_data, sealedsz, buf);
   if (sgx_ret != SGX_SUCCESS)
   {
