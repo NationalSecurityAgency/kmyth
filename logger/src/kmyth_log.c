@@ -337,10 +337,28 @@ void log_event(const char *src_file,
     {
       // output mode 0:
       //   print to both stddest (stdout/stderr) and log file (if available)
+      //
+      //   for stddest:
+      //     - timestamp is always omitted
+      //     - if logging severity threshold is <= LOG_INFO (<= 5), simplify
+      //       prefix to the severity level and content to the actual message
+      //       (routine logging to a user's screen will be simplified).
+      //     - if logging severity threshold is > LOG_INFO (>5), include the
+      //       full prefix (with application name/version) and enhance message
+      //       with source location information. User can turn on detailed
+      //       logging by using the --verbose (or -v) command line option.
     case 0:
-      fprintf(stddest, "%s-%s %s - %s(%s:%d) %s\n",
-              log_settings.app_name, log_settings.app_version,
-              severity_string, src_file, src_func, src_line, out);
+      if (log_settings.applog_severity_threshold > LOG_INFO)
+      {
+        fprintf(stddest, "%s-%s %s - %s(%s:%d) %s\n",
+                log_settings.app_name, log_settings.app_version,
+                severity_string, src_file, src_func, src_line, out);
+      }
+      else
+      {
+        fprintf(stddest, "%s - %s\n", severity_string, out);
+      }
+
       if (logfile != NULL)
       {
         fprintf(logfile, "%s-%s %s %s - %s(%s:%d) %s\n",
@@ -352,22 +370,40 @@ void log_event(const char *src_file,
 
       // output mode 2:
       //   only print to log file (if possible), never to stddest (stdout/stderr)
+      //
+      // fall through to output mode 1 if log file is available
     case 2:
       if (logfile == NULL)
       {
         break;
       }
-      // fall through to output mode 1 if log file is available
 
       // output mode 1 (or other - default behavior):
       //   print to log file only (if available) or stddest (stdout/stderr)
       //   otherwise (never both)
+      //
+      //   for stddest:
+      //     - timestamp is always omitted
+      //     - if logging severity threshold is <= LOG_INFO (<= 5), simplify
+      //       prefix to the severity level and content to the actual message
+      //       (routine logging to a user's screen will be simplified).
+      //     - if logging severity threshold is > LOG_INFO (>5), include the
+      //       full prefix (with application name/version) and enhance message
+      //       with source location information. User can turn on detailed
+      //       logging by using the --verbose (or -v) command line option.
     default:
       if (logfile == NULL)
       {
-        fprintf(stddest, "%s-%s %s - %s(%s:%d) %s\n",
-                log_settings.app_name, log_settings.app_version,
-                severity_string, src_file, src_func, src_line, out);
+        if (log_settings.applog_severity_threshold > LOG_INFO)
+        {
+          fprintf(stddest, "%s-%s %s - %s(%s:%d) %s\n",
+                  log_settings.app_name, log_settings.app_version,
+                  severity_string, src_file, src_func, src_line, out);
+        }
+        else
+        {
+          fprintf(stddest, "%s - %s\n", severity_string, out);
+        }
       }
       else
       {
