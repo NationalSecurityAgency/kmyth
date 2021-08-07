@@ -1,12 +1,14 @@
 enclave {
-
+	include "sgx_tseal.h"
     trusted {
 
         public int enc_seal_data(
                 [in, size=in_size] const uint8_t *in_data,
                 uint32_t in_size,
                 [user_check] uint8_t *out_data,
-                uint32_t out_size);
+                uint32_t out_size,
+		uint16_t key_policy,
+		sgx_attributes_t attribute_mask);
 
         public int enc_unseal_data(
                 [in, size=in_size] const uint8_t *in_data,

@@ -5,6 +5,7 @@
 #include "sgx_lfence.h"
 #include "sgx_report.h"
 #include "sgx_utils.h"
+#include "sgx_attributes.h"
 
 #include "kmyth_enclave.h"
 
@@ -37,7 +38,8 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
 // EDL checks that `in_data` is outside the enclave (speculative-safe)
 // `out_data` is user_check
 int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
-                  uint32_t out_size)
+                  uint32_t out_size, uint16_t key_policy,
+                  sgx_attributes_t attribute_mask)
 {
   if (in_data == NULL || out_data == NULL)
   {
@@ -66,7 +68,7 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
 
   // The attribute mask structure identifies which platform/enclave attributes
   // to use in key derivation. 
-  sgx_attributes_t attribute_mask;
+  //  sgx_attributes_t attribute_mask;
 
   // attribute_mask.flags indicates which enclave attributes the
   // sealing key should be bound to.
@@ -75,20 +77,24 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
   // THE SGX_FLAGS_DEBUG flag corresponds to checking if it is a DEBUG
   // enclave or not.
   // This combination is recommended by the SGX Developer Guide
-  attribute_mask.flags = SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
-
+  if (attribute_mask.flags == 0)
+  {
+    attribute_mask.flags = SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
+  }
   // attribute_mask.xfrm can be used to specify information about processor
   // extensions the enclave uses.
   // This value is recommended by the SGX Developer Guide
-  attribute_mask.xfrm = 0x0;
+  //  attribute_mask.xfrm = 0x0;
 
   // The key policy can be either
   //   SGX_KEYPOLICY_MRENCLAVE which ensures only this enclave can derive the key
   //   SGX_KEYPOLICY_MRSIGNER  which allows any enclave signed by the same signer
   //                           to derive the key.
   // We're using MRSIGNER to make the update path smoother.
-  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
-
+  //  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
+  // if(key_policy == 0){
+  //   key_policy = SGX_KEYPOLICY_MRSIGNER;
+  // }
   // If the enclave uses the key separation and sharing (KSS) features
   // we need that to be reflected in the policy of the sealing key
   // as well.
