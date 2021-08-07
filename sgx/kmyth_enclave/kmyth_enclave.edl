@@ -20,6 +20,10 @@ enclave {
                 uint32_t in_size,
                 [out, count=1] uint32_t *size);
 
+	public int enc_get_unsealed_size(uint32_t in_size,
+				        [in, size=in_size] uint8_t* in_data,
+					[out, count=1] uint32_t* size);
+
     };
 
 };

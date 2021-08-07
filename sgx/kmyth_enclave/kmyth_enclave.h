@@ -21,6 +21,23 @@ extern "C"
  */
 int enc_get_sealed_size(uint32_t in_size, uint32_t* size);
 
+
+
+/**
+ * @brief Computes the output buffer size required to unseal input data
+ *        of size in_size.
+ *
+ * @param[in]  in_size The size of the data blob to be unsealed.
+ * 
+ * @param[in]  in_data The encrypted blob to be unsealed.
+ * 
+ * @param[out] size    The size of the plaintext.
+ *
+ * @return 0 in success, SGX_ERROR_INVALID_PARAMETER on error
+ */
+int enc_get_unsealed_size(uint32_t in_size, uint8_t* in_data, uint32_t* size);
+  
+
 /**
  * @brief Seals input data using SGXs built-in sealing mechanism.
  *
@@ -57,7 +74,7 @@ int enc_seal_data(const uint8_t* in_data, uint32_t in_size, uint8_t* out_data, u
  * @param[out] out_data Pointer to space to place the decrypted data.
  *
  * @param[in] out_size Size of the buffer pointed to by out_data. Must
- *                     be calculated by calling sgx_get_encrypt_txt_len.
+ *                     be calculated by calling enc_get_unsealed_size.
  *
  * @return 0 in success, an SGX error on error.
  */

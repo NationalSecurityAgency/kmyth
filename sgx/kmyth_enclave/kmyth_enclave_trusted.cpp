@@ -35,6 +35,23 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
   return 0;
 }
 
+int enc_get_unsealed_size(uint32_t in_size, uint8_t * in_data, uint32_t * size)
+{
+  if (size == NULL)
+  {
+    return SGX_ERROR_INVALID_PARAMETER;
+  }
+  *size = 0;
+
+  uint32_t unsealedsz = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) in_data);
+
+  if (unsealedsz == UINT32_MAX)
+    return SGX_ERROR_INVALID_PARAMETER;
+
+  *size = unsealedsz;
+  return 0;
+}
+
 // EDL checks that `in_data` is outside the enclave (speculative-safe)
 // `out_data` is user_check
 int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
