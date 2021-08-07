@@ -6,6 +6,7 @@
 #include <CUnit/Basic.h>
 
 #include "sgx_urts.h"
+#include "sgx_attributes.h"
 #include "kmyth_sgx_test_enclave_u.h"
 
 // NB: Should specify as an absolute path.
@@ -41,6 +42,12 @@ void test_enclave_seal_unseal(void)
   size_t in_size = 8;
   size_t out_size = 0;
 
+  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
+  sgx_attributes_t attribute_mask;
+
+  attribute_mask.flags = 0;
+  attribute_mask.xfrm = 0;
+
   enc_get_sealed_size(eid, &sgx_ret, in_size, (uint32_t *) & out_size);
   CU_ASSERT(sgx_ret == 0);
 
@@ -51,7 +58,8 @@ void test_enclave_seal_unseal(void)
   // For enc_seal_data we can only check that the call didn't fail
   // because we don't know what key the enclave will use, and so
   // what the ciphertext should look like.
-  enc_seal_data(eid, &sgx_ret, in_data, in_size, out_data, out_size);
+  enc_seal_data(eid, &sgx_ret, in_data, in_size, out_data, out_size, key_policy,
+                attribute_mask);
   CU_ASSERT(sgx_ret == 0);
 
   // For enc_unseal_data we test both that the call didn't fail
