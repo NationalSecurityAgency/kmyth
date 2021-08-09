@@ -166,7 +166,7 @@ endef
 .PHONY: pre all run
 pre:
 	mkdir -p bin 
-	openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072
+	@if [ ! -f sgx/$(Enclave_Signing_Key) ]; then openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072; fi
 	indent $(INDENT_OPTS) src/*.c
 	rm -f src/*~
 
