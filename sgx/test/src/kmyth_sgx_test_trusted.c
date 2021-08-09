@@ -7,8 +7,6 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
-#include "kmyth_sgx_test.h"
-
 static const uint8_t *addl_data = NULL;
 static const uint32_t addl_data_sz = 0;
 

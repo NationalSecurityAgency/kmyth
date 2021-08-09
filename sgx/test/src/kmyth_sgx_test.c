@@ -7,7 +7,6 @@
 
 #include "sgx_urts.h"
 #include "sgx_attributes.h"
-#include "kmyth_sgx_test.h"
 #include "kmyth_sgx_test_enclave_u.h"
 
 // NB: Should specify as an absolute path.
