@@ -17,8 +17,6 @@
  * a data blob. It does not handle file I/O. It takes input data,
  * in the form of hex data bytes (uint8_t *), and seals it with SGX
  *
- * @param[in]  eid               Enclave ID
- *
  * @param[in]  in_data           Raw data to be sgx-unsealed
  *
  * @param[in]  in_size           The size of input in bytes
@@ -29,34 +27,11 @@
  *
  * @return 0 on success, 1 on error
  */
-int sgx_seal_data(int eid, uint8_t * in_data, size_t in_size,
+int sgx_seal_data(uint8_t * in_data, size_t in_size,
                   uint8_t ** out_data, size_t * out_size);
 
 /**
- * @brief Unseal data using SGX
- *
- * This function takes in all of the parameters needed to unseal a data blob.
- * It does not handle file I/O.
- *
- * @param[in]  eid               Enclave ID
- *
- * @param[in]  in_data           Raw data to be sgx-unsealed
- *
- * @param[in]  in_size           The size of input in bytes
- *
- * @param[out] out_data          The result of sgx-unseal
- *
- * @param[out] out_size          The size of the output data
- *
- * @return 0 on success, 1 on error
- */
-int sgx_unseal_data(int eid, uint8_t * in_data, size_t in_size,
-                    uint8_t ** out_data, size_t * out_size);
-
-/**
  * @brief High-level function implementing sgx-seal using SGX.
- *
- * @param[in]  eid               Enclave ID 
  *
  * @param[in]  input             Raw bytes to be sgx-sealed
  *
@@ -71,13 +46,11 @@ int sgx_unseal_data(int eid, uint8_t * in_data, size_t in_size,
  *
  * @return 0 on success, 1 on error
  */
-int sgx_seal(int eid, uint8_t * input, size_t input_len,
+int sgx_seal(uint8_t * input, size_t input_len,
              uint8_t ** output, size_t * output_len);
 
 /**
  * @brief High-level function implementing sgx-unseal using SGX
- *
- * @param[in]  eid               Enclave ID
  *
  * @param[in]  input             Raw data to be sgx-unsealed
  *
@@ -89,14 +62,12 @@ int sgx_seal(int eid, uint8_t * input, size_t input_len,
  *
  * @return 0 on success, 1 on error
  */
-int sgx_unseal(int eid, uint8_t * input, size_t input_len,
+int sgx_unseal(uint8_t * input, size_t input_len,
                uint8_t ** output, size_t * output_len);
 
 /**
  * @brief High-level function implementing sgx-seal for files using SGX
  *        The sgx-seal input data is read from the specified file.
- *
- * @param[in]  eid               Enclave ID
  *
  * @param[in]  input_path        Path to input data file
  *
@@ -107,14 +78,11 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
  *
  * @return 0 on success, 1 on error
  */
-int sgx_seal_file(int eid, char *input_path,
-                  uint8_t ** output, size_t * output_len);
+int sgx_seal_file(char *input_path, uint8_t ** output, size_t * output_len);
 
 /**
  * @brief High-level function implementing sgx-unseal for files using SGX
  *        The sgx-unseal input data is read from the specified file.
- *
- * @param[in]  eid               Enclave ID
  *
  * @param[in]  input_path        Path to input .nkl file
  *                               (passed as a string)
@@ -126,7 +94,6 @@ int sgx_seal_file(int eid, char *input_path,
  *
  * @return 0 on success, 1 on error
  */
-int sgx_unseal_file(int eid, char *input_path,
-                    uint8_t ** output, size_t * output_length);
+int sgx_unseal_file(char *input_path, uint8_t ** output, size_t * output_len);
 
 #endif /* SGX_SEAL_UNSEAL_IMPL_H */

@@ -17,7 +17,7 @@
 //############################################################################
 // sgx_seal()
 //############################################################################
-int sgx_seal(int eid, uint8_t * input, size_t input_len,
+int sgx_seal(uint8_t * input, size_t input_len,
              uint8_t ** output, size_t * output_len)
 {
   uint8_t *data = NULL;
@@ -36,13 +36,13 @@ int sgx_seal(int eid, uint8_t * input, size_t input_len,
     return 1;
   }
 
-  return 0;
+  free(data) return 0;
 }
 
 //############################################################################
 // sgx_unseal()
 //############################################################################
-int sgx_unseal(int eid, uint8_t * input, size_t input_len,
+int sgx_unseal(uint8_t * input, size_t input_len,
                uint8_t ** output, size_t * output_len)
 {
   uint8_t *block = NULL;
@@ -60,29 +60,21 @@ int sgx_unseal(int eid, uint8_t * input, size_t input_len,
   uint8_t *data = NULL;
   size_t data_size = 0;
 
-  if (decodeBase64Data(block, blocksize, &data, &data_size))
+  if (decodeBase64Data(block, blocksize, output, output_len))
   {
     kmyth_log(LOG_ERR, "error Base64 decode of block bytes ... exiting");
     free(block);
     return 1;
   }
 
-  if (sgx_unseal_data(eid, data, data_size, output, output_len))
-  {
-    kmyth_log(LOG_ERR, "error sgx unseal of data ... exiting");
-    free(block);
-    free(data);
-    return 1;
-  }
-
+  free(block);
   return 0;
 }
 
 //############################################################################
 // sgx_seal_file()
 //############################################################################
-int sgx_seal_file(int eid, char *input_path,
-                  uint8_t ** output, size_t * output_len)
+int sgx_seal_file(char *input_path, uint8_t ** output, size_t * output_len)
 {
   // Verify input path exists with read permissions
   if (verifyInputFilePath(input_path))
@@ -110,7 +102,7 @@ int sgx_seal_file(int eid, char *input_path,
     return 1;
   }
 
-  if (sgx_seal(eid, data, data_len, output, output_len))
+  if (sgx_seal(data, data_len, output, output_len))
   {
     kmyth_log(LOG_ERR, "Failed to sgx-seal data ... exiting");
     free(data);
@@ -124,8 +116,7 @@ int sgx_seal_file(int eid, char *input_path,
 //############################################################################
 // sgx_unseal_file()
 //############################################################################
-int sgx_unseal_file(int eid, char *input_path,
-                    uint8_t ** output, size_t * output_length)
+int sgx_unseal_file(char *input_path, uint8_t ** output, size_t * output_length)
 {
 
   uint8_t *data = NULL;
@@ -138,7 +129,7 @@ int sgx_unseal_file(int eid, char *input_path,
   }
 
   kmyth_log(LOG_DEBUG, "Read bytes from file %s", input_path);
-  if (sgx_unseal(eid, data, data_length, output, output_length))
+  if (sgx_unseal(data, data_length, output, output_length))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     free(data);
@@ -152,32 +143,13 @@ int sgx_unseal_file(int eid, char *input_path,
 //############################################################################
 // sgx_seal_data
 //############################################################################
-int sgx_seal_data(int eid, uint8_t * in_data, size_t in_size,
+int sgx_seal_data(uint8_t * in_data, size_t in_size,
                   uint8_t ** out_data, size_t * out_size)
 {
-  int ret;
-
-  enc_seal_data(eid, &ret, in_data, in_size, out_data, out_size);
+  enc_seal_data(in_data, in_size, out_data, out_size);
   if (ret == 1)
   {
     kmyth_log(LOG_ERR, "Unable to seal contents ... exiting");
-    return 1;
-  }
-  return 0;
-}
-
-//############################################################################
-// sgx_unseal_data()
-//############################################################################
-int sgx_unseal_data(int eid, uint8_t * in_data, size_t in_size,
-                    uint8_t ** out_data, size_t * out_size)
-{
-  int ret;
-
-  enc_unseal_data(eid, &ret, in_data, in_size, out_data, out_size);
-  if (ret == 1)
-  {
-    kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     return 1;
   }
   return 0;
