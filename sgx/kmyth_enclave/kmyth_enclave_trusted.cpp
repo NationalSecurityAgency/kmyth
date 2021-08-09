@@ -7,6 +7,7 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
+// REPLACE WITH APPROPRIATE HEADER FOR YOUR ENCLAVE
 #include "kmyth_sgx_test_enclave_t.h"
 
 static const uint8_t *addl_data = NULL;

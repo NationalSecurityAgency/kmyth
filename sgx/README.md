@@ -7,6 +7,7 @@ contains a simple example.
 
 The key features you should note in the test files are:
 * The ```kmyth_enclave.edl``` file is included in ```kmyth_sgx_test_enclave.edl```.
+* The trusted header for your enclave must be included in ```kmyth_enclave_trusted.cpp```, as we've done using ```kmyth_sgx_test_enclave_t.h``` for the test enclave.
 * The location of the ```kmyth_enclave.edl``` file is included in the search path for ```SGX_EDGER8R```:
 ```
 sgx/kmyth_sgx_test_enclave_t.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
