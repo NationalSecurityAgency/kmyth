@@ -8,6 +8,8 @@
 #ifndef KMYTH_H
 #define KMYTH_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C"
 {
