@@ -1,0 +1,3 @@
+enclave {
+	from "kmyth_enclave.edl" import *;
+};
