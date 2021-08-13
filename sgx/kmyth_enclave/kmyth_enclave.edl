@@ -47,5 +47,19 @@ enclave {
                 uint32_t in_size,
                 [out, count=1] uint32_t *size);
 
+
+/**
+ * @brief SGX unseals the provided data and places it into the
+ *        kmyth_unsealed_data structure.
+ *
+ * @param[in] data_size The size of the ciphertext
+ *
+ * @param[in] data      The ciphertext
+ *
+ * @return    handle    The handle in the table used to locate the data,
+ *                      -1 on failure.
+ *
+ */
+ public int kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
     };
 };

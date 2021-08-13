@@ -218,11 +218,15 @@ sgx/kmyth_sgx_test_enclave_trusted.o: src/kmyth_sgx_test_trusted.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp
+sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp 
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_sgx_test_enclave_trusted.o sgx/kmyth_enclave_trusted.o
+sgx/kmyth_unseal_data_table.o: ../../sgx/kmyth_enclave/kmyth_unseal_data_table.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_sgx_test_enclave_trusted.o sgx/kmyth_enclave_trusted.o sgx/kmyth_unseal_data_table.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
