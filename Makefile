@@ -411,8 +411,8 @@ $(LOGGER_OBJ_DIR):
 $(DOC_DIR):
 	mkdir -p $(DOC_DIR)
 
-.PHONY: doc
-doc: $(HEADER_FILES) \
+.PHONY: docs
+docs: $(HEADER_FILES) \
      $(UTIL_SOURCES) \
      $(TOOL_SOURCES) \
      $(MAIN_SOURCES) \
