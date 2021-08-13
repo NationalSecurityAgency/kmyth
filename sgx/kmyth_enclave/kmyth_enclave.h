@@ -13,4 +13,15 @@ typedef struct unseal_data_s
 
 extern unseal_data_t* kmyth_unsealed_data;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+  size_t retrieve_from_unseal_table(int handle, uint8_t** buf);
+  
+  
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
