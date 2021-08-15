@@ -16,7 +16,7 @@ int compute_handle(uint32_t data_size, uint8_t * data)
   return ctr++;
 }
 
-int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
+int ecall_kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 {
   if (data_size <= 0 || data == NULL)
   {

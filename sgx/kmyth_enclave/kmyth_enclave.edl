@@ -60,6 +60,6 @@ enclave {
  *                      -1 on failure.
  *
  */
- public int kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
+ public int ecall_kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
     };
 };

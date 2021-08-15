@@ -113,7 +113,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -200,7 +200,11 @@ sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
+sgx/kmyth_enclave_untrusted.o: ../kmyth_enclave/kmyth_enclave_untrusted.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o sgx/kmyth_enclave_untrusted.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
