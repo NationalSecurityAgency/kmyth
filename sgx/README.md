@@ -24,10 +24,16 @@ sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
 sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
+
+sgx/kmyth_unseal_data_table.o: ../../sgx/kmyth_enclave/kmyth_unseal_data_table.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
 ```
+* Your ```$(Enclave_Link_Flags)``` must contain ```-lsgx_tstdc``` to link against the thread synchronization primitives.
+
 * The kmyth enclave ecalls object file is linked against enclave:
 ```
-sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_trusted.o
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_trusted.o sgx/kmyth_unseal_data_table.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 ```
