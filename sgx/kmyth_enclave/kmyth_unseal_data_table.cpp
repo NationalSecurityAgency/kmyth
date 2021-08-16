@@ -62,6 +62,7 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 
   sgx_thread_mutex_lock(&kmyth_unsealed_data_table_lock);
   new_slot->next = kmyth_unsealed_data_table;
+  kmyth_unsealed_data_table = new_slot;
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
 
   new_slot->handle = derive_handle(data_size, data);
