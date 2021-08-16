@@ -1,7 +1,7 @@
 enclave {
 	from "sgx_tstdc.edl" import *;
+	from "sgx_tsgxssl.edl" import *;
 	include "sgx_tseal.h"
-	
     trusted {
 /**
  * @brief Seals input data using SGXs built-in sealing mechanism.
@@ -62,7 +62,7 @@ enclave {
  *                      -1 on failure.
  *
  */
- public int kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
+ public uint64_t kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
 
 /**
  * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <openssl/evp.h>
 
 #include "sgx_trts.h"
 #include "sgx_tseal.h"
@@ -15,9 +16,54 @@ static int handle_ctr = 0;
 static bool kmyth_unsealed_data_table_initialized = false;
 static sgx_thread_mutex_t kmyth_unsealed_data_table_lock;
 
-static int derive_handle(uint32_t data_size, uint8_t * data)
+static uint64_t derive_handle(uint32_t data_size, uint8_t * data)
 {
-  return handle_ctr++;
+  if (data_size == 0 || data == NULL)
+  {
+    return 0;
+  }
+
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+
+  if (ctx == NULL)
+  {
+    return 0;
+  }
+  if (EVP_DigestInit_ex(ctx, EVP_sha384(), NULL) != 1)
+  {
+    EVP_MD_CTX_free(ctx);
+    return 0;
+  }
+  if (EVP_DigestUpdate(ctx, data, data_size) != 1)
+  {
+    EVP_MD_CTX_free(ctx);
+    return 0;
+  }
+
+  unsigned char *digest = (unsigned char *) malloc(EVP_MD_size(EVP_sha384()));
+
+  if (digest == NULL)
+  {
+    EVP_MD_CTX_free(ctx);
+    return 0;
+  }
+  if (EVP_DigestFinal_ex(ctx, digest, NULL) != 1)
+  {
+    EVP_MD_CTX_free(ctx);
+    free(digest);
+    return 0;
+  }
+
+  // This takes the first 64 bits of the SHA-384 hash of the data
+  // and then ORs in a 1 to ensure the result is non-zero. As a
+  // result there are effectively 63 bits of available handle.
+  uint64_t handle = 0;
+
+  memcpy(&handle, digest, sizeof(uint64_t));
+  handle |= (uint64_t) 1;
+
+  free(digest);
+  return handle;
 }
 
 int kmyth_unsealed_data_table_initialize(void)
@@ -46,7 +92,7 @@ int kmyth_unsealed_data_table_cleanup(void)
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
-int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
+uint64_t kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 {
   if (!kmyth_unsealed_data_table_initialized)
   {
@@ -74,9 +120,15 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
   return new_slot->handle;
 }
 
-size_t retrieve_from_unseal_table(int handle, uint8_t ** buf)
+size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
 {
   if (!kmyth_unsealed_data_table_initialized)
+  {
+    return 0;
+  }
+
+  // 0 is not a valid handle
+  if (handle == 0)
   {
     return 0;
   }
