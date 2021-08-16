@@ -1,5 +1,7 @@
 enclave {
+	from "sgx_tstdc.edl" import *;
 	include "sgx_tseal.h"
+	
     trusted {
 /**
  * @brief Seals input data using SGXs built-in sealing mechanism.

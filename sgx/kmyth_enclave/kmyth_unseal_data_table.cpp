@@ -5,6 +5,7 @@
 
 #include "sgx_trts.h"
 #include "sgx_tseal.h"
+#include "sgx_thread.h"
 
 #include "kmyth_enclave.h"
 #include "kmyth_sgx_test_enclave_t.h"
@@ -12,6 +13,7 @@
 static unseal_data_t *kmyth_unsealed_data_table = NULL;
 static int ctr = 0;
 static bool kmyth_unsealed_data_table_initialized = false;
+static sgx_thread_mutex_t kmyth_unsealed_data_table_lock;
 
 static int derive_handle(uint32_t data_size, uint8_t * data)
 {
@@ -20,6 +22,10 @@ static int derive_handle(uint32_t data_size, uint8_t * data)
 
 int kmyth_unsealed_data_table_initialize(void)
 {
+  if (sgx_thread_mutex_init(&kmyth_unsealed_data_table_lock, NULL))
+  {
+    return -1;
+  }
   kmyth_unsealed_data_table_initialized = true;
   return 0;
 }
@@ -36,7 +42,8 @@ int kmyth_unsealed_data_table_cleanup(void)
     free(data);
     data = next_data;
   }
-  return 0;
+
+  return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
 int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
@@ -53,7 +60,10 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 
   unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t *));
 
+  sgx_thread_mutex_lock(&kmyth_unsealed_data_table_lock);
   new_slot->next = kmyth_unsealed_data_table;
+  sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
+
   new_slot->handle = derive_handle(data_size, data);
   new_slot->data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
   new_slot->data = (uint8_t *) malloc(new_slot->data_size);
@@ -74,11 +84,13 @@ size_t retrieve_from_unseal_table(int handle, uint8_t ** buf)
   unseal_data_t *slot = kmyth_unsealed_data_table;
   unseal_data_t *prev_slot;
 
+  sgx_thread_mutex_lock(&kmyth_unsealed_data_table_lock);
   while (slot != NULL && slot->handle != handle)
   {
     prev_slot = slot;
     slot = slot->next;
   }
+  sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
   if (slot == NULL)
   {
     return 0;
