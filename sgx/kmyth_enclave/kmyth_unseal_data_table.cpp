@@ -32,15 +32,15 @@ int kmyth_unsealed_data_table_initialize(void)
 
 int kmyth_unsealed_data_table_cleanup(void)
 {
-  unseal_data_t *data = kmyth_unsealed_data_table;
-  unseal_data_t *next_data;
+  unseal_data_t *slot = kmyth_unsealed_data_table;
+  unseal_data_t *next_slot;
 
-  while (data != NULL)
+  while (slot != NULL)
   {
-    next_data = data->next;
-    free(data->data);
-    free(data);
-    data = next_data;
+    next_slot = slot->next;
+    free(slot->data);
+    free(slot);
+    slot = next_slot;
   }
 
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
