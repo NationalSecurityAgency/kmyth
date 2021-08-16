@@ -50,7 +50,7 @@ enclave {
 
 /**
  * @brief SGX unseals the provided data and places it into the
- *        kmyth_unsealed_data structure.
+ *        kmyth_unsealed_data_table.
  *
  * @param[in] data_size The size of the ciphertext
  *
@@ -61,5 +61,19 @@ enclave {
  *
  */
  public int kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
+
+/**
+ * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.
+ *
+ * @return 0 on success, -1 on failure.
+ */
+ public int kmyth_unsealed_data_table_initialize(void);
+
+/**
+ * @brief Cleans up (and frees all memory for) the kmyth_unsealed_data_table.
+ *
+ * @return 0 on success, -1 on failure.
+ */
+ public int kmyth_unsealed_data_table_cleanup(void);
     };
 };

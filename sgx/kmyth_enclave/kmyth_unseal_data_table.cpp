@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "sgx_trts.h"
 #include "sgx_tseal.h"
@@ -8,16 +9,43 @@
 #include "kmyth_enclave.h"
 #include "kmyth_sgx_test_enclave_t.h"
 
-unseal_data_t *kmyth_unsealed_data_table = NULL;
+static unseal_data_t *kmyth_unsealed_data_table = NULL;
 static int ctr = 0;
+static bool kmyth_unsealed_data_table_initialized = false;
 
 static int derive_handle(uint32_t data_size, uint8_t * data)
 {
   return ctr++;
 }
 
+int kmyth_unsealed_data_table_initialize(void)
+{
+  kmyth_unsealed_data_table_initialized = true;
+  return 0;
+}
+
+int kmyth_unsealed_data_table_cleanup(void)
+{
+  unseal_data_t *data = kmyth_unsealed_data_table;
+  unseal_data_t *next_data;
+
+  while (data != NULL)
+  {
+    next_data = data->next;
+    free(data->data);
+    free(data);
+    data = next_data;
+  }
+  return 0;
+}
+
 int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 {
+  if (!kmyth_unsealed_data_table_initialized)
+  {
+    return -1;
+  }
+
   if (data_size <= 0 || data == NULL)
   {
     return -1;
@@ -37,6 +65,11 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 
 size_t retrieve_from_unseal_table(int handle, uint8_t ** buf)
 {
+  if (!kmyth_unsealed_data_table_initialized)
+  {
+    return 0;
+  }
+
   size_t retval = 0;
   unseal_data_t *slot = kmyth_unsealed_data_table;
   unseal_data_t *prev_slot;
