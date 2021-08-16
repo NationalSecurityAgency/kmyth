@@ -11,13 +11,13 @@
 #include "kmyth_sgx_test_enclave_t.h"
 
 static unseal_data_t *kmyth_unsealed_data_table = NULL;
-static int ctr = 0;
+static int handle_ctr = 0;
 static bool kmyth_unsealed_data_table_initialized = false;
 static sgx_thread_mutex_t kmyth_unsealed_data_table_lock;
 
 static int derive_handle(uint32_t data_size, uint8_t * data)
 {
-  return ctr++;
+  return handle_ctr++;
 }
 
 int kmyth_unsealed_data_table_initialize(void)
