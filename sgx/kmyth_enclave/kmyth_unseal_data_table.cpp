@@ -90,13 +90,15 @@ size_t retrieve_from_unseal_table(int handle, uint8_t ** buf)
     prev_slot = slot;
     slot = slot->next;
   }
-  sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
+
   if (slot == NULL)
   {
+    sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
     return 0;
   }
 
   prev_slot->next = slot->next;
+  sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
 
   *buf = (uint8_t *) malloc(slot->data_size);
   memcpy(*buf, slot->data, slot->data_size);
