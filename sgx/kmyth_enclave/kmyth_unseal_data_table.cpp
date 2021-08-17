@@ -106,17 +106,30 @@ uint64_t kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 
   unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t *));
 
+  new_slot->handle = derive_handle(data_size, data);
+  new_slot->data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
+
+  // UINT32_MAX is the error return value of sgx_get_encrypt_txt_len.
+  if (new_slot->data_size == UINT32_MAX)
+  {
+    free(new_slot);
+    return -1;
+  }
+  new_slot->data = (uint8_t *) malloc(new_slot->data_size);
+
+  if (sgx_unseal_data((sgx_sealed_data_t *) data, NULL, NULL, new_slot->data,
+                      (uint32_t *) & new_slot->data_size) != SGX_SUCCESS)
+  {
+    free(new_slot->data);
+    free(new_slot);
+    return -1;
+  }
+
   sgx_thread_mutex_lock(&kmyth_unsealed_data_table_lock);
   new_slot->next = kmyth_unsealed_data_table;
   kmyth_unsealed_data_table = new_slot;
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
 
-  new_slot->handle = derive_handle(data_size, data);
-  new_slot->data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
-  new_slot->data = (uint8_t *) malloc(new_slot->data_size);
-
-  sgx_unseal_data((sgx_sealed_data_t *) data, NULL, NULL, new_slot->data,
-                  (uint32_t *) & new_slot->data_size);
   return new_slot->handle;
 }
 
@@ -133,7 +146,6 @@ size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
     return 0;
   }
 
-  size_t retval = 0;
   unseal_data_t *slot = kmyth_unsealed_data_table;
   unseal_data_t *prev_slot;
 
@@ -155,9 +167,9 @@ size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
 
   *buf = (uint8_t *) malloc(slot->data_size);
   memcpy(*buf, slot->data, slot->data_size);
-  retval = slot->data_size;
+  size_t data_size = slot->data_size;
+
   free(slot->data);
   free(slot);
-  return retval;
-
+  return data_size;
 }
