@@ -51,6 +51,7 @@ INDENT_OPTS += -l80#                     max non-comment line length is 80
 ######## SGX SDK Settings ########
 
 SGX_SDK ?= /opt/intel/sgxsdk
+SGX_SSL ?= /opt/intel/sgxssl
 SGX_MODE ?= SIM
 SGX_ARCH ?= x64
 
@@ -65,11 +66,13 @@ ifeq ($(SGX_ARCH), x86)
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+	SGX_SSL_LIBRARY_PATH := $(SGX_SSL)/lib
 else
 	SGX_COMMON_CFLAGS := -m64
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+	SGX_SSL_LIBRARY_PATH := $(SGX_SSL)/lib64
 endif
 
 ifeq ($(SGX_DEBUG), 1)
@@ -93,10 +96,12 @@ else
 endif
 
 App_Name := bin/kmyth_enclave_tests
+Int_App_Name := bin/kmyth_enclave_integration
 
 App_Cpp_Files := src/kmyth_sgx_test.c
+Int_App_Cpp_Files := src/kmyth_enclave_app.cpp
 
-App_Include_Paths := -Iinclude -Isgx -I$(SGX_SDK)/include 
+App_Include_Paths := -Iinclude -Isgx -I$(SGX_SDK)/include -I$(SGX_SSL)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -113,7 +118,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -lsgx_usgxssl -Lsgx
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -131,14 +136,16 @@ else
 	Service_Library_Name := sgx_tservice
 endif
 Crypto_Library_Name := sgx_tcrypto
+Crypto_SSL_Library_Name := sgx_tsgxssl_crypto
+SSL_Library_Name := sgx_tsgxssl
 
-Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport 
+Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SSL)/include -I$(SGX_SSL)/include/openssl
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include 
-Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_pthread -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_pthread -l$(Crypto_Library_Name) -l$(SSL_Library_Name) -l$(Crypto_SSL_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \
@@ -179,7 +186,7 @@ all: $(App_Name) $(Enclave_Name)
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: pre $(App_Name) sgx/$(Signed_Enclave_Name)
+all: pre $(App_Name) $(Int_App_Name) sgx/$(Signed_Enclave_Name)
 endif
 
 run: all
@@ -191,7 +198,7 @@ endif
 ######## App Objects ########
 
 sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave
+	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path $(SGX_SSL)/include --search-path . --search-path ../../../sgx/kmyth_enclave
 	@echo "GEN  =>  $@"
 
 sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
@@ -202,10 +209,14 @@ $(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
+$(Int_App_Name): $(Int_App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_Link_Flags)
+	@echo "LINK => $@"
+
 ######## Enclave Objects ########
 
 sgx/kmyth_sgx_test_enclave_t.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --trusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave
+	@cd sgx && $(SGX_EDGER8R) --trusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path $(SGX_SSL)/include --search-path . --search-path ../../../sgx/kmyth_enclave
 	@echo "GEN  =>  $@"
 
 sgx/kmyth_sgx_test_enclave_t.o: sgx/kmyth_sgx_test_enclave_t.c

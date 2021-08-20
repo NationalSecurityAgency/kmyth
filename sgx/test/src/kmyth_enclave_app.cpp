@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "kmyth_enclave_u.h"
+#include "kmyth_sgx_test_enclave_u.h"
 #include "sgx_urts.h"
 
 #define ENCLAVE_PATH "enclave.signed.so"
@@ -58,6 +58,7 @@ int main(int argc, char **argv)
   // Exit early if there are no arguments
   if (1 == argc)
   {
+    printf("Usage: app path-to-der-priv-key-1 path-to-der-priv-key-2\n");
     return 1;
   }
 
