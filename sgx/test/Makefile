@@ -57,6 +57,9 @@ SGX_SSL_UNTRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
 
+ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
+ENCLAVE_HEADER_UNTRUSTED ?= '""'
+
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
@@ -101,7 +104,7 @@ App_Cpp_Files := src/kmyth_sgx_test.c
 
 App_Include_Paths := -Isgx -I$(SGX_SDK)/include
 
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
 # Three configuration modes - Debug, prerelease, release
 #   Debug - Macro DEBUG enabled.
@@ -137,7 +140,7 @@ Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -Isgx -I$(SGX_SSL_INCLUDE_PATH)
 
-Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
+Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths) -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include "tsgxsslio.h"
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_SSL_TRUSTED_LIB_PATH) -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -lsgx_tsgxssl \
@@ -224,11 +227,11 @@ sgx/kmyth_sgx_test_enclave_trusted.o: src/kmyth_sgx_test_trusted.c
 	@echo "CC   <=  $<"
 
 sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp 
-	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 sgx/kmyth_unseal_data_table.o: ../../sgx/kmyth_enclave/kmyth_unseal_data_table.cpp
-	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_sgx_test_enclave_trusted.o sgx/kmyth_enclave_trusted.o sgx/kmyth_unseal_data_table.o

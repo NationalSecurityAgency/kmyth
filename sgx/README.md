@@ -7,6 +7,10 @@ contains a simple example.
 
 The key features you should note in the test files are:
 * The ```kmyth_enclave.edl``` file is included in ```kmyth_sgx_test_enclave.edl```.
+* The name of the SGX EDGER8R generated header files are specified given in the ```Makefile```:
+```
+ENCLAVE_HEADER_TRUSTED ?= '"Name of the header for the trusted portion"'
+ENCLAVE_HEADER_UNTRUSTED ?= '"Name of the header for the untrusted portion"'
 * The trusted header for your enclave must be included in ```kmyth_enclave_trusted.cpp```, as we've done using ```kmyth_sgx_test_enclave_t.h``` for the test enclave.
 * The locations of the SGX SSL libraries are given in the ```Makefile```:
 ```
@@ -16,6 +20,8 @@ SGX_SSL_INCLUDE_PATH ?= <path to SGX SSL headers>
 ```
 * The ```App_Link_Flags``` includes both ```-L$(SGX_SSL_UNTRUSTED_LIB_PATH)``` and ```-lsgx_usgxssl```.
 * The ```Enclave_Include_Paths``` includes ```-I$(SGX_SSL_INCLUDE_PATH)```.
+* The ```Enclave_C_Flags``` includes ```-DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)```
+* The ```App_C_Flags``` includes ```-DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)```
 * The ```Enclave_Cpp_Flags``` includes ```--include "tsgxsslio.h"
 * The ```Enclave_Link_Flags``` includes
 ```
