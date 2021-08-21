@@ -7,7 +7,7 @@ contains a simple example.
 
 The key features you should note in the test files are:
 * The ```kmyth_enclave.edl``` file is included in ```kmyth_sgx_test_enclave.edl```.
-* The trusted header for your enclave must be included in ```kmyth_enclave_trusted.cpp```, as we've done using ```kmyth_sgx_test_enclave_t.h``` for the test enclave.
+* The trusted header for your enclave must be included in ```kmyth_enclave_seal.cpp``` and ```kmyth_enclave_unseal.cpp```, as we've done using ```kmyth_sgx_test_enclave_t.h``` for the test enclave.
 * The location of the ```kmyth_enclave.edl``` file is included in the search path for ```SGX_EDGER8R```:
 ```
 sgx/kmyth_sgx_test_enclave_t.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
@@ -21,11 +21,11 @@ sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
 ```
 * The trusted portion of the kmyth enclave is built as part of building the Enclave Objects in the ```Makefile```:
 ```
-sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp
+sgx/kmyth_enclave_seal.o: ../../sgx/kmyth_enclave/kmyth_enclave_seal.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/kmyth_unseal_data_table.o: ../../sgx/kmyth_enclave/kmyth_unseal_data_table.cpp
+sgx/kmyth_enclave_unseal.o: ../../sgx/kmyth_enclave/kmyth_enclave_unseal.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 ```
@@ -33,7 +33,7 @@ sgx/kmyth_unseal_data_table.o: ../../sgx/kmyth_enclave/kmyth_unseal_data_table.c
 
 * The kmyth enclave ecalls object file is linked against enclave:
 ```
-sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_trusted.o sgx/kmyth_unseal_data_table.o
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_seal.o sgx/kmyth_enclave_unseal.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 ```
