@@ -67,35 +67,13 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
   // Retire validity check of `out_data` and checks in `malloc` against `sealedsz`, influenced by `in_size`
   sgx_lfence();
 
-  // The attribute mask structure identifies which platform/enclave attributes
-  // to use in key derivation. 
-  //  sgx_attributes_t attribute_mask;
-
-  // attribute_mask.flags indicates which enclave attributes the
-  // sealing key should be bound to.
-  // The SGX_FLAGS_INITTED flag corresponds to checking if the
-  // enclave is initialized.
-  // THE SGX_FLAGS_DEBUG flag corresponds to checking if it is a DEBUG
-  // enclave or not.
-  // This combination is recommended by the SGX Developer Guide
+  // This combination is recommended by the SGX Developer Guide, so
+  // we use it as default.
   if (attribute_mask.flags == 0)
   {
     attribute_mask.flags = SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
   }
-  // attribute_mask.xfrm can be used to specify information about processor
-  // extensions the enclave uses.
-  // This value is recommended by the SGX Developer Guide
-  //  attribute_mask.xfrm = 0x0;
 
-  // The key policy can be either
-  //   SGX_KEYPOLICY_MRENCLAVE which ensures only this enclave can derive the key
-  //   SGX_KEYPOLICY_MRSIGNER  which allows any enclave signed by the same signer
-  //                           to derive the key.
-  // We're using MRSIGNER to make the update path smoother.
-  //  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
-  // if(key_policy == 0){
-  //   key_policy = SGX_KEYPOLICY_MRSIGNER;
-  // }
   // If the enclave uses the key separation and sharing (KSS) features
   // we need that to be reflected in the policy of the sealing key
   // as well.
