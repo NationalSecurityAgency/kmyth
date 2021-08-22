@@ -60,7 +60,7 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
     return -1;
   }
 
-  unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t *));
+  unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t));
 
   if (new_slot == NULL)
   {
