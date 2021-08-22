@@ -10,14 +10,6 @@
 // REPLACE WITH APPROPRIATE HEADER FOR YOUR ENCLAVE
 #include "kmyth_sgx_test_enclave_t.h"
 
-static const uint8_t *addl_data = NULL;
-static const uint32_t addl_data_sz = 0;
-
-static inline uint32_t calc_sealed_data_size(uint32_t in_size)
-{
-  return sgx_calc_sealed_data_size(addl_data_sz, in_size);
-}
-
 // EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
 {
@@ -27,7 +19,7 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
   }
   *size = 0;
 
-  uint32_t sealedsz = calc_sealed_data_size(in_size);
+  uint32_t sealedsz = sgx_calc_sealed_data_size(0, in_size);
 
   if (sealedsz == UINT32_MAX)
     return SGX_ERROR_INVALID_PARAMETER;
@@ -49,7 +41,7 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
   if (!sgx_is_outside_enclave(out_data, out_size))
     return SGX_ERROR_INVALID_PARAMETER;
 
-  uint32_t sealedsz = calc_sealed_data_size(in_size);
+  uint32_t sealedsz = sgx_calc_sealed_data_size(0, in_size);
 
   if (sealedsz == UINT32_MAX)
     return SGX_ERROR_UNEXPECTED;
@@ -97,7 +89,6 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
     ret = sgx_ret;
     goto Out;
   }
-
   memcpy(out_data, buf, sealedsz);
   ret = 0;
 Out:
