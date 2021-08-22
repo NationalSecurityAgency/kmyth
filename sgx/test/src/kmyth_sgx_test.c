@@ -123,8 +123,8 @@ void test_unseal_and_export(void)
   kmyth_unseal_into_enclave(eid, &sgx_ret, out_size, out_data);
   CU_ASSERT(sgx_ret == 0);
 
-  //  kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
-  //CU_ASSERT(sgx_ret == 0);
+  kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
+  CU_ASSERT(sgx_ret == 0);
   return;
 }
 
