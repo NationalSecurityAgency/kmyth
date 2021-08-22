@@ -32,6 +32,7 @@ int kmyth_unsealed_data_table_initialize(void)
 
 int kmyth_unsealed_data_table_cleanup(void)
 {
+  sgx_thread_mutex_lock(&kmyth_unsealed_data_table_lock);
   unseal_data_t *slot = kmyth_unsealed_data_table;
   unseal_data_t *next_slot;
 
@@ -42,12 +43,13 @@ int kmyth_unsealed_data_table_cleanup(void)
     free(slot);
     slot = next_slot;
   }
-
+  sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
 int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 {
+
   if (!kmyth_unsealed_data_table_initialized)
   {
     return -1;
@@ -60,6 +62,11 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
 
   unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t *));
 
+  if (new_slot == NULL)
+  {
+    return -1;
+  }
+
   new_slot->handle = derive_handle(data_size, data);
   new_slot->data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
 
@@ -71,8 +78,20 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
   }
   new_slot->data = (uint8_t *) malloc(new_slot->data_size);
 
-  if (sgx_unseal_data((sgx_sealed_data_t *) data, NULL, NULL, new_slot->data,
-                      (uint32_t *) & new_slot->data_size) != SGX_SUCCESS)
+  if (new_slot->data == NULL)
+  {
+    free(new_slot);
+    return -1;
+  }
+  uint8_t *tmp = NULL;
+
+  tmp = (uint8_t *) malloc(new_slot->data_size);
+
+  uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
+
+  if (sgx_unseal_data
+      ((sgx_sealed_data_t *) data, NULL, &mac_len, new_slot->data,
+       (uint32_t *) & new_slot->data_size) != SGX_SUCCESS)
   {
     free(new_slot->data);
     free(new_slot);
@@ -83,7 +102,6 @@ int kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data)
   new_slot->next = kmyth_unsealed_data_table;
   kmyth_unsealed_data_table = new_slot;
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
-
   return new_slot->handle;
 }
 
