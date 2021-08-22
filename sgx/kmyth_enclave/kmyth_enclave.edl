@@ -62,7 +62,7 @@ enclave {
  *                      -1 on failure.
  *
  */
- public int kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data);
+ public int kmyth_unseal_into_enclave(uint32_t data_size, [in, size=data_size] uint8_t* data);
 
 /**
  * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.
