@@ -36,5 +36,8 @@ public int enc_unseal_data(
 public int enc_get_unsealed_size(uint32_t in_size,
 		[in, size=in_size] uint8_t* in_data,
 		[out, count=1] uint32_t* size);
-};			
+};
+untrusted {
+void ocall_print_table_entry(size_t size, [in,out, size=size] uint8_t* data);
+};
 };
