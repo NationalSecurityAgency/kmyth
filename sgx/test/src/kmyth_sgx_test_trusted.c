@@ -103,7 +103,7 @@ size_t kmyth_sgx_test_export_from_enclave(int handle, uint32_t data_size,
   uint8_t *landing_spot = NULL;
   size_t retval = retrieve_from_unseal_table(handle, &landing_spot);
 
-  //memcpy(data, landing_spot, data_size);
-  //free(landing_spot);
+  memcpy(data, landing_spot, data_size);
+  free(landing_spot);
   return retval;
 }

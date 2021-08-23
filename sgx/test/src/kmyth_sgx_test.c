@@ -136,9 +136,10 @@ void test_unseal_and_export(void)
 
   kmyth_sgx_test_export_from_enclave(eid, &ret, handle, in_size,
                                      out_data_decrypted);
-
+  CU_ASSERT(ret == in_size);
+  CU_ASSERT(memcmp(out_data_decrypted, in_data, in_size) == 0);
   kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
-  //  CU_ASSERT(sgx_ret == 0);
+  CU_ASSERT(sgx_ret == 0);
   return;
 }
 

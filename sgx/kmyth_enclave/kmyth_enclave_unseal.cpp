@@ -128,7 +128,8 @@ size_t retrieve_from_unseal_table(int handle, uint8_t ** buf)
   {
     prev_slot->next = slot->next;
   }
-  else{
+  else
+  {
     kmyth_unsealed_data_table = slot->next;
   }
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
