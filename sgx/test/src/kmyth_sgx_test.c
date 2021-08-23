@@ -110,7 +110,7 @@ void test_unseal_and_export(void)
   enc_get_sealed_size(eid, &sgx_ret, in_size, (uint32_t *) & out_size);
   CU_ASSERT(sgx_ret == 0);
 
-  in_data = (uint8_t *) calloc(in_size, 1);
+  in_data = (uint8_t *) malloc(in_size);
   for (size_t i = 0; i < 8; i++)
   {
     in_data[i] = (uint8_t) i;
