@@ -11,7 +11,7 @@ typedef struct unseal_data_s
   struct unseal_data_s* next;
 } unseal_data_t;
 
-extern unseal_data_t* kmyth_unsealed_data;
+extern unseal_data_t* kmyth_unsealed_data_table;
 
 #ifdef __cplusplus
 extern "C" {
