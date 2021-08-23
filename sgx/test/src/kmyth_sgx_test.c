@@ -129,6 +129,10 @@ void test_unseal_and_export(void)
 
   int handle = sgx_ret;
 
+  // For testing purposes we separately check that the size
+  // of the data in the table is correct, then hand that size
+  // to the export function so the SGX EDGER8R knows what
+  // size data is coming back.
   kmyth_sgx_test_get_data_size(eid, &sgx_ret, handle);
   CU_ASSERT(sgx_ret == in_size);
 
@@ -138,6 +142,7 @@ void test_unseal_and_export(void)
                                      out_data_decrypted);
   CU_ASSERT(ret == in_size);
   CU_ASSERT(memcmp(out_data_decrypted, in_data, in_size) == 0);
+
   kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
   CU_ASSERT(sgx_ret == 0);
   return;
