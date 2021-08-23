@@ -7,6 +7,8 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
+#include "kmyth_enclave.h"
+
 static const uint8_t *addl_data = NULL;
 static const uint32_t addl_data_sz = 0;
 
@@ -78,4 +80,30 @@ Out:
   if (plain_data)
     free(plain_data);
   return ret;
+}
+
+uint32_t kmyth_sgx_test_get_data_size(uint64_t handle)
+{
+  unseal_data_t *slot = kmyth_unsealed_data_table;
+
+  while (slot != NULL && slot->handle != handle)
+  {
+    slot = slot->next;
+  }
+  if (slot != NULL)
+  {
+    return slot->data_size;
+  }
+  return 0;
+}
+
+size_t kmyth_sgx_test_export_from_enclave(int handle, uint32_t data_size,
+                                          uint8_t * data)
+{
+  uint8_t *landing_spot = NULL;
+  size_t retval = retrieve_from_unseal_table(handle, &landing_spot);
+
+  //memcpy(data, landing_spot, data_size);
+  //free(landing_spot);
+  return retval;
 }

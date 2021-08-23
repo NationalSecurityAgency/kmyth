@@ -111,6 +111,10 @@ void test_unseal_and_export(void)
   CU_ASSERT(sgx_ret == 0);
 
   in_data = (uint8_t *) calloc(in_size, 1);
+  for (size_t i = 0; i < 8; i++)
+  {
+    in_data[i] = (uint8_t) i;
+  }
   out_data_decrypted = (uint8_t *) malloc(in_size);
   out_data = (uint8_t *) malloc(out_size);
 
@@ -123,8 +127,18 @@ void test_unseal_and_export(void)
   kmyth_unseal_into_enclave(eid, &sgx_ret, out_size, out_data);
   CU_ASSERT(sgx_ret == 0);
 
+  int handle = sgx_ret;
+
+  kmyth_sgx_test_get_data_size(eid, &sgx_ret, handle);
+  CU_ASSERT(sgx_ret == in_size);
+
+  size_t ret;
+
+  kmyth_sgx_test_export_from_enclave(eid, &ret, handle, in_size,
+                                     out_data_decrypted);
+
   kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
-  CU_ASSERT(sgx_ret == 0);
+  //  CU_ASSERT(sgx_ret == 0);
   return;
 }
 

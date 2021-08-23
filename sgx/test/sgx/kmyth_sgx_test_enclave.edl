@@ -36,6 +36,9 @@ public int enc_unseal_data(
 public int enc_get_unsealed_size(uint32_t in_size,
 		[in, size=in_size] uint8_t* in_data,
 		[out, count=1] uint32_t* size);
+
+public int kmyth_sgx_test_get_data_size(uint64_t handle);
+public size_t kmyth_sgx_test_export_from_enclave(uint64_t handle, uint32_t data_size, [in,out, size=data_size] uint8_t* data);
 };
 untrusted {
 void ocall_print_table_entry(size_t size, [in,out, size=size] uint8_t* data);
