@@ -1,7 +1,8 @@
 enclave {
 	from "sgx_tstdc.edl" import *;
+	from "sgx_tsgxssl.edl" import *;
 	include "sgx_tseal.h"
-	
+	include "stdbool.h"
     trusted {
 /**
  * @brief Seals input data using SGXs built-in sealing mechanism.
@@ -58,11 +59,12 @@ enclave {
  *
  * @param[in] data      The ciphertext
  *
- * @return    handle    The handle in the table used to locate the data,
- *                      -1 on failure.
+ * @param[out] handle   A pointer to a uint64_t to hold the handle.
+ *
+ * @return true on success, false on failure. The return value MUST be checked.
  *
  */
- public int kmyth_unseal_into_enclave(uint32_t data_size, [in, size=data_size] uint8_t* data);
+ public bool kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data, [out,count=1] uint64_t* handle);
 
 /**
  * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.

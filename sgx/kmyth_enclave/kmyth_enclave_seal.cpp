@@ -7,8 +7,7 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
-// REPLACE WITH APPROPRIATE HEADER FOR YOUR ENCLAVE
-#include "kmyth_sgx_test_enclave_t.h"
+#include ENCLAVE_HEADER_TRUSTED
 
 // EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
