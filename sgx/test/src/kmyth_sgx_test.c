@@ -92,14 +92,15 @@ void test_enclave_seal_unseal(void)
 
 void test_unseal_and_export(void)
 {
-  uint8_t *in_data = NULL;
-  uint8_t *out_data = NULL;
+  uint8_t *plain_data = NULL;
+  uint8_t **cipher_data = NULL;
+  int *handles = NULL;
+  size_t num_ciphertexts = 3;
 
-  uint8_t *out_data_decrypted = NULL;
+  uint8_t *cipher_data_decrypted = NULL;
 
-  int sgx_ret;
-  size_t in_size = 8;
-  size_t out_size = 0;
+  size_t plain_size = sizeof(size_t);
+  size_t cipher_size = 0;
 
   uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
   sgx_attributes_t attribute_mask;
@@ -107,44 +108,76 @@ void test_unseal_and_export(void)
   attribute_mask.flags = 0;
   attribute_mask.xfrm = 0;
 
-  enc_get_sealed_size(eid, &sgx_ret, in_size, (uint32_t *) & out_size);
-  CU_ASSERT(sgx_ret == 0);
+  int sgx_ret_int;
+  size_t sgx_ret_size_t;
 
-  in_data = (uint8_t *) malloc(in_size);
-  for (size_t i = 0; i < 8; i++)
+  enc_get_sealed_size(eid, &sgx_ret_int, plain_size,
+                      (uint32_t *) & cipher_size);
+  CU_ASSERT(sgx_ret_int == 0);
+
+  plain_data = (uint8_t *) calloc(plain_size, 1);
+
+  cipher_data = (uint8_t **) malloc(3 * sizeof(uint8_t *));
+  for (size_t i = 0; i < num_ciphertexts; i++)
   {
-    in_data[i] = (uint8_t) i;
+    cipher_data[i] = (uint8_t *) malloc(cipher_size);
+    memcpy(plain_data, &i, sizeof(size_t));
+    enc_seal_data(eid, &sgx_ret_int, plain_data, plain_size, cipher_data[i],
+                  cipher_size, key_policy, attribute_mask);
+    CU_ASSERT(sgx_ret_int == 0);
   }
-  out_data_decrypted = (uint8_t *) malloc(in_size);
-  out_data = (uint8_t *) malloc(out_size);
+  handles = (int *) malloc(num_ciphertexts * sizeof(int));
 
-  enc_seal_data(eid, &sgx_ret, in_data, in_size, out_data, out_size, key_policy,
-                attribute_mask);
+  kmyth_unsealed_data_table_initialize(eid, &sgx_ret_int);
+  CU_ASSERT(sgx_ret_int == 0);
 
-  kmyth_unsealed_data_table_initialize(eid, &sgx_ret);
-  CU_ASSERT(sgx_ret == 0);
+  kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
+  CU_ASSERT(sgx_ret_size_t == 0);
 
-  kmyth_unseal_into_enclave(eid, &sgx_ret, out_size, out_data);
-  CU_ASSERT(sgx_ret == 0);
+  for (size_t i = 0; i < num_ciphertexts; i++)
+  {
+    kmyth_unseal_into_enclave(eid, &handles[i], cipher_size, cipher_data[i]);
+    CU_ASSERT(handles[i] == i);
 
-  int handle = sgx_ret;
+    kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
+    CU_ASSERT(sgx_ret_size_t == i + 1);
 
-  // For testing purposes we separately check that the size
-  // of the data in the table is correct, then hand that size
-  // to the export function so the SGX EDGER8R knows what
-  // size data is coming back.
-  kmyth_sgx_test_get_data_size(eid, &sgx_ret, handle);
-  CU_ASSERT(sgx_ret == in_size);
+    kmyth_sgx_test_get_data_size(eid, &sgx_ret_int, handles[i]);
+    CU_ASSERT(sgx_ret_int == plain_size);
+  }
 
-  size_t ret;
+  // We do this as a separate look so we can test extracting from
+  // the table when there are multiple entries.
+  cipher_data_decrypted = (uint8_t *) malloc(plain_size);
+  for (size_t i = 0; i < num_ciphertexts; i++)
+  {
+    kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size_t,
+                                       handles[num_ciphertexts - 1 - i],
+                                       plain_size, cipher_data_decrypted);
+    CU_ASSERT(sgx_ret_size_t == plain_size);
 
-  kmyth_sgx_test_export_from_enclave(eid, &ret, handle, in_size,
-                                     out_data_decrypted);
-  CU_ASSERT(ret == in_size);
-  CU_ASSERT(memcmp(out_data_decrypted, in_data, in_size) == 0);
+    size_t val = num_ciphertexts - 1 - i;
 
-  kmyth_unsealed_data_table_cleanup(eid, &sgx_ret);
-  CU_ASSERT(sgx_ret == 0);
+    CU_ASSERT(memcmp(cipher_data_decrypted, &val, plain_size) == 0);
+
+    kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
+    CU_ASSERT(sgx_ret_size_t == num_ciphertexts - 1 - i);
+  }
+
+  kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
+  CU_ASSERT(sgx_ret_size_t == 0);
+
+  kmyth_unsealed_data_table_cleanup(eid, &sgx_ret_int);
+  CU_ASSERT(sgx_ret_int == 0);
+
+  free(plain_data);
+  for (size_t i = 0; i < num_ciphertexts; i++)
+  {
+    free(cipher_data[i]);
+  }
+  free(cipher_data);
+  free(cipher_data_decrypted);
+  free(handles);
   return;
 }
 

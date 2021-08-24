@@ -107,3 +107,16 @@ size_t kmyth_sgx_test_export_from_enclave(int handle, uint32_t data_size,
   free(landing_spot);
   return retval;
 }
+
+size_t kmyth_sgx_test_get_unseal_table_size(void)
+{
+  size_t count = 0;
+  unseal_data_t *slot = kmyth_unsealed_data_table;
+
+  while (slot != NULL)
+  {
+    count++;
+    slot = slot->next;
+  }
+  return count;
+}
