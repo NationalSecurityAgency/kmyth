@@ -64,7 +64,7 @@ enclave {
  * @return true on success, false on failure. The return value MUST be checked.
  *
  */
- public bool kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data, [out,count=1] uint64_t* handle);
+ public bool kmyth_unseal_into_enclave(uint32_t data_size, [in, count=data_size] uint8_t* data, [out] uint64_t* handle);
 
 /**
  * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.

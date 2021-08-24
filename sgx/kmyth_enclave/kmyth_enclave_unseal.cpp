@@ -65,8 +65,7 @@ static bool derive_handle(uint32_t data_size, uint8_t * data, uint64_t * handle)
     free(digest);
     return false;
   }
-
-  memcpy(handle, digest, sizeof(uint64_t));
+  memcpy(handle, digest, 2);
   free(digest);
   return true;
 }
