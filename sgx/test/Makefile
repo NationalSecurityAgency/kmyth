@@ -87,6 +87,11 @@ else
 		SGX_COMMON_CFLAGS += -O2
 endif
 
+######## Kmyth Settings ########
+
+KMYTH_INC_DIR ?= /usr/local/include/kmyth
+KMYTH_SRC_INC_DIR ?= ../..
+
 ######## App Settings ########
 
 ifneq ($(SGX_MODE), HW)
@@ -125,6 +130,14 @@ ifneq ($(SGX_MODE), HW)
 else
 	App_Link_Flags += -lsgx_uae_service
 endif
+
+######## Server Settings ########
+
+Server_Name := bin/kmyth_test_ecdh_key_server
+Server_C_Files := src/ecdh_key_server.c
+Server_Include_Paths := -I$(KMYTH_SRC_INC_DIR)/include -I$(KMYTH_INC_DIR)
+Server_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Server_Include_Paths)
+Server_Link_Flags := $(SGX_COMMON_CFLAGS) -lssl -lcrypto -lkmip -lkmyth-logger -lkmyth-tpm
 
 ######## Enclave Settings ########
 
@@ -186,7 +199,7 @@ all: $(App_Name) $(Enclave_Name)
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: pre $(App_Name) $(Int_App_Name) sgx/$(Signed_Enclave_Name)
+all: pre $(App_Name) $(Int_App_Name) $(Server_Name) sgx/$(Signed_Enclave_Name)
 endif
 
 run: all
@@ -212,6 +225,16 @@ $(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
 $(Int_App_Name): $(Int_App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_Link_Flags)
 	@echo "LINK => $@"
+
+######## Server Objects ########
+
+src/ecdh_key_server.o: src/ecdh_key_server.c
+	@$(CC) $(Server_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(Server_Name): src/ecdh_key_server.o
+	@$(CXX) $^ -o $@ $(Server_Include_Paths) $(Server_C_Flags) $(Server_Link_Flags)
+	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
 
@@ -246,4 +269,4 @@ test: all
 .PHONY: clean
 
 clean:
-	@rm -f sgx/*.h sgx/*.c sgx/*.o sgx/*.so bin/* sgx/*.pem
+	@rm -f sgx/*.h sgx/*.c sgx/*.o sgx/*.so bin/* sgx/*.pem src/*.o

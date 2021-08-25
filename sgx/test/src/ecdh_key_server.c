@@ -1,16 +1,21 @@
+#include <math.h>
 #include <getopt.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
 
+#include <openssl/ec.h>
+#include <openssl/evp.h>
+
 #include <kmip/kmip.h>
 
 #include "defines.h"
-#include "nsl_util.h"
-#include "socket_util.h"
-#include "kmip_util.h"
-#include "aes_gcm.h"
+#include "util/memory_util.h"
+#include "util/nsl_util.h"
+#include "util/socket_util.h"
+#include "util/kmip_util.h"
+#include "cipher/aes_gcm.h"
 
 static void usage(const char *prog)
 {
@@ -47,13 +52,13 @@ const struct option longopts[] = {
 };
 
 //
-// generate_session_key
+// generate_session_key_from_secret
 //
 // Generate a digest-based session key from a secret value.
 // This function should mirror SGX enclave session key generation.
 //
-int generate_session_key(unsigned char *secret, size_t secret_len,
-                         unsigned char **key, size_t * key_len)
+int generate_session_key_from_secret(unsigned char *secret, size_t secret_len,
+                                     unsigned char **key, size_t * key_len)
 {
   // Set up the contexts for deriving the key.
   const EVP_MD *md_type = EVP_shake256();
@@ -81,7 +86,7 @@ int generate_session_key(unsigned char *secret, size_t secret_len,
     return 1;
   }
 
-  result = EVP_DigestUpdate(md_ctx, session_secret, session_secret_len);
+  result = EVP_DigestUpdate(md_ctx, secret, secret_len);
   if (0 == result)
   {
     kmyth_log(LOG_ERR, "Failed to update the digest with the secret.");
@@ -244,7 +249,7 @@ int main(int argc, char **argv)
                                             POINT_CONVERSION_UNCOMPRESSED,
                                             &point_buf, NULL);
 
-  if (0 == point_buf_size)
+  if (0 == point_buf_len)
   {
     kmyth_log(LOG_ERR, "Failed to extract ephemeral key point to buffer.");
     EVP_PKEY_CTX_free(public_key_ctx);
@@ -300,8 +305,12 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  unsigned char *session_secret = calloc(X, sizeof(unsigned char));
-  size_t session_secret_len = X * sizeof(unsigned char);
+  int num_field_bits = EC_GROUP_get_degree(group);
+  size_t num_secret_bytes = (size_t) ceil(num_field_bits);
+
+  unsigned char *session_secret =
+    (unsigned char *) calloc(num_secret_bytes, sizeof(unsigned char));
+  size_t session_secret_len = num_secret_bytes * sizeof(unsigned char);
 
   result = ECDH_compute_key(session_secret, session_secret_len, peer_point,
                             ephemeral_key, NULL);
@@ -324,8 +333,8 @@ int main(int argc, char **argv)
   unsigned char *session_key = NULL;
   size_t session_key_len = 0;
 
-  result = generate_session_key(session_secret, session_secret_len,
-                                &session_key, &session_key_len);
+  result = generate_session_key_from_secret(session_secret, session_secret_len,
+                                            &session_key, &session_key_len);
 
   // Send key K to A; encrypt message with S
   uint8 static_key[16] = {
