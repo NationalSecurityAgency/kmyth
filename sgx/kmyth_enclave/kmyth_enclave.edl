@@ -1,6 +1,7 @@
 enclave {
 	from "sgx_tstdc.edl" import *;
 	from "sgx_tsgxssl.edl" import *;
+	from "sgx_pthread.edl" import *;
 	include "sgx_tseal.h"
 	include "stdbool.h"
     trusted {
