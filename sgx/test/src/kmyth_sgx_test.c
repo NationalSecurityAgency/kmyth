@@ -9,7 +9,6 @@
 #include "sgx_urts.h"
 #include "sgx_attributes.h"
 #include "kmyth_sgx_test_enclave_u.h"
-//#include "kmyth_enclave.h"
 
 // NB: Should specify as an absolute path.
 #define ENCLAVE_PATH "sgx/kmyth_sgx_test_enclave.signed.so"
