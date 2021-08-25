@@ -96,7 +96,7 @@ void test_unseal_and_export(void)
   uint8_t *plain_data = NULL;
   uint8_t **cipher_data = NULL;
   uint64_t *handles = NULL;
-  size_t num_ciphertexts = 3;
+  size_t num_ciphertexts = 5;
 
   uint8_t *cipher_data_decrypted = NULL;
 
@@ -141,7 +141,6 @@ void test_unseal_and_export(void)
 
     kmyth_unseal_into_enclave(eid, &result, cipher_size, cipher_data[i],
                               handles + i);
-    printf("%lu\n", *(handles + i));
     CU_ASSERT(result == true);
 
     kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
@@ -159,13 +158,13 @@ void test_unseal_and_export(void)
     kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size_t,
                                        handles[num_ciphertexts - 1 - i],
                                        plain_size, cipher_data_decrypted);
-    //CU_ASSERT(sgx_ret_size_t == plain_size);
+    CU_ASSERT(sgx_ret_size_t == plain_size);
 
-    //size_t val = num_ciphertexts - 1 - i;
+    size_t val = num_ciphertexts - 1 - i;
 
-    //CU_ASSERT(memcmp(cipher_data_decrypted, &val, plain_size) == 0);
-    //kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
-    //CU_ASSERT(sgx_ret_size_t == num_ciphertexts - 1 - i);
+    CU_ASSERT(memcmp(cipher_data_decrypted, &val, plain_size) == 0);
+    kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
+    CU_ASSERT(sgx_ret_size_t == num_ciphertexts - 1 - i);
   }
 
   kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);

@@ -97,7 +97,7 @@ uint32_t kmyth_sgx_test_get_data_size(uint64_t handle)
   return 0;
 }
 
-size_t kmyth_sgx_test_export_from_enclave(int handle, uint32_t data_size,
+size_t kmyth_sgx_test_export_from_enclave(uint64_t handle, uint32_t data_size,
                                           uint8_t * data)
 {
   uint8_t *landing_spot = NULL;
