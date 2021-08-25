@@ -11,7 +11,7 @@ The key features you should note in the test files are:
 ```
 ENCLAVE_HEADER_TRUSTED ?= '"Name of the header for the trusted portion"'
 ENCLAVE_HEADER_UNTRUSTED ?= '"Name of the header for the untrusted portion"'
-* The trusted header for your enclave must be included in ```kmyth_enclave_trusted.cpp```, as we've done using ```kmyth_sgx_test_enclave_t.h``` for the test enclave.
+```
 * The locations of the SGX SSL libraries are given in the ```Makefile```:
 ```
 SGX_SSL_UNTRUSTED_LIB_PATH ?= <path to SGX SSL untrusted libraries>
