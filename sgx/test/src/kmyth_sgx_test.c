@@ -109,6 +109,7 @@ void test_unseal_and_export(void)
   attribute_mask.xfrm = 0;
 
   int sgx_ret_int;
+  uint32_t sgx_ret_uint32_t;
   size_t sgx_ret_size_t;
 
   enc_get_sealed_size(eid, &sgx_ret_int, plain_size,
@@ -145,8 +146,8 @@ void test_unseal_and_export(void)
     kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
     CU_ASSERT(sgx_ret_size_t == i + 1);
 
-    kmyth_sgx_test_get_data_size(eid, &sgx_ret_int, handles[i]);
-    CU_ASSERT(sgx_ret_int == plain_size);
+    kmyth_sgx_test_get_data_size(eid, &sgx_ret_uint32_t, handles[i]);
+    CU_ASSERT(sgx_ret_uint32_t == plain_size);
   }
 
   // We do this as a separate look so we can test extracting from
