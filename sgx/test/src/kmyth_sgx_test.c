@@ -115,7 +115,7 @@ void test_unseal_and_export(void)
                       (uint32_t *) & cipher_size);
   CU_ASSERT(sgx_ret_int == 0);
 
-  plain_data = (uint8_t *) calloc(plain_size, 1);
+  plain_data = (uint8_t *) malloc(plain_size);
 
   cipher_data = (uint8_t **) malloc(num_ciphertexts * sizeof(uint8_t *));
   for (size_t i = 0; i < num_ciphertexts; i++)
