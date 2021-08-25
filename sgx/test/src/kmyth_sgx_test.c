@@ -118,7 +118,7 @@ void test_unseal_and_export(void)
 
   plain_data = (uint8_t *) calloc(plain_size, 1);
 
-  cipher_data = (uint8_t **) malloc(3 * sizeof(uint8_t *));
+  cipher_data = (uint8_t **) malloc(num_ciphertexts * sizeof(uint8_t *));
   for (size_t i = 0; i < num_ciphertexts; i++)
   {
     cipher_data[i] = (uint8_t *) malloc(cipher_size);
