@@ -54,6 +54,12 @@ SGX_SDK ?= /opt/intel/sgxsdk
 SGX_SSL ?= /opt/intel/sgxssl
 SGX_MODE ?= SIM
 SGX_ARCH ?= x64
+SGX_SSL_UNTRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
+SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
+SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
+
+ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
+ENCLAVE_HEADER_UNTRUSTED ?= '""'
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -106,9 +112,9 @@ Int_App_Name := bin/kmyth_enclave_integration
 App_Cpp_Files := src/kmyth_sgx_test.c
 Int_App_Cpp_Files := src/kmyth_enclave_app.cpp
 
-App_Include_Paths := -Iinclude -Isgx -I$(SGX_SDK)/include -I$(SGX_SSL)/include
+App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I$(SGX_SSL)/include
 
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
 # Three configuration modes - Debug, prerelease, release
 #   Debug - Macro DEBUG enabled.
@@ -123,7 +129,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_LIBRARY_PATH) -l$(Urts_Library_Name) -lcunit -lsgx_usgxssl -Lsgx
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -152,11 +158,13 @@ Crypto_Library_Name := sgx_tcrypto
 Crypto_SSL_Library_Name := sgx_tsgxssl_crypto
 SSL_Library_Name := sgx_tsgxssl
 
-Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SSL)/include -I$(SGX_SSL)/include/openssl
+Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -Isgx -I$(SGX_SSL_INCLUDE_PATH)
 
-Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
-Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include 
-Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_LIBRARY_PATH) \
+Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths) -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
+Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include "tsgxsslio.h"
+Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_SSL_TRUSTED_LIB_PATH) -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -lsgx_tsgxssl \
+	-Wl,--no-whole-archive -lsgx_tsgxssl_crypto \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_pthread -l$(Crypto_Library_Name) -l$(SSL_Library_Name) -l$(Crypto_SSL_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
@@ -188,7 +196,9 @@ pre:
 	mkdir -p bin 
 	@if [ ! -f sgx/$(Enclave_Signing_Key) ]; then openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072; fi
 	indent $(INDENT_OPTS) src/*.c
+	indent $(INDENT_OPTS) ../kmyth_enclave/*.cpp
 	rm -f src/*~
+	rm -f ../kmyth_enclave/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Name)
@@ -211,14 +221,14 @@ endif
 ######## App Objects ########
 
 sgx/kmyth_sgx_test_enclave_u.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path $(SGX_SSL)/include --search-path . --search-path ../../../sgx/kmyth_enclave
+	@cd sgx && $(SGX_EDGER8R) --untrusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave  --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o
+$(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -239,18 +249,26 @@ $(Server_Name): src/ecdh_key_server.o
 ######## Enclave Objects ########
 
 sgx/kmyth_sgx_test_enclave_t.c: $(SGX_EDGER8R) sgx/kmyth_sgx_test_enclave.edl
-	@cd sgx && $(SGX_EDGER8R) --trusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path $(SGX_SSL)/include --search-path . --search-path ../../../sgx/kmyth_enclave
+	@cd sgx && $(SGX_EDGER8R) --trusted kmyth_sgx_test_enclave.edl --search-path $(SGX_SDK)/include --search-path . --search-path ../../../sgx/kmyth_enclave --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 sgx/kmyth_sgx_test_enclave_t.o: sgx/kmyth_sgx_test_enclave_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/kmyth_enclave_trusted.o: ../../sgx/kmyth_enclave/kmyth_enclave_trusted.cpp
+sgx/kmyth_sgx_test_enclave_ecdh.o: src/kmyth_sgx_test_ecdh.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_enclave_trusted.o
+sgx/kmyth_enclave_seal.o: ../../sgx/kmyth_enclave/kmyth_enclave_seal.cpp 
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+sgx/kmyth_enclave_unseal.o: ../../sgx/kmyth_enclave/kmyth_enclave_unseal.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+sgx/$(Enclave_Name): sgx/kmyth_sgx_test_enclave_t.o sgx/kmyth_sgx_test_enclave_ecdh.o sgx/kmyth_enclave_seal.o sgx/kmyth_enclave_unseal.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
