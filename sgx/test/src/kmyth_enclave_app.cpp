@@ -5,7 +5,7 @@
 #include "kmyth_sgx_test_enclave_u.h"
 #include "sgx_urts.h"
 
-#define ENCLAVE_PATH "enclave.signed.so"
+#define ENCLAVE_PATH "sgx/kmyth_sgx_test_enclave.signed.so"
 
 
 int load_key_file(const char *file_path, unsigned char **data, size_t *data_len)

@@ -16,14 +16,10 @@ extern unseal_data_t* kmyth_unsealed_data_table;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-int enc_get_sealed_size(uint32_t in_size, uint32_t* size);
-int enc_seal_data(const uint8_t* in_data, uint32_t in_size, uint8_t* out_data, uint32_t out_size);
-int enc_unseal_data (const uint8_t* in_data, uint32_t in_size, uint8_t* out_data, uint32_t out_size);
-
-void enc_clear(void *v, size_t size);
-void enc_clear_and_free(void *v, size_t size);
-int enc_derive_secret_key(unsigned char *secret, size_t secret_len, unsigned char **key, size_t *key_le
+  size_t retrieve_from_unseal_table(uint64_t handle, uint8_t** buf);
+  void enc_clear(void *v, size_t size);
+  void enc_clear_and_free(void *v, size_t size);
+  int enc_derive_secret_key(unsigned char *secret, size_t secret_len, unsigned char **key, size_t *key_len);
   
   
 #ifdef __cplusplus

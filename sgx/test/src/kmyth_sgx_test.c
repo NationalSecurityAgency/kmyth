@@ -14,17 +14,6 @@
 #define ENCLAVE_PATH "sgx/kmyth_sgx_test_enclave.signed.so"
 sgx_enclave_id_t eid = 0;
 
-void ocall_print_table_entry(size_t size, uint8_t * data)
-{
-  printf("%lu\n", size);
-  for (size_t i = 0; i < size; i++)
-  {
-    printf("0x%02x ", data[i]);
-  }
-  printf("\n");
-  return;
-}
-
 int init_suite(void)
 {
   sgx_status_t retval;
