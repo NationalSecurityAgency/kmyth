@@ -96,7 +96,7 @@ Once the dependencies are installed:
 
 1. Download the code
 
-2. The documentation is built using *make doc*. The doxygen generated
+2. The documentation is built using *make docs*. The doxygen generated
    documentation is put in ./doc.
 
 3. In the `tpm2` directory run *make* or  *make all* to create:

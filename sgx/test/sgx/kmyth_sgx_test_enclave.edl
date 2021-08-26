@@ -1,3 +1,77 @@
 enclave {
 	from "kmyth_enclave.edl" import *;
+	trusted {
+/**
+ * @brief Unseals data sealed with enc_seal_data.
+ *
+ * @param[in] in_data Pointer to the data to be unsealed.
+ *
+ * @param[in] in_size Length of data pointed to by in_data.
+ *
+ * @param[out] out_data Pointer to space to place the decrypted data.
+ *
+ * @param[in] out_size Size of the buffer pointed to by out_data. Must
+ *                     be calculated by calling enc_get_unsealed_size.
+ *
+ * @return 0 in success, an SGX error on error.
+ */
+public int enc_unseal_data(
+		[in, size=in_size] const uint8_t* in_data,
+		uint32_t in_size,
+		[user_check] uint8_t* out_data,
+		uint32_t out_size);
+
+/**
+ * @brief Computes the output buffer size required to unseal input data
+ *        of size in_size.
+ *
+ * @param[in]  in_size The size of the data blob to be unsealed.
+ * 
+ * @param[in]  in_data The encrypted blob to be unsealed.
+ * 
+ * @param[out] size    The size of the plaintext.
+ *
+ * @return 0 in success, SGX_ERROR_INVALID_PARAMETER on error
+ */
+public int enc_get_unsealed_size(uint32_t in_size,
+		[in, size=in_size] uint8_t* in_data,
+		[out, count=1] uint32_t* size);
+
+/**
+ * @brief Gets the size of a data entry in the unsealed_data_table.
+ *
+ * @param[in] handle The handle of the entry.
+ *
+ * @returns the size, or 0 if the entry is not in the table or if the table is not initialized.
+ *
+ */
+public uint32_t kmyth_sgx_test_get_data_size(uint64_t handle);
+
+/**
+ * @brief Exports an entry from the unsealed_data_table.
+ *
+ * @param[in] handle    The handle of the entry
+ *
+ * @param[in] data_size The size of the data in the entry
+ *
+ * @param[out] data     A pointer to a location to place the data
+ *
+ * @returns The size of the returned data.
+ */
+public size_t kmyth_sgx_test_export_from_enclave(uint64_t handle, uint32_t data_size, [out,size=data_size] uint8_t* data);
+
+/**
+ * @brief Gives the current number of entries in the unsealed_data_table.
+ *
+ * @returns The number of entries in the table.
+ */
+public size_t kmyth_sgx_test_get_unseal_table_size(void);
+};
+
+untrusted {
+/**
+ * @brief Helper function to view enclave memory.
+ */
+void ocall_print_table_entry(size_t size, [in,size=size] uint8_t* data);
+};
 };
