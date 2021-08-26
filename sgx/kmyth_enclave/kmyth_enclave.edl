@@ -60,8 +60,6 @@ enclave {
                 [out, count=1] size_t *key_len,
                 [out, size=error_buffer_len] char *error_buffer,
                 size_t error_buffer_len);
-    };
-
 /**
  * @brief SGX unseals the provided data and places it into the
  *        kmyth_unsealed_data_table.
