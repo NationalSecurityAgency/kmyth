@@ -12,7 +12,6 @@
 #include ENCLAVE_HEADER_TRUSTED
 
 unseal_data_t *kmyth_unsealed_data_table = NULL;
-static int handle_ctr = 0;
 static bool kmyth_unsealed_data_table_initialized = false;
 static sgx_thread_mutex_t kmyth_unsealed_data_table_lock;
 

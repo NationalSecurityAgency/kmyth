@@ -184,6 +184,7 @@ TEST_VEC_DIRS += $(TEST_DATA_DIR)/gcmtestvectors
 # Specify fundamental compiler parameters
 CC = gcc#                                invoke gcc compiler
 CC += -std=c11#                          use C11 standard
+CC += -Wall#                             enable all warnings
 DEBUG = -g#                              produce debugging information
 PREFIX ?= /usr/local#                    set source installation path 
 
@@ -212,7 +213,6 @@ LDLIBS += -lcrypto#                      libcrypto
 LDLIBS += -lkmip#                        libkmip
 
 # Specify basic set of required compiler flags
-CFLAGS = -Wall#                          enable all warnings
 CFLAGS += -c#                            compile, but do not link
 CFLAGS += $(DEBUG)#                      debugging options (above)
 CFLAGS += -D_GNU_SOURCE#                 GNU/LINUX platform

@@ -9,9 +9,6 @@
 
 #include "kmyth_enclave.h"
 
-static const uint8_t *addl_data = NULL;
-static const uint32_t addl_data_sz = 0;
-
 int enc_get_unsealed_size(uint32_t in_size, uint8_t * in_data, uint32_t * size)
 {
   if (size == NULL)
@@ -46,7 +43,7 @@ int enc_unseal_data(const uint8_t * in_data, uint32_t in_size,
 
   if (mac_len == UINT32_MAX || plain_len == UINT32_MAX)
     return SGX_ERROR_UNEXPECTED;
-  if (mac_len != addl_data_sz || plain_len > out_size || plain_len > in_size)
+  if (plain_len > out_size || plain_len > in_size)
     return SGX_ERROR_INVALID_PARAMETER;
 
   int ret;

@@ -140,8 +140,8 @@ Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -I../kmyth_enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -Isgx -I$(SGX_SSL_INCLUDE_PATH)
 
-Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths) -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
-Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include "tsgxsslio.h"
+Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths) -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED) -Wall
+Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++ --include "tsgxsslio.h" -Wall
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_SSL_TRUSTED_LIB_PATH) -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -lsgx_tsgxssl \
 	-Wl,--no-whole-archive -lsgx_tsgxssl_crypto \
