@@ -5,7 +5,7 @@
  *        along with the other sgx_seal/sgx_unseal functions
  */
 
-#include "sgx_seal_unseal_impl.h"
+#include "kmyth_enclave.h"
 
 #include <stdlib.h>
 #include <string.h>
