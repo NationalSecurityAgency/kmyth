@@ -16,7 +16,6 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "formatting_tools.h"
 
 #include ENCLAVE_HEADER_UNTRUSTED
 
