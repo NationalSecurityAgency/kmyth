@@ -659,7 +659,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
   //       in the TPM2B_* sized buffer cases
   size_t pcr_select_size = sizeof(input.pcr_list);
   size_t pcr_select_offset = 0;
-  uint8_t *pcr_select_data = (uint8_t *) calloc(pcr_select_size, sizeof(uint8_t));
+  uint8_t *pcr_select_data =
+    (uint8_t *) calloc(pcr_select_size, sizeof(uint8_t));
 
   if (pcr_select_data == NULL)
   {
