@@ -659,7 +659,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
   //       in the TPM2B_* sized buffer cases
   size_t pcr_select_size = sizeof(input.pcr_list);
   size_t pcr_select_offset = 0;
-  uint8_t *pcr_select_data = calloc(pcr_select_size, sizeof(uint8_t));
+  uint8_t *pcr_select_data = (uint8_t *) calloc(pcr_select_size, sizeof(uint8_t));
 
   if (pcr_select_data == NULL)
   {
@@ -670,7 +670,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
 
   size_t sk_pub_size = input.sk_pub.size + 2;
   size_t sk_pub_offset = 0;
-  uint8_t *sk_pub_data = malloc(sk_pub_size);
+  uint8_t *sk_pub_data = (uint8_t *) malloc(sk_pub_size);
 
   if (sk_pub_data == NULL)
   {
@@ -682,7 +682,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
 
   size_t sk_priv_size = input.sk_priv.size + 2;
   size_t sk_priv_offset = 0;
-  uint8_t *sk_priv_data = malloc(sk_priv_size);
+  uint8_t *sk_priv_data = (uint8_t *) malloc(sk_priv_size);
 
   if (sk_priv_data == NULL)
   {
@@ -695,7 +695,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
 
   size_t wk_pub_size = input.wk_pub.size + 2;
   size_t wk_pub_offset = 0;
-  uint8_t *wk_pub_data = malloc(wk_pub_size);
+  uint8_t *wk_pub_data = (uint8_t *) malloc(wk_pub_size);
 
   if (wk_pub_data == NULL)
   {
@@ -709,7 +709,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
 
   size_t wk_priv_size = input.wk_priv.size + 2;
   size_t wk_priv_offset = 0;
-  uint8_t *wk_priv_data = malloc(wk_priv_size);
+  uint8_t *wk_priv_data = (uint8_t *) malloc(wk_priv_size);
 
   if (wk_priv_data == NULL)
   {
@@ -896,6 +896,7 @@ Ski get_default_ski(void)
     .pcr_list = {.count = 0,},
     .sk_pub = {.size = 0,},
     .sk_priv = {.size = 0,},
+    .cipher = {.cipher_name = NULL,},
     .wk_pub = {.size = 0},
     .wk_priv = {.size = 0},
     .enc_data = NULL,
@@ -1196,7 +1197,7 @@ int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
     return (1);
   }
 
-  if ((new_dest = realloc(*dest, new_dest_len)) == NULL)
+  if ((new_dest = (uint8_t *) realloc(*dest, new_dest_len)) == NULL)
   {
     kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
     return (1);

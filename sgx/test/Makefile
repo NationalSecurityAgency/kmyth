@@ -101,9 +101,9 @@ endif
 App_Name := bin/kmyth_enclave_tests
 
 App_Cpp_Files := src/kmyth_sgx_test.c \
-		../kmyth_enclave/sgx_seal_unseal_impl.c 
-		#../../src/tpm/formatting_tools.c \
-		#../../src/util/file_io.c
+		../kmyth_enclave/sgx_seal_unseal_impl.c \
+		../../src/tpm/formatting_tools.c \
+		../../src/util/file_io.c
 
 App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../../include -I../../logger/include -I../../include/tpm -I../../include/util
 
