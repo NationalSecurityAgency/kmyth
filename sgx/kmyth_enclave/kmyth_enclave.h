@@ -18,26 +18,6 @@ extern unseal_data_t* kmyth_unsealed_data_table;
 extern "C" {
 #endif
   size_t retrieve_from_unseal_table(uint64_t handle, uint8_t** buf);
-  
-  /**
-   * @brief Seal data using SGX
-   *
-   * This function takes in all of the parameters needed to seal
-   * a data blob. It does not handle file I/O. It takes input data,
-   * in the form of hex data bytes (uint8_t *), and seals it with SGX
-   *
-   * @param[in]  in_data           Raw data to be sgx-unsealed
-   *
-   * @param[in]  in_size           The size of input in bytes
-   *
-   * @param[out] out_data          The result of sgx-unseal
-   *
-   * @param[out] out_size          The size of the output data
-   *
-   * @return 0 on success, 1 on error
-   */
-  int sgx_seal_data(uint8_t * in_data, size_t in_size,
-                    uint8_t ** out_data, size_t * out_size);
 
   /**
    * @brief High-level function implementing sgx-seal using SGX.
@@ -55,7 +35,7 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-  int sgx_seal(uint8_t * input, size_t input_len,
+  int sgx_seal(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
                uint8_t ** output, size_t * output_len);
 
   /**
@@ -65,14 +45,11 @@ extern "C" {
    *
    * @param[in]  input_len         The size of input in bytes
    *
-   * @param[out] output            The result of sgx-unseal in .nkl format
-   *
-   * @param[out] output_len        The size of the output data
+   * @param[out] handle            The handle result of sgx-unseal
    *
    * @return 0 on success, 1 on error
    */
-  int sgx_unseal(uint8_t * input, size_t input_len,
-                 uint8_t ** output, size_t * output_len);
+   int sgx_unseal(sgx_enclave_id_t eid, uint8_t * input, size_t input_len, uint64_t * handle);
 
   /**
    * @brief High-level function implementing sgx-seal for files using SGX
@@ -87,7 +64,7 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-  int sgx_seal_file(char *input_path, uint8_t ** output, size_t * output_len);
+  int sgx_seal_file(sgx_enclave_id_t eid, char *input_path, uint8_t ** output, size_t * output_len);
 
   /**
    * @brief High-level function implementing sgx-unseal for files using SGX
@@ -96,14 +73,11 @@ extern "C" {
    * @param[in]  input_path        Path to input .nkl file
    *                               (passed as a string)
    *
-   * @param[out] output            Decrypted result (pointer to a byte buffer)
-   *
-   * @param[out] output_size       Size (in bytes) of decrypted result
-   *                               (passed as pointer to size value)
+   * @param[out] handle            Decrypted result (pointer to a byte buffer)
    *
    * @return 0 on success, 1 on error
    */
-  int sgx_unseal_file(char *input_path, uint8_t ** output, size_t * output_len);
+  int sgx_unseal_file(sgx_enclave_id_t eid, char *input_path, uint64_t * handle);
 
 
 #ifdef __cplusplus
