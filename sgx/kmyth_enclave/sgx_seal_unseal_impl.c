@@ -34,11 +34,16 @@ int sgx_seal(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
   attribute_mask.flags = 0;
   attribute_mask.xfrm = 0;
 
-  enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy, attribute_mask);
-  if (ret == 1)
+  enc_get_sealed_size(eid, &ret, input_len,(uint32_t *) &data_size);
+  if (ret == 0 )
   {
-    kmyth_log(LOG_ERR, "error to seal data ... exiting");
-    return 1;
+    data = (uint8_t *) malloc(data_size);
+    enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy, attribute_mask);
+    if (ret == 1)
+    {
+      kmyth_log(LOG_ERR, "error to seal data ... exiting");
+      return 1;
+    }
   }
 
   if (create_nkl_bytes(data, data_size, output, output_len))
