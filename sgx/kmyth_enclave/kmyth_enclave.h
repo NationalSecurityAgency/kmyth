@@ -2,6 +2,7 @@
 #define KMYTH_ENCLAVE_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct unseal_data_s
 {
@@ -17,7 +18,7 @@ extern unseal_data_t* kmyth_unsealed_data_table;
 extern "C" {
 #endif
   size_t retrieve_from_unseal_table(uint64_t handle, uint8_t** buf);
-  
+  bool insert_into_unseal_table(uint8_t* data, uint32_t data_size, uint64_t* handle);
   
 
 #ifdef __cplusplus
