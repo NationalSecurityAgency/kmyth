@@ -22,16 +22,12 @@
 // kmyth_sgx_seal_nkl()
 //############################################################################
 int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
-             uint8_t ** output, size_t * output_len)
+             uint8_t ** output, size_t * output_len, uint16_t key_policy, 
+	     sgx_attributes_t attribute_mask)
 {
   uint8_t *data = NULL;
   size_t data_size = 0;
   int ret;
-  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
-  sgx_attributes_t attribute_mask;
-
-  attribute_mask.flags = 0;
-  attribute_mask.xfrm = 0;
 
   enc_get_sealed_size(eid, &ret, input_len,(uint32_t *) &data_size);
   if (ret == 0 )
