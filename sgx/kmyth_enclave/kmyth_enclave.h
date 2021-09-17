@@ -38,7 +38,8 @@ extern "C" {
    * @return 0 on success, 1 on error
    */
   int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
-		size_t input_len, uint8_t ** output, size_t * output_len);
+		size_t input_len, uint8_t ** output, size_t * output_len,
+		uint16_t key_policy, sgx_attributes_t attribute_mask);
 
   /**
    * @brief High-level function implementing sgx-unseal using SGX
