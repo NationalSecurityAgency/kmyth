@@ -110,12 +110,52 @@ bool kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data,
     return false;
   }
 
-  unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t));
+  uint32_t plaintext_data_size =
+    sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
 
-  if (new_slot == NULL)
+  // UINT32_MAX is the error return value of sgx_get_encrypt_txt_len.
+  if (plaintext_data_size == UINT32_MAX)
   {
-    return -1;
+    return false;
   }
+
+  uint8_t *plaintext_data = (uint8_t *) malloc(plaintext_data_size);
+
+  if (plaintext_data == NULL)
+  {
+    return false;
+  }
+
+  uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
+
+  if (sgx_unseal_data
+      ((sgx_sealed_data_t *) data, NULL, &mac_len, plaintext_data,
+       (uint32_t *) & plaintext_data_size) != SGX_SUCCESS)
+  {
+    free(plaintext_data);
+    return false;
+  }
+
+  // handle gets set in insert_into_unseal_table
+  return insert_into_unseal_table(plaintext_data, plaintext_data_size, handle);
+}
+
+bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
+                              uint64_t * handle)
+{
+  if (!kmyth_unsealed_data_table_initialized)
+  {
+    return false;
+  }
+
+  // UINT32_MAX is an invalid data size for the plaintext of an
+  // SGX-sealed blob.
+  if (data_size == 0 || data_size == UINT32_MAX || data == NULL)
+  {
+    return false;
+  }
+
+  unseal_data_t *new_slot = (unseal_data_t *) malloc(sizeof(unseal_data_t));
 
   if (new_slot == NULL)
   {
@@ -127,28 +167,11 @@ bool kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data,
     free(new_slot);
     return false;
   }
-  new_slot->data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
 
-  // UINT32_MAX is the error return value of sgx_get_encrypt_txt_len.
-  if (new_slot->data_size == UINT32_MAX)
-  {
-    free(new_slot);
-    return false;
-  }
-  new_slot->data = (uint8_t *) malloc(new_slot->data_size);
+  new_slot->data_size = data_size;
+  new_slot->data = data;
   if (new_slot->data == NULL)
   {
-    free(new_slot);
-    return -1;
-  }
-
-  uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
-
-  if (sgx_unseal_data
-      ((sgx_sealed_data_t *) data, NULL, &mac_len, new_slot->data,
-       (uint32_t *) & new_slot->data_size) != SGX_SUCCESS)
-  {
-    free(new_slot->data);
     free(new_slot);
     return false;
   }
