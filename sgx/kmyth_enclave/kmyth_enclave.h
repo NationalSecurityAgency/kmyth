@@ -37,8 +37,8 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-  int sgx_seal(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
-               uint8_t ** output, size_t * output_len);
+  int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
+		size_t input_len, uint8_t ** output, size_t * output_len);
 
   /**
    * @brief High-level function implementing sgx-unseal using SGX
@@ -51,35 +51,8 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-   int sgx_unseal(sgx_enclave_id_t eid, uint8_t * input, size_t input_len, uint64_t * handle);
-
-  /**
-   * @brief High-level function implementing sgx-seal for files using SGX
-   *        The sgx-seal input data is read from the specified file.
-   *
-   * @param[in]  input_path        Path to input data file
-   *
-   * @param[out] output            The result of sgx_seal as bytes in
-   *                               .nkl format
-   *
-   * @param[out] output_len        The length, in bytes, of output
-   *
-   * @return 0 on success, 1 on error
-   */
-  int sgx_seal_file(sgx_enclave_id_t eid, char *input_path, uint8_t ** output, size_t * output_len);
-
-  /**
-   * @brief High-level function implementing sgx-unseal for files using SGX
-   *        The sgx-unseal input data is read from the specified file.
-   *
-   * @param[in]  input_path        Path to input .nkl file
-   *                               (passed as a string)
-   *
-   * @param[out] handle            Decrypted result (pointer to a byte buffer)
-   *
-   * @return 0 on success, 1 on error
-   */
-  int sgx_unseal_file(sgx_enclave_id_t eid, char *input_path, uint64_t * handle);
+   int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
+		   size_t input_len, uint64_t * handle);
 
 int get_block_bytes(char **contents,
                     size_t * remaining, unsigned char **block,
