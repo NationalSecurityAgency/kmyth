@@ -16,8 +16,8 @@
 #include "formatting_tools.h"
 
 /**
- * @brief Parses a .ski formatted bytes into a ski struct. The 
- *        output is only modified on success, otherwise the 
+ * @brief Parses a .ski formatted byte array into a ski struct. 
+ *        The output is only modified on success, otherwise the 
  *        pointer is untouched
  *
  * @param[in]  input          The bytes in .ski format
