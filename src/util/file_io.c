@@ -18,7 +18,7 @@
 #include "memory_util.h"
 
 #include "cipher/cipher.h"
-#include "tpm/formatting_tools.h"
+#include "util/formatting_tools.h"
 
 //############################################################################
 // verifyInputFilePath()

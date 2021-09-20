@@ -13,6 +13,7 @@
 #include "defines.h"
 #include "file_io.h"
 #include "formatting_tools.h"
+#include "marshalling_tools.h"
 #include "memory_util.h"
 #include "object_tools.h"
 #include "pcrs.h"

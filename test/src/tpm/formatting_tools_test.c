@@ -1,7 +1,8 @@
 //############################################################################
 // formatting_tools_test.c
 //
-// Tests for TPM 2.0 object utility functions in tpm2/src/tpm/formatting_tools.c
+// Tests for TPM 2.0 object utility functions in tpm2/src/tpm/marshalling_tools.c
+//                                        and in tpm2/src/util/formatting_tools.c
 //############################################################################
 
 #include <stdio.h>
@@ -10,6 +11,7 @@
 
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
+#include "marshalling_tools.h"
 #include "object_tools.h"
 #include "defines.h"
 
