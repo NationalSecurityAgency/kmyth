@@ -18,7 +18,7 @@
 #include <tss2/tss2-tcti-tabrmd.h>
 
 #include "defines.h"
-#include "tpm/formatting_tools.h"
+#include "tpm/marshalling_tools.h"
 
 /*
  * These are known to be manufacturer strings for software TPM simulators.
