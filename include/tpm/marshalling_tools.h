@@ -68,6 +68,21 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
 int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
 
 /**
+ * @brief Frees the contents of a ski struct
+ *
+ * @param[in] ski				The struct to be freed
+ */
+void free_ski(Ski * ski);
+
+/**
+ * @brief Creates an 'empty' ski struct and initializes internal
+ *        sizes to 0
+ *
+ * @return A new, 'empty' ski struct
+ */
+Ski get_default_ski(void);
+
+/**
  * @brief Marshals TPM2 structures that need to be written to the .ski file
  *        into byte arrays.
  *
@@ -511,48 +526,5 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
  * @return 0 if success, 1 if error
  */
 int unpack_uint32_to_str(uint32_t uint_value, char **str_repr);
-
-/**
- * @brief Parses a .ski formatted bytes into a ski struct. The 
- *        output is only modified on success, otherwise the 
- *        pointer is untouched
- *
- * @param[in]  input          The bytes in .ski format
- *
- * @param[in]  input_length   The number of bytes
- *
- * @param[out] output         The new ski struct
- *
- * @return 0 on success, 1 on error
- */
-int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
-
-/**
- * @brief Creates a byte array in .ski format from a ski struct
- *
- * @param[in]  input          The ski struct to be converted
- *
- * @param[out] output         The bytes in .ski format
- *
- * @param[out] output_length  The number of bytes in output
- *
- * @return 0 on success, 1 on error
- */
-int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
-
-/**
- * @brief Frees the contents of a ski struct
- *
- * @param[in] ski				The struct to be freed
- */
-void free_ski(Ski * ski);
-
-/**
- * @brief Creates an 'empty' ski struct and initializes internal
- *        sizes to 0
- *
- * @return A new, 'empty' ski struct
- */
-Ski get_default_ski(void);
 
 #endif /* MARSHALLING_TOOLS_H */

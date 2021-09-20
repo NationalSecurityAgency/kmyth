@@ -10,8 +10,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <tss2/tss2_sys.h>
-
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
  *         block file, if the delimiter for the current file block matches the

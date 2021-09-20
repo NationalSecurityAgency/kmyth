@@ -11,7 +11,6 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
-#include <tss2/tss2_mu.h>
 
 #include "defines.h"
 
@@ -38,7 +37,7 @@ int get_block_bytes(char **contents,
 
   if (next_delim_len > *remaining)
   {
-    kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
+    kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
     return 1;
   }
   while (strncmp(*contents + size, next_delim, next_delim_len))
@@ -46,7 +45,7 @@ int get_block_bytes(char **contents,
     size++;
     if (size + next_delim_len > *remaining)
     {
-      kmyth_log(LOG_ERR, "unexpectedly reached end of .ski file ... exiting");
+      kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
       return 1;
     }
   }
@@ -54,7 +53,7 @@ int get_block_bytes(char **contents,
   // check that the block is not empty
   if (size == 0)
   {
-    kmyth_log(LOG_ERR, "empty .ski block ... exiting");
+    kmyth_log(LOG_ERR, "empty block ... exiting");
     return 1;
   }
 
@@ -80,6 +79,50 @@ int get_block_bytes(char **contents,
     *contents += size;
     *remaining -= size;
   }
+
+  return 0;
+}
+
+//############################################################################
+// create_nkl_bytes()
+//############################################################################
+int create_nkl_bytes(uint8_t * input, size_t input_length,
+                     uint8_t ** output, size_t * output_length)
+{
+  // validate that all data to be written is non-NULL and non-empty
+  if (input == NULL || input_length == 0)
+  {
+    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
+    return 1;
+  }
+
+  //Encode each portion of the file in base64
+  uint8_t *nkl_data = NULL;
+  size_t nkl_data_size = 0;
+
+  if (encodeBase64Data(input, input_length, &nkl_data, &nkl_data_size))
+  {
+    kmyth_log(LOG_ERR, "error base64 encoding nkl string ... exiting");
+    free(nkl_data);
+    return 1;
+  }
+
+  //At this point the data is all formatted, it's time to create the string
+
+  uint8_t *out = NULL;
+  size_t out_length = 0;
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_NKL_DATA,
+         strlen(KMYTH_DELIM_NKL_DATA));
+  concat(&out, &out_length, nkl_data, nkl_data_size);
+  free(nkl_data);
+  nkl_data = NULL;
+
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_END_NKL,
+         strlen(KMYTH_DELIM_END_NKL));
+
+  *output = out;
+  *output_length = out_length;
 
   return 0;
 }
@@ -262,7 +305,7 @@ int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
     return (1);
   }
 
-  if ((new_dest = realloc(*dest, new_dest_len)) == NULL)
+  if ((new_dest = (uint8_t *) realloc(*dest, new_dest_len)) == NULL)
   {
     kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
     return (1);

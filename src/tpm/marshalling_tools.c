@@ -21,6 +21,7 @@
 //############################################################################
 int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 {
+
   if (input == NULL)
   {
     kmyth_log(LOG_ERR, "NULL input cannot be parsed ... exiting");
@@ -634,7 +635,6 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     kmyth_log(LOG_ERR, "unallocated SK public byte array ... exiting");
     return 1;
   }
-
   if (pack_public(storage_key_public_blob,
                   *storage_key_public_data,
                   *storage_key_public_data_size,
