@@ -58,26 +58,6 @@ extern "C" {
    int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
 		   size_t input_len, uint64_t * handle);
 
-int get_block_bytes(char **contents,
-                    size_t * remaining, unsigned char **block,
-                    size_t * blocksize,
-                    char *delim, size_t delim_len,
-                    char *next_delim, size_t next_delim_len);
-
-int create_nkl_bytes(uint8_t * input, size_t input_length,
-                     uint8_t ** output, size_t * output_length);
-
-int encodeBase64Data(uint8_t * raw_data,
-                     size_t raw_data_size, uint8_t ** base64_data,
-                     size_t * base64_data_size);
-
-int decodeBase64Data(unsigned char *base64_data,
-                     size_t base64_data_size, unsigned char **raw_data,
-                     size_t * raw_data_size);
-
-int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
-           size_t input_length);
-
 #ifdef __cplusplus
 }
 #endif
