@@ -164,8 +164,7 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
 
   if (input_size == 0)
   {
-    kmyth_log(LOG_DEBUG, "input file size is zero, returning NULL ... exiting");
-	if (!BIO_free(bio))
+    if (!BIO_free(bio))
     {
       kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
     }
