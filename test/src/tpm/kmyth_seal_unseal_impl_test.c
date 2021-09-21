@@ -12,6 +12,7 @@
 #include "kmyth.h"
 #include "pcrs.h"
 #include "formatting_tools.h"
+#include "marshalling_tools.h"
 #include "storage_key_tools.h"
 #include "tpm2_interface.h"
 #include "kmyth_seal_unseal_impl.h"

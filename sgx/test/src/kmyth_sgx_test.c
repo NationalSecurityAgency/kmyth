@@ -9,6 +9,7 @@
 #include "sgx_urts.h"
 #include "sgx_attributes.h"
 #include "kmyth_sgx_test_enclave_u.h"
+#include "kmyth_enclave.h"
 
 // NB: Should specify as an absolute path.
 #define ENCLAVE_PATH "sgx/kmyth_sgx_test_enclave.signed.so"
@@ -184,6 +185,51 @@ void test_unseal_and_export(void)
   return;
 }
 
+void test_seal_unseal_nkl(void)
+{
+  const char *data = "Test of the NKL seal and unseal";
+  size_t data_len = 30;
+  uint8_t *sgx_seal = NULL;
+  size_t sgx_seal_len = 0;
+  uint64_t handle;
+  uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
+  sgx_attributes_t attribute_mask;
+
+  attribute_mask.flags = 0;
+  attribute_mask.xfrm = 0;
+
+  uint8_t *cipher_data_decrypted = NULL;
+
+  int sgx_ret_int;
+  size_t sgx_ret_size;
+
+  CU_ASSERT(kmyth_sgx_seal_nkl
+            (eid, (uint8_t *) data, data_len, &sgx_seal, &sgx_seal_len,
+             key_policy, attribute_mask) == 0);
+
+  kmyth_unsealed_data_table_initialize(eid, &sgx_ret_int);
+  CU_ASSERT(sgx_ret_int == 0);
+
+  CU_ASSERT(kmyth_sgx_unseal_nkl(eid, sgx_seal, sgx_seal_len, &handle));
+
+  kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size);
+  CU_ASSERT(sgx_ret_size == 1);
+
+  cipher_data_decrypted = (uint8_t *) malloc(data_len);
+  kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size, handle, data_len,
+                                     cipher_data_decrypted);
+  CU_ASSERT(sgx_ret_size == data_len);
+
+  CU_ASSERT(memcmp(cipher_data_decrypted, data, data_len) == 0);
+
+  kmyth_unsealed_data_table_cleanup(eid, &sgx_ret_int);
+  CU_ASSERT(sgx_ret_int == 0);
+
+  free(sgx_seal);
+  free(cipher_data_decrypted);
+  return;
+}
+
 int main(void)
 {
 
@@ -210,6 +256,12 @@ int main(void)
   }
   if (NULL == CU_add_test(kmyth_sgx_test_suite, "Test enclave unseal table",
                           test_unseal_and_export))
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (NULL == CU_add_test(kmyth_sgx_test_suite, "Test seal/unseal nkl",
+                          test_seal_unseal_nkl))
   {
     CU_cleanup_registry();
     return CU_get_error();

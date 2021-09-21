@@ -372,4 +372,18 @@
  */
 #define KMYTH_DELIM_END_FILE "-----FILE END-----\n"
 
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of a nickel file
+ */
+#define KMYTH_DELIM_NKL_DATA "-----NKL DATA-----\n"
+
+/**
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the end of a nickel file
+ */
+#define KMYTH_DELIM_END_NKL "-----NKL END-----\n"
+
 #endif // DEFINES_H

@@ -15,6 +15,30 @@
 
 #include "formatting_tools.h"
 
+#include "cipher/cipher.h"
+
+typedef struct Ski_s
+{
+  //List of PCRs chosen to use when kmyth-sealing
+  TPML_PCR_SELECTION pcr_list;
+
+  //Storage key public/private
+  TPM2B_PUBLIC sk_pub;
+  TPM2B_PRIVATE sk_priv;
+
+  //The cipher used to encrypt the data
+  cipher_t cipher;
+
+  //Wrapping key pub/priv TPM2 components
+  TPM2B_PUBLIC wk_pub;
+  TPM2B_PRIVATE wk_priv;
+
+  //The data encrypted by kmyth-seal
+  uint8_t *enc_data;
+  size_t enc_data_size;
+
+} Ski;
+
 /**
  * @brief Parses a .ski formatted byte array into a ski struct. 
  *        The output is only modified on success, otherwise the 
@@ -42,6 +66,21 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
  * @return 0 on success, 1 on error
  */
 int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
+
+/**
+ * @brief Frees the contents of a ski struct
+ *
+ * @param[in] ski				The struct to be freed
+ */
+void free_ski(Ski * ski);
+
+/**
+ * @brief Creates an 'empty' ski struct and initializes internal
+ *        sizes to 0
+ *
+ * @return A new, 'empty' ski struct
+ */
+Ski get_default_ski(void);
 
 /**
  * @brief Marshals TPM2 structures that need to be written to the .ski file

@@ -58,7 +58,7 @@ SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
 
 ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
-ENCLAVE_HEADER_UNTRUSTED ?= '""'
+ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_test_enclave_u.h"'
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -100,9 +100,11 @@ endif
 
 App_Name := bin/kmyth_enclave_tests
 
-App_Cpp_Files := src/kmyth_sgx_test.c
+App_Cpp_Files := src/kmyth_sgx_test.c \
+		../kmyth_enclave/sgx_seal_unseal_impl.c \
+		../../src/util/formatting_tools.c
 
-App_Include_Paths := -Isgx -I$(SGX_SDK)/include
+App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../../include -I../../include/util -I../../logger/include -I../kmyth_enclave
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
@@ -119,7 +121,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl -lkmyth-logger
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -209,7 +211,7 @@ sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
 	@echo "CC   <=  $<"
 
 $(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o 
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags)
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags) -Lsgx -lcrypto -lcunit
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########

@@ -10,55 +10,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <tss2/tss2_sys.h>
-
-#include "cipher/cipher.h"
-
-typedef struct Ski_s
-{
-  //List of PCRs chosen to use when kmyth-sealing
-  TPML_PCR_SELECTION pcr_list;
-
-  //Storage key public/private
-  TPM2B_PUBLIC sk_pub;
-  TPM2B_PRIVATE sk_priv;
-
-  //The cipher used to encrypt the data
-  cipher_t cipher;
-
-  //Wrapping key pub/priv TPM2 components
-  TPM2B_PUBLIC wk_pub;
-  TPM2B_PRIVATE wk_priv;
-
-  //The data encrypted by kmyth-seal
-  uint8_t *enc_data;
-  size_t enc_data_size;
-
-} Ski;
-
-/**
- * @brief Frees the contents of a ski struct
- *
- * @param[in] ski				The struct to be freed
- */
-void free_ski(Ski * ski);
-
-/**
- * @brief Creates an 'empty' ski struct and initializes internal
- *        sizes to 0
- *
- * @return A new, 'empty' ski struct
- */
-Ski get_default_ski(void);
-
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
- *        .ski file, if the delimiter for the current file block matches the
+ *         block file, if the delimiter for the current file block matches the
  *        expected delimiter value.
  *
  * A .ski file is partitioned into "blocks" by delimiters and this function
  * uses that structure to parse a requested block from a data buffer
- * containing the contents (full or remaining) of the data read from a .ski
+ * containing the contents (full or remaining) of the data read from a block
  * file.
  *
  * @param[in/out] contents   Data buffer containing the contents (or partial
@@ -86,11 +45,27 @@ Ski get_default_ski(void);
  * @param[in] next_delim_len Length of the next expected delimeter
  * @return 0 on success, 1 on failure
  */
-int get_ski_block_bytes(char **contents,
-                        size_t * remaining, unsigned char **block,
-                        size_t * blocksize,
-                        char *delim, size_t delim_len,
-                        char *next_delim, size_t next_delim_len);
+int get_block_bytes(char **contents,
+                    size_t * remaining, unsigned char **block,
+                    size_t * blocksize,
+                    char *delim, size_t delim_len,
+                    char *next_delim, size_t next_delim_len);
+
+/**
+ * @brief Creates a byte array in .nkl format from a input string
+ *
+ * @param[in]  input          The input string to be converted
+ *
+ * @param[in]  input_length   The number of bytes in input
+ *
+ * @param[out] output         The bytes in .nkl format
+ *
+ * @param[out] output_length  The number of bytes in output
+ *
+ * @return 0 on success, 1 on error
+ */
+int create_nkl_bytes(uint8_t * input, size_t input_length,
+                     uint8_t ** output, size_t * output_length);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained
