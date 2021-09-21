@@ -33,7 +33,8 @@ int verifyOutputFilePath(char *path);
 
 /**
  * @brief Reads raw bytes from a file, located at input_path,
- *        and stores them in the data buffer passed in.
+ *        and stores them in the data buffer passed in. If input_path
+ *        is an empty file, returns NULL pointer as data.
  * 
  * @param[in]  input_path  String representing the path to the file being read
  *
@@ -43,7 +44,8 @@ int verifyOutputFilePath(char *path);
  *                         caller can pass in a pointer to an
  *                         empty data buffer (function allocates memory
  *                         that the caller must free when it is no
- *                         longer needed)
+ *                         longer needed). NULL if input_path points to
+ *                         an empty file.
  *
  * @param[out] data_length The size, in bytes, of the resultant data buffer -
  *                         passed as a pointer to the length value
