@@ -162,6 +162,17 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
   }
   int input_size = st.st_size;
 
+  if (input_size == 0)
+  {
+    if (!BIO_free(bio))
+    {
+      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    }
+    *data_length = 0;
+    *data = NULL;
+    return 0;
+  }
+
   // Create data buffer and read file into it
   *data = (uint8_t *) malloc(input_size);
   if (data == NULL)

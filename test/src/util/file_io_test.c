@@ -225,7 +225,7 @@ void test_print_to_stdout(void)
   CU_ASSERT(print_to_stdout(testdata, 0) == 0);
   read_bytes_from_file("redirect_test1", &filedata1, &filedata1_len);
   CU_ASSERT(filedata1_len == 0);
-  CU_ASSERT(strncmp("", (char *) filedata1, testdata_len) == 0);
+  CU_ASSERT(filedata1 == NULL);
   free(filedata1);
   remove("redirect_test1");
 
