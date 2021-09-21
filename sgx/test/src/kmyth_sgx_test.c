@@ -201,8 +201,7 @@ void test_seal_unseal_nkl(void)
   uint8_t *cipher_data_decrypted = NULL;
 
   int sgx_ret_int;
-  uint32_t sgx_ret_uint32_t;
-  size_t sgx_ret_size_t;
+  size_t sgx_ret_size;
 
   CU_ASSERT(kmyth_sgx_seal_nkl
             (eid, (uint8_t *) data, data_len, &sgx_seal, &sgx_seal_len,
@@ -213,13 +212,13 @@ void test_seal_unseal_nkl(void)
 
   CU_ASSERT(kmyth_sgx_unseal_nkl(eid, sgx_seal, sgx_seal_len, &handle));
 
-  kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size_t);
-  CU_ASSERT(sgx_ret_size_t == 1);
+  kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size);
+  CU_ASSERT(sgx_ret_size == 1);
 
   cipher_data_decrypted = (uint8_t *) malloc(data_len);
-  kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size_t, handle, data_len,
+  kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size, handle, data_len,
                                      cipher_data_decrypted);
-  CU_ASSERT(sgx_ret_size_t == data_len);
+  CU_ASSERT(sgx_ret_size == data_len);
 
   CU_ASSERT(memcmp(cipher_data_decrypted, data, data_len) == 0);
 
