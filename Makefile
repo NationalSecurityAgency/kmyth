@@ -275,7 +275,7 @@ SOFLAGS = -shared#                       compile/link shared library
 SOFLAGS += -fPIC#
 
 # Specify linker flags
-LDFLAGS += -Llib#                        link path for libkmyth-*.so
+LDFLAGS = -Llib#                         link path for libkmyth-*.so
 LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth-*.so
 
 # Specify indentation options
@@ -338,17 +338,19 @@ $(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 	      $(LOGGER_OBJECTS) \
 	      -o $(LOGGER_LIB_LOCAL_DEST)
 
-$(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
-                            $(CIPHER_OBJECTS) \
+$(LIB_DIR)/libkmyth-tpm.so: $(CIPHER_OBJECTS) \
+	                          $(NETWORK_OBJECTS) \
+														$(PROTOCOL_OBJECTS) \
                             $(TPM_OBJECTS) \
                             $(LIB_DIR)/libkmyth-utils.so \
                             $(LIB_DIR)/libkmyth-logger.so | \
                             $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
-	      $(UTIL_OBJECTS) \
 	      $(CIPHER_OBJECTS) \
+				$(NETWORK_OBJECTS) \
+				$(PROTOCOL_OBJECTS) \
 	      $(TPM_OBJECTS) \
-	      -o $(TPM_UTIL_LIB_LOCAL_DEST) \
+	      -o $(TPM_LIB_LOCAL_DEST) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 				-lkmyth-utils \
@@ -605,9 +607,9 @@ ifeq ($(wildcard $(LOGGER_LIB_LOCAL_DEST)), $(LOGGER_LIB_LOCAL_DEST))
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
 endif
-ifeq ($(wildcard $(TPM_UTIL_LIB_LOCAL_DEST)), $(TPM_UTIL_LIB_LOCAL_DEST))
+ifeq ($(wildcard $(TPM_LIB_LOCAL_DEST)), $(TPM_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
-	install -m 755 $(TPM_UTIL_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -m 755 $(TPM_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
 	install -d $(DESTDIR)$(PREFIX)/include/kmyth
 	install -m 644 $(INC_DIR)/kmyth.h $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
@@ -624,7 +626,7 @@ endif
 .PHONY: uninstall
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(UTILS_LIB_SONAME)
-	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_UTIL_LIB_SONAME)
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
