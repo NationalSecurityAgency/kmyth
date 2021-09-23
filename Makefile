@@ -295,7 +295,7 @@ libs: pre clean-backups \
       $(LIB_DIR)/libkmyth-tpm.so
 
 .PHONY: utils-lib
-logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-utils.so
+utils-lib: pre clean-backups $(LIB_DIR)/libkmyth-utils.so
 
 .PHONY: logger-lib
 logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-logger.so
@@ -487,6 +487,7 @@ $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lcunit \
+				-lkmyth-utils \
 	      -lkmyth-tpm
 
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
