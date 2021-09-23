@@ -123,7 +123,7 @@ Once the dependencies are installed:
   * /usr/local/bin/kmyth-seal
   * /usr/local/bin/kmyth-unseal
 
-In addition to a normal (full) build/installation, the following two partial
+In addition to a normal (full) build/installation, the following partial
 approaches are also supported for those applications needing more granular
 control of the process:
 
