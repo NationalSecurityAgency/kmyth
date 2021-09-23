@@ -4,7 +4,7 @@
  * C library containing data formatting utilities supporting Kmyth
  */
 
-#include "util/formatting_tools.h"
+#include "formatting_tools.h"
 
 #include <string.h>
 

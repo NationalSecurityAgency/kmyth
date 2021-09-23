@@ -12,6 +12,7 @@ BIN_DIR ?= bin
 DOC_DIR ?= doc
 LIB_DIR ?= lib
 LOGGER_DIR ?= logger
+UTILS_DIR ?= utils
 
 # Specify kmyth applications (main) directories/files
 MAIN_SRC_DIR = $(SRC_DIR)/main
@@ -64,6 +65,16 @@ HEADER_FILES += $(UTIL_HEADERS)
 HEADER_FILES += $(CIPHER_HEADERS)
 HEADER_FILES += $(TPM_HEADERS)
 
+# Specify Kmyth Utilities shared library directories/files
+UTILS_SRC_DIR = $(UTILS_DIR)/src
+UTILS_SOURCES = $(wildcard $(UTILS_SRC_DIR)/*.c)
+UTILS_INC_DIR = $(UTILS_DIR)/include
+UTILS_OBJ_DIR = $(UTILS_DIR)/obj
+UTILS_OBJECTS = $(subst $(UTILS_SRC_DIR), \
+                         $(UTILS_OBJ_DIR), \
+                         $(UTILS_SOURCES:%.c=%.o))
+UTILS_HEADER_FILES = $(wildcard $(UTILS_INC_DIR)/*.h)
+
 # Specify Kmyth logger shared library directories/files
 LOGGER_SRC_DIR = $(LOGGER_DIR)/src
 LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
@@ -79,7 +90,12 @@ TPM_UTIL_LIB_NAME = kmyth-tpm
 TPM_UTIL_LIB_SONAME = lib$(TPM_UTIL_LIB_NAME).so
 TPM_UTIL_LIB_LOCAL_DEST = $(LIB_DIR)/$(TPM_UTIL_LIB_SONAME)
 
-# Specify details for optional kmyth logger shared (.so) library
+# Specify details for kmyth utilities shared (.so) library
+UTILS_LIB_NAME = kmyth-utils
+UTILS_LIB_SONAME = lib$(UTILS_LIB_NAME).so
+UTILS_LIB_LOCAL_DEST = $(LIB_DIR)/$(UTILS_LIB_SONAME)
+
+# Specify details for kmyth logger shared (.so) library
 LOGGER_LIB_NAME = kmyth-logger
 LOGGER_LIB_SONAME = lib$(LOGGER_LIB_NAME).so
 LOGGER_LIB_LOCAL_DEST = $(LIB_DIR)/$(LOGGER_LIB_SONAME)
@@ -193,6 +209,7 @@ KMYTH_INCLUDE_FLAGS = -I$(INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(UTIL_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(CIPHER_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(TPM_INC_DIR)
+KMYTH_INCLUDE_FLAGS += -I$(UTILS_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(LOGGER_INC_DIR)
 
 # Specify Kmyth unit test 'include directory' compiler option flags
@@ -220,7 +237,8 @@ CFLAGS += -fPIC#                         Generate position independent code
 
 # Specify compiler flags for building kmyth applications that use logger library
 KMYTH_CFLAGS = $(CFLAGS)
-KMYTH_CFLAGS += -I$(LOGGER_DIR)/include# kmyth logging utility header files
+KMYTH_CFLAGS += -I$(UTILS_INC_DIR)#      kmyth utilities header files
+KMYTH_CFLAGS += -I$(LOGGER_INC_DIR)#     kmyth logging utility header files
 
 # Specify flags for the SO build of the logger
 LOGGER_CFLAGS = $(CFLAGS)
@@ -261,6 +279,7 @@ all: pre clean-backups \
      $(BIN_DIR)/kmyth-getkey \
      $(BIN_DIR)/nsl-client \
      $(BIN_DIR)/nsl-server \
+		 $(LIB_DIR)/libkmyth-utils.so \
      $(LIB_DIR)/libkmyth-logger.so \
      $(LIB_DIR)/libkmyth-tpm.so
 
@@ -271,11 +290,20 @@ pre:
 
 .PHONY: libs
 libs: pre clean-backups \
+      $(LIB_DIR)/libkmyth-utils.so \
       $(LIB_DIR)/libkmyth-logger.so \
       $(LIB_DIR)/libkmyth-tpm.so
 
+.PHONY: utils-lib
+logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-utils.so
+
 .PHONY: logger-lib
 logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-logger.so
+
+$(LIB_DIR)/libkmyth-utils.so: $(UTILS_OBJECTS) | $(LIB_DIR)
+	$(CC) $(SOFLAGS) \
+	      $(UTILS_OBJECTS) \
+	      -o $(UTILS_LIB_LOCAL_DEST)
 
 $(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
@@ -285,6 +313,7 @@ $(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 $(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
                             $(CIPHER_OBJECTS) \
                             $(TPM_OBJECTS) \
+                            $(LIB_DIR)/libkmyth-utils.so \
                             $(LIB_DIR)/libkmyth-logger.so | \
                             $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
@@ -294,6 +323,7 @@ $(LIB_DIR)/libkmyth-tpm.so: $(UTIL_OBJECTS) \
 	      -o $(TPM_UTIL_LIB_LOCAL_DEST) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger
 
 
@@ -304,6 +334,7 @@ $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
 	      -o $(BIN_DIR)/kmyth-seal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -314,6 +345,7 @@ $(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o \
 	      -o $(BIN_DIR)/kmyth-unseal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -324,6 +356,7 @@ $(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -335,6 +368,7 @@ $(BIN_DIR)/nsl-client: $(MAIN_OBJ_DIR)/nsl_client.o \
 	      -o $(BIN_DIR)/nsl-client \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -345,8 +379,18 @@ $(BIN_DIR)/nsl-server: $(MAIN_OBJ_DIR)/nsl_server.o \
 	      -o $(BIN_DIR)/nsl-server \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
+				-lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
+
+$(UTILS_OBJ_DIR)/%.o: $(UTILS_SRC_DIR)/%.c \
+                      $(UTILS_INC_DIR)/%.h | \
+                      $(UTILS_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) \
+	      $(KMYTH_INCLUDE_FLAGS) \
+				-I$(UTILS_INC_DIR) \
+	      $< \
+	      -o $@
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) \
                    $(LOGGER_HEADER_FILES) | \
@@ -404,6 +448,9 @@ $(CIPHER_OBJ_DIR):
 
 $(TPM_OBJ_DIR):
 	mkdir -p $(TPM_OBJ_DIR)
+
+$(UTILS_OBJ_DIR):
+	mkdir -p $(UTILS_OBJ_DIR)
 
 $(LOGGER_OBJ_DIR):
 	mkdir -p $(LOGGER_OBJ_DIR)
@@ -489,6 +536,14 @@ $(TEST_CIPHER_OBJ_DIR):
 
 .PHONY: install
 install:
+ifeq ($(wildcard $(UTILS_LIB_LOCAL_DEST)), $(UTILS_LIB_LOCAL_DEST))
+	install -d $(DESTDIR)$(PREFIX)/lib
+	install -m 755 $(UTILS_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth
+	install -m 644 $(UTILS_HEADER_FILES) \
+	               $(DESTDIR)$(PREFIX)/include/kmyth/
+	ldconfig
+endif
 ifeq ($(wildcard $(LOGGER_LIB_LOCAL_DEST)), $(LOGGER_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(LOGGER_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
@@ -546,6 +601,7 @@ clean: clean-backups
 	rm -rf $(DOC_DIR)
 	rm -rf $(LIB_DIR)
 	rm -rf $(TEST_OBJ_DIR)
+	rm -rf $(UTILS_OBJ_DIR)
 	rm -rf $(LOGGER_OBJ_DIR)
 
 .PHONY: clean-backups

@@ -15,10 +15,11 @@
 #include <sys/stat.h>
 
 #include "defines.h"
-#include "memory_util.h"
 
 #include "cipher/cipher.h"
-#include "util/formatting_tools.h"
+
+#include "formatting_tools.h"
+#include "memory_util.h"
 
 //############################################################################
 // verifyInputFilePath()
