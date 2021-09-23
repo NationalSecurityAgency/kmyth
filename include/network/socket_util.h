@@ -20,8 +20,7 @@
  *
  * @return 0 on success, 1 on error
  */
-int setup_client_socket(const char *node, const char *service,
-                        int *socket_fd);
+int setup_client_socket(const char *node, const char *service, int *socket_fd);
 
 /**
  * <pre>

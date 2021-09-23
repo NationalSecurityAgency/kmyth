@@ -22,16 +22,6 @@ MAIN_OBJECTS = $(subst $(MAIN_SRC_DIR), \
                        $(MAIN_OBJ_DIR), \
                        $(MAIN_SOURCES:%.c=%.o))
 
-# Specify Kmyth general utility directories/files
-UTIL_SRC_DIR = $(SRC_DIR)/util
-UTIL_SOURCES = $(wildcard $(UTIL_SRC_DIR)/*.c)
-UTIL_INC_DIR = $(INC_DIR)/util
-UTIL_HEADERS = $(wildcard $(UTIL_INC)DIR/*.h)
-UTIL_OBJ_DIR = $(OBJ_DIR)/util
-UTIL_OBJECTS = $(subst $(UTIL_SRC_DIR), \
-                       $(UTIL_OBJ_DIR), \
-                       $(UTIL_SOURCES:%.c=%.o))
-
 # Specify Kmyth cipher utility directories/files
 CIPHER_SRC_DIR = $(SRC_DIR)/cipher
 CIPHER_SOURCES = $(wildcard $(CIPHER_SRC_DIR)/*.c)
@@ -41,6 +31,26 @@ CIPHER_OBJ_DIR = $(OBJ_DIR)/cipher
 CIPHER_OBJECTS = $(subst $(CIPHER_SRC_DIR), \
                          $(CIPHER_OBJ_DIR), \
                          $(CIPHER_SOURCES:%.c=%.o))
+
+# Specify Kmyth network utility directories/files
+NETWORK_SRC_DIR = $(SRC_DIR)/network
+NETWORK_SOURCES = $(wildcard $(NETWORK_SRC_DIR)/*.c)
+NETWORK_INC_DIR = $(INC_DIR)/network
+NETWORK_HEADERS = $(wildcard $(NETWORK_INC_DIR)/*.h)
+NETWORK_OBJ_DIR = $(OBJ_DIR)/network
+NETWORK_OBJECTS = $(subst $(NETWORK_SRC_DIR), \
+                          $(NETWORK_OBJ_DIR), \
+                          $(NETWORK_SOURCES:%.c=%.o))
+
+# Specify Kmyth protocol implementation/utility directories/files
+PROTOCOL_SRC_DIR = $(SRC_DIR)/protocol
+PROTOCOL_SOURCES = $(wildcard $(PROTOCOL_SRC_DIR)/*.c)
+PROTOCOL_INC_DIR = $(INC_DIR)/protocol
+PROTOCOL_HEADERS = $(wildcard $(PROTOCOL_INC_DIR)/*.h)
+PROTOCOL_OBJ_DIR = $(OBJ_DIR)/protocol
+PROTOCOL_OBJECTS = $(subst $(PROTOCOL_SRC_DIR), \
+                          $(PROTOCOL_OBJ_DIR), \
+                          $(PROTOCOL_SOURCES:%.c=%.o))
 
 # Specify Kmyth TPM 2.0 utility directories/files
 TPM_SRC_DIR = $(SRC_DIR)/tpm
@@ -55,14 +65,16 @@ TPM_OBJECTS = $(subst $(TPM_SRC_DIR), \
 # Specify Kmyth source files
 SOURCE_FILES = $(wildcard $(SRC_DIR)/*.c)
 SOURCE_FILES += $(MAIN_SOURCES)
-SOURCE_FILES += $(UTIL_SOURCES)
 SOURCE_FILES += $(CIPHER_SOURCES)
+SOURCE_FILES += $(NETWORK_SOURCES)
+SOURCE_FILES += $(PROTOCOL_SOURCES)
 SOURCE_FILES += $(TPM_SOURCES)
 
 # Specify Kmyth header files
 HEADER_FILES = $(wildcard $(INC_DIR)/*.h)
-HEADER_FILES += $(UTIL_HEADERS)
 HEADER_FILES += $(CIPHER_HEADERS)
+HEADER_FILES += $(NETWORK_HEADERS)
+HEADER_FILES += $(PROTOCOL_HEADERS)
 HEADER_FILES += $(TPM_HEADERS)
 
 # Specify Kmyth Utilities shared library directories/files
@@ -73,7 +85,7 @@ UTILS_OBJ_DIR = $(UTILS_DIR)/obj
 UTILS_OBJECTS = $(subst $(UTILS_SRC_DIR), \
                          $(UTILS_OBJ_DIR), \
                          $(UTILS_SOURCES:%.c=%.o))
-UTILS_HEADER_FILES = $(wildcard $(UTILS_INC_DIR)/*.h)
+UTILS_HEADERS = $(wildcard $(UTILS_INC_DIR)/*.h)
 
 # Specify Kmyth logger shared library directories/files
 LOGGER_SRC_DIR = $(LOGGER_DIR)/src
@@ -83,12 +95,7 @@ LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), \
                          $(LOGGER_OBJ_DIR), \
                          $(LOGGER_SOURCES:%.c=%.o))
-LOGGER_HEADER_FILES = $(wildcard $(LOGGER_INC_DIR)/*.h)
-
-# Specify details for kmyth TPM utilities shared (.so) library
-TPM_UTIL_LIB_NAME = kmyth-tpm
-TPM_UTIL_LIB_SONAME = lib$(TPM_UTIL_LIB_NAME).so
-TPM_UTIL_LIB_LOCAL_DEST = $(LIB_DIR)/$(TPM_UTIL_LIB_SONAME)
+LOGGER_HEADERS = $(wildcard $(LOGGER_INC_DIR)/*.h)
 
 # Specify details for kmyth utilities shared (.so) library
 UTILS_LIB_NAME = kmyth-utils
@@ -99,6 +106,11 @@ UTILS_LIB_LOCAL_DEST = $(LIB_DIR)/$(UTILS_LIB_SONAME)
 LOGGER_LIB_NAME = kmyth-logger
 LOGGER_LIB_SONAME = lib$(LOGGER_LIB_NAME).so
 LOGGER_LIB_LOCAL_DEST = $(LIB_DIR)/$(LOGGER_LIB_SONAME)
+
+# Specify details for kmyth TPM shared (.so) library
+TPM_LIB_NAME = kmyth-tpm
+TPM_LIB_SONAME = lib$(TPM_LIB_NAME).so
+TPM_LIB_LOCAL_DEST = $(LIB_DIR)/$(TPM_LIB_SONAME)
 
 # Specify backup files to be cleaned up
 BACKUP_FILES = $(shell find -name "*~" -print)
@@ -131,15 +143,25 @@ TEST_MAIN_OBJECTS = $(subst $(TEST_MAIN_SRC_DIR), \
                             $(TEST_MAIN_OBJ_DIR), \
                             $(TEST_MAIN_SOURCES:%.c=%.o))
 
-# Specify directories/files supporting kmyth general utility (util) testing
-TEST_UTIL_SRC_DIR = $(TEST_SRC_DIR)/util
-TEST_UTIL_SOURCES = $(wildcard $(TEST_UTIL_SRC_DIR)/*.c)
-TEST_UTIL_INC_DIR = $(TEST_INC_DIR)/util
-TEST_UTIL_HEADERS = $(wildcard $(TEST_UTIL_INC_DIR)/*.h)
-TEST_UTIL_OBJ_DIR = $(TEST_OBJ_DIR)/util
-TEST_UTIL_OBJECTS = $(subst $(TEST_UTIL_SRC_DIR), \
-                            $(TEST_UTIL_OBJ_DIR), \
-                            $(TEST_UTIL_SOURCES:%.c=%.o))
+# Specify directories/files supporting kmyth cipher utility testing
+TEST_CIPHER_SRC_DIR = $(TEST_SRC_DIR)/cipher
+TEST_CIPHER_SOURCES = $(wildcard $(TEST_CIPHER_SRC_DIR)/*.c)
+TEST_CIPHER_INC_DIR = $(TEST_INC_DIR)/cipher
+TEST_CIPHER_HEADERS = $(wildcard $(TEST_CIPHER_INC_DIR)/*.h)
+TEST_CIPHER_OBJ_DIR = $(TEST_OBJ_DIR)/cipher
+TEST_CIPHER_OBJECTS = $(subst $(TEST_CIPHER_SRC_DIR), \
+                              $(TEST_CIPHER_OBJ_DIR), \
+                              $(TEST_CIPHER_SOURCES:%.c=%.o))
+
+# Specify directories/files supporting kmyth network utility testing
+TEST_NETWORK_SRC_DIR = $(TEST_SRC_DIR)/network
+TEST_NETWORK_SOURCES = $(wildcard $(TEST_NETWORK_SRC_DIR)/*.c)
+TEST_NETWORK_INC_DIR = $(TEST_INC_DIR)/network
+TEST_NETWORK_HEADERS = $(wildcard $(TEST_UTIL_INC_DIR)/*.h)
+TEST_NETWORK_OBJ_DIR = $(TEST_OBJ_DIR)/network
+TEST_NETWORK_OBJECTS = $(subst $(TEST_NETWORK_SRC_DIR), \
+                               $(TEST_NETWORK_OBJ_DIR), \
+                               $(TEST_NETWORK_SOURCES:%.c=%.o))
 
 # Specify directories/files supporting kmyth TPM utility testing
 TEST_TPM_SRC_DIR = $(TEST_SRC_DIR)/tpm
@@ -151,42 +173,46 @@ TEST_TPM_OBJECTS = $(subst $(TEST_TPM_SRC_DIR), \
                            $(TEST_TPM_OBJ_DIR), \
                            $(TEST_TPM_SOURCES:%.c=%.o))
 
-# Specify directories/files supporting kmyth cipher utility testing
-TEST_CIPHER_SRC_DIR = $(TEST_SRC_DIR)/cipher
-TEST_CIPHER_SOURCES = $(wildcard $(TEST_CIPHER_SRC_DIR)/*.c)
-TEST_CIPHER_INC_DIR = $(TEST_INC_DIR)/cipher
-TEST_CIPHER_HEADERS = $(wildcard $(TEST_CIPHER_INC_DIR)/*.h)
-TEST_CIPHER_OBJ_DIR = $(TEST_OBJ_DIR)/cipher
-TEST_CIPHER_OBJECTS = $(subst $(TEST_CIPHER_SRC_DIR), \
-                              $(TEST_CIPHER_OBJ_DIR), \
-                              $(TEST_CIPHER_SOURCES:%.c=%.o))
+# Specify directories/files supporting kmyth general utility testing
+TEST_UTILS_SRC_DIR = $(TEST_SRC_DIR)/utils
+TEST_UTILS_SOURCES = $(wildcard $(TEST_UTILS_SRC_DIR)/*.c)
+TEST_UTILS_INC_DIR = $(TEST_INC_DIR)/utils
+TEST_UTILS_HEADERS = $(wildcard $(TEST_UTILS_INC_DIR)/*.h)
+TEST_UTILS_OBJ_DIR = $(TEST_OBJ_DIR)/utils
+TEST_UTILS_OBJECTS = $(subst $(TEST_UTILS_SRC_DIR), \
+                             $(TEST_UTILS_OBJ_DIR), \
+                             $(TEST_UTILS_SOURCES:%.c=%.o))
 
 # Create consolidated list of test source files
 TEST_SOURCES = $(TESTRUNNER_SOURCES)
 TEST_SOURCES += $(TEST_MAIN_SOURCES)
-TEST_SOURCES += $(TEST_UTIL_SOURCES)
-TEST_SOURCES += $(TEST_TPM_SOURCES)
 TEST_SOURCES += $(TEST_CIPHER_SOURCES)
+TEST_SOURCES += $(TEST_NETWORK_SOURCES)
+TEST_SOURCES += $(TEST_UTILS_SOURCES)
+TEST_SOURCES += $(TEST_TPM_SOURCES)
 
 # Create consolidated list of test header files
 TEST_HEADERS = $(TESTRUNNER_HEADERS)
 TEST_HEADERS += $(TEST_MAIN_HEADERS)
-TEST_HEADERS += $(TEST_UTIL_HEADERS)
-TEST_HEADERS += $(TEST_TPM_HEADERS)
 TEST_HEADERS += $(TEST_CIPHER_HEADERS)
+TEST_HEADERS += $(TEST_NETWORK_HEADERS)
+TEST_HEADERS += $(TEST_UTILS_HEADERS)
+TEST_HEADERS += $(TEST_TPM_HEADERS)
 
 # Create consolidated list of test object files
 TEST_OBJECTS = $(TESTRUNNER_OBJECTS)
 TEST_OBJECTS += $(TEST_MAIN_OBJECTS)
-TEST_OBJECTS += $(TEST_UTIL_OBJECTS)
-TEST_OBJECTS += $(TEST_TPM_OBJECTS)
 TEST_OBJECTS += $(TEST_CIPHER_OBJECTS)
+TEST_OBJECTS += $(TEST_NETWORK_OBJECTS)
+TEST_OBJECTS += $(TEST_UTILS_OBJECTS)
+TEST_OBJECTS += $(TEST_TPM_OBJECTS)
 
 # Create consolidated list of test object directories
 TEST_OBJECT_DIRS = $(TEST_MAIN_OBJ_DIR)
-TEST_OBJECT_DIRS += $(TEST_UTIL_OBJ_DIR)
-TEST_OBJECT_DIRS += $(TEST_TPM_OBJ_DIR)
 TEST_OBJECT_DIRS += $(TEST_CIPHER_OBJ_DIR)
+TEST_OBJECT_DIRS += $(TEST_NETWORK_OBJ_DIR)
+TEST_OBJECT_DIRS += $(TEST_UTILS_OBJ_DIR)
+TEST_OBJECT_DIRS += $(TEST_TPM_OBJ_DIR)
 
 # Create consolidated list of test vector directories
 TEST_VEC_DIRS = $(TEST_DATA_DIR)/kwtestvectors
@@ -206,16 +232,18 @@ PREFIX ?= /usr/local#                    set source installation path
 
 # Specify Kmyth 'include directory' compiler option flags
 KMYTH_INCLUDE_FLAGS = -I$(INC_DIR)
-KMYTH_INCLUDE_FLAGS += -I$(UTIL_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(CIPHER_INC_DIR)
+KMYTH_INCLUDE_FLAGS += -I$(NETWORK_INC_DIR)
+KMYTH_INCLUDE_FLAGS += -I$(PROTOCOL_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(TPM_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(UTILS_INC_DIR)
 KMYTH_INCLUDE_FLAGS += -I$(LOGGER_INC_DIR)
 
 # Specify Kmyth unit test 'include directory' compiler option flags
 TEST_INCLUDE_FLAGS = -I$(TEST_INC_DIR)
-TEST_INCLUDE_FLAGS += -I$(TEST_UTIL_INC_DIR)
 TEST_INCLUDE_FLAGS += -I$(TEST_CIPHER_INC_DIR)
+TEST_INCLUDE_FLAGS += -I$(TEST_NETWORK_INC_DIR)
+TEST_INCLUDE_FLAGS += -I$(TEST_UTILS_INC_DIR)
 TEST_INCLUDE_FLAGS += -I$(TEST_TPM_INC_DIR)
 
 # Specify shared library dependencies
@@ -247,8 +275,8 @@ SOFLAGS = -shared#                       compile/link shared library
 SOFLAGS += -fPIC#
 
 # Specify linker flags
-LDFLAGS += -Llib#                        libkmyth
-LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth.so
+LDFLAGS += -Llib#                        link path for libkmyth-*.so
+LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth-*.so
 
 # Specify indentation options
 INDENT_OPTS = -bli0#                     indent braces zero spaces
@@ -393,7 +421,7 @@ $(UTILS_OBJ_DIR)/%.o: $(UTILS_SRC_DIR)/%.c \
 	      -o $@
 
 $(LOGGER_OBJECTS): $(LOGGER_SOURCES) \
-                   $(LOGGER_HEADER_FILES) | \
+                   $(LOGGER_HEADERS) | \
                    $(LOGGER_OBJ_DIR)
 	$(CC) $(LOGGER_CFLAGS) \
 	      -I$(LOGGER_INC_DIR) \
@@ -407,9 +435,25 @@ $(MAIN_OBJ_DIR)/%.o: $(MAIN_SRC_DIR)/%.c | \
 	      $< \
 	      -o $@
 
-$(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c \
-                     $(UTIL_INC_DIR)/%.h | \
-                     $(UTIL_OBJ_DIR)
+$(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
+                       $(CIPHER_INC_DIR)/%.h | \
+                       $(CIPHER_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) \
+	      $(KMYTH_INCLUDE_FLAGS) \
+	      $< \
+	      -o $@
+
+$(NETWORK_OBJ_DIR)/%.o: $(NETWORK_SRC_DIR)/%.c \
+                        $(NETWORK_INC_DIR)/%.h | \
+                        $(NETWORK_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) \
+	      $(KMYTH_INCLUDE_FLAGS) \
+	      $< \
+	      -o $@
+
+$(PROTOCOL_OBJ_DIR)/%.o: $(PROTOCOL_SRC_DIR)/%.c \
+                         $(PROTOCOL_INC_DIR)/%.h | \
+                         $(PROTOCOL_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
 	      $< \
@@ -418,14 +462,6 @@ $(UTIL_OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c \
 $(TPM_OBJ_DIR)/%.o: $(TPM_SRC_DIR)/%.c \
                     $(TPM_INC_DIR)/%.h | \
                     $(TPM_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) \
-	      $(KMYTH_INCLUDE_FLAGS) \
-	      $< \
-	      -o $@
-
-$(CIPHER_OBJ_DIR)/%.o: $(CIPHER_SRC_DIR)/%.c \
-                       $(CIPHER_INC_DIR)/%.h | \
-                       $(CIPHER_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
 	      $< \
@@ -440,11 +476,14 @@ $(LIB_DIR):
 $(MAIN_OBJ_DIR):
 	mkdir -p $(MAIN_OBJ_DIR)
 
-$(UTIL_OBJ_DIR):
-	mkdir -p $(UTIL_OBJ_DIR)
-
 $(CIPHER_OBJ_DIR):
 	mkdir -p $(CIPHER_OBJ_DIR)
+
+$(NETWORK_OBJ_DIR):
+	mkdir -p $(NETWORK_OBJ_DIR)
+
+$(PROTOCOL_OBJ_DIR):
+	mkdir -p $(PROTOCOL_OBJ_DIR)
 
 $(TPM_OBJ_DIR):
 	mkdir -p $(TPM_OBJ_DIR)
@@ -460,13 +499,13 @@ $(DOC_DIR):
 
 .PHONY: docs
 docs: $(HEADER_FILES) \
-     $(UTIL_SOURCES) \
-     $(TOOL_SOURCES) \
-     $(MAIN_SOURCES) \
-     $(LOGGER_HEADERS) \
-     $(LOGGER_SOURCES) \
-     Doxyfile | \
-		 $(DOC_DIR)
+      $(SOURCE_FILES) \
+			$(UTILS_HEADERS) \
+			$(UTILS_SOURCES) \
+			$(LOGGER_HEADERS) \
+			$(LOGGER_SOURCES) \
+      Doxyfile | \
+		  $(DOC_DIR)
 	doxygen Doxyfile
 
 .PHONY: test
@@ -480,6 +519,7 @@ pretest:
 
 
 $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
+	                     $(LIB_DIR)/libkmyth-utils.so \
                        $(LIB_DIR)/libkmyth-tpm.so | \
                        $(BIN_DIR)
 	$(CC) $(TEST_OBJECTS) \
@@ -493,9 +533,27 @@ $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@
 
-$(TEST_UTIL_OBJ_DIR)/%.o: $(TEST_UTIL_SRC_DIR)/%.c \
-                          $(TEST_UTIL_INC_DIR)/%.h | \
-                          $(TEST_UTIL_OBJ_DIR)
+$(TEST_CIPHER_OBJ_DIR)/%.o: $(TEST_CIPHER_SRC_DIR)/%.c \
+                            $(TEST_CIPHER_INC_DIR)/%.h | \
+                            $(TEST_CIPHER_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) \
+	      $(KMYTH_INCLUDE_FLAGS) \
+	      $(TEST_INCLUDE_FLAGS) \
+	      $< \
+	      -o $@
+
+$(TEST_NETWORK_OBJ_DIR)/%.o: $(TEST_NETWORK_SRC_DIR)/%.c \
+                             $(TEST_NETWORK_INC_DIR)/%.h | \
+                             $(TEST_NETWORK_OBJ_DIR)
+	$(CC) $(KMYTH_CFLAGS) \
+	      $(KMYTH_INCLUDE_FLAGS) \
+	      $(TEST_INCLUDE_FLAGS) \
+	      $< \
+	      -o $@
+
+$(TEST_UTILS_OBJ_DIR)/%.o: $(TEST_UTILS_SRC_DIR)/%.c \
+                           $(TEST_UTILS_INC_DIR)/%.h | \
+                           $(TEST_UTILS_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
 	      $(TEST_INCLUDE_FLAGS) \
@@ -511,29 +569,23 @@ $(TEST_TPM_OBJ_DIR)/%.o: $(TEST_TPM_SRC_DIR)/%.c \
 	      $< -o \
 	      $@
 
-$(TEST_CIPHER_OBJ_DIR)/%.o: $(TEST_CIPHER_SRC_DIR)/%.c \
-                            $(TEST_CIPHER_INC_DIR)/%.h | \
-                            $(TEST_CIPHER_OBJ_DIR)
-	$(CC) $(KMYTH_CFLAGS) \
-	      $(KMYTH_INCLUDE_FLAGS) \
-	      $(TEST_INCLUDE_FLAGS) \
-	      $< \
-	      -o $@
-
 $(TEST_OBJ_DIR):
 	mkdir -p $(TEST_OBJ_DIR)
 
 $(TEST_MAIN_OBJ_DIR):
 	mkdir -p $(TEST_MAIN_OBJ_DIR)
 
-$(TEST_UTIL_OBJ_DIR):
-	mkdir -p $(TEST_UTIL_OBJ_DIR)
+$(TEST_CIPHER_OBJ_DIR):
+	mkdir -p $(TEST_CIPHER_OBJ_DIR)
+
+$(TEST_NETWORK_OBJ_DIR):
+	mkdir -p $(TEST_NETWORK_OBJ_DIR)
+
+$(TEST_UTILS_OBJ_DIR):
+	mkdir -p $(TEST_UTILS_OBJ_DIR)
 
 $(TEST_TPM_OBJ_DIR):
 	mkdir -p $(TEST_TPM_OBJ_DIR)
-
-$(TEST_CIPHER_OBJ_DIR):
-	mkdir -p $(TEST_CIPHER_OBJ_DIR)
 
 .PHONY: install
 install:
@@ -541,7 +593,7 @@ ifeq ($(wildcard $(UTILS_LIB_LOCAL_DEST)), $(UTILS_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(UTILS_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
 	install -d $(DESTDIR)$(PREFIX)/include/kmyth
-	install -m 644 $(UTILS_HEADER_FILES) \
+	install -m 644 $(UTILS_HEADERS) \
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
 endif
@@ -571,10 +623,12 @@ endif
 
 .PHONY: uninstall
 uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(UTILS_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_UTIL_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/$(UTILS_HEADERS)
 ifeq ($(wildcard $(DESTDIR)$(PREFIX)/include/kmyth/*.h),)
 	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
 endif

@@ -100,6 +100,7 @@ Once the dependencies are installed:
    documentation is put in ./doc.
 
 3. In the `tpm2` directory run *make* or  *make all* to create:
+  * ./lib/libkmyth-utils.so
   * ./lib/libkmyth-logger.so
   * ./lib/libkmyth-tpm.so
   * ./bin/kmyth-seal
@@ -111,8 +112,12 @@ Once the dependencies are installed:
 
 5. To install the `kmyth` headers, library, and the executables run
    *sudo make install*. By default this installs:
+  * /usr/local/include/kmyth/file_io.h
+  * /usr/local/include/kmyth/formatting_tools.h
+  * /usr/local/include/kmyth/memory_util.h
   * /usr/local/include/kmyth/kmyth_log.h
   * /usr/local/include/kmyth/kmyth.h
+  * /usr/local/lib/libkmyth-utils.so
   * /usr/local/lib/libkmyth-logger.so
   * /usr/local/lib/libkmyth-tpm.so
   * /usr/local/bin/kmyth-seal
@@ -131,11 +136,26 @@ control of the process:
    Note: As this option does not build the kmyth TPM utilities library, unit
    testing will not be possible (*make test* will fail).
 
-2. To build both kmyth shared libraries, but not the kmyth applications, run
+2. To build only the 'kmyth-utils' library run *make utils-lib*. This might
+   be useful if only the kmyth utility functionality is required. It creates:
+  * ./logger/lib/libkmyth-utils.so
+   Running *sudo make install* after this will install:
+  * /usr/local/lib/libkmyth-utils.so
+  * /uae/local/include/kmyth/file_io.h
+  * /uae/local/include/kmyth/formatting_tools.h
+  * /uae/local/include/kmyth/memory_util.h
+   Note: As this option does not build the kmyth TPM utilities library, unit
+   testing will not be possible (*make test* will fail).
+
+3. To build all kmyth shared libraries, but not the kmyth applications, run
    *make libs*. This will create:
+  * ./lib/libkmyth-utils.so
   * ./lib/libkmyth-logger.so
   * ./lib/libkmyth-tpm.so
    Running *sudo make install* after this will install:
+  * /usr/local/include/kmyth/file_io.h
+  * /usr/local/include/kmyth/formatting_tools.h
+  * /usr/local/include/kmyth/memory_util.h
   * /usr/local/include/kmyth/kmyth_log.h
   * /usr/local/include/kmyth/kmyth.h
   * /usr/local/lib/libkmyth-logger.so
