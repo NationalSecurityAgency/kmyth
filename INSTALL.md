@@ -123,29 +123,36 @@ Once the dependencies are installed:
   * /usr/local/bin/kmyth-seal
   * /usr/local/bin/kmyth-unseal
 
-In addition to a normal (full) build/installation, the following partial
-approaches are also supported for those applications needing more granular
-control of the process:
+In addition to a normal (full) build/installation, a couple partial
+approaches are also supported to support those applications needing
+more granular access to kmyth functionality:
 
-1. To build only the 'kmyth-logger' library run *make logger-lib*. This might
+1. Kmyth provides a fairly generic logging capability that could be repurposed
+   by other applications. In order to support potential re-use, kmyth logging
+   functionality is built as a separate shared libary (kmyth-logger). To build
+   only the 'kmyth-logger' library run *make logger-lib*. This might
    be useful if only the logging functionality is required. It creates:
-  * ./logger/lib/libkmyth-logger.so
+  * ./lib/libkmyth-logger.so
    Running *sudo make install* after this will install:
   * /usr/local/lib/libkmyth-logger.so
   * /uae/local/include/kmyth/kmyth_log.h
-   Note: As this option does not build the kmyth TPM utilities library, unit
-   testing will not be possible (*make test* will fail).
 
-2. To build only the 'kmyth-utils' library run *make utils-lib*. This might
-   be useful if only the kmyth utility functionality is required. It creates:
-  * ./logger/lib/libkmyth-utils.so
+2. Because the kmyth enclave code is intended to built within other projects,
+   we created *libkmyth-utils.so* to expose functionality that other projects
+   might find useful. In this library we include our formatting tools
+   (e.g., our base64 encode/decode functions), our memory utilities, and our
+   file I/O utilities. This avoids potential reference conflicts when building
+   Kmyth as a submodule, and it allows other programs to use existing calls,
+   such as kmyth's secure_memset. This library does not contain any code
+   specific to the TPM or SGX. To build only the 'kmyth-utils' library run
+   *make utils-lib*. This might be useful if only the kmyth utility
+   functionality is required. It creates:
+  * ./lib/libkmyth-utils.so
    Running *sudo make install* after this will install:
   * /usr/local/lib/libkmyth-utils.so
-  * /uae/local/include/kmyth/file_io.h
-  * /uae/local/include/kmyth/formatting_tools.h
-  * /uae/local/include/kmyth/memory_util.h
-   Note: As this option does not build the kmyth TPM utilities library, unit
-   testing will not be possible (*make test* will fail).
+  * /usr/local/include/kmyth/file_io.h
+  * /usr/local/include/kmyth/formatting_tools.h
+  * /usr/local/include/kmyth/memory_util.h
 
 3. To build all kmyth shared libraries, but not the kmyth applications, run
    *make libs*. This will create:
@@ -160,8 +167,6 @@ control of the process:
   * /usr/local/include/kmyth/kmyth.h
   * /usr/local/lib/libkmyth-logger.so
   * /usr/local/lib/libkmyth-tpm.so
-   Note: as this option builds all kmyth library functionality, unit testing
-   should be possible (*make test* should run unit tests).
 
 Any installed files can be uninstalled by running *sudo make uninstall*.
 
