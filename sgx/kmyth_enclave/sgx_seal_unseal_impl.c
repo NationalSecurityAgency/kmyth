@@ -15,8 +15,6 @@
 #include <kmyth/kmyth_log.h>
 #include <kmyth/formatting_tools.h>
 
-#include "defines.h"
-
 #include ENCLAVE_HEADER_UNTRUSTED
 
 //############################################################################
