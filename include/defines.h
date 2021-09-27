@@ -55,11 +55,6 @@
 #define KMYTH_APPLOG_PATH "/var/log/kmyth.log"
 
 /**
- * @brief macro used to specify common initial three kmyth_log() parameters
- */
-#define kmyth_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
-
-/**
  * For TPM 2.0 Software Stack (TSS2) library calls where retries might be
  * applicable, we define an upper limit (MAX_RETRIES) to prevent infinite
  * retry attempts.
