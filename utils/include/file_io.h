@@ -85,8 +85,9 @@ int write_bytes_to_file(char *output_path,
  */
 int print_to_stdout(unsigned char *plain_text_data,
                     size_t plain_text_data_size);
+
 #ifdef __cplusplus
 }
-#endif:
+#endif
 
 #endif /* FILE_IO_H */

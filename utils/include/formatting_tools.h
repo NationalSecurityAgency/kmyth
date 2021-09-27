@@ -214,6 +214,7 @@ int decodeBase64Data(unsigned char *base64_data,
  */
 int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
            size_t input_length);
+
 #ifdef __cplusplus
 }
 #endif

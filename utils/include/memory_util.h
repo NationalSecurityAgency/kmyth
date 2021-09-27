@@ -53,6 +53,7 @@ void kmyth_clear_and_free(void *v, size_t size);
  * @return the cleared pointer 
  */
 void *secure_memset(void *v, int c, size_t n);
+
 #ifdef __cplusplus
 }
 #endif
