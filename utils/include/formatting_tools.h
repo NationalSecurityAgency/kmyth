@@ -15,6 +15,85 @@ extern "C" {
 #endif
 
 /**
+ * @defgroup block_delim SKI Block Delimiters
+ *
+ * @brief    These are strings used for formatting;
+ *           each one is used for parsing a kmyth-seal'd file.
+ */
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of the PCR selection list block
+ */
+#define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of the storage key public block
+ */
+#define KMYTH_DELIM_STORAGE_KEY_PUBLIC "-----STORAGE KEY PUBLIC-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of the storage key encrypted private block
+ */
+#define KMYTH_DELIM_STORAGE_KEY_PRIVATE "-----STORAGE KEY ENC PRIVATE-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the block containing the name of
+ *          the cipher used on ENC DATA
+ */
+#define KMYTH_DELIM_CIPHER_SUITE "-----CIPHER SUITE-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of an encrypted symmetric key public block
+ */
+#define KMYTH_DELIM_SYM_KEY_PUBLIC "-----SYM KEY PUBLIC-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates start of an encrypted symmetric key
+ *          encrypted private block
+ */
+#define KMYTH_DELIM_SYM_KEY_PRIVATE "-----SYM KEY ENC PRIVATE-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of an encrypted data block
+ */
+#define KMYTH_DELIM_ENC_DATA "-----ENC DATA-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the end of the file
+ */
+#define KMYTH_DELIM_END_FILE "-----FILE END-----\n"
+
+/** 
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the start of a nickel file
+ */
+#define KMYTH_DELIM_NKL_DATA "-----NKL DATA-----\n"
+
+/**
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the end of a nickel file
+ */
+#define KMYTH_DELIM_END_NKL "-----NKL END-----\n"
+
+/**
  * @brief Retrieves the contents of the next "block" in the data read from a 
  *         block file, if the delimiter for the current file block matches the
  *        expected delimiter value.

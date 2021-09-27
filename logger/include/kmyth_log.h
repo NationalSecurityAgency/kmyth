@@ -330,6 +330,12 @@ FILE *get_stddest(int severity_val_in);
 void log_event(const char *src_file,
                const char *src_func, const int src_line, int severity,
                const char *message, ...);
+
+/**
+ * @brief macro used to specify common initial three kmyth_log() parameters
+ */
+#define kmyth_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
+
 #ifdef __cplusplus
 }
 #endif

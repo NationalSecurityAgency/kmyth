@@ -55,11 +55,6 @@
 #define KMYTH_APPLOG_PATH "/var/log/kmyth.log"
 
 /**
- * @brief macro used to specify common initial three kmyth_log() parameters
- */
-#define kmyth_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
-
-/**
  * For TPM 2.0 Software Stack (TSS2) library calls where retries might be
  * applicable, we define an upper limit (MAX_RETRIES) to prevent infinite
  * retry attempts.
@@ -306,84 +301,5 @@
  * @brief kmyth-getkey receive buffer size (in bytes)
  */
 #define KMYTH_GETKEY_RX_BUFFER_SIZE 256
-
-/**
- * @defgroup block_delim SKI Block Delimiters
- *
- * @brief    These are strings used for formatting;
- *           each one is used for parsing a kmyth-seal'd file.
- */
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of the PCR selection list block
- */
-#define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of the storage key public block
- */
-#define KMYTH_DELIM_STORAGE_KEY_PUBLIC "-----STORAGE KEY PUBLIC-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of the storage key encrypted private block
- */
-#define KMYTH_DELIM_STORAGE_KEY_PRIVATE "-----STORAGE KEY ENC PRIVATE-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the block containing the name of
- *          the cipher used on ENC DATA
- */
-#define KMYTH_DELIM_CIPHER_SUITE "-----CIPHER SUITE-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of an encrypted symmetric key public block
- */
-#define KMYTH_DELIM_SYM_KEY_PUBLIC "-----SYM KEY PUBLIC-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates start of an encrypted symmetric key
- *          encrypted private block
- */
-#define KMYTH_DELIM_SYM_KEY_PRIVATE "-----SYM KEY ENC PRIVATE-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of an encrypted data block
- */
-#define KMYTH_DELIM_ENC_DATA "-----ENC DATA-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the end of the file
- */
-#define KMYTH_DELIM_END_FILE "-----FILE END-----\n"
-
-/** 
- * @ingroup block_delim
- *
- * @brief   Indicates the start of a nickel file
- */
-#define KMYTH_DELIM_NKL_DATA "-----NKL DATA-----\n"
-
-/**
- * @ingroup block_delim
- *
- * @brief   Indicates the end of a nickel file
- */
-#define KMYTH_DELIM_END_NKL "-----NKL END-----\n"
 
 #endif // DEFINES_H
