@@ -8,7 +8,7 @@
 
 #include <openssl/evp.h>
 
-#include "kmyth_log.h"
+#include <kmyth/kmyth_log.h>
 
 /**
  * The version of a specific Kmyth release, library, and code

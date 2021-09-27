@@ -10,6 +10,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /**
  * @brief Retrieves the contents of the next "block" in the data read from a 
  *         block file, if the delimiter for the current file block matches the
@@ -131,5 +135,8 @@ int decodeBase64Data(unsigned char *base64_data,
  */
 int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
            size_t input_length);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* FORMATTING_TOOLS_H */

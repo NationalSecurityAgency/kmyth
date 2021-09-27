@@ -10,6 +10,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /**
  * @brief Wipes the memory in a designated pointer. If the size is incorrectly specified, behavior 
  *        can be unpredictable. If a NULL pointer is handled, the function simply returns.
@@ -49,5 +53,8 @@ void kmyth_clear_and_free(void *v, size_t size);
  * @return the cleared pointer 
  */
 void *secure_memset(void *v, int c, size_t n);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MEMORY_UTIL_H */
