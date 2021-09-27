@@ -630,7 +630,9 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
-	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/$(UTILS_HEADERS)
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/file_io.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/formatting_tools.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/memory_util.h
 ifeq ($(wildcard $(DESTDIR)$(PREFIX)/include/kmyth/*.h),)
 	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
 endif
