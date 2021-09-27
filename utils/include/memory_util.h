@@ -11,9 +11,9 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
+
 /**
  * @brief Wipes the memory in a designated pointer. If the size is incorrectly specified, behavior 
  *        can be unpredictable. If a NULL pointer is handled, the function simply returns.

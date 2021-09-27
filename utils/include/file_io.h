@@ -12,9 +12,9 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
+
 /**
  * @brief Checks a path to an input file to make sure that it exists and that
  *        the user has read access to the file.
@@ -87,6 +87,6 @@ int print_to_stdout(unsigned char *plain_text_data,
                     size_t plain_text_data_size);
 #ifdef __cplusplus
 }
-#endif
+#endif:
 
 #endif /* FILE_IO_H */
