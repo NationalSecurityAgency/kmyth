@@ -101,10 +101,9 @@ endif
 App_Name := bin/kmyth_enclave_tests
 
 App_Cpp_Files := src/kmyth_sgx_test.c \
-		../kmyth_enclave/sgx_seal_unseal_impl.c \
-		../../src/util/formatting_tools.c
+		../kmyth_enclave/sgx_seal_unseal_impl.c
 
-App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../../include -I../../include/util -I../../logger/include -I../kmyth_enclave
+App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../../include -I../kmyth_enclave
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
@@ -121,7 +120,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl -lkmyth-logger
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl -lkmyth-logger -lkmyth-utils
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
