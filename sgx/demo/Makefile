@@ -58,8 +58,8 @@ SGX_SSL_UNTRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
 
-ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
-ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_test_enclave_u.h"'
+ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_retrieve_key_demo_enclave_t.h"'
+ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_retrieve_key_demo_enclave_u.h"'
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -99,20 +99,17 @@ else
 	Urts_Library_Name := sgx_urts
 endif
 
-App_Name := bin/kmyth_enclave_tests
+App_Name := bin/kmyth_sgx_retrieve_key_demo
 
-App_Source_Files := src/kmyth_sgx_test.c \
-		                ../untrusted/src/sgx_seal_unseal_impl.c
+App_Source_Files := src/kmyth_sgx_retrieve_key_demo.c
 
-App_Include_Paths := -Ienclave
+App_Include_Paths := -Iinclude
 App_Include_Paths += -I../untrusted/include
+App_Include_Paths += -Ienclave
 App_Include_Paths += -I$(SGX_SDK)/include
-App_Include_paths += -I../../utils/include
-App_Include_Paths += -I../../logger/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
-App_C_Flags += -fPIC
-App_C_Flags += -Wno-attributes
+App_C_Flags += -fPIC -Wno-attributes
 App_C_Flags += $(App_Include_Paths)
 App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
@@ -133,19 +130,20 @@ App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS)
 App_Link_Flags += -L$(SGX_LIBRARY_PATH)
 App_Link_Flags += -L$(SGX_SSL_UNTRUSTED_LIB_PATH)
-App_Link_Flags += -Lenclave
-App_Link_Flags += -L../../lib
 App_Link_Flags += -l$(Urts_Library_Name)
-App_Link_Flags += -lcunit
-App_Link_Flags += -lpthread
+App_Link_Flags += -Lenclave
 App_Link_Flags += -lsgx_usgxssl
-App_Link_Flags += -Wl,-rpath=../../lib -lkmyth-utils -lkmyth-logger
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
 else
 	App_Link_Flags += -lsgx_uae_service
 endif
+
+App_Link_Flags += -lpthread
+App_Link_Flags += -lkmyth-utils
+App_Link_Flags += -lkmyth-logger
+App_Link_Flags += -lcunit
 
 ######## Enclave Build Settings ########
 
@@ -156,6 +154,7 @@ else
 	Trts_Library_Name := sgx_trts
 	Service_Library_Name := sgx_tservice
 endif
+
 Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -I../trusted/include
@@ -189,6 +188,7 @@ Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
 Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
 Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
 Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
+Enclave_Link_Flags += -Wl,--whole-archive -lkmyth-utils
 Enclave_Link_Flags += -Wl,--no-whole-archive -Wl,--start-group
 Enclave_Link_Flags +=   -lsgx_tstdc
 Enclave_Link_Flags +=   -lsgx_tcxx
@@ -202,7 +202,7 @@ Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
 Enclave_Link_Flags += -Wl,--export-dynamic
 Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
 
-Enclave_Name := kmyth_sgx_test_enclave
+Enclave_Name := kmyth_sgx_retrieve_key_demo_enclave
 Enclave_Lib := $(Enclave_Name).so
 Enclave_Signing_Key := $(Enclave_Name)_private.pem
 Signed_Enclave_Name := $(Enclave_Name).signed.so
@@ -219,8 +219,8 @@ endif
 # Message for missing Enclave Signing Key - Fatal Build Error
 define err_no_enclave_signing_key
 FAIL - No Enclave Signing Key found
-Generate or install enclave/$(Enclave_Signing_Key)
-e.g., run 'openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072'
+Generate or install build/$(Enclave_Signing_Key)
+e.g., run 'openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072'
 endef
 
 .PHONY: pre all run
@@ -235,8 +235,6 @@ pre:
 	rm -f src/*~
 	rm -f ../untrusted/src/*~ ../untrusted/include/*~
 	rm -f ../trusted/src/*~ ../trusted/include/*~
-	@(test -f ../../lib/libkmyth-logger.so && \
-		test -f ../../lib/libkmyth-utils.so) || make libs -C ../..
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Lib)
@@ -270,20 +268,20 @@ enclave/log_ocall.o: ../untrusted/src/log_ocall.c
 
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
-		                        --search-path $(SGX_SDK)/include \
-														--search-path . \
-														--search-path ../../trusted \
-														--search-path $(SGX_SSL_INCLUDE_PATH)
+		                            --search-path $(SGX_SDK)/include \
+							  							  --search-path . \
+								  						  --search-path ../../trusted \
+									  					  --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
-	                               enclave/log_ocall.o
+$(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-	                                  -Lenclave -lcrypto -lcunit
+		                                -Lenclave
+	                                  -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
@@ -291,16 +289,12 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --trusted $(Enclave_Name).edl \
 		                            --search-path $(SGX_SDK)/include \
-														    --search-path . \
-														    --search-path ../../trusted \
-														    --search-path $(SGX_SSL_INCLUDE_PATH)
+						    								--search-path . \
+							    							--search-path ../../trusted \
+								    						--search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
-	@$(CC) $(Enclave_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"
-
-enclave/kmyth_sgx_test_trusted.o: src/kmyth_sgx_test_trusted.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -312,10 +306,14 @@ enclave/kmyth_enclave_unseal.o: ../trusted/src/kmyth_enclave_unseal.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/kmyth_enclave_retrieve_key.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
-	                      enclave/kmyth_sgx_test_trusted.o \
 	                      enclave/kmyth_enclave_seal.o \
-												enclave/kmyth_enclave_unseal.o
+				  					    enclave/kmyth_enclave_unseal.o \
+					  					  enclave/kmyth_enclave_retrieve_key.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -329,10 +327,10 @@ enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing
 															-config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
-.PHONY: test
+.PHONY: demo
 
-test: all
-	./bin/kmyth_enclave_tests 2> /dev/null
+demo: all
+	./$(App_Name)
 
 .PHONY: clean
 

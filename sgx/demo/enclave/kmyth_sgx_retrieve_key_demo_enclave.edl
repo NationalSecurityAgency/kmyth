@@ -1,0 +1,6 @@
+enclave
+{
+  from "kmyth_enclave.edl" import *;
+	from "sgx_tsgxssl.edl" import *;
+  from "sgx_pthread.edl" import *;
+};
