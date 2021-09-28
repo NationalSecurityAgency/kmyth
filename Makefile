@@ -80,7 +80,7 @@ HEADER_FILES += $(TPM_HEADERS)
 # Specify Kmyth Utilities shared library directories/files
 UTILS_SRC_DIR = $(UTILS_DIR)/src
 UTILS_SOURCES = $(wildcard $(UTILS_SRC_DIR)/*.c)
-UTILS_INC_DIR = $(UTILS_DIR)/include
+UTILS_INC_DIR = $(UTILS_DIR)/include/kmyth
 UTILS_OBJ_DIR = $(UTILS_DIR)/obj
 UTILS_OBJECTS = $(subst $(UTILS_SRC_DIR), \
                          $(UTILS_OBJ_DIR), \
@@ -90,7 +90,7 @@ UTILS_HEADERS = $(wildcard $(UTILS_INC_DIR)/*.h)
 # Specify Kmyth logger shared library directories/files
 LOGGER_SRC_DIR = $(LOGGER_DIR)/src
 LOGGER_SOURCES = $(wildcard $(LOGGER_SRC_DIR)/*.c)
-LOGGER_INC_DIR = $(LOGGER_DIR)/include
+LOGGER_INC_DIR = $(LOGGER_DIR)/include/kmyth
 LOGGER_OBJ_DIR = $(LOGGER_DIR)/obj
 LOGGER_OBJECTS = $(subst $(LOGGER_SRC_DIR), \
                          $(LOGGER_OBJ_DIR), \
@@ -307,7 +307,7 @@ all: pre clean-backups \
      $(BIN_DIR)/kmyth-getkey \
      $(BIN_DIR)/nsl-client \
      $(BIN_DIR)/nsl-server \
-		 $(LIB_DIR)/libkmyth-utils.so \
+     $(LIB_DIR)/libkmyth-utils.so \
      $(LIB_DIR)/libkmyth-logger.so \
      $(LIB_DIR)/libkmyth-tpm.so
 
@@ -353,7 +353,7 @@ $(LIB_DIR)/libkmyth-tpm.so: $(CIPHER_OBJECTS) \
 	      -o $(TPM_LIB_LOCAL_DEST) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger
 
 
@@ -364,7 +364,7 @@ $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
 	      -o $(BIN_DIR)/kmyth-seal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -375,7 +375,7 @@ $(BIN_DIR)/kmyth-unseal: $(MAIN_OBJ_DIR)/unseal.o \
 	      -o $(BIN_DIR)/kmyth-unseal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -386,7 +386,7 @@ $(BIN_DIR)/kmyth-getkey: $(MAIN_OBJ_DIR)/getkey.o \
 	      -o $(BIN_DIR)/kmyth-getkey \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -398,7 +398,7 @@ $(BIN_DIR)/nsl-client: $(MAIN_OBJ_DIR)/nsl_client.o \
 	      -o $(BIN_DIR)/nsl-client \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
@@ -409,7 +409,7 @@ $(BIN_DIR)/nsl-server: $(MAIN_OBJ_DIR)/nsl_server.o \
 	      -o $(BIN_DIR)/nsl-server \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
-				-lkmyth-utils \
+	      -lkmyth-utils \
 	      -lkmyth-logger \
 	      -lkmyth-tpm
 
