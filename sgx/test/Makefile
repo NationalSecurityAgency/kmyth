@@ -103,7 +103,7 @@ App_Name := bin/kmyth_enclave_tests
 App_Cpp_Files := src/kmyth_sgx_test.c \
 		../kmyth_enclave/sgx_seal_unseal_impl.c
 
-App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../kmyth_enclave
+App_Include_Paths := -Isgx -I$(SGX_SDK)/include -I../kmyth_enclave -I../../logger/include -I../../utils/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths) -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 
@@ -120,7 +120,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl -lkmyth-logger -lkmyth-utils
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -L$(SGX_SSL_UNTRUSTED_LIB_PATH) -l$(Urts_Library_Name) -lcunit -Lsgx -lpthread -lsgx_usgxssl -Wl,-rpath=../../lib -L../../lib -lkmyth-utils -lkmyth-logger
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -180,6 +180,7 @@ pre:
 	indent $(INDENT_OPTS) ../kmyth_enclave/*.cpp
 	rm -f src/*~
 	rm -f ../kmyth_enclave/*~
+	@(test -f ../../lib/libkmyth-logger.so && test -f ../../lib/libkmyth-utils.so) || make -C ../..
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Name)
@@ -210,7 +211,7 @@ sgx/kmyth_sgx_test_enclave_u.o: sgx/kmyth_sgx_test_enclave_u.c
 	@echo "CC   <=  $<"
 
 $(App_Name): $(App_Cpp_Files) sgx/kmyth_sgx_test_enclave_u.o 
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Include_Paths) $(App_C_Flags) $(App_Link_Flags) -Lsgx -lcrypto -lcunit
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_C_Flags) $(App_Link_Flags) -Lsgx -lcrypto -lcunit
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
