@@ -101,7 +101,7 @@ endif
 
 App_Name := bin/kmyth_sgx_retrieve_key_demo
 
-App_Source_Files := src/kmyth_sgx_retrieve_key_demo.c
+App_Source_Files := app/kmyth_sgx_retrieve_key_demo.c
 
 App_Include_Paths := -Iinclude
 App_Include_Paths += -I../untrusted/include
@@ -118,11 +118,11 @@ App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-		App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+    App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
-		App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+    App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
-		App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+    App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
@@ -135,9 +135,9 @@ App_Link_Flags += -Lenclave
 App_Link_Flags += -lsgx_usgxssl
 
 ifneq ($(SGX_MODE), HW)
-	App_Link_Flags += -lsgx_uae_service_sim
+    App_Link_Flags += -lsgx_uae_service_sim
 else
-	App_Link_Flags += -lsgx_uae_service
+    App_Link_Flags += -lsgx_uae_service
 endif
 
 App_Link_Flags += -lpthread
@@ -148,11 +148,11 @@ App_Link_Flags += -lcunit
 ######## Enclave Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
+    Trts_Library_Name := sgx_trts_sim
+    Service_Library_Name := sgx_tservice_sim
 else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
+    Trts_Library_Name := sgx_trts
+    Service_Library_Name := sgx_tservice
 endif
 
 Crypto_Library_Name := sgx_tcrypto
@@ -229,7 +229,7 @@ pre:
 	@if [ ! -f enclave/$(Enclave_Signing_Key) ]; then \
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
-	indent $(INDENT_OPTS) src/*.c
+	indent $(INDENT_OPTS) app/*.c
 	indent $(INDENT_OPTS) ../untrusted/src/*.c ../untrusted/include/*.h
 	indent $(INDENT_OPTS) ../trusted/src/*.cpp ../trusted/include/*.h
 	rm -f src/*~
@@ -288,10 +288,10 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o enclave/log_ocall.o
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --trusted $(Enclave_Name).edl \
-		                            --search-path $(SGX_SDK)/include \
-						    								--search-path . \
-							    							--search-path ../../trusted \
-								    						--search-path $(SGX_SSL_INCLUDE_PATH)
+                                --search-path $(SGX_SDK)/include \
+                                --search-path . \
+                                --search-path ../../trusted \
+                                --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
@@ -335,6 +335,7 @@ demo: all
 .PHONY: clean
 
 clean:
-	@rm -f enclave/*.h enclave/*.c enclave/*.o enclave/*.so enclave/*.pem
+	@rm -f enclave/*_u.h enclave/*_t.h enclave/*_u.c enclave/*_t.c
+	@rm -f enclave/*.o enclave/*.so enclave/*.pem
 	@rm -rf bin
 
