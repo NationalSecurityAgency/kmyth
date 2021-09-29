@@ -104,7 +104,8 @@ App_Name := bin/kmyth_sgx_retrieve_key_demo
 App_Source_Files := app/kmyth_sgx_retrieve_key_demo.c
 
 App_Include_Paths := -Iinclude
-App_Include_Paths += -I../untrusted/include
+App_Include_Paths += -I../untrusted/include/ocall
+App_Include_Paths += -I../untrusted/include/wrapper
 App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
 App_Include_Paths += -I$(SGX_SDK)/include
@@ -160,6 +161,7 @@ Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -Ienclave
 Enclave_Include_Paths += -I../trusted/include
+Enclave_Include_Paths += -I../trusted/include/util
 Enclave_Include_Paths += -I../common/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
@@ -232,12 +234,12 @@ pre:
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
-	@indent $(INDENT_OPTS) ../untrusted/src/*.c ../untrusted/include/*.h
-	@indent $(INDENT_OPTS) ../trusted/src/*.cpp ../trusted/src/*.c
-	@indent $(INDENT_OPTS) ../trusted/include/*.h
+	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
+	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
+	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
 	@rm -f app/*~
-	@rm -f ../untrusted/src/*~ ../untrusted/include/*~
-	@rm -f ../trusted/src/*~ ../trusted/include/*~
+	@rm -f ../untrusted/src/*/*~ ../untrusted/include/*/*~
+	@rm -f ../trusted/src/*/*~ ../trusted/include/*~ ../trusted/include/*/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Lib)
@@ -275,7 +277,7 @@ enclave/ec_key_cert_unmarshal.o: ../common/src/ec_key_cert_unmarshal.c
 
 ######## App Objects ########
 
-enclave/log_ocall.o: ../untrusted/src/log_ocall.c
+enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -313,19 +315,19 @@ enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/kmyth_enclave_memory_util.o: ../trusted/src/kmyth_enclave_memory_util.c 
+enclave/kmyth_enclave_memory_util.o: ../trusted/src/util/kmyth_enclave_memory_util.c 
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/kmyth_enclave_seal.o: ../trusted/src/kmyth_enclave_seal.cpp 
+enclave/kmyth_enclave_seal.o: ../trusted/src/ecall/kmyth_enclave_seal.cpp 
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/kmyth_enclave_unseal.o: ../trusted/src/kmyth_enclave_unseal.cpp
+enclave/kmyth_enclave_unseal.o: ../trusted/src/ecall/kmyth_enclave_unseal.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/kmyth_enclave_retrieve_key.cpp
+enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
