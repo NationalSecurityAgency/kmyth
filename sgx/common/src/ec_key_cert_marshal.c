@@ -21,8 +21,12 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
 
   if (EVP_PKEY_base_id(pkey_ptr) != EVP_PKEY_EC)
   {
-    log_event_ocall(*__FILE__, __func__, __LINE__,
-                    3, "PKEY to be marshalled is not of EC type");
+    const char *src_file_name = __FILE__;
+    const char *func_name = __func__;
+    int severity = 3;
+    const char *message = "PKEY to be marshalled is not of EC type";
+    const int line = __LINE__ + 1;
+    log_event_ocall(&src_file_name, &func_name, &line, &severity, &message);
     return EXIT_FAILURE;
   }
 
@@ -34,7 +38,7 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
   if (*ec_der_bytes_out != NULL)
   {
     free(*ec_der_bytes_out);
-    *ec_der_bytes = NULL;
+    *ec_der_bytes_out = NULL;
   }
 
   // A copy of the pointer is needed because i2d_PrivateKey() will
@@ -47,8 +51,12 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
 
   if (out_len <= 0)
   {
-    log_event_ocall(*__FILE__, __func__, __LINE__,
-                    3, "PKEY to DER format conversion error");
+    const char *src_file_name = __FILE__;
+    const char *func_name = __func__;
+    int severity = 3;
+    const char *message = "PKEY to DER format conversion error";
+    const int line = __LINE__ + 1;
+    log_event_ocall(&src_file_name, &func_name, &line, &severity, &message);
     return EXIT_FAILURE;
   }
 
@@ -87,8 +95,12 @@ int marshal_ec_x509_to_der(X509 ** ec_cert_in,
 
   if (out_len <= 0)
   {
-    log_event_ocall(*__FILE__, __func__, __LINE__,
-                    3, "X509 to DER format conversion error");
+    const char *src_file_name = __FILE__;
+    const char *func_name = __func__;
+    int severity = 3;
+    const char *message = "X509 to DER format conversion error";
+    const int line = __LINE__ + 1;
+    log_event_ocall(&src_file_name, &func_name, &line, &severity, &message);
     return EXIT_FAILURE;
   }
 

@@ -105,6 +105,7 @@ App_Source_Files := app/kmyth_sgx_retrieve_key_demo.c
 
 App_Include_Paths := -Iinclude
 App_Include_Paths += -I../untrusted/include
+App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
 App_Include_Paths += -I$(SGX_SDK)/include
 
@@ -143,7 +144,7 @@ endif
 App_Link_Flags += -lpthread
 App_Link_Flags += -lkmyth-utils
 App_Link_Flags += -lkmyth-logger
-App_Link_Flags += -lcunit
+App_Link_Flags += -lcrypto
 
 ######## Enclave Build Settings ########
 
@@ -157,8 +158,9 @@ endif
 
 Crypto_Library_Name := sgx_tcrypto
 
-Enclave_Include_Paths := -I../trusted/include
-Enclave_Include_Paths += -Ienclave
+Enclave_Include_Paths := -Ienclave
+Enclave_Include_Paths += -I../trusted/include
+Enclave_Include_Paths += -I../common/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
 Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
@@ -185,10 +187,10 @@ Enclave_Link_Flags += -nodefaultlibs
 Enclave_Link_Flags += -nostartfiles
 Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
 Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
+Enclave_Link_Flags += -L/usr/local/include
 Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
 Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
 Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
-Enclave_Link_Flags += -Wl,--whole-archive -lkmyth-utils
 Enclave_Link_Flags += -Wl,--no-whole-archive -Wl,--start-group
 Enclave_Link_Flags +=   -lsgx_tstdc
 Enclave_Link_Flags +=   -lsgx_tcxx
@@ -229,12 +231,13 @@ pre:
 	@if [ ! -f enclave/$(Enclave_Signing_Key) ]; then \
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
-	indent $(INDENT_OPTS) app/*.c
-	indent $(INDENT_OPTS) ../untrusted/src/*.c ../untrusted/include/*.h
-	indent $(INDENT_OPTS) ../trusted/src/*.cpp ../trusted/include/*.h
-	rm -f src/*~
-	rm -f ../untrusted/src/*~ ../untrusted/include/*~
-	rm -f ../trusted/src/*~ ../trusted/include/*~
+	@indent $(INDENT_OPTS) app/*.c
+	@indent $(INDENT_OPTS) ../untrusted/src/*.c ../untrusted/include/*.h
+	@indent $(INDENT_OPTS) ../trusted/src/*.cpp ../trusted/src/*.c
+	@indent $(INDENT_OPTS) ../trusted/include/*.h
+	@rm -f app/*~
+	@rm -f ../untrusted/src/*~ ../untrusted/include/*~
+	@rm -f ../trusted/src/*~ ../trusted/include/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Lib)
@@ -260,6 +263,16 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
 
+######## Common Objects ########
+
+enclave/ec_key_cert_marshal.o: ../common/src/ec_key_cert_marshal.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/ec_key_cert_unmarshal.o: ../common/src/ec_key_cert_unmarshal.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 ######## App Objects ########
 
 enclave/log_ocall.o: ../untrusted/src/log_ocall.c
@@ -278,7 +291,9 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o enclave/log_ocall.o 
+$(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
+	                               enclave/ec_key_cert_marshal.o \
+																 enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 		                                -Lenclave
 	                                  -lcrypto -lkmyth-utils -lkmyth-logger
@@ -298,6 +313,10 @@ enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/kmyth_enclave_memory_util.o: ../trusted/src/kmyth_enclave_memory_util.c 
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/kmyth_enclave_seal.o: ../trusted/src/kmyth_enclave_seal.cpp 
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
@@ -311,6 +330,8 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/kmyth_enclave_retrieve_key.
 	@echo "CC   <=  $<"
 
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
+	                      enclave/kmyth_enclave_memory_util.o \
+	                      enclave/ec_key_cert_unmarshal.o \
 	                      enclave/kmyth_enclave_seal.o \
 				  					    enclave/kmyth_enclave_unseal.o \
 					  					  enclave/kmyth_enclave_retrieve_key.o
@@ -327,15 +348,25 @@ enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing
 															-config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
+data/client_priv_test.pem: data/gen_test_keys_certs.bash
+	@cd data && ./gen_test_keys_certs.bash
+	@echo "GEN => Test Key/Cert Files"
+
+data/server_cert_test.pem: data/gen_test_keys_certs.bash
+	@cd data && ./gen_test_keys_certs.bash
+	@echo "GEN => Test Key/Cert Files"
+
 .PHONY: demo
 
-demo: all
+demo: all data/client_priv_test.pem data/server_cert_test.pem
 	./$(App_Name)
 
 .PHONY: clean
 
 clean:
 	@rm -f enclave/*_u.h enclave/*_t.h enclave/*_u.c enclave/*_t.c
-	@rm -f enclave/*.o enclave/*.so enclave/*.pem
+	@rm -f enclave/*.o enclave/*.so
+	@rm -f enclave/*.pem data/*.pem
 	@rm -rf bin
+
 

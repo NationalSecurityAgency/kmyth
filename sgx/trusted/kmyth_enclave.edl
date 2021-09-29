@@ -92,12 +92,12 @@ enclave {
      *
      * @return 0 on success, -1 on failure.
      */
-    public int kmyth_enclave_retrieve_key_from_server([in, size=client_private_len]
-                                                        uint8_t* client_private,
-                                                      size_t client_private_len,
-                                                      [in, size=server_cert_len]
-                                                        uint8_t* server_cert,
-                                                      size_t server_cert_len);
+    public int kmyth_enclave_retrieve_key_from_server([in, size=client_private_bytes_len]
+                                                        uint8_t* client_private_bytes,
+                                                      size_t client_private_bytes_len,
+                                                      [in, size=server_cert_bytes_len]
+                                                        uint8_t* server_cert_bytes,
+                                                      size_t server_cert_bytes_len);
 
 
   };

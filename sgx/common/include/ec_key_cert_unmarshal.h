@@ -50,8 +50,8 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
  * @param[out] ec_x509_out          Pointer to X509 struct to hold the
  *                                  unmarshalled EC certificate result
  */
-int unmarshal_ec_der_to_x509(uint8_t * ec_der_bytes_in,
-                             size_t ec_der_bytes_in_len,
+int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
+                             size_t * ec_der_bytes_in_len,
                              X509 ** ec_x509_out);
 
 #ifdef __cplusplus

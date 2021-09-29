@@ -1,16 +1,16 @@
 #ifndef _KMYTH_ENCLAVE_H_
 #define _KMYTH_ENCLAVE_H_
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include "sgx_urts.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #define MAX_LOG_MSG_LEN 128
 
