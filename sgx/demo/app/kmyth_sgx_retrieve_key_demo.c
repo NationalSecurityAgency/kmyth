@@ -14,11 +14,17 @@
 
 #include "sgx_urts.h"
 
-#include "kmyth_sgx_retrieve_key_demo.h"
+#include <kmyth/kmyth_log.h>
 
 #include "kmyth_sgx_retrieve_key_demo_enclave_u.h"
 
 #define ENCLAVE_PATH "enclave/kmyth_sgx_retrieve_key_demo_enclave.signed.so"
+
+/**
+ * @brief Macro used to simplify logging statements initiated from
+ *        untrusted space.
+ */
+#define demo_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 /*****************************************************************************
  * initialize_enclave

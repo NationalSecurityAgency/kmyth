@@ -101,8 +101,8 @@ endif
 
 App_Name := bin/kmyth_enclave_tests
 
-App_Source_Files := src/kmyth_sgx_test.c \
-		                ../untrusted/src/sgx_seal_unseal_impl.c
+App_Source_Files := app/kmyth_sgx_test.c \
+                    ../untrusted/src/sgx_seal_unseal_impl.c
 
 App_Include_Paths := -Ienclave
 App_Include_Paths += -I../untrusted/include
@@ -121,11 +121,11 @@ App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-		App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+    App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
-		App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+    App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
-		App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+    App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
@@ -229,7 +229,7 @@ pre:
 	@if [ ! -f enclave/$(Enclave_Signing_Key) ]; then \
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
-	indent $(INDENT_OPTS) src/*.c
+	indent $(INDENT_OPTS) app/*.c
 	indent $(INDENT_OPTS) ../untrusted/src/*.c ../untrusted/include/*.h
 	indent $(INDENT_OPTS) ../trusted/src/*.cpp ../trusted/include/*.h
 	rm -f src/*~
@@ -270,10 +270,10 @@ enclave/log_ocall.o: ../untrusted/src/log_ocall.c
 
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
-		                        --search-path $(SGX_SDK)/include \
-														--search-path . \
-														--search-path ../../trusted \
-														--search-path $(SGX_SSL_INCLUDE_PATH)
+                                --search-path $(SGX_SDK)/include \
+                                --search-path . \
+                                --search-path ../../trusted \
+                                --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
@@ -300,7 +300,7 @@ enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/kmyth_sgx_test_trusted.o: src/kmyth_sgx_test_trusted.c
+enclave/kmyth_sgx_test_trusted.o: enclave/kmyth_sgx_test_trusted.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -312,10 +312,16 @@ enclave/kmyth_enclave_unseal.o: ../trusted/src/kmyth_enclave_unseal.cpp
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/kmyth_enclave_retrieve_key.o: \
+	          ../trusted/src/kmyth_enclave_retrieve_key.cpp
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
 	                      enclave/kmyth_sgx_test_trusted.o \
 	                      enclave/kmyth_enclave_seal.o \
-												enclave/kmyth_enclave_unseal.o
+												enclave/kmyth_enclave_unseal.o \
+												enclave/kmyth_enclave_retrieve_key.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -337,6 +343,7 @@ test: all
 .PHONY: clean
 
 clean:
-	@rm -f enclave/*.h enclave/*.c enclave/*.o enclave/*.so enclave/*.pem
+	@rm -f enclave/*_t.h enclave/*_u.h enclave/*_t.c enclave/*_u.c
+	@rm -f enclave/*.o enclave/*.so enclave/*.pem
 	@rm -rf bin
 
