@@ -35,15 +35,15 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   }
   enclave_log(7, "unmarshalled client signing key (converted to EVP_PKEY)");
 
+  // now that input client private (DER) has been processed, clear it
   kmyth_enclave_clear(client_private_bytes, client_private_bytes_len);
-  enclave_log(7, "cleared memory for DER formatted client signing key");
+  enclave_log(7, "cleared memory for input DER client signing key");
 
   // unmarshal server cert (containing public key for signature verification)
   X509 *server_cert = NULL;
 
   ret_val = unmarshal_ec_der_to_x509(&server_cert_bytes,
                                      &server_cert_bytes_len, &server_cert);
-
   if (ret_val)
   {
     enclave_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -51,11 +51,18 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   }
   enclave_log(7, "unmarshalled server certificate (converted to X509)");
 
+  // now that input server cert (DER) has been processed, clear it
   kmyth_enclave_clear(server_cert_bytes, server_cert_bytes_len);
-  enclave_log(7, "cleared memory for DER formatted server certificate");
+  enclave_log(7, "cleared memory for input DER server certificate");
 
-  kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
+  // extract the server public key from its certificate
+  EVP_PKEY *server_pubkey = X509_get_pubkey(server_cert);
+
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
+  enclave_log(7, "extracted public key from server certificate");
+
+  // done with client private signing key, so clear and free it
+  kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
 
   return EXIT_SUCCESS;
 }
