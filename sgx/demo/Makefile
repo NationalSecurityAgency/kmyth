@@ -86,17 +86,17 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-		SGX_COMMON_CFLAGS += -O0 -g
+    SGX_COMMON_CFLAGS += -O0 -g
 else
-		SGX_COMMON_CFLAGS += -O2
+    SGX_COMMON_CFLAGS += -O2
 endif
 
 ######## App (untrusted code) Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-	Urts_Library_Name := sgx_urts_sim
+    Urts_Library_Name := sgx_urts_sim
 else
-	Urts_Library_Name := sgx_urts
+    Urts_Library_Name := sgx_urts
 endif
 
 App_Name := bin/kmyth_sgx_retrieve_key_demo
@@ -281,10 +281,10 @@ enclave/log_ocall.o: ../untrusted/src/log_ocall.c
 
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
-		                            --search-path $(SGX_SDK)/include \
-							  							  --search-path . \
-								  						  --search-path ../../trusted \
-									  					  --search-path $(SGX_SSL_INCLUDE_PATH)
+		                      --search-path $(SGX_SDK)/include \
+		                      --search-path . \
+				      --search-path ../../trusted \
+				      --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
@@ -292,10 +292,10 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@echo "CC   <=  $<"
 
 $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
-	                               enclave/ec_key_cert_marshal.o \
-																 enclave/log_ocall.o 
+	                         enclave/ec_key_cert_marshal.o \
+				 enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-		                                -Lenclave
+		                          -Lenclave
 	                                  -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
 
@@ -330,11 +330,11 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/kmyth_enclave_retrieve_key.
 	@echo "CC   <=  $<"
 
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
-	                      enclave/kmyth_enclave_memory_util.o \
-	                      enclave/ec_key_cert_unmarshal.o \
-	                      enclave/kmyth_enclave_seal.o \
-				  					    enclave/kmyth_enclave_unseal.o \
-					  					  enclave/kmyth_enclave_retrieve_key.o
+	                enclave/kmyth_enclave_memory_util.o \
+	                enclave/ec_key_cert_unmarshal.o \
+	                enclave/kmyth_enclave_seal.o \
+			enclave/kmyth_enclave_unseal.o \
+		        enclave/kmyth_enclave_retrieve_key.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -343,9 +343,9 @@ enclave/$(Enclave_Signing_Key):
 
 enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing_Key)
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/$(Enclave_Signing_Key) \
-		                          -enclave enclave/$(Enclave_Lib) \
-															-out $@ \
-															-config enclave/$(Enclave_Config_File)
+		                    -enclave enclave/$(Enclave_Lib) \
+				    -out $@ \
+			            -config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 data/client_priv_test.pem: data/gen_test_keys_certs.bash
@@ -368,5 +368,3 @@ clean:
 	@rm -f enclave/*.o enclave/*.so
 	@rm -f enclave/*.pem data/*.pem
 	@rm -rf bin
-
-
