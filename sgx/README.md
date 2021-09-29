@@ -2,8 +2,12 @@ The code maintained here provides ECALLs and OCALLs for SGX enclaves
 that need to seal or unseal data into the enclave. In order to use it
 you must create your own enclave, include ```kmyth_enclave.edl``` in
 your ```.edl``` file, and build the ECALL and OCALL object files as
-part of your application and enclave. The ```tests``` directory
-contains a simple example.
+part of your application and enclave. The ```demo``` directory
+contains example(s). The ```test``` directory contains an app to
+validate functionality implemented by the code and, therefore, also
+can serve as a example. Be cautioned, however, that the test application
+builds against local versions of utilized kmyth libraries rather than
+the installed version that would typically be utilized.
 
 The key features you should note in the test files are:
 * The ```kmyth_enclave.edl``` file is included in ```kmyth_sgx_test_enclave.edl```.
