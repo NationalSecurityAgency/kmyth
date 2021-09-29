@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include <kmyth_log.h>
+#include <kmyth/kmyth_log.h>
 #include <kmyth/formatting_tools.h>
 
 #include ENCLAVE_HEADER_UNTRUSTED
