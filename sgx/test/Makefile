@@ -86,17 +86,17 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-		SGX_COMMON_CFLAGS += -O0 -g
+    SGX_COMMON_CFLAGS += -O0 -g
 else
-		SGX_COMMON_CFLAGS += -O2
+    SGX_COMMON_CFLAGS += -O2
 endif
 
 ######## App (untrusted code) Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-	Urts_Library_Name := sgx_urts_sim
+    Urts_Library_Name := sgx_urts_sim
 else
-	Urts_Library_Name := sgx_urts
+    Urts_Library_Name := sgx_urts
 endif
 
 App_Name := bin/kmyth_enclave_tests
@@ -144,19 +144,19 @@ App_Link_Flags += -lsgx_usgxssl
 App_Link_Flags += -Wl,-rpath=../../lib -lkmyth-utils -lkmyth-logger
 
 ifneq ($(SGX_MODE), HW)
-	App_Link_Flags += -lsgx_uae_service_sim
+    App_Link_Flags += -lsgx_uae_service_sim
 else
-	App_Link_Flags += -lsgx_uae_service
+    App_Link_Flags += -lsgx_uae_service
 endif
 
 ######## Enclave Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
+    Trts_Library_Name := sgx_trts_sim
+    Service_Library_Name := sgx_tservice_sim
 else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
+    Trts_Library_Name := sgx_trts
+    Service_Library_Name := sgx_tservice
 endif
 Crypto_Library_Name := sgx_tcrypto
 
