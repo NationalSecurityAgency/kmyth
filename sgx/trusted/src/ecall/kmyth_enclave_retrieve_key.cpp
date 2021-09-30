@@ -10,7 +10,7 @@
 
 #include "ec_key_cert_unmarshal.h"
 
-#include "kmyth_enclave.h"
+#include "kmyth_enclave_trusted.h"
 
 #include ENCLAVE_HEADER_TRUSTED
 

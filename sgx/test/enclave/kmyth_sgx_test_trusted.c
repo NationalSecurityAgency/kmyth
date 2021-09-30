@@ -7,7 +7,7 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
-#include "kmyth_enclave.h"
+#include "kmyth_enclave_trusted.h"
 
 int enc_get_unsealed_size(uint32_t in_size, uint8_t * in_data, uint32_t * size)
 {

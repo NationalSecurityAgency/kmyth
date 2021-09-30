@@ -28,8 +28,6 @@ extern "C"
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
-#include "log_ocall.h"
-
 /**
  * @brief DER formats elliptic curve private key struct (EVP_PKEY).
  *
@@ -38,11 +36,19 @@ extern "C"
  *                                   a DER formatted byte array)
  *
  * @param[out] ec_der_bytes_out      Pointer to byte array that contains
- *                                   the marshalled EC private key result
+ *                                   the marshalled EC private key result.
+ *                                   A NULL pointer must be passed into
+ *                                   this function for this parameter. On
+ *                                   return, it will point to an allocated
+ *                                   byte array containing the DER result.
+ *                                   The calling function must free this
+ *                                   memory when done with it.
  *
  * @param[out] ec_der_bytes_out_len  Pointer to size of the byte array
  *                                   containing the marshalled EC private
  *                                   key result
+ *
+ * @return 0 on success, 1 on error
  */
 int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
                            unsigned char ** ec_der_bytes_out,
@@ -57,11 +63,18 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
  *
  * @param[out] ec_der_bytes_out      Pointer to byte array that contains
  *                                   the marshalled X509 public EC
- *                                   certificate result
+ *                                   certificate result. A NULL pointer must
+ *                                   be passed into this function for this
+ *                                   parameter. On return, it will point to
+ *                                   an allocated byte array containing the
+ *                                   DER result. The calling function must
+ *                                   free this memory when done with it.
  *
  * @param[out] ec_der_bytes_out_len  Pointer to size of the byte array
  *                                   containing the marshalled X509 EC
  *                                   certificate result
+ *
+ * @return 0 on success, 1 on error
  */
 int marshal_ec_x509_to_der(X509 ** ec_cert_in,
                            unsigned char ** ec_der_bytes_out,

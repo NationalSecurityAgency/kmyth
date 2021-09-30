@@ -1,5 +1,5 @@
-#ifndef _KMYTH_ENCLAVE_H_
-#define _KMYTH_ENCLAVE_H_
+#ifndef _KMYTH_ENCLAVE_TRUSTED_H_
+#define _KMYTH_ENCLAVE_TRUSTED_H_
 
 #ifdef __cplusplus
 extern "C"
