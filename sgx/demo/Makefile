@@ -305,10 +305,10 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --trusted $(Enclave_Name).edl \
-                                --search-path $(SGX_SDK)/include \
-                                --search-path . \
-                                --search-path ../../trusted \
-                                --search-path $(SGX_SSL_INCLUDE_PATH)
+                                      --search-path $(SGX_SDK)/include \
+                                      --search-path . \
+                                      --search-path ../../trusted \
+                                      --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
