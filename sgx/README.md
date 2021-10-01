@@ -94,7 +94,7 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retriev
 ```
 * Your ```$(Enclave_Link_Flags)``` must contain ```-lsgx_tstdc``` to link against the thread synchronization primitives.
 
-* The kmyth enclave ecalls object file is linked against enclave:
+* The kmyth enclave object files are linked against enclave:
 
 ```
 Enclave_Lib = kmyth_sgx_retrieve_key_demo_enclave.so
