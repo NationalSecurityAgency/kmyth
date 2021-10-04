@@ -52,7 +52,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   kmyth_sgx_log(7, "cleared memory for DER formatted server certificate");
 
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
-  enclave_log(7, "extracted public key from server certificate");
+  kmyth_sgx_log(7, "extracted public key from server certificate");
 
   // done with client private signing key, so clear and free it
   kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
