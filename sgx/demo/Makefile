@@ -295,6 +295,7 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 
 $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
 	                         enclave/ec_key_cert_marshal.o \
+	                         enclave/ec_key_cert_unmarshal.o \
 				 enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 		                          -Lenclave

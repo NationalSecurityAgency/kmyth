@@ -6,23 +6,19 @@ extern "C"
 {
 #endif
 
+#ifndef _KMYTH_LOCALE_TRUSTED_
+#define _KMYTH_LOCALE_TRUSTED_
+#endif
+
+#include "kmyth_enclave_memory_util.h"
+
+#include "kmyth_enclave_common.h"
+
 #include "sgx_urts.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
-#define MAX_LOG_MSG_LEN 128
-
-#define enclave_log(severity, message)\
-{\
-  const char *src_file = __FILE__;\
-  const char *src_func = __func__;\
-  const int src_line = __LINE__;\
-  int log_level = severity;\
-  const char *log_msg = message;\
-  log_event_ocall(&src_file, &src_func, &src_line, &log_level, &log_msg);\
-}
 
   typedef struct unseal_data_s
   {

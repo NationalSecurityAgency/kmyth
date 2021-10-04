@@ -19,6 +19,8 @@ extern "C"
 #include <openssl/bn.h>
 #include <openssl/err.h>
 
+#include "kmyth_enclave_common.h"
+
 
 /**
  * @brief Restores EVP_PKEY private key struct from DER formatted input.
