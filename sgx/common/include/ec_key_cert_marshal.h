@@ -16,7 +16,6 @@ extern "C"
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <errno.h>
 
 #include <openssl/bio.h>
@@ -27,6 +26,8 @@ extern "C"
 #include <openssl/bn.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+
+#include "kmyth_enclave_common.h"
 
 /**
  * @brief DER formats elliptic curve private key struct (EVP_PKEY).
