@@ -11,6 +11,7 @@ extern "C"
 #endif
 
 #include "kmyth_enclave_memory_util.h"
+#include "sgx_retrieve_key_impl.h"
 
 #include "kmyth_enclave_common.h"
 

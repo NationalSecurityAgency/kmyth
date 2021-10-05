@@ -162,6 +162,7 @@ Crypto_Library_Name := sgx_tcrypto
 Enclave_Include_Paths := -Ienclave
 Enclave_Include_Paths += -I../trusted/include
 Enclave_Include_Paths += -I../trusted/include/util
+Enclave_Include_Paths += -I../trusted/include/wrapper
 Enclave_Include_Paths += -I../common/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
@@ -320,6 +321,10 @@ enclave/kmyth_enclave_memory_util.o: ../trusted/src/util/kmyth_enclave_memory_ut
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/sgx_retrieve_key_impl.o: ../trusted/src/wrapper/sgx_retrieve_key_impl.c 
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/kmyth_enclave_seal.o: ../trusted/src/ecall/kmyth_enclave_seal.cpp 
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
@@ -333,11 +338,12 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retriev
 	@echo "CC   <=  $<"
 
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
-	                enclave/kmyth_enclave_memory_util.o \
-	                enclave/ec_key_cert_unmarshal.o \
-	                enclave/kmyth_enclave_seal.o \
-			enclave/kmyth_enclave_unseal.o \
-		        enclave/kmyth_enclave_retrieve_key.o
+	                      enclave/kmyth_enclave_memory_util.o \
+	                      enclave/sgx_retrieve_key_impl.o \
+	                      enclave/ec_key_cert_unmarshal.o \
+	                      enclave/kmyth_enclave_seal.o \
+			                  enclave/kmyth_enclave_unseal.o \
+		                    enclave/kmyth_enclave_retrieve_key.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
