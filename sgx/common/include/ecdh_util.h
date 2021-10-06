@@ -25,6 +25,7 @@ extern "C"
 
 #include "kmyth_enclave_common.h"
 
+#define KMYTH_EC_NID NID_secp384r1
 
 /**
  * @brief Creates an ephemeral 'public key' contribution to be exchanged
@@ -42,7 +43,7 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_public(int ec_curve_nid,
+  int create_ecdh_ephemeral_public(int ec_nid,
                                    unsigned char ** ec_ephemeral_pub_out,
                                    int * ec_ephemeral_pub_out_len);
 

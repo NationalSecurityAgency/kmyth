@@ -38,7 +38,6 @@ int create_ecdh_ephemeral_public(int ec_nid,
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "created ephemeral elliptic curve 'private key'");
 
   // extract 'public key'
   const EC_POINT *ec_ephemeral_pub = EC_KEY_get0_public_key(ec_ephemeral);

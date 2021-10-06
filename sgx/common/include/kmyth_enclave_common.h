@@ -20,6 +20,7 @@ extern "C"
 
 #include "ec_key_cert_marshal.h"
 #include "ec_key_cert_unmarshal.h"
+#include "ecdh_util.h"
 
 #ifdef _KMYTH_LOCALE_TRUSTED_
 #include ENCLAVE_HEADER_TRUSTED
