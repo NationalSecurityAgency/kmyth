@@ -278,6 +278,10 @@ enclave/ec_key_cert_unmarshal.o: ../common/src/ec_key_cert_unmarshal.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/ecdh_util.o: ../common/src/ecdh_util.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 ######## App Objects ########
 
 enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
@@ -299,6 +303,7 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
                                  enclave/ec_key_cert_marshal.o \
                                  enclave/ec_key_cert_unmarshal.o \
+                                 enclave/ecdh_util.o \
                                  enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 	                                  -Lenclave -lcrypto -lcunit
@@ -347,6 +352,7 @@ enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
 	                      enclave/kmyth_sgx_test_trusted.o \
 	                      enclave/ec_key_cert_marshal.o \
 		                    enclave/ec_key_cert_unmarshal.o \
+		                    enclave/ecdh_util.o \
 	                      enclave/kmyth_enclave_memory_util.o \
 									      enclave/sgx_retrieve_key_impl.o \
 	                      enclave/kmyth_enclave_seal.o \

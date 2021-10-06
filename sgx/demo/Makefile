@@ -276,6 +276,10 @@ enclave/ec_key_cert_unmarshal.o: ../common/src/ec_key_cert_unmarshal.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/ecdh_util.o: ../common/src/ecdh_util.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 ######## App Objects ########
 
 enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
@@ -284,10 +288,10 @@ enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
 
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
-		                      --search-path $(SGX_SDK)/include \
-		                      --search-path . \
-				      --search-path ../../trusted \
-				      --search-path $(SGX_SSL_INCLUDE_PATH)
+		                            --search-path $(SGX_SDK)/include \
+		                            --search-path . \
+				                        --search-path ../../trusted \
+				                        --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
@@ -295,22 +299,22 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@echo "CC   <=  $<"
 
 $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
-	                         enclave/ec_key_cert_marshal.o \
-	                         enclave/ec_key_cert_unmarshal.o \
-				 enclave/log_ocall.o 
+	                               enclave/ec_key_cert_marshal.o \
+	                               enclave/ec_key_cert_unmarshal.o \
+	                               enclave/ecdh_util.o \
+				                         enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-		                          -Lenclave
-	                                  -lcrypto -lkmyth-utils -lkmyth-logger
+		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --trusted $(Enclave_Name).edl \
-                                      --search-path $(SGX_SDK)/include \
-                                      --search-path . \
-                                      --search-path ../../trusted \
-                                      --search-path $(SGX_SSL_INCLUDE_PATH)
+                                --search-path $(SGX_SDK)/include \
+                                --search-path . \
+                                --search-path ../../trusted \
+                                --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
@@ -340,7 +344,9 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retriev
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
 	                      enclave/kmyth_enclave_memory_util.o \
 	                      enclave/sgx_retrieve_key_impl.o \
+	                      enclave/ec_key_cert_marshal.o \
 	                      enclave/ec_key_cert_unmarshal.o \
+	                      enclave/ecdh_util.o \
 	                      enclave/kmyth_enclave_seal.o \
 			                  enclave/kmyth_enclave_unseal.o \
 		                    enclave/kmyth_enclave_retrieve_key.o
@@ -353,8 +359,8 @@ enclave/$(Enclave_Signing_Key):
 enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing_Key)
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/$(Enclave_Signing_Key) \
 		                    -enclave enclave/$(Enclave_Lib) \
-				    -out $@ \
-			            -config enclave/$(Enclave_Config_File)
+				                -out $@ \
+			                  -config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 data/client_priv_test.pem: data/gen_test_keys_certs.bash
