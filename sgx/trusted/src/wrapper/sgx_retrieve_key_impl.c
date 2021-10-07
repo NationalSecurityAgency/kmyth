@@ -106,7 +106,7 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "signed client's contribution");
+  kmyth_sgx_log(7, "client signed its contribution for ECDH key agreement");
 
   // done with client private signing key, so clear and free it
   kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
