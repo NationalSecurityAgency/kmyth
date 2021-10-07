@@ -27,7 +27,6 @@ extern "C"
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
-
 /**
  * @brief Supports exchanging signed 'public key' contributions between the
  *        client (enclave) and the server (emulated in the untrusted app).
@@ -73,16 +72,14 @@ extern "C"
  * 
  * @return 0 on success, 1 on failure
  */
-int ecdh_exchange_ocall(unsigned char ** enclave_contribution,
-                        int * enclave_contribution_len,
-                        unsigned char ** enclave_contribution_signature,
-                        int * enclave_contribution_signature_len,
-                        unsigned char ** remote_contribution,
-                        int * remote_contribution_len,
-                        unsigned char ** remote_contribution_signature,
-                        int * remote_contribution_signature_len);
-
-
+  int ecdh_exchange_ocall(unsigned char **enclave_contribution,
+                          int *enclave_contribution_len,
+                          unsigned char **enclave_contribution_signature,
+                          int *enclave_contribution_signature_len,
+                          unsigned char **remote_contribution,
+                          int *remote_contribution_len,
+                          unsigned char **remote_contribution_signature,
+                          int *remote_contribution_signature_len);
 
 /**
  * @brief Supports sending enclave public ephemeral contribution for ECDH key
@@ -105,12 +102,10 @@ int ecdh_exchange_ocall(unsigned char ** enclave_contribution,
  *
  * @return 0 on success, 1 on failure
  */
-int send_ecdh_request_to_peer(unsigned char ** enclave_contrib,
-                              int * enclave_contrib_len,
-                              unsigned char ** enclave_contrib_sig,
-                              int * enclave_contrib_sig_len);
-
-
+  int send_ecdh_request_to_peer(unsigned char **enclave_contrib,
+                                int *enclave_contrib_len,
+                                unsigned char **enclave_contrib_sig,
+                                int *enclave_contrib_sig_len);
 
 /**
  * @brief Supports receiving remote public ephemeral contribution for ECDH key
@@ -134,11 +129,10 @@ int send_ecdh_request_to_peer(unsigned char ** enclave_contrib,
  * 
  * @return 0 on success, 1 on failure
  */
-int receive_ecdh_response_from_peer(unsigned char ** remote_contrib,
-                                    int * remote_contrib_len,
-                                    unsigned char ** remote_contrib_sig,
-                                    int * remote_contrib_sig_len);
-
+  int receive_ecdh_response_from_peer(unsigned char **remote_contrib,
+                                      int *remote_contrib_len,
+                                      unsigned char **remote_contrib_sig,
+                                      int *remote_contrib_sig_len);
 
 #ifdef __cplusplus
 }

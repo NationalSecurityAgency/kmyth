@@ -10,20 +10,21 @@
 /*****************************************************************************
  * ecdh_exchange_ocall()
  ****************************************************************************/
-int ecdh_exchange_ocall(unsigned char ** enclave_contribution,
-                        int * enclave_contribution_len,
-                        unsigned char ** enclave_contribution_signature,
-                        int * enclave_contribution_signature_len,
-                        unsigned char ** remote_contribution,
-                        int * remote_contribution_len,
-                        unsigned char ** remote_contribution_signature,
-                        int * remote_contribution_signature_len)
+int ecdh_exchange_ocall(unsigned char **enclave_contribution,
+                        int *enclave_contribution_len,
+                        unsigned char **enclave_contribution_signature,
+                        int *enclave_contribution_signature_len,
+                        unsigned char **remote_contribution,
+                        int *remote_contribution_len,
+                        unsigned char **remote_contribution_signature,
+                        int *remote_contribution_signature_len)
 {
   // send connection (ECDH key agreement initiation) request to remote peer
   int ret_val = send_ecdh_request_to_peer(enclave_contribution,
                                           enclave_contribution_len,
                                           enclave_contribution_signature,
                                           enclave_contribution_signature_len);
+
   if (ret_val != 1)
   {
     return EXIT_FAILURE;
@@ -45,25 +46,23 @@ int ecdh_exchange_ocall(unsigned char ** enclave_contribution,
 /*****************************************************************************
  * send_ecdh_request_to_peer()
  ****************************************************************************/
-int send_ecdh_request_to_peer(unsigned char ** enclave_contrib,
-                              int * enclave_contrib_len,
-                              unsigned char ** enclave_contrib_sig,
-                              int * enclave_contrib_sig_len)
+int send_ecdh_request_to_peer(unsigned char **enclave_contrib,
+                              int *enclave_contrib_len,
+                              unsigned char **enclave_contrib_sig,
+                              int *enclave_contrib_sig_len)
 {
 
   return EXIT_SUCCESS;
 }
-
 
 /*****************************************************************************
  * receive_ecdh_response_from_peer()
  ****************************************************************************/
-int receive_ecdh_response_from_peer(unsigned char ** remote_contrib,
-                                    int * remote_contrib_len,
-                                    unsigned char ** remote_contrib_sig,
-                                    int * remote_contrib_sig_len))
+int receive_ecdh_response_from_peer(unsigned char **remote_contrib,
+                                    int *remote_contrib_len,
+                                    unsigned char **remote_contrib_sig,
+                                    int *remote_contrib_sig_len))
 {
 
   return EXIT_SUCCESS;
 }
-
