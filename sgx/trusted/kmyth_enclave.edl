@@ -92,10 +92,10 @@ enclave {
      *
      * @return 0 on success, -1 on failure.
      */
-    public int kmyth_enclave_retrieve_key_from_server([in, size=client_private_bytes_len]
+    public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len]
                                                         uint8_t* client_private_bytes,
                                                       size_t client_private_bytes_len,
-                                                      [in, size=server_cert_bytes_len]
+                                                      [in, count=server_cert_bytes_len]
                                                         uint8_t* server_cert_bytes,
                                                       size_t server_cert_bytes_len);
 
@@ -126,6 +126,32 @@ enclave {
                          [in] const int *src_line_ptr,
                          [in] int *severity_ptr,
                          [in] const char **message_ptr);
+
+    /**
+     * @brief Supports ECDH exchange between enclave and a remote peer
+     *
+     * @param[in] src_file_ptr     Pointer to source code filename string
+     *
+     * @param[in] src_func_ptr     Pointer to function name string
+     *
+     * @param[in] src_line_ptr     Pointer to source code line number integer
+     *
+     * @param[in] severity_ptr     Pointer to integer representing the severity
+     *                             level of the event to be logged.
+     *
+     * @param[in] message_ptr      Pointer to string containing the message to
+     *                             be logged.
+     */
+    void ecdh_exchange_ocall([in, count=enclave_contribution_len]
+                               unsigned char *enclave_contribution,
+                             int enclave_contribution_len,
+                             [in, count=enclave_contribution_signature_len]
+                               unsigned char *enclave_contribution_signature,
+                             int enclave_contribution_signature_len,
+                             [out] unsigned char **remote_contribution,
+                             [out] int *remote_contribution_len,
+                             [out] unsigned char **remote_contribution_signature,
+                             [out] int *remote_contribution_signature_len);
 
   };
 

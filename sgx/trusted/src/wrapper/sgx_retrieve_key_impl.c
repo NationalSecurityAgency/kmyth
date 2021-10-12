@@ -111,6 +111,28 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   // done with client private signing key, so clear and free it
   kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
 
+  unsigned char *server_contribution = NULL;
+  int server_contribution_len = 0;
+  unsigned char *server_contrib_signature = NULL;
+  int server_contrib_signature_len = 0;
+
+  ret_val = ecdh_exchange_ocall(client_contribution,
+                                client_contribution_len,
+                                client_contrib_signature,
+                                client_contrib_signature_len,
+                                &server_contribution,
+                                &server_contribution_len,
+                                &server_contrib_signature,
+                                &server_contrib_signature_len);
+  if (ret_val)
+  {
+    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_enclave_clear_and_free(server_sign_pubkey,
+                                 sizeof(server_sign_pubkey));
+    return EXIT_FAILURE;
+  }
+  kmyth_sgx_log(7, "completed ECDH exchange");
+
   // done with server public key, so clear and free it
   kmyth_enclave_clear_and_free(server_sign_pubkey, sizeof(server_sign_pubkey));
 

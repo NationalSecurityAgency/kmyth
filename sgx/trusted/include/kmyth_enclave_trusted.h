@@ -21,6 +21,8 @@ extern "C"
 #include <stddef.h>
 #include <stdbool.h>
 
+#include ENCLAVE_HEADER_TRUSTED
+
   typedef struct unseal_data_s
   {
     uint64_t handle;
