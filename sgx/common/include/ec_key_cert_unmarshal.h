@@ -35,6 +35,8 @@ extern "C"
  *
  * @param[out] ec_pkey_out         Pointer to a EVP_PKEY struct to hold the
  *                                 unmarshalled EC key result
+ *
+ * @return 0 on success, 1 on error
  */
 int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
                              size_t * ec_der_bytes_in_len,
@@ -52,6 +54,8 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
  *
  * @param[out] ec_x509_out          Pointer to X509 struct to hold the
  *                                  unmarshalled EC certificate result
+ *
+ * @return 0 on success, 1 on error
  */
 int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
                              size_t * ec_der_bytes_in_len,
