@@ -288,6 +288,10 @@ enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/ecdh_exchange_ocall.o: ../untrusted/src/ocall/ecdh_exchange_ocall.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
                                       --search-path $(SGX_SDK)/include \
@@ -304,6 +308,7 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
                                  enclave/ec_key_cert_marshal.o \
                                  enclave/ec_key_cert_unmarshal.o \
                                  enclave/ecdh_util.o \
+                                 enclave/ecdh_exchange_ocall.o \
                                  enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 	                                  -Lenclave -lcrypto -lcunit

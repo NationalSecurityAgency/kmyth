@@ -28,22 +28,40 @@ extern "C"
 #define KMYTH_EC_NID NID_secp384r1
 
 /**
+ * @brief Creates an ephemeral 'private key' contribution to be combined with
+ *        a 'public key' contribution received from a peer in an ECDH key
+ *        agreement protocol
+ *
+ * @param[in] ec_nid                     ID for the elliptic curve to use for
+ *                                       generating this ephemeral
+ *                                       'private key'
+ *
+ * @param[out] ec_ephemeral_priv_out     Pointer to ephemeral 'private key'
+ *                                       (EC_KEY struct) generated
+ *
+ * @return 0 on success, 1 on error
+ */
+  int create_ecdh_ephemeral(int ec_nid, EC_KEY ** ec_ephemeral_priv_out);
+
+
+/**
  * @brief Creates an ephemeral 'public key' contribution to be exchanged
  *        with a peer in an ECDH key agreement protocal
  *
- * @param[in] ec_nid                     ID for the elliptic curve to use for
- *                                       generating this ephemeral 'public key'
- *                                       contribution
+ * @param[in] ec_ephemeral_priv_in       Pointer to ephemeral 'private key'
+ *                                       to be used for generating the
+ *                                       ephemeral 'public key' contribution
  *
  * @param[out] ec_ephemeral_pub_out      Pointer to ephemeral 'public key'
  *                                       contribution generated
  *
  * @param[out] ec_ephemeral_pub_out_len  Pointer to length (in bytes) of
  *                                       ephemeral 'public key' contribution
+ *                                       generated
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_public(int ec_nid,
+  int create_ecdh_ephemeral_public(const EC_KEY * ec_ephemeral_priv_in,
                                    unsigned char ** ec_ephemeral_pub_out,
                                    int * ec_ephemeral_pub_out_len);
 

@@ -9,30 +9,37 @@
 #include "ecdh_util.h"
 
 /*****************************************************************************
- * create_ecdh_ephemeral_public()
+ * create_ecdh_ephemeral()
  ****************************************************************************/
-int create_ecdh_ephemeral_public(int ec_nid,
-                                 unsigned char ** ec_ephemeral_pub_out,
-                                 int * ec_ephemeral_pub_out_len)
+int create_ecdh_ephemeral(int ec_nid, EC_KEY ** ec_ephemeral_priv_out)
 {
   // construct new EC_KEY on specified curve (input NID parameter) for enclave
-  EC_KEY * ec_ephemeral = EC_KEY_new_by_curve_name(ec_nid);
-  if (ec_ephemeral == NULL)
+  *ec_ephemeral_priv_out = EC_KEY_new_by_curve_name(ec_nid);
+  if (*ec_ephemeral_priv_out == NULL)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
 
   // generate new public/private key pair
-  if (!EC_KEY_generate_key(ec_ephemeral))
+  if (!EC_KEY_generate_key(*ec_ephemeral_priv_out))
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
 
-  // need EC_GROUP to extract public key
-  const EC_GROUP *ec_grp = EC_KEY_get0_group(ec_ephemeral);
+  return EXIT_SUCCESS;
+}
 
+/*****************************************************************************
+ * create_ecdh_ephemeral_public()
+ ****************************************************************************/
+int create_ecdh_ephemeral_public(const EC_KEY * ec_ephemeral_priv_in,
+                                 unsigned char ** ec_ephemeral_pub_out,
+                                 int * ec_ephemeral_pub_out_len)
+{
+  // need EC_GROUP (elliptic curve definition) as parameter for API calls
+  const EC_GROUP *ec_grp = EC_KEY_get0_group(ec_ephemeral_priv_in);
   if (ec_grp == NULL)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -40,7 +47,8 @@ int create_ecdh_ephemeral_public(int ec_nid,
   }
 
   // extract 'public key'
-  const EC_POINT *ec_ephemeral_pub = EC_KEY_get0_public_key(ec_ephemeral);
+  const EC_POINT *ec_ephemeral_pub = EC_POINT_new(ec_grp);
+  ec_ephemeral_pub = EC_KEY_get0_public_key(ec_ephemeral_priv_in);
   if (ec_ephemeral_pub == NULL)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -49,19 +57,17 @@ int create_ecdh_ephemeral_public(int ec_nid,
 
   // Convert elliptic curve point struct (EC_POINT) to an octet string array.
   // This facilitates exporting it from the enclave and communicating it to a
-  // "remote" peer. The first call, which specifies a NULL pointer as the
-  // output byte array parameter, returns the length of the octect string that
-  // will be produced. This enables memory allocation for a buffer of the
+  // remote peer. The first 'point2oct' call, specifying a NULL pointer as
+  // the output byte array parameter, returns the length of the octet string
+  // that will be produced. This enables memory allocation for a buffer of the
   // required size. The second call passes a pointer to this newly allocated
-  // buffer, and gets populated with the required octet string representation
-  // of the EC_POINT.
+  // buffer, and gets populated with the required octet string representation.
   int required_buffer_len = EC_POINT_point2oct(ec_grp,
                                                ec_ephemeral_pub,
                                                POINT_CONVERSION_UNCOMPRESSED,
                                                NULL,
                                                0,
                                                NULL);
-
   *ec_ephemeral_pub_out = (unsigned char *) malloc(required_buffer_len);
   if (ec_ephemeral_pub_out == NULL)
   {

@@ -118,19 +118,60 @@ int dummy_ecdh_server(unsigned char *client_contrib,
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "validated signature on client contribution");
-/* 
+
+  // create server's ephemeral contribution
+  EC_KEY *server_ec_ephemeral_priv = NULL;
+
+  ret = create_ecdh_ephemeral(KMYTH_EC_NID, &server_ec_ephemeral_priv);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "creation of server EC ephemeral 'private key' failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "created server's private ephemeral contribution");
+  ret = create_ecdh_ephemeral_public((const EC_KEY *) server_ec_ephemeral_priv,
+                                     server_contrib, server_contrib_len);
+
+  // sign server's ephemeral contribution
+  ret = sign_buffer(server_priv_ec_key, *server_contrib, *server_contrib_len,
+                    server_contrib_sig, server_contrib_sig_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "signature of server EC ephemeral contribution failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "signed server's ephemeral public contribution");
+
   // re-construct EC_POINT for client contribution
   EC_POINT *client_contribution_point = NULL;
 
-  ret = reconstruct_peer_point(server_ec_ephemeral,
-                               client_contribution,
-                               client_contribution_len,
-                               &client_contribution_point);
+  ret = ec_oct_to_ec_point(KMYTH_EC_NID, client_contrib, client_contrib_len,
+                           client_contribution_point);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "reconstruction of client ephemeral point failed");
     return EXIT_FAILURE;
   }
-*/
+
+  // generate session key result for ECDH key agreement (server side)
+  unsigned char *session_secret = NULL;
+  int session_secret_len = 1;
+  const EC_GROUP *ephemeral_ec_group =
+    EC_KEY_get0_group((server_ec_ephemeral_priv));
+  int field_size = EC_GROUP_get_degree(ephemeral_ec_group);
+
+  session_secret_len = (field_size + 8) / 8;
+  session_secret = malloc(session_secret_len);
+  session_secret_len = ECDH_compute_key(session_secret, session_secret_len,
+                                        client_contribution_point,
+                                        server_ec_ephemeral_priv, NULL);
+  kmyth_log(LOG_DEBUG, "server-side session key = 1x%02x%02x...%02x%02x",
+            session_secret[1], session_secret[1],
+            session_secret[session_secret_len - 3],
+            session_secret[session_secret_len - 2]);
+
+  // add clear
+  EC_KEY_free(server_ec_ephemeral_priv);
+
   return EXIT_SUCCESS;
 }

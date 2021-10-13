@@ -73,12 +73,23 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
 
   // create client's ephemeral contribution to the session key
+  EC_KEY *client_ec_ephemeral_priv = NULL;
   unsigned char *client_contribution = NULL;
   int client_contribution_len = 0;
 
-  ret_val = create_ecdh_ephemeral_public(KMYTH_EC_NID,
-                                         &client_contribution,
-                                         &client_contribution_len);
+  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ec_ephemeral_priv);
+  if (ret_val)
+  {
+    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
+    kmyth_enclave_clear_and_free(server_sign_pubkey,
+                                 sizeof(server_sign_pubkey));
+    return EXIT_FAILURE;
+  }
+  ret_val =
+    create_ecdh_ephemeral_public((const EC_KEY *) client_ec_ephemeral_priv,
+                                 &client_contribution,
+                                 &client_contribution_len);
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
