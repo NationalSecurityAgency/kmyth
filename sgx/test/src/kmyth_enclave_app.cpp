@@ -53,6 +53,39 @@ int load_key_file(const char *file_path, unsigned char **data, size_t *data_len)
   return 0;
 }
 
+int ocall_send_msg(int socket_fd, unsigned char* message, size_t message_len)
+{
+  ssize_t result = write(socket_fd, message, message_len);
+  if(result != message_len)
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
+int ocall_recv_msg_len(int socket_fd, size_t *message_len)
+{
+  ssize_t result = read(socket_fd, message_len, sizeof(size_t));
+  if(result != sizeof(size_t))
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
+int ocall_recv_msg(int socket_fd, unsigned char *message, size_t message_len)
+{
+  ssize_t result = read(socket_fd, message, message_len);
+  if(result != message_len)
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
   // Exit early if there are no arguments
@@ -110,8 +143,18 @@ int main(int argc, char **argv)
   }
   size_t error_buffer_len = 512 * sizeof(char);
 
+  // Create socket to peer.
+  int socket_fd = -1;
+  result = setup_client_socket(ip, port, &socket_fd);
+  if(result)
+  {
+    printf("Failed to set up socket.\n");
+    return 1;
+  }
+
   sgx_result = sgx_create_enclave(ENCLAVE_PATH, SGX_DEBUG_FLAG, NULL, NULL, &enclave_id, NULL);
   sgx_result = enc_run_dh_key_exchange(enclave_id, &sgx_return,
+                                       socket_fd,
                                        private_key, private_key_len,
                                        public_key, public_key_len,
                                        &secret, &secret_len,

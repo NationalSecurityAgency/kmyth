@@ -336,6 +336,15 @@ int main(int argc, char **argv)
   result = generate_session_key_from_secret(session_secret, session_secret_len,
                                             &session_key, &session_key_len);
 
+  kmyth_log(
+    LOG_INFO,
+    "Generated session key: 0x%02X%02X%02X%02X...",
+    session_key[0],
+    session_key[1],
+    session_key[2],
+    session_key[3]
+  );
+/*
   // Send key K to A; encrypt message with S
   uint8 static_key[16] = {
     0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
@@ -353,7 +362,7 @@ int main(int argc, char **argv)
     close(socket_fd);
     return 1;
   }
-
+*/
   close(socket_fd);
 
   return 0;

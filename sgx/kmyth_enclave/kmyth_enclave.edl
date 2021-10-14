@@ -52,6 +52,7 @@ enclave {
                 [out, count=1] uint32_t *size);
 
         public int enc_run_dh_key_exchange(
+                int socket_fd,
                 [in, size=private_host_key_len] unsigned char *private_host_key,
                 size_t private_host_key_len,
                 [in, size=public_peer_key_len] unsigned char *public_peer_key,
@@ -88,5 +89,22 @@ enclave {
  * @return 0 on success, -1 on failure.
  */
  public int kmyth_unsealed_data_table_cleanup(void);
+    };
+
+    untrusted {
+
+        public int ocall_send_msg(
+                int socket_fd,
+                [in, size=message_len] unsigned char *message,
+                size_t message_len);
+
+        public int ocall_recv_msg_len(
+                int socket_fd,
+                [out, count=1] size_t *message_len);
+
+        public int ocall_recv_msg(
+                int socket_fd,
+                [out, size=message_len] unsigned char* message,
+                size_t message_len);
     };
 };
