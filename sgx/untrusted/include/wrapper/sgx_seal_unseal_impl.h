@@ -1,5 +1,5 @@
-#ifndef KMYTH_ENCLAVE_H_
-#define KMYTH_ENCLAVE_H_
+#ifndef SGX_SEAL_UNSEAL_IMPL_H
+#define SGX_SEAL_UNSEAL_IMPL_H
 
 #include "sgx_urts.h"
 
@@ -7,22 +7,15 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct unseal_data_s
-{
-  uint64_t handle;
-  size_t data_size;
-  uint8_t* data;
-  struct unseal_data_s* next;
-} unseal_data_t;
+#include <kmyth/kmyth_log.h>
+#include <kmyth/formatting_tools.h>
 
-extern unseal_data_t* kmyth_unsealed_data_table;
+#include ENCLAVE_HEADER_UNTRUSTED
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-  size_t retrieve_from_unseal_table(uint64_t handle, uint8_t** buf);
-
-  bool insert_into_unseal_table(uint8_t* data, uint32_t data_size, uint64_t* handle);
 
   /**
    * @brief High-level function implementing sgx-seal using SGX.
@@ -40,9 +33,12 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-  int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
-		size_t input_len, uint8_t ** output, size_t * output_len,
-		uint16_t key_policy, sgx_attributes_t attribute_mask);
+  int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid,
+                         uint8_t * input,
+                         size_t input_len,
+                         uint8_t ** output,
+                         size_t * output_len,
+                         uint16_t key_policy, sgx_attributes_t attribute_mask);
 
   /**
    * @brief High-level function implementing sgx-unseal using SGX
@@ -55,8 +51,9 @@ extern "C" {
    *
    * @return 0 on success, 1 on error
    */
-   int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
-		   size_t input_len, uint64_t * handle);
+  int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
+                           uint8_t * input,
+                           size_t input_len, uint64_t * handle);
 
 #ifdef __cplusplus
 }

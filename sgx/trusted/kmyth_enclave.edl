@@ -1,0 +1,132 @@
+enclave {
+
+	from "sgx_tstdc.edl" import *;
+	from "sgx_tsgxssl.edl" import *;
+	from "sgx_pthread.edl" import *;
+
+	include "sgx_tseal.h"
+	include "stdbool.h"
+
+  trusted {
+
+    /**
+     * @brief Seals input data using SGXs built-in sealing mechanism.
+     *
+     * @param[in]  in_data  Pointer to the data to be sealed.
+     *
+     * @param[in]  in_size  The size of in_data in bytes.
+     *
+     * @param[out] out_data Pointer to space to hold the encrypted data, must
+     *                      allready be allocated with size out_size.
+     *
+     * @param[in]  out_size  The size of out_data. Must be determined by first
+     *                       calling enc_get_sealed_size with in_size.
+     *
+     * @param[in]  key_policy The SGX key policy to use for the sealing key.
+     *                        Must be SGX_KEYPOLICY_MRSIGNER (to bind to the 
+     *                        signer of the enclave) or SGX_KEYPOLICY_MRENCLAVE
+     *                        (to bind to the enclave.)
+     * 
+     * @param[in] attribute_mask The SGX attribute mask structure to be used
+     *                           for the sealing. If attribute_mask.flags is 0,
+     *                           the recommended default value will be used.
+     *
+     * @return 0 on success, an SGX error on error.
+     */
+    public int enc_seal_data([in, size=in_size] const uint8_t *in_data,
+                             uint32_t in_size,
+                             [user_check] uint8_t *out_data,
+                             uint32_t out_size,
+    		                     uint16_t key_policy,
+    		                     sgx_attributes_t attribute_mask);
+    
+    /**
+     * @brief Computes the output buffer size required to seal input data
+     *        of size in_size.
+     *
+     * @param[in]  in_size The size of the plaintext data to be encrypted
+     *
+     * @param[out] size    The size of the ciphertext
+     *
+     * @return 0 in success, SGX_ERROR_INVALID_PARAMETER on error
+     */
+    public int enc_get_sealed_size(uint32_t in_size,
+                                   [out, count=1] uint32_t *size);
+    
+    
+    /**
+     * @brief SGX unseals the provided data and places it into the
+     *        kmyth_unsealed_data_table.
+     *
+     * @param[in] data_size The size of the ciphertext
+     *
+     * @param[in] data      The ciphertext
+     *
+     * @param[out] handle   A pointer to a uint64_t to hold the handle.
+     *
+     * @return true on success, false on failure. The return value MUST be checked.
+     *
+     */
+    public bool kmyth_unseal_into_enclave(uint32_t data_size,
+                                          [in, count=data_size] uint8_t* data,
+                                          [out] uint64_t* handle);
+    
+    /**
+     * @brief Initializes the necessary values to maintain kmyth_unsealed_data_table.
+     *
+     * @return 0 on success, -1 on failure.
+     */
+    public int kmyth_unsealed_data_table_initialize(void);
+    
+    /**
+     * @brief Cleans up (and frees all memory for) the kmyth_unsealed_data_table.
+     *
+     * @return 0 on success, -1 on failure.
+     */
+    public int kmyth_unsealed_data_table_cleanup(void);
+
+    /**
+     * @brief Negotiates a session key (using ECDH) for creating a secure
+              connection with key server and then retrieves a key from the
+              key server using that secure connection.
+     *
+     * @return 0 on success, -1 on failure.
+     */
+    public int kmyth_enclave_retrieve_key_from_server([in, size=client_private_bytes_len]
+                                                        uint8_t* client_private_bytes,
+                                                      size_t client_private_bytes_len,
+                                                      [in, size=server_cert_bytes_len]
+                                                        uint8_t* server_cert_bytes,
+                                                      size_t server_cert_bytes_len);
+
+
+  };
+
+  untrusted {
+
+    /**
+     * @brief Supports calling logger from within enclave. Must pass information
+     *        about the event out explicitly since we must invoke the logging API
+     *        from untrusted space.
+     *
+     * @param[in] src_file_ptr     Pointer to source code filename string
+     *
+     * @param[in] src_func_ptr     Pointer to function name string
+     *
+     * @param[in] src_line_ptr     Pointer to source code line number integer
+     *
+     * @param[in] severity_ptr     Pointer to integer representing the severity
+     *                             level of the event to be logged.
+     *
+     * @param[in] message_ptr      Pointer to string containing the message to
+     *                             be logged.
+     */
+    void log_event_ocall([in] const char **src_file_ptr,
+                         [in] const char **src_func_ptr,
+                         [in] const int *src_line_ptr,
+                         [in] int *severity_ptr,
+                         [in] const char **message_ptr);
+
+  };
+
+};

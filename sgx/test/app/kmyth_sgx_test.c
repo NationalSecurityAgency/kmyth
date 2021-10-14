@@ -8,11 +8,14 @@
 
 #include "sgx_urts.h"
 #include "sgx_attributes.h"
+
+#include "log_ocall.h"
+#include "sgx_seal_unseal_impl.h"
+
 #include "kmyth_sgx_test_enclave_u.h"
-#include "kmyth_enclave.h"
 
 // NB: Should specify as an absolute path.
-#define ENCLAVE_PATH "sgx/kmyth_sgx_test_enclave.signed.so"
+#define ENCLAVE_PATH "enclave/kmyth_sgx_test_enclave.signed.so"
 sgx_enclave_id_t eid = 0;
 
 void ocall_print_table_entry(size_t size, uint8_t * data)

@@ -8,7 +8,7 @@
 #include "sgx_tseal.h"
 #include "sgx_thread.h"
 
-#include "kmyth_enclave.h"
+#include "kmyth_enclave_trusted.h"
 #include ENCLAVE_HEADER_TRUSTED
 
 unseal_data_t *kmyth_unsealed_data_table = NULL;

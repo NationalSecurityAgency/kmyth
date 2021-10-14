@@ -6,7 +6,8 @@
  */
 
 #include "sgx_urts.h"
-#include "kmyth_enclave.h"
+
+#include "sgx_seal_unseal_impl.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -21,18 +22,19 @@
 // kmyth_sgx_seal_nkl()
 //############################################################################
 int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
-             uint8_t ** output, size_t * output_len, uint16_t key_policy, 
-	     sgx_attributes_t attribute_mask)
+                       uint8_t ** output, size_t * output_len,
+                       uint16_t key_policy, sgx_attributes_t attribute_mask)
 {
   uint8_t *data = NULL;
   size_t data_size = 0;
   int ret;
 
-  enc_get_sealed_size(eid, &ret, input_len,(uint32_t *) &data_size);
-  if (ret == 0 )
+  enc_get_sealed_size(eid, &ret, input_len, (uint32_t *) & data_size);
+  if (ret == 0)
   {
     data = (uint8_t *) malloc(data_size);
-    enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy, attribute_mask);
+    enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy,
+                  attribute_mask);
     if (ret == 1)
     {
       kmyth_log(LOG_ERR, "error to seal data ... exiting");
@@ -54,16 +56,16 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
 //############################################################################
 // kmyth_sgx_unseal_nkl()
 //############################################################################
-int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input, 
-		size_t input_len, uint64_t * handle)
+int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input,
+                         size_t input_len, uint64_t * handle)
 {
   uint8_t *block = NULL;
   size_t blocksize = 0;
 
   if (get_block_bytes
       ((char **) &input, &input_len, &block, &blocksize,
-       (char*) KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA), 
-       (char*) KMYTH_DELIM_END_NKL, strlen(KMYTH_DELIM_END_NKL)))
+       (char *) KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA),
+       (char *) KMYTH_DELIM_END_NKL, strlen(KMYTH_DELIM_END_NKL)))
   {
     kmyth_log(LOG_ERR, "error getting block bytes ... exiting");
     return 1;
@@ -82,7 +84,7 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input,
 
   free(block);
   kmyth_unseal_into_enclave(eid, &ret, data_size, data, handle);
-  if (ret)  
+  if (ret)
   {
     kmyth_log(LOG_ERR, "error to unseal block bytes ... exiting");
     free(data);
@@ -92,4 +94,3 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input,
   free(data);
   return 0;
 }
-
