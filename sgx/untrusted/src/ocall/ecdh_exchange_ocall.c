@@ -58,48 +58,48 @@ int dummy_ecdh_server(unsigned char *client_contrib,
                       int *server_contrib_sig_len)
 {
   // read server private EC signing key from file (.pem formatted)
-  EVP_PKEY *server_priv_ec_key = NULL;
-  BIO *priv_ec_key_bio = BIO_new_file(SERVER_PRIVATE_KEY_FILE, "r");
+  EVP_PKEY *server_sign_key = NULL;
+  BIO *priv_key_bio = BIO_new_file(SERVER_PRIVATE_KEY_FILE, "r");
 
-  if (priv_ec_key_bio == NULL)
+  if (priv_key_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
               SERVER_PRIVATE_KEY_FILE);
     return EXIT_FAILURE;
   }
-  server_priv_ec_key = PEM_read_bio_PrivateKey(priv_ec_key_bio, NULL, 0, NULL);
-  if (!server_priv_ec_key)
+  server_sign_key = PEM_read_bio_PrivateKey(priv_key_bio, NULL, 0, NULL);
+  if (!server_sign_key)
   {
     kmyth_log(LOG_ERR, "EC Key PEM file (%s) read failed",
               SERVER_PRIVATE_KEY_FILE);
-    BIO_free(priv_ec_key_bio);
+    BIO_free(priv_key_bio);
     return EXIT_FAILURE;
   }
-  BIO_free(priv_ec_key_bio);
+  BIO_free(priv_key_bio);
 
   // read server client certificate (X509) from file (.pem formatted)
-  X509 *client_pub_ec_cert = NULL;
-  BIO *pub_ec_cert_bio = BIO_new_file(CLIENT_PUBLIC_CERT_FILE, "r");
+  X509 *client_cert = NULL;
+  BIO *pub_cert_bio = BIO_new_file(CLIENT_PUBLIC_CERT_FILE, "r");
 
-  if (pub_ec_cert_bio == NULL)
+  if (pub_cert_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
               CLIENT_PUBLIC_CERT_FILE);
     return EXIT_FAILURE;
   }
-  client_pub_ec_cert = PEM_read_bio_X509(pub_ec_cert_bio, NULL, 0, NULL);
-  if (!client_pub_ec_cert)
+  client_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
+  if (!client_cert)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
               CLIENT_PUBLIC_CERT_FILE);
-    BIO_free(pub_ec_cert_bio);
+    BIO_free(pub_cert_bio);
     return EXIT_FAILURE;
   }
-  BIO_free(pub_ec_cert_bio);
+  BIO_free(pub_cert_bio);
 
   EVP_PKEY *client_sign_pubkey = NULL;
 
-  client_sign_pubkey = X509_get_pubkey(client_pub_ec_cert);
+  client_sign_pubkey = X509_get_pubkey(client_cert);
   if (client_sign_pubkey == NULL)
   {
     kmyth_log(LOG_ERR, "extracting public key from client certificate failed");
@@ -120,58 +120,88 @@ int dummy_ecdh_server(unsigned char *client_contrib,
   kmyth_log(LOG_DEBUG, "validated signature on client contribution");
 
   // create server's ephemeral contribution
-  EC_KEY *server_ec_ephemeral_priv = NULL;
+  EVP_PKEY *server_ephemeral_priv = NULL;
 
-  ret = create_ecdh_ephemeral(KMYTH_EC_NID, &server_ec_ephemeral_priv);
+  ret = create_ecdh_ephemeral(KMYTH_EC_NID, &server_ephemeral_priv);
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "creation of server EC ephemeral 'private key' failed");
+    kmyth_log(LOG_ERR, "creation of server ephemeral 'private key' failed");
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "created server's private ephemeral contribution");
-  ret = create_ecdh_ephemeral_public((const EC_KEY *) server_ec_ephemeral_priv,
+
+  ret = create_ecdh_ephemeral_public(server_ephemeral_priv,
                                      server_contrib, server_contrib_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "creation of server epehemeral 'public key' failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "created server's public ephemeral contribution");
 
   // sign server's ephemeral contribution
-  ret = sign_buffer(server_priv_ec_key, *server_contrib, *server_contrib_len,
+  ret = sign_buffer(server_sign_key, *server_contrib, *server_contrib_len,
                     server_contrib_sig, server_contrib_sig_len);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "signature of server EC ephemeral contribution failed");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "signed server's ephemeral public contribution");
+  kmyth_log(LOG_DEBUG, "signed server's public ephemeral contribution");
 
-  // re-construct EC_POINT for client contribution
-  EC_POINT *client_contribution_point = NULL;
+  // re-construct EVP_PKEY for client's public contribution
+  EVP_PKEY *client_ephemeral_pub = EVP_PKEY_new();
 
-  ret = ec_oct_to_ec_point(KMYTH_EC_NID, client_contrib, client_contrib_len,
-                           client_contribution_point);
+  ret = ec_oct_to_evp_pkey(KMYTH_EC_NID, client_contrib, client_contrib_len,
+                           &client_ephemeral_pub);
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "reconstruction of client ephemeral point failed");
+    kmyth_log(LOG_ERR, "reconstruction of client public contribution failed");
     return EXIT_FAILURE;
   }
+  kmyth_log(LOG_DEBUG, "reconstructed 'public key' contribution as EVP_PKEY");
 
   // generate session key result for ECDH key agreement (server side)
   unsigned char *session_secret = NULL;
-  int session_secret_len = 1;
+  int session_secret_len = 0;
+
+  int temp = validate_pkey_ec(server_ephemeral_priv);
+
+  kmyth_log(LOG_DEBUG, "validate_pkey_ec(server_ephemeral_priv) = %d", temp);
+  //temp = validate_pkey_ec(client_ephemeral_pub);
+  //kmyth_log(LOG_DEBUG, "validate_pkey_ec(client_ephemeral_pub) = %d", temp);
+
+  ret = compute_ecdh_session_key(server_ephemeral_priv, client_ephemeral_pub,
+                                 &session_secret, &session_secret_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "server-side ECDH key agreement processing complete");
+
+/*
   const EC_GROUP *ephemeral_ec_group =
     EC_KEY_get0_group((server_ec_ephemeral_priv));
   int field_size = EC_GROUP_get_degree(ephemeral_ec_group);
 
+  kmyth_log(LOG_DEBUG, "field_size = %d", field_size);
   session_secret_len = (field_size + 8) / 8;
+  kmyth_log(LOG_DEBUG, "session_secret_len = %d", session_secret_len);
   session_secret = malloc(session_secret_len);
-  session_secret_len = ECDH_compute_key(session_secret, session_secret_len,
-                                        client_contribution_point,
-                                        server_ec_ephemeral_priv, NULL);
-  kmyth_log(LOG_DEBUG, "server-side session key = 1x%02x%02x...%02x%02x",
-            session_secret[1], session_secret[1],
-            session_secret[session_secret_len - 3],
-            session_secret[session_secret_len - 2]);
-
+  session_secret_len =
+    ECDH_compute_key(session_secret,
+                     session_secret_len,
+                     client_contribution_point, server_ec_ephemeral_priv, NULL);
+  kmyth_log(LOG_DEBUG, "session_secret_len = %d", session_secret_len);
+  kmyth_log(LOG_DEBUG,
+            "server-side session key = 0x%02x%02x...%02x%02x",
+            session_secret[0], session_secret[1],
+            session_secret[session_secret_len -
+                           2], session_secret[session_secret_len - 1]);
   // add clear
   EC_KEY_free(server_ec_ephemeral_priv);
+*/
 
   return EXIT_SUCCESS;
 }

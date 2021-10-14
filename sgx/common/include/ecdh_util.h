@@ -36,19 +36,19 @@ extern "C"
  *                                       generating this ephemeral
  *                                       'private key'
  *
- * @param[out] ec_ephemeral_priv_out     Pointer to ephemeral 'private key'
- *                                       (EC_KEY struct) generated
+ * @param[out] ec_ephemeral_pkey_out     Pointer to ephemeral 'private key'
+ *                                       (EVP_PKEY struct) generated
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral(int ec_nid, EC_KEY ** ec_ephemeral_priv_out);
+int create_ecdh_ephemeral(int ec_nid, EVP_PKEY ** ec_ephemeral_pkey_out);
 
 
 /**
  * @brief Creates an ephemeral 'public key' contribution to be exchanged
  *        with a peer in an ECDH key agreement protocal
  *
- * @param[in] ec_ephemeral_priv_in       Pointer to ephemeral 'private key'
+ * @param[in] ec_ephemeral_pkey_in       Pointer to ephemeral 'private key'
  *                                       to be used for generating the
  *                                       ephemeral 'public key' contribution
  *
@@ -61,9 +61,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_public(const EC_KEY * ec_ephemeral_priv_in,
-                                   unsigned char ** ec_ephemeral_pub_out,
-                                   int * ec_ephemeral_pub_out_len);
+int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
+                                 unsigned char ** ec_ephemeral_pub_out,
+                                 int * ec_ephemeral_pub_out_len);
 
 
 /**
@@ -79,17 +79,24 @@ extern "C"
  *
  * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
  *
- * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
+ * @param[out] ec_evp_pkey_out      Pointer to EVP_PKEY struct that represents
  *                                  the elliptic curve point for the input
  *                                  elliptic curve 'key'
  *
  * @return 0 on success, 1 on error
  */
-  int ec_oct_to_ec_point(int ec_nid,
-                         unsigned char * ec_octet_str_in,
-                         int ec_octet_str_in_len,
-                         EC_POINT * ec_point_out);
+int ec_oct_to_evp_pkey(int ec_nid,
+                       unsigned char * ec_octet_str_in,
+                       int ec_octet_str_in_len,
+                       EVP_PKEY ** ec_evp_pkey_out);
 
+
+int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
+                             EVP_PKEY * remote_pub_pkey,
+                             unsigned char ** session_key,
+                             int * session_key_len);
+
+int validate_pkey_ec(EVP_PKEY * pkey);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed

@@ -67,17 +67,17 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
     kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "extracted server's public signature key from certificate");
+  kmyth_sgx_log(7, "extracted server signature verification key from cert");
 
-  // now that public key is extracted, done with input server certificate
+  // now that public key is extracted, done with server certificate passed in
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
 
   // create client's ephemeral contribution to the session key
-  EC_KEY *client_ec_ephemeral_priv = NULL;
+  EVP_PKEY *client_ephemeral_priv = NULL;
   unsigned char *client_contribution = NULL;
   int client_contribution_len = 0;
 
-  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ec_ephemeral_priv);
+  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ephemeral_priv);
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -86,10 +86,16 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
-  ret_val =
-    create_ecdh_ephemeral_public((const EC_KEY *) client_ec_ephemeral_priv,
-                                 &client_contribution,
-                                 &client_contribution_len);
+
+  int temp = validate_pkey_ec(client_ephemeral_priv);
+
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "validate_pkey_ec(client_ephemeral_priv) = %d", temp);
+  kmyth_sgx_log(7, msg);
+  ret_val = create_ecdh_ephemeral_public(client_ephemeral_priv,
+                                         &client_contribution,
+                                         &client_contribution_len);
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -98,7 +104,7 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "created client's contribution (public EC point bytes)");
+  kmyth_sgx_log(7, "created client's ephemeral 'public key' contribution");
 
   // sign client's ephemeral contribution
   unsigned char *client_contrib_signature = NULL;
@@ -122,6 +128,7 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   // done with client private signing key, so clear and free it
   kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
 
+  // exchange signed client/server 'public key' contributions
   unsigned char *server_contribution = NULL;
   int server_contribution_len = 0;
   unsigned char *server_contrib_signature = NULL;
@@ -135,6 +142,29 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
                                 &server_contribution_len,
                                 &server_contrib_signature,
                                 &server_contrib_signature_len);
+
+  // generate session key result for ECDH key agreement (client side)
+  //unsigned char *session_secret = NULL;
+  //int session_secret_len = 1;
+
+/*
+  const EC_GROUP *ephemeral_ec_group =
+    EC_KEY_get0_group((client_ec_ephemeral_priv));
+  int field_size = EC_GROUP_get_degree(ephemeral_ec_group);
+
+  session_secret_len = (field_size + 8) / 8;
+  session_secret = malloc(session_secret_len);
+  session_secret_len = ECDH_compute_key(session_secret, session_secret_len,
+                                        server_contribution_point,
+                                        client_ec_ephemeral_priv, NULL);
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "client-side session key = 0x%02x%02x...%02x%02x",
+           session_secret[1], session_secret[1],
+           session_secret[session_secret_len - 3],
+           session_secret[session_secret_len - 2]);
+  kmyth_sgx_log(7, msg);
+
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -146,6 +176,7 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
 
   // done with server public key, so clear and free it
   kmyth_enclave_clear_and_free(server_sign_pubkey, sizeof(server_sign_pubkey));
+*/
 
   return EXIT_SUCCESS;
 

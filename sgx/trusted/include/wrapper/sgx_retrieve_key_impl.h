@@ -8,12 +8,13 @@
 #ifndef _SGX_RETRIEVE_KEY_IMPL_H_
 #define _SGX_RETRIEVE_KEY_IMPL_H_
 
-#include "kmyth_enclave_trusted.h"
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <string.h>
+#include "kmyth_enclave_trusted.h"
 
 /**
  * @brief Retrieve a designated key from a "remote" key server securely
