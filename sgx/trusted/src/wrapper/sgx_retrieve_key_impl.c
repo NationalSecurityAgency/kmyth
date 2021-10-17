@@ -73,11 +73,11 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
 
   // create client's ephemeral contribution to the session key
-  EVP_PKEY *client_ephemeral_priv = NULL;
-  unsigned char *client_contribution = NULL;
-  int client_contribution_len = 0;
+  EVP_PKEY *client_ephemeral_keypair = NULL;
+  unsigned char *client_ephemeral_pub = NULL;
+  int client_ephemeral_pub_len = 0;
 
-  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ephemeral_priv);
+  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ephemeral_keypair);
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -87,15 +87,15 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
     return EXIT_FAILURE;
   }
 
-  int temp = validate_pkey_ec(client_ephemeral_priv);
+  int temp = validate_pkey_ec(client_ephemeral_keypair);
 
   char msg[MAX_LOG_MSG_LEN] = { 0 };
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "validate_pkey_ec(client_ephemeral_priv) = %d", temp);
+           "validate_pkey_ec(client_ephemeral_keypair) = %d", temp);
   kmyth_sgx_log(7, msg);
-  ret_val = create_ecdh_ephemeral_public(client_ephemeral_priv,
-                                         &client_contribution,
-                                         &client_contribution_len);
+  ret_val = create_ecdh_ephemeral_public(client_ephemeral_keypair,
+                                         &client_ephemeral_pub,
+                                         &client_ephemeral_pub_len);
   if (ret_val)
   {
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -111,8 +111,8 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   int client_contrib_signature_len = 0;
 
   ret_val = sign_buffer(client_sign_key,
-                        client_contribution,
-                        client_contribution_len,
+                        client_ephemeral_pub,
+                        client_ephemeral_pub_len,
                         &client_contrib_signature,
                         &client_contrib_signature_len);
   if (ret_val)
@@ -134,8 +134,8 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   unsigned char *server_contrib_signature = NULL;
   int server_contrib_signature_len = 0;
 
-  ret_val = ecdh_exchange_ocall(client_contribution,
-                                client_contribution_len,
+  ret_val = ecdh_exchange_ocall(client_ephemeral_pub,
+                                client_ephemeral_pub_len,
                                 client_contrib_signature,
                                 client_contrib_signature_len,
                                 &server_contribution,

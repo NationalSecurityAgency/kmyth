@@ -150,7 +150,7 @@ int dummy_ecdh_server(unsigned char *client_contrib,
   kmyth_log(LOG_DEBUG, "signed server's public ephemeral contribution");
 
   // re-construct EVP_PKEY for client's public contribution
-  EVP_PKEY *client_ephemeral_pub = EVP_PKEY_new();
+  EVP_PKEY *client_ephemeral_pub = NULL;
 
   ret = ec_oct_to_evp_pkey(KMYTH_EC_NID, client_contrib, client_contrib_len,
                            &client_ephemeral_pub);
@@ -168,8 +168,9 @@ int dummy_ecdh_server(unsigned char *client_contrib,
   int temp = validate_pkey_ec(server_ephemeral_priv);
 
   kmyth_log(LOG_DEBUG, "validate_pkey_ec(server_ephemeral_priv) = %d", temp);
-  //temp = validate_pkey_ec(client_ephemeral_pub);
-  //kmyth_log(LOG_DEBUG, "validate_pkey_ec(client_ephemeral_pub) = %d", temp);
+  temp = validate_pkey_ec(client_ephemeral_pub);
+
+  kmyth_log(LOG_DEBUG, "validate_pkey_ec(client_ephemeral_pub) = %d", temp);
 
   ret = compute_ecdh_session_key(server_ephemeral_priv, client_ephemeral_pub,
                                  &session_secret, &session_secret_len);

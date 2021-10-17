@@ -91,38 +91,27 @@ int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
                                  unsigned char ** ec_ephemeral_pub_out,
                                  int * ec_ephemeral_pub_out_len)
 {
-  int ev_type = EVP_PKEY_id(ec_ephemeral_pkey_in);
-  char msg[MAX_LOG_MSG_LEN] = {0};
-  snprintf(msg, MAX_LOG_MSG_LEN, "ev_type = %d", ev_type);
-  kmyth_sgx_log(7, msg);
-
   // extract EC_KEY from EVP_PKEY
-  EC_KEY *ephemeral_ec_key = EVP_PKEY_get1_EC_KEY(ec_ephemeral_pkey_in);
+  EC_KEY * ephemeral_ec_key = EVP_PKEY_get1_EC_KEY(ec_ephemeral_pkey_in);
   if (ephemeral_ec_key == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "EC_KEY extraction from EVP_PKEY failed");
     return EXIT_FAILURE;
   }
 
-  // check extracted result
-  if (EC_KEY_check_key(ephemeral_ec_key) != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(3, "extracted EC_KEY struct failed check");
-  }
-
   // need EC_GROUP (elliptic curve definition) as parameter for API calls
-  const EC_GROUP *ephemeral_ec_grp = EC_KEY_get0_group(ephemeral_ec_key);
+  EC_GROUP const* ephemeral_ec_grp = EC_KEY_get0_group(ephemeral_ec_key);
   if (ephemeral_ec_grp == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "'get' EC_GROUP from EC_KEY failed");
     return EXIT_FAILURE;
   }
 
   // extract 'public key'
-  const EC_POINT *ephemeral_ec_point = EC_KEY_get0_public_key(ephemeral_ec_key);
-  if (ephemeral_ec_point == NULL)
+  EC_POINT const* ephemeral_ec_pub = EC_KEY_get0_public_key(ephemeral_ec_key);
+  if (ephemeral_ec_pub == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "'public key' extraction from EC_KEY failed");
     return EXIT_FAILURE;
   }
 
@@ -134,7 +123,7 @@ int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
   // required size. The second call passes a pointer to this newly allocated
   // buffer, and gets populated with the required octet string representation.
   int required_buffer_len = EC_POINT_point2oct(ephemeral_ec_grp,
-                                               ephemeral_ec_point,
+                                               ephemeral_ec_pub,
                                                POINT_CONVERSION_UNCOMPRESSED,
                                                NULL,
                                                0,
@@ -142,17 +131,17 @@ int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
   *ec_ephemeral_pub_out = (unsigned char *) malloc(required_buffer_len);
   if (ec_ephemeral_pub_out == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "failed to get size for ephemeral pubkey octet string");
     return EXIT_FAILURE;
   }
   *ec_ephemeral_pub_out_len = EC_POINT_point2oct(ephemeral_ec_grp,
-                                                 ephemeral_ec_point,
+                                                 ephemeral_ec_pub,
                                                  POINT_CONVERSION_UNCOMPRESSED,
                                                  *ec_ephemeral_pub_out,
                                                  required_buffer_len, NULL);
   if (ec_ephemeral_pub_out_len <= 0)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "EC_POINT to octet string conversion failed");
     return EXIT_FAILURE;
   }
 
@@ -215,7 +204,8 @@ int ec_oct_to_evp_pkey(int ec_nid,
   }
 
   // convert EC_KEY to EVP_PKEY
-  ret_val = EVP_PKEY_set1_EC_KEY(*ec_evp_pkey_out, eckey);
+  *ec_evp_pkey_out = EVP_PKEY_new();
+  ret_val = EVP_PKEY_assign_EC_KEY(*ec_evp_pkey_out, eckey);
   if (ret_val != 1)
   {
     EC_POINT_clear_free(pub_point);
@@ -226,7 +216,7 @@ int ec_oct_to_evp_pkey(int ec_nid,
   }
 
   // Clean-up
-  EC_POINT_clear_free(pub_point);
+  //EC_POINT_clear_free(pub_point);
   EC_GROUP_clear_free((EC_GROUP *) group);
 
   return EXIT_SUCCESS;
@@ -240,18 +230,12 @@ int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
                              unsigned char ** session_key,
                              int * session_key_len)
 {
+  kmyth_sgx_log(7, "inside compute_ecdh_session_key()");
+
   // Create context for the shared secret derivation
   EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(local_priv_pkey, NULL);
   if (ctx == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  // Initialize context
-  if (1 != EVP_PKEY_derive_init(ctx))
-  {
-    EVP_PKEY_CTX_free(ctx);
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
@@ -266,8 +250,16 @@ int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
     kmyth_sgx_log(3, "EVP_PKEY_param_check() failed");
   }
 
+  // Initialize context
+  if (1 != EVP_PKEY_derive_init(ctx))
+  {
+    EVP_PKEY_CTX_free(ctx);
+    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    return EXIT_FAILURE;
+  }
+
   kmyth_sgx_log(7, "before load 'public key' into context");
-/*
+
   // Load the 'public key' contribution received from the peer
   if (1 != EVP_PKEY_derive_set_peer(ctx, remote_pub_pkey))
   {
@@ -282,7 +274,7 @@ int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
   unsigned char *secret;
   size_t secret_len;
 
-  if (EXIT_SUCCESS != EVP_PKEY_derive(ctx, NULL, &secret_len))
+  if (1 != EVP_PKEY_derive(ctx, NULL, &secret_len))
   {
     EVP_PKEY_CTX_free(ctx);
     kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
@@ -299,7 +291,7 @@ int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
   }
 
   // Derive the 'shared secret' value
-  if (EXIT_SUCCESS != EVP_PKEY_derive(ctx, secret, &secret_len))
+  if (1 != EVP_PKEY_derive(ctx, secret, &secret_len))
   {
     EVP_PKEY_CTX_free(ctx);
     OPENSSL_clear_free(secret, secret_len);
@@ -309,7 +301,7 @@ int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
 
   OPENSSL_clear_free(secret, secret_len);
   EVP_PKEY_CTX_free(ctx);
-*/
+
   return EXIT_SUCCESS;
 }
 
@@ -320,28 +312,30 @@ int validate_pkey_ec(EVP_PKEY * pkey)
 {
   int result = 0;
 
+  kmyth_sgx_log(7, "1");
+
   EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(pkey);
   if (!ec_key)
   {
     return -1;
   }
 
-  kmyth_sgx_log(7, "1");
-
+  kmyth_sgx_log(7, "2");
+/*
   if (1 != EC_KEY_check_key(ec_key))
   {
     EC_KEY_free(ec_key);
     return -1;
   }
-
-  kmyth_sgx_log(7, "2");
+*/
+  kmyth_sgx_log(7, "3");
 
   if (EC_KEY_get0_private_key(ec_key))
   {
     result = 2;
   }
 
-  kmyth_sgx_log(7, "3");
+  kmyth_sgx_log(7, "4");
 
   if (EC_KEY_get0_public_key(ec_key))
   {
