@@ -73,38 +73,33 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   kmyth_enclave_clear_and_free(server_cert, sizeof(server_cert));
 
   // create client's ephemeral contribution to the session key
-  EVP_PKEY *client_ephemeral_keypair = NULL;
+  EC_KEY *client_ephemeral_keypair = NULL;
   unsigned char *client_ephemeral_pub = NULL;
   int client_ephemeral_pub_len = 0;
 
-  ret_val = create_ecdh_ephemeral(KMYTH_EC_NID, &client_ephemeral_keypair);
+  ret_val = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
+                                           &client_ephemeral_keypair);
   if (ret_val)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "client ECDH ephemeral key pair creation failed");
     kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
     kmyth_enclave_clear_and_free(server_sign_pubkey,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
 
-  int temp = validate_pkey_ec(client_ephemeral_keypair);
-
-  char msg[MAX_LOG_MSG_LEN] = { 0 };
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "validate_pkey_ec(client_ephemeral_keypair) = %d", temp);
-  kmyth_sgx_log(7, msg);
   ret_val = create_ecdh_ephemeral_public(client_ephemeral_keypair,
                                          &client_ephemeral_pub,
                                          &client_ephemeral_pub_len);
   if (ret_val)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "client ECDH 'public key' octet string creation failed");
     kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
     kmyth_enclave_clear_and_free(server_sign_pubkey,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "created client's ephemeral 'public key' contribution");
+  kmyth_sgx_log(7, "created client's ephemeral 'public key' octet string");
 
   // sign client's ephemeral contribution
   unsigned char *client_contrib_signature = NULL;
@@ -117,13 +112,13 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
                         &client_contrib_signature_len);
   if (ret_val)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "error signing client ephemeral 'public key' bytes");
     kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));
     kmyth_enclave_clear_and_free(server_sign_pubkey,
                                  sizeof(server_sign_pubkey));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "client signed its contribution for ECDH key agreement");
+  kmyth_sgx_log(7, "client signed ECDH ephemeral 'public key'");
 
   // done with client private signing key, so clear and free it
   kmyth_enclave_clear_and_free(client_sign_key, sizeof(client_sign_key));

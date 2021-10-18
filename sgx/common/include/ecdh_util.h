@@ -25,78 +25,110 @@ extern "C"
 
 #include "kmyth_enclave_common.h"
 
+/**
+ * @brief Object or Numeric Identifiers (OID/NID) are used to specify
+ *        cryptographic primitives within the ASN.1 context. This macro
+ *        (KMYTH_EC_NID) is used to specify the elliptic curve used for
+ *        Elliptic Curve Diffe Hellman (ECDH) key agreement by kmyth.
+ *        While the kmyth API calls supporting ECDH generally
+ *        parameterize the 'curve ID' specification, this macro provides
+ *        calling functions a way to easily specify the kmyth default
+ *        when invoking API calls that include a 'curve ID' parameter.
+ */
 #define KMYTH_EC_NID NID_secp384r1
 
 /**
- * @brief Creates an ephemeral 'private key' contribution to be combined with
- *        a 'public key' contribution received from a peer in an ECDH key
- *        agreement protocol
+ * @brief Creates an ephemeral elliptic curve key pair (containing both the
+ *        private and public components) for a participant's contribution
+ *        in an ECDH key agreement protocol
  *
- * @param[in] ec_nid                     ID for the elliptic curve to use for
- *                                       generating this ephemeral
- *                                       'private key'
+ * @param[in]  ec_nid                     ID for the elliptic curve to use
+ *                                        for generating this ephemeral
+ *                                        private/public key pair.
  *
- * @param[out] ec_ephemeral_pkey_out     Pointer to ephemeral 'private key'
- *                                       (EVP_PKEY struct) generated
+ * @param[out] ephemeral_ec_key_pair_out  Pointer to ephemeral key pair
+ *                                        (EC_KEY struct) generated
  *
  * @return 0 on success, 1 on error
  */
-int create_ecdh_ephemeral(int ec_nid, EVP_PKEY ** ec_ephemeral_pkey_out);
+int create_ecdh_ephemeral_key_pair(int ec_nid,
+                                   EC_KEY ** ephemeral_ec_key_pair_out);
 
 
 /**
- * @brief Creates an ephemeral 'public key' contribution to be exchanged
- *        with a peer in an ECDH key agreement protocal
+ * @brief Creates an ephemeral 'public key' contribution (in byte array or
+ *        'octet string' format0 to be exchanged with a peer as part of an
+ *        ECDH key agreement protocol
  *
- * @param[in] ec_ephemeral_pkey_in       Pointer to ephemeral 'private key'
- *                                       to be used for generating the
- *                                       ephemeral 'public key' contribution
+ * @param[in]  ephemeral_ec_key_pair_in  Pointer to ephemeral elliptic curve
+ *                                       key pair to be used for generating
+ *                                       the 'public key' octet string
  *
- * @param[out] ec_ephemeral_pub_out      Pointer to ephemeral 'public key'
- *                                       contribution generated
+ * @param[out] ephemeral_ec_pub_out      Pointer to ephemeral 'public key'
+ *                                       octet string generated
  *
- * @param[out] ec_ephemeral_pub_out_len  Pointer to length (in bytes) of
- *                                       ephemeral 'public key' contribution
+ * @param[out] ephemeral_ec_pub_out_len  Pointer to length (in bytes) of
+ *                                       ephemeral 'public key' octet string
  *                                       generated
  *
  * @return 0 on success, 1 on error
  */
-int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
-                                 unsigned char ** ec_ephemeral_pub_out,
-                                 int * ec_ephemeral_pub_out_len);
+int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
+                                 unsigned char ** ephemeral_ec_pub_out,
+                                 int * ephemeral_ec_pub_out_len);
 
 
 /**
- * @brief Reconstructs the curve point for an elliptic curve 'key' in
+ * @brief Reconstructs the curve point for an elliptic curve 'public key' in
  *        octet string format
  *
  * @param[in]  ec_nid               ID for the elliptic curve to use for
  *                                  generating this ephemeral 'public key'
- *                                  contribution
+ *                                  point
  *
- * @param[in]  ec_octet_str_in      Input elliptic curve 'key' in octet string
- *                                  format
+ * @param[in]  ec_octet_str_in      Input elliptic curve 'public key' in octet
+ *                                  string format
  *
  * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
  *
- * @param[out] ec_evp_pkey_out      Pointer to EVP_PKEY struct that represents
+ * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
  *                                  the elliptic curve point for the input
- *                                  elliptic curve 'key'
+ *                                  elliptic curve 'public key' contribution
  *
  * @return 0 on success, 1 on error
  */
-int ec_oct_to_evp_pkey(int ec_nid,
-                       unsigned char * ec_octet_str_in,
-                       int ec_octet_str_in_len,
-                       EVP_PKEY ** ec_evp_pkey_out);
+int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
+                                           unsigned char * ec_octet_str_in,
+                                           int ec_octet_str_in_len,
+                                           EC_POINT ** ec_point_out);
 
 
-int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
-                             EVP_PKEY * remote_pub_pkey,
+/**
+ * @brief Computes shared secret value, using ECDH, from a local private
+ *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
+ *        secret (e.g., 'abG') that is used to create a session key mutually
+ *        derivable by both the local and remote party.
+ *
+ * @param[in]  ec_nid               ID for the elliptic curve to use for
+ *                                  generating this ephemeral 'public key'
+ *                                  point
+ *
+ * @param[in]  ec_octet_str_in      Input elliptic curve 'public key' in octet
+ *                                  string format
+ *
+ * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
+ *
+ * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
+ *                                  the elliptic curve point for the input
+ *                                  elliptic curve 'public key' contribution
+ *
+ * @return 0 on success, 1 on error
+ */
+int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
+                             EC_POINT * remote_eph_pub_point,
                              unsigned char ** session_key,
                              int * session_key_len);
 
-int validate_pkey_ec(EVP_PKEY * pkey);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed
@@ -123,7 +155,7 @@ int validate_pkey_ec(EVP_PKEY * pkey);
  */
   int sign_buffer(EVP_PKEY * ec_sign_pkey,
                   unsigned char * buf_in, int buf_in_len,
-                  unsigned char ** signature_out, int * signature_out_len);
+                  unsigned char ** sig_out, int * sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
@@ -150,7 +182,7 @@ int validate_pkey_ec(EVP_PKEY * pkey);
  */
   int verify_buffer(EVP_PKEY * ec_verify_pkey,
                     unsigned char * buf_in, int buf_in_len,
-                    unsigned char * signature_in, int signature_in_len);
+                    unsigned char * sig_in, int sig_in_len);
 
 #ifdef __cplusplus
 }

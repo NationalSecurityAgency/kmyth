@@ -9,77 +9,27 @@
 #include "ecdh_util.h"
 
 /*****************************************************************************
- * create_ecdh_ephemeral()
+ * create_ecdh_ephemeral_key_pair()
  ****************************************************************************/
-int create_ecdh_ephemeral(int ec_nid, EVP_PKEY ** ec_ephemeral_pkey_out)
+int create_ecdh_ephemeral_key_pair(int ec_nid,
+                                   EC_KEY ** ephemeral_ec_key_pair_out)
 {
-  EVP_PKEY_CTX *pctx = NULL;
-  EVP_PKEY_CTX *kctx = NULL;
-  EVP_PKEY *params = NULL;
-
-	// Create the context for parameter generation
-	if (NULL == (pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL)))
+	// create new EC_KEY object for the specified built-in curve
+  //   The EC_KEY object passed to 'generate_key' below must be associated
+  //   with the desired EC_GROUP.
+  *ephemeral_ec_key_pair_out = EC_KEY_new_by_curve_name(ec_nid);
+	if (*ephemeral_ec_key_pair_out == NULL)
   {
-    kmyth_sgx_log(3, "failed to create context for parameter generation");
+    kmyth_sgx_log(3, "failed to create new elliptic curve key object by NID");
     return EXIT_FAILURE;
   }
 
-	// Initialize the parameter generation
-	if (1 != EVP_PKEY_paramgen_init(pctx))
+  // generate the ephemeral EC key pair
+	if (1 != EC_KEY_generate_key(*ephemeral_ec_key_pair_out))
   {
-    EVP_PKEY_CTX_free(pctx);
-    kmyth_sgx_log(3, "failed to initialize context for parameter generation");
+    kmyth_sgx_log(3, "ephemeral key pair generation failed");
     return EXIT_FAILURE;
   }
-
-	// Configure context to use desired built-in curve
-	if (1 != EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, ec_nid))
-  {
-    EVP_PKEY_CTX_free(pctx);
-    kmyth_sgx_log(3, "configure paramgen context for built-in curve failed");
-    return EXIT_FAILURE;
-  }
-
-	// Create the parameters object
-	if (!EVP_PKEY_paramgen(pctx, &params))
-  {
-    EVP_PKEY_CTX_free(pctx);
-    kmyth_sgx_log(3, "creation of parameters object failed");
-    return EXIT_FAILURE;
-  }
-
-  // Done with the parameter generation context
-  EVP_PKEY_CTX_free(pctx);
-
-	// Create the context for the ephemeral EC key generation
-	if (NULL == (kctx = EVP_PKEY_CTX_new(params, NULL)))
-  {
-    EVP_PKEY_free(params);
-    kmyth_sgx_log(3, "failed to create key generation context");
-    return EXIT_FAILURE;
-  }
-
-  // Done with the parameters object
-  EVP_PKEY_free(params);
-
-	// Initialize the ephemeral EC key generation context
-	if (1 != EVP_PKEY_keygen_init(kctx))
-  {
-    EVP_PKEY_CTX_free(kctx);
-    kmyth_sgx_log(3, "failed to initialize key generation context");
-    return EXIT_FAILURE;
-  }
-
-  // Generate the ephemeral EC key
-	if (1 != EVP_PKEY_keygen(kctx, ec_ephemeral_pkey_out))
-  {
-    EVP_PKEY_CTX_free(kctx);
-    kmyth_sgx_log(3, "key generation failed");
-    return EXIT_FAILURE;
-  }
-
-  // Done with the key generation context
-  EVP_PKEY_CTX_free(kctx);
 
   return EXIT_SUCCESS;
 }
@@ -87,29 +37,21 @@ int create_ecdh_ephemeral(int ec_nid, EVP_PKEY ** ec_ephemeral_pkey_out)
 /*****************************************************************************
  * create_ecdh_ephemeral_public()
  ****************************************************************************/
-int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
-                                 unsigned char ** ec_ephemeral_pub_out,
-                                 int * ec_ephemeral_pub_out_len)
+int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
+                                 unsigned char ** ephemeral_ec_pub_out,
+                                 int * ephemeral_ec_pub_out_len)
 {
-  // extract EC_KEY from EVP_PKEY
-  EC_KEY * ephemeral_ec_key = EVP_PKEY_get1_EC_KEY(ec_ephemeral_pkey_in);
-  if (ephemeral_ec_key == NULL)
-  {
-    kmyth_sgx_log(3, "EC_KEY extraction from EVP_PKEY failed");
-    return EXIT_FAILURE;
-  }
-
   // need EC_GROUP (elliptic curve definition) as parameter for API calls
-  EC_GROUP const* ephemeral_ec_grp = EC_KEY_get0_group(ephemeral_ec_key);
-  if (ephemeral_ec_grp == NULL)
+  EC_GROUP const* grp = EC_KEY_get0_group(ephemeral_ec_key_pair_in);
+  if (grp == NULL)
   {
     kmyth_sgx_log(3, "'get' EC_GROUP from EC_KEY failed");
     return EXIT_FAILURE;
   }
 
-  // extract 'public key'
-  EC_POINT const* ephemeral_ec_pub = EC_KEY_get0_public_key(ephemeral_ec_key);
-  if (ephemeral_ec_pub == NULL)
+  // extract 'public key' (as an EC_POINT struct)
+  EC_POINT const* pub_pt = EC_KEY_get0_public_key(ephemeral_ec_key_pair_in);
+  if (pub_pt == NULL)
   {
     kmyth_sgx_log(3, "'public key' extraction from EC_KEY failed");
     return EXIT_FAILURE;
@@ -122,24 +64,30 @@ int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
   // that will be produced. This enables memory allocation for a buffer of the
   // required size. The second call passes a pointer to this newly allocated
   // buffer, and gets populated with the required octet string representation.
-  int required_buffer_len = EC_POINT_point2oct(ephemeral_ec_grp,
-                                               ephemeral_ec_pub,
+  int required_buffer_len = EC_POINT_point2oct(grp,
+                                               pub_pt,
                                                POINT_CONVERSION_UNCOMPRESSED,
                                                NULL,
                                                0,
                                                NULL);
-  *ec_ephemeral_pub_out = (unsigned char *) malloc(required_buffer_len);
-  if (ec_ephemeral_pub_out == NULL)
+  if (required_buffer_len <= 0)
   {
     kmyth_sgx_log(3, "failed to get size for ephemeral pubkey octet string");
     return EXIT_FAILURE;
   }
-  *ec_ephemeral_pub_out_len = EC_POINT_point2oct(ephemeral_ec_grp,
-                                                 ephemeral_ec_pub,
+
+  *ephemeral_ec_pub_out = (unsigned char *) malloc(required_buffer_len);
+  if (*ephemeral_ec_pub_out == NULL)
+  {
+    kmyth_sgx_log(3, "malloc of ephemeral pubkey octet string buffer failed");
+    return EXIT_FAILURE;
+  }
+  *ephemeral_ec_pub_out_len = EC_POINT_point2oct(grp,
+                                                 pub_pt,
                                                  POINT_CONVERSION_UNCOMPRESSED,
-                                                 *ec_ephemeral_pub_out,
+                                                 *ephemeral_ec_pub_out,
                                                  required_buffer_len, NULL);
-  if (ec_ephemeral_pub_out_len <= 0)
+  if (*ephemeral_ec_pub_out_len <= 0)
   {
     kmyth_sgx_log(3, "EC_POINT to octet string conversion failed");
     return EXIT_FAILURE;
@@ -149,75 +97,39 @@ int create_ecdh_ephemeral_public(EVP_PKEY * ec_ephemeral_pkey_in,
 }
 
 /*****************************************************************************
- * ec_oct_to_evp_pkey()
+ * reconstruct_ecdh_ephemeral_public_point()
  ****************************************************************************/
-int ec_oct_to_evp_pkey(int ec_nid,
-                       unsigned char * ec_octet_str_in,
-                       int ec_octet_str_in_len,
-                       EVP_PKEY ** ec_evp_pkey_out)
+int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
+                                            unsigned char * ec_octet_str_in,
+                                            int ec_octet_str_in_len,
+                                            EC_POINT ** ec_point_out)
 {
-  // create empty intermediate structs
-  EC_KEY * eckey = EC_KEY_new_by_curve_name(ec_nid);
-  if (eckey == NULL)
-  {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-  const EC_GROUP * group = EC_KEY_get0_group(eckey);
+  // need 'group' parameter to create new EC_POINT on this elliptic curve
+  EC_GROUP * group = EC_GROUP_new_by_curve_name(ec_nid);
   if (group == NULL)
   {
-    EC_KEY_free(eckey);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-  EC_POINT * pub_point = EC_POINT_new(group);
-  if (pub_point == NULL)
-  {
-    EC_GROUP_clear_free((EC_GROUP *) group);
-    EC_KEY_free(eckey);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "EC_GROUP creation for built-in curve NID failed");
     return EXIT_FAILURE;
   }
 
-  // convert input octet encoded string to an EC_POINT struct 
-  int ret_val = EC_POINT_oct2point(group, pub_point,
-                                   ec_octet_str_in,
-                                   ec_octet_str_in_len, NULL);
-  if (ret_val != 1)
+  *ec_point_out = EC_POINT_new(group);
+  if (*ec_point_out == NULL)
   {
-    EC_POINT_clear_free(pub_point);
-    EC_GROUP_clear_free((EC_GROUP *) group);
-    EC_KEY_free(eckey);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "init of empty EC_POINT for specified group failed");
     return EXIT_FAILURE;
   }
 
-  // convert EC_POINT struct to EC_KEY
-  ret_val = EC_KEY_set_public_key(eckey, pub_point);
-  if (ret_val != 1)
+  // convert input octet string to an EC_POINT struct 
+  if (EC_POINT_oct2point(group, *ec_point_out,
+                         ec_octet_str_in, ec_octet_str_in_len, NULL) != 1)
   {
-    EC_POINT_clear_free(pub_point);
-    EC_GROUP_clear_free((EC_GROUP *) group);
-    EC_KEY_free(eckey);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    EC_GROUP_clear_free(group);
+    kmyth_sgx_log(3, "octet string to EC_POINT conversion failed");
     return EXIT_FAILURE;
   }
 
-  // convert EC_KEY to EVP_PKEY
-  *ec_evp_pkey_out = EVP_PKEY_new();
-  ret_val = EVP_PKEY_assign_EC_KEY(*ec_evp_pkey_out, eckey);
-  if (ret_val != 1)
-  {
-    EC_POINT_clear_free(pub_point);
-    EC_GROUP_clear_free((EC_GROUP *) group);
-    EC_KEY_free(eckey);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  // Clean-up
-  //EC_POINT_clear_free(pub_point);
-  EC_GROUP_clear_free((EC_GROUP *) group);
+  // clean-up
+  EC_GROUP_clear_free(group);
 
   return EXIT_SUCCESS;
 }
@@ -225,126 +137,30 @@ int ec_oct_to_evp_pkey(int ec_nid,
 /*****************************************************************************
  * compute_ecdh_session_key()
  ****************************************************************************/
-int compute_ecdh_session_key(EVP_PKEY * local_priv_pkey,
-                             EVP_PKEY * remote_pub_pkey,
+int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
+                             EC_POINT * remote_eph_pub_point,
                              unsigned char ** session_key,
                              int * session_key_len)
 {
   kmyth_sgx_log(7, "inside compute_ecdh_session_key()");
 
-  // Create context for the shared secret derivation
-  EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(local_priv_pkey, NULL);
-  if (ctx == NULL)
+  // create buffer (allocate memory) for the shared secret (session key) result
+  int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
+	*session_key_len = (field_size + 7) / 8;
+  *session_key = OPENSSL_malloc(*session_key_len);
+
+  // derive the 'shared secret' (session key) value
+  *session_key_len = ECDH_compute_key(*session_key, *session_key_len,
+                                      remote_eph_pub_point,
+                                      local_eph_priv_key, NULL);
+
+  if (*session_key_len <= 0)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "computation of ECDH shared secret value failed");
     return EXIT_FAILURE;
   }
-
-  if (1 != EVP_PKEY_check(ctx))
-  {
-    kmyth_sgx_log(3, "EVP_PKEY_check() failed");
-  }
-
-  if (1 != EVP_PKEY_param_check(ctx))
-  {
-    kmyth_sgx_log(3, "EVP_PKEY_param_check() failed");
-  }
-
-  // Initialize context
-  if (1 != EVP_PKEY_derive_init(ctx))
-  {
-    EVP_PKEY_CTX_free(ctx);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  kmyth_sgx_log(7, "before load 'public key' into context");
-
-  // Load the 'public key' contribution received from the peer
-  if (1 != EVP_PKEY_derive_set_peer(ctx, remote_pub_pkey))
-  {
-    EVP_PKEY_CTX_free(ctx);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  kmyth_sgx_log(7, "before determine buffer size");
-
-  // Determine the buffer size needed for the shared secret
-  unsigned char *secret;
-  size_t secret_len;
-
-  if (1 != EVP_PKEY_derive(ctx, NULL, &secret_len))
-  {
-    EVP_PKEY_CTX_free(ctx);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  // Create the buffer
-  secret = OPENSSL_malloc(secret_len);
-  if (secret == NULL)
-  {
-    EVP_PKEY_CTX_free(ctx);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  // Derive the 'shared secret' value
-  if (1 != EVP_PKEY_derive(ctx, secret, &secret_len))
-  {
-    EVP_PKEY_CTX_free(ctx);
-    OPENSSL_clear_free(secret, secret_len);
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
-    return EXIT_FAILURE;
-  }
-
-  OPENSSL_clear_free(secret, secret_len);
-  EVP_PKEY_CTX_free(ctx);
 
   return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * validate_pkey_ec()
- ****************************************************************************/
-int validate_pkey_ec(EVP_PKEY * pkey)
-{
-  int result = 0;
-
-  kmyth_sgx_log(7, "1");
-
-  EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(pkey);
-  if (!ec_key)
-  {
-    return -1;
-  }
-
-  kmyth_sgx_log(7, "2");
-/*
-  if (1 != EC_KEY_check_key(ec_key))
-  {
-    EC_KEY_free(ec_key);
-    return -1;
-  }
-*/
-  kmyth_sgx_log(7, "3");
-
-  if (EC_KEY_get0_private_key(ec_key))
-  {
-    result = 2;
-  }
-
-  kmyth_sgx_log(7, "4");
-
-  if (EC_KEY_get0_public_key(ec_key))
-  {
-    result++;
-  }
-
-  EC_KEY_free(ec_key);
-
-  return result;
 }
 
 
@@ -353,33 +169,27 @@ int validate_pkey_ec(EVP_PKEY * pkey)
  ****************************************************************************/
 int sign_buffer(EVP_PKEY * ec_sign_pkey,
                 unsigned char * buf_in, int buf_in_len,
-                unsigned char ** signature_out, int * signature_out_len)
+                unsigned char ** sig_out, int * sig_out_len)
 {
-  // create 'return code' variable to hold result of OpenSSL API calls
-  int rc = -1;
-
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-
   if (mdctx == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "creation of message digest context failed");
     return EXIT_FAILURE;
   }
 
   // configure signing context
-  rc = EVP_SignInit(mdctx, EVP_sha512());
-  if (rc != 1)
+  if (EVP_SignInit(mdctx, EVP_sha512()) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "config of message digest signature context failed");
     return EXIT_FAILURE;
   }
 
-  // hash data into the signature contex
-  rc = EVP_SignUpdate(mdctx, buf_in, buf_in_len);
-  if (rc != 1)
+  // hash data into the signature context
+  if (EVP_SignUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "error hashing data into signature context");
     return EXIT_FAILURE;
   }
 
@@ -390,18 +200,17 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
     kmyth_sgx_log(3, "invalid value for maximum signature length");
     return EXIT_FAILURE;
   }
-  *signature_out = OPENSSL_malloc(max_sig_len);
-  if (*signature_out == NULL)
+  *sig_out = OPENSSL_malloc(max_sig_len);
+  if (*sig_out == NULL)
   {
     kmyth_sgx_log(3, "malloc of signature buffer failed");
     return EXIT_FAILURE;
   }
 
   // sign the data (create signature)
-  rc = EVP_SignFinal(mdctx, *signature_out, signature_out_len, ec_sign_pkey);
-  if (rc != 1)
+  if (EVP_SignFinal(mdctx, *sig_out, sig_out_len, ec_sign_pkey) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "signature creation failed");
     return EXIT_FAILURE;
   }
 
@@ -416,40 +225,35 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
  ****************************************************************************/
 int verify_buffer(EVP_PKEY * ec_verify_pkey,
                   unsigned char * buf_in, int buf_in_len,
-                  unsigned char * signature_in, int signature_in_len)
+                  unsigned char * sig_in, int sig_in_len)
 {
-  // create 'return code' variable to hold result of OpenSSL API calls
-  int rc = -1;
-
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (mdctx == NULL)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "creation of message digest context failed");
     return EXIT_FAILURE;
   }
 
   // 'initialize' (e.g., load public key)
-  rc = EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(), NULL, ec_verify_pkey);
-  if (rc != 1)
+  if (EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(),
+                           NULL, ec_verify_pkey) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "initialization of message digest context failed");
     return EXIT_FAILURE;
   }
 
   // 'update' with signed data
-  rc = EVP_DigestVerifyUpdate(mdctx, buf_in, buf_in_len);
-  if (rc != 1)
+  if (EVP_DigestVerifyUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "message digest context update with signed data failed");
     return EXIT_FAILURE;
   }
 
   // check signature
-  rc = EVP_DigestVerifyFinal(mdctx, signature_in, signature_in_len);
-  if (rc != 1)
+  if (EVP_DigestVerifyFinal(mdctx, sig_in, sig_in_len) != 1)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    kmyth_sgx_log(3, "signature verification failed");
     return EXIT_FAILURE;
   }
 
