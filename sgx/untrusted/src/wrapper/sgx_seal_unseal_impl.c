@@ -84,7 +84,7 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input,
 
   free(block);
   kmyth_unseal_into_enclave(eid, &ret, data_size, data, handle);
-  if (ret)
+  if (ret == false)
   {
     kmyth_log(LOG_ERR, "error to unseal block bytes ... exiting");
     free(data);
