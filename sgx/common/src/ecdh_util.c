@@ -142,8 +142,6 @@ int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
                              unsigned char ** session_key,
                              int * session_key_len)
 {
-  kmyth_sgx_log(7, "inside compute_ecdh_session_key()");
-
   // create buffer (allocate memory) for the shared secret (session key) result
   int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
 	*session_key_len = (field_size + 7) / 8;
