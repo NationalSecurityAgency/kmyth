@@ -38,6 +38,17 @@ extern "C"
 #define KMYTH_EC_NID NID_secp384r1
 
 /**
+ * @brief OpenSSL's compute_ecdh_key() call supports optionally passing
+ *        a function pointer for a KDF to apply to the derived shared
+ *        secret value. If the intent is to use the shared secret value
+ *        directly, NULL should be passed for this parameter. This macro
+ *        provides a centralized way to configure this behavior. I
+ *        believe that ECDH_KDF_X9_62 selects a simple hash scheme
+ *        defined by ANSI X9.62
+ */
+#define KMYTH_ECDH_KDF (void *) ECDH_KDF_X9_62
+
+/**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
  *        private and public components) for a participant's contribution
  *        in an ECDH key agreement protocol

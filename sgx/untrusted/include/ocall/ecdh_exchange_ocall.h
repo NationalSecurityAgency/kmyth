@@ -27,6 +27,9 @@ extern "C"
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
+#include <kmyth/kmyth_log.h>
+#include <kmyth/memory_util.h>
+
 #include "kmyth_enclave_common.h"
 
 #define SERVER_PRIVATE_KEY_FILE "data/server_priv_test.pem"

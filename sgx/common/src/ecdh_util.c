@@ -148,9 +148,12 @@ int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
   *session_key = OPENSSL_malloc(*session_key_len);
 
   // derive the 'shared secret' (session key) value
+  // TODO: KDF selection/implementation needs further investigation/test
+  //       seems like the current KDF specification is not doing anything
   *session_key_len = ECDH_compute_key(*session_key, *session_key_len,
                                       remote_eph_pub_point,
-                                      local_eph_priv_key, NULL);
+                                      local_eph_priv_key,
+                                      KMYTH_ECDH_KDF);
 
   if (*session_key_len <= 0)
   {
