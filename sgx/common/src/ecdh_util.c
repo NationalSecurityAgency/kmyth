@@ -135,27 +135,28 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 }
 
 /*****************************************************************************
- * compute_ecdh_session_key()
+ * compute_ecdh_shared_secret()
  ****************************************************************************/
-int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
-                             EC_POINT * remote_eph_pub_point,
-                             unsigned char ** session_key,
-                             int * session_key_len)
+int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+                               EC_POINT * remote_eph_pub_point,
+                               unsigned char ** shared_secret,
+                               int * shared_secret_len)
 {
   // create buffer (allocate memory) for the shared secret (session key) result
   int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
-	*session_key_len = (field_size + 7) / 8;
-  *session_key = OPENSSL_malloc(*session_key_len);
+	*shared_secret_len = (field_size + 7) / 8;
+  *shared_secret = OPENSSL_malloc(*shared_secret_len);
 
   // derive the 'shared secret' (session key) value
-  // TODO: KDF selection/implementation needs further investigation/test
-  //       seems like the current KDF specification is not doing anything
-  *session_key_len = ECDH_compute_key(*session_key, *session_key_len,
-                                      remote_eph_pub_point,
-                                      local_eph_priv_key,
-                                      KMYTH_ECDH_KDF);
+  // TODO: KDF selection/implementation via last parameter needs further
+  //       investigation/test
+  *shared_secret_len = ECDH_compute_key(*shared_secret,
+                                        *shared_secret_len,
+                                        remote_eph_pub_point,
+                                        local_eph_priv_key,
+                                        KMYTH_ECDH_KDF);
 
-  if (*session_key_len <= 0)
+  if (*shared_secret_len <= 0)
   {
     kmyth_sgx_log(3, "computation of ECDH shared secret value failed");
     return EXIT_FAILURE;
@@ -164,7 +165,74 @@ int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
   return EXIT_SUCCESS;
 }
 
+  
+/*****************************************************************************
+ * compute_ecdh_session_key()
+ ****************************************************************************/
+int compute_ecdh_session_key(unsigned char * secret,
+                             int secret_len,
+                             unsigned char ** session_key,
+                             int * session_key_len)
+{
+  // specify hash algorithm to employ as a KDF
+  const EVP_MD *kdf = EVP_shake256();
 
+  if (NULL == kdf)
+  {
+    kmyth_sgx_log(3, "failed to locate the specifed hash function");
+    return EXIT_FAILURE;
+  }
+
+  // create message digest (EVP_MD) context
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+
+  if (NULL == ctx)
+  {
+    kmyth_sgx_log(3, "failed to create the message digest context");
+    return EXIT_FAILURE;
+  }
+
+  // initialize the context
+  int result = EVP_DigestInit_ex(ctx, kdf, NULL);
+
+  if (0 == result)
+  {
+    kmyth_sgx_log(3, "failed to initialize the message digest context.");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+
+  // apply shared secret input
+  result = EVP_DigestUpdate(ctx, secret, secret_len);
+  if (0 == result)
+  {
+    kmyth_sgx_log(3, "failed to update the message digest context");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+
+  *session_key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
+  if (NULL == *session_key)
+  {
+    kmyth_sgx_log(3, "failed to allocate the session key buffer");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+  *session_key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
+
+  result = EVP_DigestFinal_ex(ctx, *session_key, (unsigned int *) session_key_len);
+  if (0 == result)
+  {
+    kmyth_sgx_log(3, "failed to finalize the message digest context");
+    EVP_MD_CTX_free(ctx);
+    return 1;
+  }
+
+  EVP_MD_CTX_free(ctx);
+
+  return EXIT_SUCCESS;
+}
+  
 /*****************************************************************************
  * sign_buffer()
  ****************************************************************************/

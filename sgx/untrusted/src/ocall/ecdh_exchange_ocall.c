@@ -176,35 +176,41 @@ int dummy_ecdh_server(unsigned char *client_pub,
   }
   kmyth_log(LOG_DEBUG, "reconstructed client 'public key' as EC_POINT");
 
-  // generate session key result for ECDH key agreement (server side)
+  // generate shared secret result for ECDH key agreement (server side)
   unsigned char *session_secret = NULL;
   int session_secret_len = 0;
 
-  ret = compute_ecdh_session_key(server_ephemeral_keypair,
-                                 client_ephemeral_pub_pt,
-                                 &session_secret, &session_secret_len);
+  ret = compute_ecdh_shared_secret(server_ephemeral_keypair,
+                                   client_ephemeral_pub_pt,
+                                   &session_secret, &session_secret_len);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "server-side ECDH key agreement processing complete");
-
-  const EC_GROUP *group = EC_KEY_get0_group((server_ephemeral_keypair));
-  int field_size = EC_GROUP_get_degree(group);
-
-  session_secret_len = (field_size + 8) / 8;
-  session_secret = malloc(session_secret_len);
-  session_secret_len = ECDH_compute_key(session_secret,
-                                        session_secret_len,
-                                        client_ephemeral_pub_pt,
-                                        server_ephemeral_keypair, NULL);
-  kmyth_log(LOG_DEBUG, "server-side session key = 0x%02x%02x...%02x%02x (%d%s",
+  kmyth_log(LOG_DEBUG, "server-side secret = 0x%02x%02x...%02x%02x (%d bytes)",
             session_secret[0],
             session_secret[1],
             session_secret[session_secret_len - 2],
-            session_secret[session_secret_len - 1],
-            session_secret_len, " bytes)");
+            session_secret[session_secret_len - 1], session_secret_len);
+
+  // generate session key result for ECDH key agreement (server side)
+  unsigned char *session_key = NULL;
+  int session_key_len = 0;
+
+  ret = compute_ecdh_session_key(session_secret,
+                                 session_secret_len,
+                                 &session_key, &session_key_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "server computation of 'session key' result failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "server-side key = 0x%02x%02x...%02x%02x (%d bytes)",
+            session_key[0],
+            session_key[1],
+            session_key[session_key_len - 2],
+            session_key[session_key_len - 1], session_key_len);
 
   // done with server ephemeral keypair, so clear and free
   kmyth_clear(server_ephemeral_keypair, sizeof(server_ephemeral_keypair));
@@ -212,6 +218,10 @@ int dummy_ecdh_server(unsigned char *client_pub,
 
   // done with client ephemeral public point, so clear and free
   EC_POINT_free(client_ephemeral_pub_pt);
+
+  // clean up buffers containing shared secret value and session key
+  kmyth_clear_and_free(session_secret, session_secret_len);
+  kmyth_clear_and_free(session_key, session_key_len);
 
   return EXIT_SUCCESS;
 }

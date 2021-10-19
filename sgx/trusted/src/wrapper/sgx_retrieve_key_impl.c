@@ -174,30 +174,47 @@ int enclave_retrieve_key(uint8_t * client_private_key_bytes,
   }
   kmyth_sgx_log(7, "reconstructed server ECDH ephemeral 'public key' point");
 
-  // generate session key result for ECDH key agreement (client side)
+  // generate shared secret value result for ECDH key agreement (client side)
   unsigned char *session_secret = NULL;
-  int session_secret_len = 1;
-  const EC_GROUP *group = EC_KEY_get0_group((client_ephemeral_keypair));
-  int field_size = EC_GROUP_get_degree(group);
+  int session_secret_len = 0;
 
-  session_secret_len = (field_size + 8) / 8;
-  session_secret = malloc(session_secret_len);
+  ret_val = compute_ecdh_shared_secret(client_ephemeral_keypair,
+                                       server_ephemeral_pub_pt,
+                                       &session_secret, &session_secret_len);
+  if (ret_val)
+  {
+    kmyth_sgx_log(3, "mutually agreed upon shared secret computation failed");
+    return EXIT_FAILURE;
+  }
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "client-side shared secret = 0x%02x%02x...%02x%02x (%d bytes)",
+           session_secret[0], session_secret[1],
+           session_secret[session_secret_len - 2],
+           session_secret[session_secret_len - 1], session_secret_len);
+  kmyth_sgx_log(7, msg);
 
-  session_secret_len = ECDH_compute_key(session_secret, session_secret_len,
-                                        server_ephemeral_pub_pt,
-                                        client_ephemeral_keypair, NULL);
+  // generate session key result for ECDH key agreement (client side)
+  unsigned char *session_key = NULL;
+  int session_key_len = 0;
+
+  ret_val = compute_ecdh_session_key(session_secret,
+                                     session_secret_len,
+                                     &session_key, &session_key_len);
   if (ret_val)
   {
     kmyth_sgx_log(3, "mutually agreed upon session key computation failed");
     return EXIT_FAILURE;
   }
-  char msg[MAX_LOG_MSG_LEN] = { 0 };
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side session key = 0x%02x%02x...%02x%02x",
-           session_secret[0], session_secret[1],
-           session_secret[session_secret_len - 2],
-           session_secret[session_secret_len - 1]);
+           "client-side session key = 0x%02x%02x...%02x%02x (%d bytes)",
+           session_key[0], session_key[1],
+           session_key[session_key_len - 2],
+           session_key[session_key_len - 1], session_key_len);
   kmyth_sgx_log(7, msg);
+
+  kmyth_enclave_clear_and_free(session_secret, session_secret_len);
+  kmyth_enclave_clear_and_free(session_key, session_key_len);
 
   kmyth_sgx_log(7, "completed ECDH exchange");
 

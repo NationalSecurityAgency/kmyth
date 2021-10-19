@@ -41,38 +41,38 @@ extern "C"
  *        With the exchange of this information, they can independently
  *        generate a common session key.
  * 
- * @param[in] enclave_contribution                Pointer to enclave (client)
+ * @param[in]  enclave_ephemeral_public           Pointer to enclave (client)
  *                                                public ephemeral contribution
  *                                                to be exchanged with remote
  *                                                peer (server)
  *
- * @param[in]  enclave_contribution_len           Pointer to length (in bytes)
+ * @param[in]  enclave_ephemeral_public_len       Pointer to length (in bytes)
  *                                                of enclave (client) public
  *                                                ephemeral contribution
  *
- * @param[in]  enclave_contribution_signature     Pointer to signature over
+ * @param[in]  enclave_eph_pub_signature          Pointer to signature over
  *                                                enclave (client) public
  *                                                ephemeral contribution.
  *
- * @param[in]  enclave_contribution_signature_len Pointer to length (in bytes)
+ * @param[in]  enclave_eph_pub_signature_len      Pointer to length (in bytes)
  *                                                of signature for client
  *                                                (enclave) public ephemeral
  *                                                contribution.
  *
- * @param[out] remote_contribution                Pointer to remote (server)
+ * @param[out] remote_ephemeral_public            Pointer to remote (server)
  *                                                public ephemeral contribution
  *                                                to be exchanged with enclave
  *                                                (client)
  *
- * @param[out] remote_contribution_len            Pointer to length (in bytes)
+ * @param[out] remote_ephemeral_public_len        Pointer to length (in bytes)
  *                                                of remote (server) public
  *                                                ephemeral contribution.
  *
- * @param[out] remote_contribution_signature      Pointer to signature over
+ * @param[out] remote_eph_pub_signature           Pointer to signature over
  *                                                remote (server) public
  *                                                ephemeral contribution.
  *
- * @param[out] remote_contribution_signature_len  Pointer to length (in bytes)
+ * @param[out] remote_eph_pub_signature_len       Pointer to length (in bytes)
  *                                                of signature for remote
  *                                                (server) public ephemeral
  *                                                contribution.
@@ -80,44 +80,58 @@ extern "C"
  * 
  * @return 0 on success, 1 on failure
  */
-  int ecdh_exchange_ocall(unsigned char *enclave_contribution,
-                          int enclave_contribution_len,
-                          unsigned char *enclave_contribution_signature,
-                          int enclave_contribution_signature_len,
-                          unsigned char **remote_contribution,
-                          int *remote_contribution_len,
-                          unsigned char **remote_contribution_signature,
-                          int *remote_contribution_signature_len);
+  int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
+                          int enclave_ephemeral_public_len,
+                          unsigned char *enclave_eph_pub_signature,
+                          int enclave_eph_pub_signature_len,
+                          unsigned char **remote_ephemeral_public,
+                          int *remote_ephemeral_public_len,
+                          unsigned char **remote_eph_pub_signature,
+                          int *remote_eph_pub_signature_len);
 
 /**
  * @brief Supports sending enclave public ephemeral contribution for ECDH key
  *        agreement as part of a "ECDH connection request" message to the
  *        remote peer (server).
  * 
- * @param[in] enclave_contrib          Pointer to enclave (client) public
+ * @param[in]  client_pub              Pointer to enclave (client) public
  *                                     ephemeral contribution to be exchanged
- *                                     with remote peer (server)
+ *                                     with remote peer (server).
  *
- * @param[in]  enclave_contrib_len     Pointer to length (in bytes) of enclave
+ * @param[in]  client_pub_len          Pointer to length (in bytes) of enclave
  *                                     (client) public ephemeral contribution.
  *
- * @param[in]  enclave_contrib_sig     Pointer to signature over enclave
+ * @param[in]  client_pub_sig          Pointer to signature over enclave
  *                                     (client) public ephemeral contribution.
  *
- * @param[in]  enclave_contrib_sig_len Pointer to length (in bytes) of
+ * @param[in]  client_pub_sig_len      Pointer to length (in bytes) of
  *                                     signature for client (enclave) public
+ *                                     ephemeral contribution.
+ *
+ * @param[in]  server_pub              Pointer to remote (server) public
+ *                                     ephemeral contribution to be exchanged
+ *                                     with peer (enclave client).
+ *
+ * @param[in]  server_pub_len          Pointer to length (in bytes) of remote
+ *                                     (server) public ephemeral contribution.
+ *
+ * @param[in]  server_pub_sig          Pointer to signature over remote
+ *                                     (server) public ephemeral contribution.
+ *
+ * @param[in]  server_pub_sig_len      Pointer to length (in bytes) of
+ *                                     signature for remote (server) public
  *                                     ephemeral contribution.
  *
  * @return 0 on success, 1 on failure
  */
-  int dummy_ecdh_server(unsigned char *client_contrib,
-                        int client_contrib_len,
-                        unsigned char *client_contrib_sig,
-                        int client_contrib_sig_len,
-                        unsigned char **server_contrib,
-                        int *server_contrib_len,
-                        unsigned char **server_contrib_sig,
-                        int *server_contrib_sig_len);
+  int dummy_ecdh_server(unsigned char *client_pub,
+                        int client_pub_len,
+                        unsigned char *client_pub_sig,
+                        int client_pub_sig_len,
+                        unsigned char **server_pub,
+                        int *server_pub_len,
+                        unsigned char **server_pub_sig,
+                        int *server_pub_sig_len);
 
 #ifdef __cplusplus
 }

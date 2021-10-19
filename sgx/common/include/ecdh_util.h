@@ -46,7 +46,8 @@ extern "C"
  *        believe that ECDH_KDF_X9_62 selects a simple hash scheme
  *        defined by ANSI X9.62
  */
-#define KMYTH_ECDH_KDF (void *) ECDH_KDF_X9_62
+//#define KMYTH_ECDH_KDF (void *) ECDH_KDF_X9_62
+#define KMYTH_ECDH_KDF NULL
 
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
@@ -117,26 +118,50 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 /**
  * @brief Computes shared secret value, using ECDH, from a local private
  *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
- *        secret (e.g., 'abG') that is used to create a session key mutually
- *        derivable by both the local and remote party.
+ *        secret (e.g., 'abG') that is mutually derivable by both the local
+ *        and remote party.
  *
- * @param[in]  ec_nid               ID for the elliptic curve to use for
- *                                  generating this ephemeral 'public key'
- *                                  point
+ * @param[in]  local_eph_priv_key   Key pair containing the ephemeral
+ *                                  'private key' for the 'local' party
+ *                                  participating in the ECDH exchange.
  *
- * @param[in]  ec_octet_str_in      Input elliptic curve 'public key' in octet
- *                                  string format
+ * @param[in]  remote_eph_pub_point Elliptic curve 'public key' point
+ *                                  representing remote peer's contribution
+ *                                  to the ECDH shared secret computation
  *
- * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
+ * @param[out] shared_secret        computed X component of the remote peer's
+ *                                  'public key' point dotted with the local
+ *                                  'private key' point
  *
- * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
- *                                  the elliptic curve point for the input
- *                                  elliptic curve 'public key' contribution
+ * @param[out] shared_secret_len    Pointer to the length (in bytes) of the
+ *                                  shared secret result.
  *
  * @return 0 on success, 1 on error
  */
-int compute_ecdh_session_key(EC_KEY * local_eph_priv_key,
-                             EC_POINT * remote_eph_pub_point,
+int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+                               EC_POINT * remote_eph_pub_point,
+                               unsigned char ** session_key,
+                               int * session_key_len);
+
+/**
+ * @brief Computes session key from a shared secret value input.
+ *
+ * @param[in]  secret           Secret value that will be hashed to produce
+ *                              a session key result of the desired length.
+ *
+ * @param[in]  secret_len       Length (in bytes) of the input secret value
+ *
+ * @param[out] session_key      Message digest resulting from the hash of the
+ *                              input secret value. This result will be used
+ *                              as a session key value.
+ *
+ * @param[out] session_key_len  Pointer to the length (in bytes) of the
+ *                              session key result.
+ *
+ * @return 0 on success, 1 on error
+ */
+int compute_ecdh_session_key(unsigned char * secret,
+                             int secret_len,
                              unsigned char ** session_key,
                              int * session_key_len);
 
