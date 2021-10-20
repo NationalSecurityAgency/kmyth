@@ -31,6 +31,8 @@ extern "C"
  *
  * @param[in] message_ptr      Pointer to string containing the message to
  *                             be logged.
+ *
+ * @return                     None
  */
   void log_event_ocall(const char **src_file_ptr,
                        const char **src_func_ptr,

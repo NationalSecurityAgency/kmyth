@@ -280,6 +280,7 @@ enclave/ecdh_util.o: ../common/src/ecdh_util.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+
 ######## App Objects ########
 
 enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
