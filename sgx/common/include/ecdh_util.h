@@ -42,11 +42,11 @@ extern "C"
  *        a function pointer for a KDF to apply to the derived shared
  *        secret value. If the intent is to use the shared secret value
  *        directly, NULL should be passed for this parameter. This macro
- *        provides a centralized way to configure this behavior. I
- *        believe that ECDH_KDF_X9_62 selects a simple hash scheme
- *        defined by ANSI X9.62
+ *        provides a centralized way to configure this behavior. For now
+ *        this is set to NULL and the compute_ecdh_session_key() function
+ *        was added to hash the ECDH mutually computed secret as a 'KDF'
+ *        and create a 'session key'
  */
-//#define KMYTH_ECDH_KDF (void *) ECDH_KDF_X9_62
 #define KMYTH_ECDH_KDF NULL
 
 /**
@@ -110,9 +110,9 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
  * @return 0 on success, 1 on error
  */
 int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
-                                           unsigned char * ec_octet_str_in,
-                                           int ec_octet_str_in_len,
-                                           EC_POINT ** ec_point_out);
+                                            unsigned char * ec_octet_str_in,
+                                            int ec_octet_str_in_len,
+                                            EC_POINT ** ec_point_out);
 
 
 /**
