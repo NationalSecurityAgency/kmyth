@@ -252,6 +252,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   if (EVP_SignInit(mdctx, EVP_sha512()) != 1)
   {
     kmyth_sgx_log(3, "config of message digest signature context failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
@@ -259,6 +260,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   if (EVP_SignUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
     kmyth_sgx_log(3, "error hashing data into signature context");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
@@ -267,12 +269,14 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   if (max_sig_len <= 0)
   {
     kmyth_sgx_log(3, "invalid value for maximum signature length");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
   *sig_out = OPENSSL_malloc(max_sig_len);
   if (*sig_out == NULL)
   {
     kmyth_sgx_log(3, "malloc of signature buffer failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
@@ -280,6 +284,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   if (EVP_SignFinal(mdctx, *sig_out, sig_out_len, ec_sign_pkey) != 1)
   {
     kmyth_sgx_log(3, "signature creation failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
@@ -309,6 +314,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
                            NULL, ec_verify_pkey) != 1)
   {
     kmyth_sgx_log(3, "initialization of message digest context failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
@@ -316,13 +322,16 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   if (EVP_DigestVerifyUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
     kmyth_sgx_log(3, "message digest context update with signed data failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 
   // check signature
-  if (EVP_DigestVerifyFinal(mdctx, sig_in, sig_in_len) != 1)
+  unsigned char *sig_ptr = sig_in;
+  if (EVP_DigestVerifyFinal(mdctx, sig_ptr, sig_in_len) != 1)
   {
     kmyth_sgx_log(3, "signature verification failed");
+    EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
 

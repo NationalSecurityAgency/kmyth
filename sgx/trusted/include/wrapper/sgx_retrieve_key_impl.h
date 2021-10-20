@@ -14,23 +14,41 @@ extern "C"
 #endif
 
 #include <string.h>
+
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
 #include "kmyth_enclave_trusted.h"
 
 /**
  * @brief Retrieve a designated key from a "remote" key server securely
  *        into the enclave.
  *
- * @param[in]  client_private_key_bytes
- * @param[in]  client_private_key_bytes_len
- * @param[in]  server_certificate_bytes
- * @param[in]  server_certificate_bytes_len
+ *        TODO: The parameters to this function will have to be augmented
+ *              to support actual retrieval from the remote server. This
+ *              initial implementation is purely focused on the key
+ *              agreement steps.
+ *
+ * @param[in]  enclave_sign_privkey   Pointer to enclave's (client's)
+ *                                    private signing key. This supports
+ *                                    signature of the enclave's 'public key'
+ *                                    contribution exchanged with a remote
+ *                                    peer as part of an ECDH key agreement
+ *                                    protocol.
+ *
+ * @param[in]  peer_cert              Pointer to remote's (server's)
+ *                                    certificate, containing the server's
+ *                                    public key that can be used to validate
+ *                                    the signature over the server's
+ *                                    'public key' contribution exchanged with
+ *                                    the enclave as part of an ECDH key
+ *                                    agreement protocol.
  *
  * @return 0 on success, 1 on error
  */
-  int enclave_retrieve_key(uint8_t * client_private_key_bytes,
-                           size_t client_private_key_bytes_len,
-                           uint8_t * server_certificate_bytes,
-                           size_t server_certificate_bytes_len);
+  int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert);
 
 #ifdef __cplusplus
 }
