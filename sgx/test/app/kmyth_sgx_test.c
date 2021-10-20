@@ -213,7 +213,7 @@ void test_seal_unseal_nkl(void)
   kmyth_unsealed_data_table_initialize(eid, &sgx_ret_int);
   CU_ASSERT(sgx_ret_int == 0);
 
-  CU_ASSERT(kmyth_sgx_unseal_nkl(eid, sgx_seal, sgx_seal_len, &handle));
+  CU_ASSERT(kmyth_sgx_unseal_nkl(eid, sgx_seal, sgx_seal_len, &handle) == 0);
 
   kmyth_sgx_test_get_unseal_table_size(eid, &sgx_ret_size);
   CU_ASSERT(sgx_ret_size == 1);
