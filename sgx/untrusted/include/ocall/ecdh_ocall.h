@@ -30,10 +30,9 @@ extern "C"
 #include <kmyth/kmyth_log.h>
 #include <kmyth/memory_util.h>
 
-#include "kmyth_enclave_common.h"
+#include "ecdh_dummy_server.h"
 
-#define SERVER_PRIVATE_KEY_FILE "data/server_priv_test.pem"
-#define CLIENT_PUBLIC_CERT_FILE "data/client_cert_test.pem"
+#include "kmyth_enclave_common.h"
 
 /**
  * @brief Supports exchanging signed 'public key' contributions between the
@@ -88,50 +87,6 @@ extern "C"
                           int *remote_ephemeral_public_len,
                           unsigned char **remote_eph_pub_signature,
                           int *remote_eph_pub_signature_len);
-
-/**
- * @brief Supports sending enclave public ephemeral contribution for ECDH key
- *        agreement as part of a "ECDH connection request" message to the
- *        remote peer (server).
- * 
- * @param[in]  client_pub              Pointer to enclave (client) public
- *                                     ephemeral contribution to be exchanged
- *                                     with remote peer (server).
- *
- * @param[in]  client_pub_len          Pointer to length (in bytes) of enclave
- *                                     (client) public ephemeral contribution.
- *
- * @param[in]  client_pub_sig          Pointer to signature over enclave
- *                                     (client) public ephemeral contribution.
- *
- * @param[in]  client_pub_sig_len      Pointer to length (in bytes) of
- *                                     signature for client (enclave) public
- *                                     ephemeral contribution.
- *
- * @param[in]  server_pub              Pointer to remote (server) public
- *                                     ephemeral contribution to be exchanged
- *                                     with peer (enclave client).
- *
- * @param[in]  server_pub_len          Pointer to length (in bytes) of remote
- *                                     (server) public ephemeral contribution.
- *
- * @param[in]  server_pub_sig          Pointer to signature over remote
- *                                     (server) public ephemeral contribution.
- *
- * @param[in]  server_pub_sig_len      Pointer to length (in bytes) of
- *                                     signature for remote (server) public
- *                                     ephemeral contribution.
- *
- * @return 0 on success, 1 on failure
- */
-  int dummy_ecdh_server(unsigned char *client_pub,
-                        int client_pub_len,
-                        unsigned char *client_pub_sig,
-                        int client_pub_sig_len,
-                        unsigned char **server_pub,
-                        int *server_pub_len,
-                        unsigned char **server_pub_sig,
-                        int *server_pub_sig_len);
 
 #ifdef __cplusplus
 }

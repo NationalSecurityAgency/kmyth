@@ -120,12 +120,30 @@ enclave {
      *
      * @param[in] message_ptr      Pointer to string containing the message to
      *                             be logged.
+     *
+     * @return                     None
      */
     void log_event_ocall([in] const char **src_file_ptr,
                          [in] const char **src_func_ptr,
                          [in] const int *src_line_ptr,
                          [in] int *severity_ptr,
                          [in] const char **message_ptr);
+
+
+    /**
+     * @brief Supports freeing untrusted memory resources from within the
+              enclave. As an example of where this might be needed, If a
+              pointer passed as a parameter of an OCALL is allocated by
+              untrusted code, the trusted code cannot use a simple free()
+              call to de-allocate that memory block. This function, then,
+              attempts to address situations such as these.
+     *
+     * @param[in] mem_block_ptr    Pointer to memory buffer to be freed.
+     *
+     * @return                     None
+     */
+    void OPENSSL_free_ocall([user_check] void ** mem_block_ptr);
+
 
     /**
      * @brief Supports ECDH exchange between enclave and a remote peer
@@ -141,8 +159,10 @@ enclave {
      *
      * @param[in] message_ptr      Pointer to string containing the message to
      *                             be logged.
+     *
+     * @return 0 on success, 1 on failure
      */
-    void ecdh_exchange_ocall([in, count=enclave_contribution_len]
+    int ecdh_exchange_ocall([in, count=enclave_contribution_len]
                                unsigned char *enclave_contribution,
                              int enclave_contribution_len,
                              [in, count=enclave_contribution_signature_len]

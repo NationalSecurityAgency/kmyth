@@ -84,7 +84,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   unsigned char *server_eph_pub_signature = NULL;
   int server_eph_pub_signature_len = 0;
 
-  ret_val = ecdh_exchange_ocall(client_ephemeral_pub,
+  ret_val = ecdh_exchange_ocall(&ret_val,
+                                client_ephemeral_pub,
                                 client_ephemeral_pub_len,
                                 client_eph_pub_signature,
                                 client_eph_pub_signature_len,
@@ -127,9 +128,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   kmyth_sgx_log(7, "validated client ECDH ephemeral 'public key' signature");
 
   // done with signature verification of server contribution
-  // Note: server_eph_pub_signature buffer malloc'd in untrusted space,
-  //       cannot simply free here
   EVP_PKEY_free(server_sign_pubkey);
+  OPENSSL_free_ocall((void **) &server_eph_pub_signature);
 
   // convert server's ephemeral public octet string to an EC_POINT struct
   EC_POINT *server_ephemeral_pub_pt = NULL;
@@ -148,8 +148,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   }
   kmyth_sgx_log(7, "reconstructed server ECDH ephemeral 'public key' point");
 
-  // Note: done with server_ephemeral_pub, but, since it was malloc'd in
-  //       untrusted space, cannot simply free here.
+  // done with server_ephemeral_pub
+  OPENSSL_free_ocall((void **) &server_ephemeral_pub);
 
   // generate shared secret value result for ECDH key agreement (client side)
   unsigned char *session_secret = NULL;

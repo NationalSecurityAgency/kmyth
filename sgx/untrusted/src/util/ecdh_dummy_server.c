@@ -1,55 +1,17 @@
 /**
- * @file ecdh_exchange_ocall.c
+ * @file dummy_ecdh_peer.c
  *
- * @brief Provides implementation of functionality to support peer interaction
- *        for ECDH key agreement
+ * @brief Provides a function to emulate an ECDH remote peer for testing.
+ *        Since kmyth implements a 'client' within the SGX enclave, this
+ *        emulates an ECDH 'server' remote peer.
  */
 
-#include "ecdh_exchange_ocall.h"
+#include "ecdh_dummy_server.h"
 
 /*****************************************************************************
- * ecdh_exchange_ocall()
+ * ecdh_dummy_server()
  ****************************************************************************/
-int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
-                        int enclave_ephemeral_public_len,
-                        unsigned char *enclave_eph_pub_signature,
-                        int enclave_eph_pub_signature_len,
-                        unsigned char **remote_ephemeral_public,
-                        int *remote_ephemeral_public_len,
-                        unsigned char **remote_eph_pub_signature,
-                        int *remote_eph_pub_signature_len)
-{
-  // The ECDH exchange is envisioned as a implementation of the following two
-  // steps:
-  //   - send connection (ECDH key agreement initiation) request to remote peer
-  //   - receive ECDH key agreement response from remote peer
-  //
-  //  Currently, the exchange is simplified to a single call to
-  //  dummy_ecdh_server(). The function call/return replaces the required
-  //  network functionality. The dummy_ecdh_server() function itself,
-  //  emulates processing that would be performed by the remote peer (server).
-  int ret_val = dummy_ecdh_server(enclave_ephemeral_public,
-                                  enclave_ephemeral_public_len,
-                                  enclave_eph_pub_signature,
-                                  enclave_eph_pub_signature_len,
-                                  remote_ephemeral_public,
-                                  remote_ephemeral_public_len,
-                                  remote_eph_pub_signature,
-                                  remote_eph_pub_signature_len);
-
-  if (ret_val != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "unable to complete ECDH 'public key' exchange");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * dummy_ecdh_server()
- ****************************************************************************/
-int dummy_ecdh_server(unsigned char *client_pub,
+int ecdh_dummy_server(unsigned char *client_pub,
                       int client_pub_len,
                       unsigned char *client_pub_sig,
                       int client_pub_sig_len,

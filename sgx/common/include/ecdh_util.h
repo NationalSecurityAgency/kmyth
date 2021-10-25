@@ -220,6 +220,56 @@ int compute_ecdh_session_key(unsigned char * secret,
                     unsigned char * buf_in, int buf_in_len,
                     unsigned char * sig_in, int sig_in_len);
 
+/**
+ * @brief Provides a 'test fixture' that emulates the remote peer (server)
+ *        in an ECDH exchange. This function is passed the enclave (client)
+ *        public ephemeral contribution for ECDH key agreement to emulate an
+ *        "ECDH connection request" message to the remote peer (server). Just
+ *        as a real remote peer would, this function generates it's own
+ *        epehemeral contribution and uses that to derive a 'shared secret'
+ *        and a 'session key' result. It returns its signed epehemeral
+ *        contribution so that the client can independently derive the same
+ *        'shared secret' and 'session key' values.
+ * 
+ * @param[in]  client_pub              Pointer to enclave (client) public
+ *                                     ephemeral contribution to be exchanged
+ *                                     with remote peer (server).
+ *
+ * @param[in]  client_pub_len          Pointer to length (in bytes) of enclave
+ *                                     (client) public ephemeral contribution.
+ *
+ * @param[in]  client_pub_sig          Pointer to signature over enclave
+ *                                     (client) public ephemeral contribution.
+ *
+ * @param[in]  client_pub_sig_len      Pointer to length (in bytes) of
+ *                                     signature for client (enclave) public
+ *                                     ephemeral contribution.
+ *
+ * @param[in]  server_pub              Pointer to remote (server) public
+ *                                     ephemeral contribution to be exchanged
+ *                                     with peer (enclave client).
+ *
+ * @param[in]  server_pub_len          Pointer to length (in bytes) of remote
+ *                                     (server) public ephemeral contribution.
+ *
+ * @param[in]  server_pub_sig          Pointer to signature over remote
+ *                                     (server) public ephemeral contribution.
+ *
+ * @param[in]  server_pub_sig_len      Pointer to length (in bytes) of
+ *                                     signature for remote (server) public
+ *                                     ephemeral contribution.
+ *
+ * @return 0 on success, 1 on failure
+ */
+  int dummy_ecdh_server(unsigned char *client_pub,
+                        int client_pub_len,
+                        unsigned char *client_pub_sig,
+                        int client_pub_sig_len,
+                        unsigned char **server_pub,
+                        int *server_pub_len,
+                        unsigned char **server_pub_sig,
+                        int *server_pub_sig_len);
+
 #ifdef __cplusplus
 }
 #endif

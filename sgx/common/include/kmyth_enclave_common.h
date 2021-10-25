@@ -26,6 +26,8 @@ extern "C"
 #include ENCLAVE_HEADER_TRUSTED
 #else
 #include "log_ocall.h"
+#include "memory_ocall.h"
+#include "ecdh_ocall.h"
 #endif
 
 #ifdef __cplusplus

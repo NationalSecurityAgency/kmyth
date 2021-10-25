@@ -106,6 +106,7 @@ App_Source_Files := app/kmyth_sgx_test.c \
 
 App_Include_Paths := -Ienclave
 App_Include_Paths += -I../untrusted/include/ocall
+App_Include_Paths += -I../untrusted/include/util
 App_Include_Paths += -I../untrusted/include/wrapper
 App_Include_Paths += -I../common/include
 App_Include_Paths += -I$(SGX_SDK)/include
@@ -288,7 +289,15 @@ enclave/log_ocall.o: ../untrusted/src/ocall/log_ocall.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/ecdh_exchange_ocall.o: ../untrusted/src/ocall/ecdh_exchange_ocall.c
+enclave/memory_ocall.o: ../untrusted/src/ocall/memory_ocall.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/ecdh_ocall.o: ../untrusted/src/ocall/ecdh_ocall.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/ecdh_dummy_server.o: ../untrusted/src/util/ecdh_dummy_server.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -308,7 +317,9 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
                                  enclave/ec_key_cert_marshal.o \
                                  enclave/ec_key_cert_unmarshal.o \
                                  enclave/ecdh_util.o \
-                                 enclave/ecdh_exchange_ocall.o \
+                                 enclave/ecdh_ocall.o \
+																 enclave/ecdh_dummy_server.o \
+																 enclave/memory_ocall.o \
                                  enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 	                                  -Lenclave -lcrypto -lcunit
