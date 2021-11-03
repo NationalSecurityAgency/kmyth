@@ -19,10 +19,9 @@
 //############################################################################
 // parse_ski_bytes
 //############################################################################
-int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
+int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
+                    uint8_t bool_policy_or)
 {
-
-  uint8_t policy_or_bool = 1;
 
   if (input == NULL)
   {
@@ -45,7 +44,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_pb_2_data = NULL;
   size_t raw_pb_2_size = 0;
 
-  if (policy_or_bool == 1)
+  if (bool_policy_or == 1)
   {
     if (get_block_bytes((char **) &position,
                         &remaining,
@@ -142,7 +141,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -168,7 +167,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -195,7 +194,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -216,7 +215,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -246,7 +245,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -274,7 +273,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -302,7 +301,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -323,7 +322,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
-    if (policy_or_bool == 1)
+    if (bool_policy_or == 1)
     {
       free(raw_policy_data);
       free(raw_pb_1_data);
@@ -359,7 +358,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   size_t decoded_policy_branch_2_size = 0;
   size_t decoded_policy_branch_2_offset = 0;
 
-  if (policy_or_bool == 1)
+  if (bool_policy_or == 1)
   {
     // decode policy struct
     retval |= decodeBase64Data(raw_policy_data,
@@ -485,7 +484,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   free(decoded_sk_priv_data);
   free(decoded_sym_pub_data);
   free(decoded_sym_priv_data);
-  if (policy_or_bool == 1)
+  if (bool_policy_or == 1)
   {
     free(decoded_policy_data);
     free(decoded_policy_branch_1_data);

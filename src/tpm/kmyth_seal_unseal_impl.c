@@ -376,7 +376,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       size_t *output_len,
                       uint8_t * auth_bytes,
                       size_t auth_bytes_len,
-                      uint8_t * owner_auth_bytes, size_t oa_bytes_len)
+                      uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                      uint8_t bool_policy_or)
 {
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
@@ -443,7 +444,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
 
   Ski ski = get_default_ski();
 
-  if (parse_ski_bytes(input, input_len, &ski))
+  if (parse_ski_bytes(input, input_len, &ski, bool_policy_or))
   {
     kmyth_log(LOG_ERR, "error parsing ski string ... exiting");
     free_ski(&ski);
@@ -584,7 +585,8 @@ int tpm2_kmyth_unseal_file(char *input_path,
                            size_t *output_length,
                            uint8_t * auth_bytes,
                            size_t auth_bytes_len,
-                           uint8_t * owner_auth_bytes, size_t oa_bytes_len)
+                           uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                           uint8_t bool_policy_or)
 {
 
   uint8_t *data = NULL;
@@ -597,7 +599,7 @@ int tpm2_kmyth_unseal_file(char *input_path,
   }
   if (tpm2_kmyth_unseal(data, data_length,
                         output, output_length, auth_bytes, auth_bytes_len,
-                        owner_auth_bytes, oa_bytes_len))
+                        owner_auth_bytes, oa_bytes_len, bool_policy_or))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     free(data);
