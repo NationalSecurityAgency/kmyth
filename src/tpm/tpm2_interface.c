@@ -1123,6 +1123,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     TPM2B_DIGEST pcrEmptyDigest;
 
     pcrEmptyDigest.size = 0;
+
     rc = Tss2_Sys_PolicyPCR(sapi_ctx,
                             policySessionHandle,
                             nullCmdAuths,
@@ -1153,10 +1154,14 @@ int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
 
+  TPML_DIGEST pHashList = {.count = 0 };
+  for (size_t i = 0; i < 8; i++)
+  {
+    pHashList.digests[i].size = 0;
+  }
+
   if (policy1.size != 0 && policy2.size != 0)
   {
-    TPML_DIGEST pHashList;
-
     apply_policy_or(sapi_ctx, policySessionHandle, &policy1, &policy2,
                     &pHashList);
   }

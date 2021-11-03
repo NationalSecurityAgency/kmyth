@@ -455,6 +455,11 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       {
         TPML_DIGEST pHashList;
 
+        for (size_t i = 0; i < 8; i++)
+        {
+          pHashList.digests[i].size = 0;
+        }
+
         apply_policy_or(sapi_ctx, createObjectAuthSession->sessionHandle,
                         &policyBranch1, &policyBranch2, &pHashList);
       }
@@ -699,7 +704,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   // Tss2_Sys_Load() command. Loading an object into the TPM requires
   // authorization based on the criteria of the parent object that the new
   // object is being loaded under:
-  //   - If the object being loaded is a storage key (SK), as it is being 
+  //   - If the object being loaded is a storage key (SK), as it is being
   //     sealed to the SRK, password authorization using the owner hierarchy
   //     authorization (emptyAuth by default) is required.
   // Note: If password authorization is being used, the caller should pass

@@ -742,6 +742,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                         &sdo_public, &sdo_handle))
   {
     kmyth_log(LOG_ERR, "load error: sealed data object ... exiting");
+    Tss2_Sys_FlushContext(sapi_ctx, unsealData_session.sessionHandle);
     return 1;
   }
   kmyth_log(LOG_DEBUG, "loaded sealed data object at handle = 0x%08X",
