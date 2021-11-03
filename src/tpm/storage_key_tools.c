@@ -443,6 +443,7 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2B_DIGEST policyBranch1 = {.size = 0 };  // policy branches not needed for SK creation
   TPM2B_DIGEST policyBranch2 = {.size = 0 };  // policy branches not needed for SK creation
 
+
   if (create_kmyth_object(sapi_ctx,
                           nullSession,
                           srk_handle,

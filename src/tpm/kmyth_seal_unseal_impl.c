@@ -666,7 +666,6 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
 
-  // FOO RETURN HERE
   // create sealed data object
   if (create_kmyth_object(sapi_ctx,
                           &sealData_session,
