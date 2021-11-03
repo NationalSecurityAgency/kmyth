@@ -532,6 +532,28 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPM2_HANDLE policySessionHandle,
                  TPML_PCR_SELECTION policySession_pcrList);
 
+/**
+ * @brief Extension of apply_policy for unsealing. Only calls apply policy
+ * if the user has not elected to use a "policy or". If the user has elected
+ * to use "policy or" it performs the calculations necessary to authorize an action
+ *
+ * @param[in]  sapi_ctx              Pointer to the System API (SAPI) context
+ *
+ * @param[in]  policySessionHandle   Handle referencing authorization policy
+ *                                   session whose context will be updated
+ *                                   by applying these policy commands.
+ *
+ * @param[in]  policySession_pcrList PCR Selection structure for session to
+ *                                   be updated
+ *
+ * @param[in]  policy1               one of two policy branches capable of
+ *                                   satisfying the compound policy
+ *
+ * @param[in]  policy2               The second of two policy branches capable
+ *                                   of satisfying the compound policy
+ *
+ * @return 0 if success, 1 if error.
+ */
 int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                         TPM2_HANDLE policySessionHandle,
                         TPML_PCR_SELECTION policySession_pcrList,
