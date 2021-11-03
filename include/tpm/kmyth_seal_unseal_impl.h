@@ -121,6 +121,8 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
+                           TPM2B_DIGEST policyBranch1,
+                           TPM2B_DIGEST policyBranch2,
                            uint8_t ** result, size_t *result_size);
 
 #endif /* KMYTH_SEAL_UNSEAL_IMPL_H */

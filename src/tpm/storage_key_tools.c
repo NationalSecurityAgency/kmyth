@@ -462,7 +462,8 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                         nullSession,
                         srk_handle,
                         srk_authVal,
-                        emptyPCRList, sk_private, sk_public, sk_handle))
+                        emptyPCRList, policyBranch1, policyBranch2, sk_private,
+                        sk_public, sk_handle))
   {
     kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
     return 1;

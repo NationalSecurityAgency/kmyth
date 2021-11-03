@@ -532,6 +532,11 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPM2_HANDLE policySessionHandle,
                  TPML_PCR_SELECTION policySession_pcrList);
 
+int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                        TPM2_HANDLE policySessionHandle,
+                        TPML_PCR_SELECTION policySession_pcrList,
+                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2);
+
 /**
  * @brief Executes the Kmyth-specific authorization policy steps and updates
  *        the authorization policy session context for the specified TPM 2.0

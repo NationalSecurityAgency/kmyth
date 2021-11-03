@@ -497,7 +497,6 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   wk_priv_data = NULL;
 
   //At this point the data is all formatted, it's time to create the string
-
   uint8_t *out = NULL;
   size_t out_length = 0;
 

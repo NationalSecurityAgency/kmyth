@@ -375,6 +375,12 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   being loaded or SK if a data object is
  *                                   being loaded) was sealed to.
  *
+ * @param[in]  policyBranch1         1 of 2 optional policy branch arguments
+ *                                   needed for compound policy calculations
+ *
+ * @param[in]  policyBranch2         2 of 2 optional policy branch arguments
+ *                                   needed for compound policy calculations
+ *
  * @param[in]  in_private            Encrypted TPM 2.0 "private blob" for
  *                                   object to be loaded - passed as a pointer
  *                                   to the TPM2B_PRIVATE sized buffer
@@ -397,6 +403,8 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                       TPM2_HANDLE parent_handle,
                       TPM2B_AUTH parent_auth,
                       TPML_PCR_SELECTION parent_pcrList,
+                      TPM2B_DIGEST policyBranch1,
+                      TPM2B_DIGEST policyBranch2,
                       TPM2B_PRIVATE * in_private,
                       TPM2B_PUBLIC * in_public, TPM2_HANDLE * object_handle);
 
@@ -433,6 +441,8 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * unsealObjectAuthSession,
                         TPM2_HANDLE object_handle,
                         TPM2B_AUTH object_auth,
+                        TPM2B_AUTH policyBranch1,
+                        TPM2B_AUTH policyBranch2,
                         TPML_PCR_SELECTION object_pcrList,
                         TPM2B_SENSITIVE_DATA * object_sensitive);
 

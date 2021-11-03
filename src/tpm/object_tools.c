@@ -653,6 +653,8 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                       TPM2_HANDLE parent_handle,
                       TPM2B_AUTH parent_auth,
                       TPML_PCR_SELECTION parent_pcrList,
+                      TPM2B_DIGEST policyBranch1,
+                      TPM2B_DIGEST policyBranch2,
                       TPM2B_PRIVATE * in_private,
                       TPM2B_PUBLIC * in_public, TPM2_HANDLE * object_handle)
 {
@@ -724,8 +726,9 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     //   - Storage Key (SK) auth is required to load it under the SK
 
     // Apply policy to session context, in preparation for the "load" command
-    if (apply_policy(sapi_ctx,
-                     loadObjectAuthSession->sessionHandle, parent_pcrList))
+    if (unseal_apply_policy
+        (sapi_ctx, loadObjectAuthSession->sessionHandle, parent_pcrList,
+         policyBranch1, policyBranch2))
     {
       kmyth_log(LOG_ERR, "apply policy to session context error ... exiting");
       return 1;
@@ -866,6 +869,8 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * unsealObjectAuthSession,
                         TPM2_HANDLE object_handle,
                         TPM2B_AUTH object_auth,
+                        TPM2B_DIGEST policyBranch1,
+                        TPM2B_DIGEST policyBranch2,
                         TPML_PCR_SELECTION object_pcrList,
                         TPM2B_SENSITIVE_DATA * object_sensitive)
 {
@@ -897,8 +902,9 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   // PCR selection list (empty by default).
 
   // Apply policy to session context, in preparation for the "unseal" command
-  if (apply_policy(sapi_ctx,
-                   unsealObjectAuthSession->sessionHandle, object_pcrList))
+  if (unseal_apply_policy
+      (sapi_ctx, unsealObjectAuthSession->sessionHandle, object_pcrList,
+       policyBranch1, policyBranch2))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;

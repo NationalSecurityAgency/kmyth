@@ -381,6 +381,22 @@ int tpm2_kmyth_seal(uint8_t * input,
   // done, so free any allocated resources that remain
   free_tpm2_resources(&sapi_ctx);
 
+  FILE *policyOut;
+
+  policyOut = fopen("policies.dat", "w");
+  if (policyOut == NULL)
+  {
+    fprintf(stderr, "\nError opened file\n");
+    exit(1);
+  }
+
+  TPM2B_DIGEST policy1 = ski.policyBranch1;
+  TPM2B_DIGEST policy2 = ski.policyBranch2;
+
+  fwrite(&policy1, sizeof(UINT16) * 34, 1, policyOut);
+  fwrite(&policy2, sizeof(UINT16) * 34, 1, policyOut);
+  fclose(policyOut);
+
   return 0;
 }
 
@@ -468,6 +484,25 @@ int tpm2_kmyth_unseal(uint8_t * input,
     return 1;
   }
 
+  // retrieving policy1 and policy2 to be used in policyor calculation
+  TPM2B_DIGEST policyBranch1;
+  TPM2B_DIGEST policyBranch2;
+  FILE *infile = fopen("policies.dat", "r");
+
+  if (infile == NULL)
+  {
+    fprintf(stderr, "\nError opening file\n");
+    exit(1);
+  }
+  fread(&policyBranch1, sizeof(UINT16) * 34, 1, infile);
+  fread(&policyBranch2, sizeof(UINT16) * 34, 1, infile);
+
+  // close file
+  fclose(infile);
+
+  ski.policyBranch1 = policyBranch1;
+  ski.policyBranch2 = policyBranch2;
+
   // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
   // We have obtained its public and encrypted private blobs from
   // the input .ski file and will now load the SK into the TPM.
@@ -478,6 +513,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                         storageRootKey_handle,
                         ownerAuth,
                         emptyPcrList,
+                        ski.policyBranch1, ski.policyBranch2,
                         &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "error loading storage key ... exiting");
@@ -508,7 +544,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
                              ski.wk_pub,
                              ski.wk_priv,
                              objAuthValue,
-                             ski.pcr_list, objAuthPolicy, &key, &key_len))
+                             ski.pcr_list, objAuthPolicy, ski.policyBranch1,
+                             ski.policyBranch2, &key, &key_len))
   {
     kmyth_log(LOG_ERR, "error unsealing data ... exiting");
     free_ski(&ski);
@@ -727,6 +764,8 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
+                           TPM2B_DIGEST policyBranch1,
+                           TPM2B_DIGEST policyBranch2,
                            uint8_t ** result, size_t *result_size)
 {
   // Start a TPM 2.0 policy session that we will use to authorize the use of
@@ -749,7 +788,8 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                         &unsealData_session,
                         sk_handle,
                         authVal,
-                        pcrList, &sdo_private, &sdo_public, &sdo_handle))
+                        pcrList, policyBranch1, policyBranch2, &sdo_private,
+                        &sdo_public, &sdo_handle))
   {
     kmyth_log(LOG_ERR, "load error: sealed data object ... exiting");
     return 1;
@@ -761,7 +801,8 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2B_SENSITIVE_DATA unseal_sensitive = {.size = 0, };
   if (unseal_kmyth_object(sapi_ctx,
                           &unsealData_session,
-                          sdo_handle, authVal, pcrList, &unseal_sensitive))
+                          sdo_handle, authVal, policyBranch1, policyBranch2,
+                          pcrList, &unseal_sensitive))
   {
     kmyth_log(LOG_ERR, "error unsealing ... exiting");
 

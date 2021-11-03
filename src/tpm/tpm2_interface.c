@@ -1154,6 +1154,30 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
+// unseal_apply_policy()
+//############################################################################
+int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                        TPM2_HANDLE policySessionHandle,
+                        TPML_PCR_SELECTION policySession_pcrList,
+                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2)
+{
+
+  if (apply_policy(sapi_ctx, policySessionHandle, policySession_pcrList))
+  {
+    return 1;
+  }
+
+  if (policy1.size != 0 && policy2.size != 0)
+  {
+    TPML_DIGEST pHashList;
+
+    apply_policy_or(sapi_ctx, policySessionHandle, &policy1, &policy2,
+                    &pHashList);
+  }
+  return 0;
+}
+
+//############################################################################
 // apply_policy_or()
 //############################################################################
 int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
