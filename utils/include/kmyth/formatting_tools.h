@@ -28,6 +28,27 @@ extern "C" {
  */
 #define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"
 
+/**
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the primary policy (resulting from either a compound PolicyOR or single policyPCR)
+ */
+#define KMYTH_DELIM_POLICY "-----PRIMARY POLICY-----\n"
+
+/**
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the one of two policy branches used in a compound policy
+ */
+#define KMYTH_DELIM_POLICY_BRANCH_1 "-----POLICY BRANCH 1-----\n"
+
+/**
+ * @ingroup block_delim
+ *
+ * @brief   Indicates the second of two policy branches used in a compound policy
+ */
+#define KMYTH_DELIM_POLICY_BRANCH_2 "-----POLICY BRANCH 2-----\n"
+
 /** 
  * @ingroup block_delim
  *

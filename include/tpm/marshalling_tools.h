@@ -215,7 +215,18 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
                        size_t *sealed_key_private_data_size,
-                       size_t sealed_key_private_data_offset);
+                       size_t sealed_key_private_data_offset,
+                       TPM2B_DIGEST * policy,
+                       uint8_t ** policy_data,
+                       size_t *policy_data_size,
+                       size_t policy_data_offset,
+                       TPM2B_DIGEST * policyBranch1,
+                       uint8_t ** pb1_data,
+                       size_t *pb1_data_size,
+                       size_t pb1_data_offset,
+                       TPM2B_DIGEST * policyBranch2,
+                       uint8_t ** pb2_data,
+                       size_t *pb2_data_size, size_t pb2_data_offset);
 
 /**
  * @brief Unmarshals TPM 2.0 objects read from a .ski file.
@@ -514,6 +525,10 @@ int pack_private(TPM2B_PRIVATE * private_blob_in,
 int unpack_private(TPM2B_PRIVATE * private_blob_out,
                    uint8_t * packed_data_in,
                    size_t packed_data_in_size, size_t packed_data_in_offset);
+
+int pack_digest(TPM2B_DIGEST * digest_in,
+                uint8_t * digest_data_out,
+                size_t packed_data_out_size, size_t packed_data_out_offset);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)
