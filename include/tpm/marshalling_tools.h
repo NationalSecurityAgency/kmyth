@@ -334,7 +334,19 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          TPM2B_PRIVATE * sealed_key_private_blob,
                          uint8_t * sealed_key_private_data,
                          size_t sealed_key_private_data_size,
-                         size_t sealed_key_private_data_offset);
+                         size_t sealed_key_private_data_offset,
+                         TPM2B_DIGEST * policy_struct,
+                         uint8_t * policy_struct_data,
+                         size_t policy_struct_data_size,
+                         size_t policy_struct_data_offset,
+                         TPM2B_DIGEST * policy_branch_1_struct,
+                         uint8_t * policy_branch_1_struct_data,
+                         size_t policy_branch_1_struct_data_size,
+                         size_t policy_branch_1_struct_data_offset,
+                         TPM2B_DIGEST * policy_branch_2_struct,
+                         uint8_t * policy_branch_2_struct_data,
+                         size_t policy_branch_2_struct_data_size,
+                         size_t policy_branch_2_struct_data_offset);
 
 /**
  * @brief This function packs an input TPM 2.0 PCR selection list structure
@@ -529,6 +541,10 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
 int pack_digest(TPM2B_DIGEST * digest_in,
                 uint8_t * digest_data_out,
                 size_t packed_data_out_size, size_t packed_data_out_offset);
+
+int unpack_digest(TPM2B_DIGEST * digest_out,
+                  uint8_t * packed_data_in,
+                  size_t packed_data_in_size, size_t packed_data_in_offset);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)

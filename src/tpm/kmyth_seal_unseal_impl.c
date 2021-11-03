@@ -364,22 +364,6 @@ int tpm2_kmyth_seal(uint8_t * input,
   // done, so free any allocated resources that remain
   free_tpm2_resources(&sapi_ctx);
 
-  FILE *policyOut;
-
-  policyOut = fopen("policies.dat", "w");
-  if (policyOut == NULL)
-  {
-    fprintf(stderr, "\nError opened file\n");
-    exit(1);
-  }
-
-  TPM2B_DIGEST policy1 = ski.policyBranch1;
-  TPM2B_DIGEST policy2 = ski.policyBranch2;
-
-  fwrite(&policy1, sizeof(UINT16) * 34, 1, policyOut);
-  fwrite(&policy2, sizeof(UINT16) * 34, 1, policyOut);
-  fclose(policyOut);
-
   return 0;
 }
 
@@ -466,25 +450,6 @@ int tpm2_kmyth_unseal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
-
-  // retrieving policy1 and policy2 to be used in policyor calculation
-  TPM2B_DIGEST policyBranch1;
-  TPM2B_DIGEST policyBranch2;
-  FILE *infile = fopen("policies.dat", "r");
-
-  if (infile == NULL)
-  {
-    fprintf(stderr, "\nError opening file\n");
-    exit(1);
-  }
-  fread(&policyBranch1, sizeof(UINT16) * 34, 1, infile);
-  fread(&policyBranch2, sizeof(UINT16) * 34, 1, infile);
-
-  // close file
-  fclose(infile);
-
-  ski.policyBranch1 = policyBranch1;
-  ski.policyBranch2 = policyBranch2;
 
   // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
   // We have obtained its public and encrypted private blobs from

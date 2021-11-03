@@ -22,6 +22,8 @@
 int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 {
 
+  uint8_t policy_or_bool = 1;
+
   if (input == NULL)
   {
     kmyth_log(LOG_ERR, "NULL input cannot be parsed ... exiting");
@@ -36,18 +38,92 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
 
-  if (get_block_bytes((char **) &position,
-                      &remaining,
-                      &raw_pcr_select_list_data,
-                      &raw_pcr_select_list_size,
-                      KMYTH_DELIM_PCR_SELECTION_LIST,
-                      strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                      KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                      strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
+  uint8_t *raw_policy_data = NULL;
+  size_t raw_policy_size = 0;
+  uint8_t *raw_pb_1_data = NULL;
+  size_t raw_pb_1_size = 0;
+  uint8_t *raw_pb_2_data = NULL;
+  size_t raw_pb_2_size = 0;
+
+  if (policy_or_bool == 1)
   {
-    kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
-    free(raw_pcr_select_list_data);
-    return 1;
+    if (get_block_bytes((char **) &position,
+                        &remaining,
+                        &raw_pcr_select_list_data,
+                        &raw_pcr_select_list_size,
+                        KMYTH_DELIM_PCR_SELECTION_LIST,
+                        strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                        KMYTH_DELIM_POLICY, strlen(KMYTH_DELIM_POLICY)))
+    {
+      kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
+      free(raw_pcr_select_list_data);
+      return 1;
+    }
+
+    if (get_block_bytes((char **) &position,
+                        &remaining,
+                        &raw_policy_data,
+                        &raw_policy_size,
+                        KMYTH_DELIM_POLICY,
+                        strlen(KMYTH_DELIM_POLICY),
+                        KMYTH_DELIM_POLICY_BRANCH_1,
+                        strlen(KMYTH_DELIM_POLICY_BRANCH_1)))
+    {
+      kmyth_log(LOG_ERR, "get policy error ... exiting");
+      free(raw_pcr_select_list_data);
+      free(raw_policy_data);
+      return 1;
+    }
+
+    if (get_block_bytes((char **) &position,
+                        &remaining,
+                        &raw_pb_1_data,
+                        &raw_pb_1_size,
+                        KMYTH_DELIM_POLICY_BRANCH_1,
+                        strlen(KMYTH_DELIM_POLICY_BRANCH_1),
+                        KMYTH_DELIM_POLICY_BRANCH_2,
+                        strlen(KMYTH_DELIM_POLICY_BRANCH_2)))
+    {
+      kmyth_log(LOG_ERR, "get policy branch 1 error ... exiting");
+      free(raw_pcr_select_list_data);
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      return 1;
+    }
+
+    if (get_block_bytes((char **) &position,
+                        &remaining,
+                        &raw_pb_2_data,
+                        &raw_pb_2_size,
+                        KMYTH_DELIM_POLICY_BRANCH_2,
+                        strlen(KMYTH_DELIM_POLICY_BRANCH_2),
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                        strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
+    {
+      kmyth_log(LOG_ERR, "get policy branch 2 error ... exiting");
+      free(raw_pcr_select_list_data);
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+      return 1;
+    }
+
+  }
+  else
+  {
+    if (get_block_bytes((char **) &position,
+                        &remaining,
+                        &raw_pcr_select_list_data,
+                        &raw_pcr_select_list_size,
+                        KMYTH_DELIM_PCR_SELECTION_LIST,
+                        strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                        strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
+    {
+      kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
+      free(raw_pcr_select_list_data);
+      return 1;
+    }
   }
 
   // read in (parse out) 'raw' (encoded) public data block for the storage key
@@ -66,6 +142,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -86,6 +168,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_pcr_select_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -107,6 +195,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -122,6 +216,13 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
+
     return 1;
   }
   free(raw_cipher_str_data);
@@ -145,6 +246,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -167,6 +274,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -189,6 +302,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -204,6 +323,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
+    if (policy_or_bool == 1)
+    {
+      free(raw_policy_data);
+      free(raw_pb_1_data);
+      free(raw_pb_2_data);
+    }
     return 1;
   }
 
@@ -223,6 +348,42 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                              &decoded_pcr_select_list_size);
   free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
+
+  uint8_t *decoded_policy_data = NULL;
+  size_t decoded_policy_size = 0;
+  size_t decoded_policy_offset = 0;
+  uint8_t *decoded_policy_branch_1_data = NULL;
+  size_t decoded_policy_branch_1_size = 0;
+  size_t decoded_policy_branch_1_offset = 0;
+  uint8_t *decoded_policy_branch_2_data = NULL;
+  size_t decoded_policy_branch_2_size = 0;
+  size_t decoded_policy_branch_2_offset = 0;
+
+  if (policy_or_bool == 1)
+  {
+    // decode policy struct
+    retval |= decodeBase64Data(raw_policy_data,
+                               raw_policy_size,
+                               &decoded_policy_data, &decoded_policy_size);
+
+    // decode policy 1 branch struct
+    retval |= decodeBase64Data(raw_pb_1_data,
+                               raw_pb_1_size,
+                               &decoded_policy_branch_1_data,
+                               &decoded_policy_branch_1_size);
+
+    // decode policy 1 branch struct
+    retval |= decodeBase64Data(raw_pb_2_data,
+                               raw_pb_2_size,
+                               &decoded_policy_branch_2_data,
+                               &decoded_policy_branch_2_size);
+  }
+  free(raw_policy_data);
+  raw_policy_data = NULL;
+  free(raw_pb_1_data);
+  raw_pb_1_data = NULL;
+  free(raw_pb_2_data);
+  raw_pb_2_data = NULL;
 
   // decode public data block for storage key
   uint8_t *decoded_sk_pub_data = NULL;
@@ -300,7 +461,19 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                                   &temp_ski.wk_priv,
                                   decoded_sym_priv_data,
                                   decoded_sym_priv_size,
-                                  decoded_sym_priv_offset);
+                                  decoded_sym_priv_offset,
+                                  &temp_ski.policy,
+                                  decoded_policy_data,
+                                  decoded_policy_size,
+                                  decoded_policy_offset,
+                                  &temp_ski.policyBranch1,
+                                  decoded_policy_branch_1_data,
+                                  decoded_policy_branch_1_size,
+                                  decoded_policy_branch_1_offset,
+                                  &temp_ski.policyBranch2,
+                                  decoded_policy_branch_2_data,
+                                  decoded_policy_branch_2_size,
+                                  decoded_policy_branch_2_offset);
     if (retval)
     {
       kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
@@ -312,6 +485,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   free(decoded_sk_priv_data);
   free(decoded_sym_pub_data);
   free(decoded_sym_priv_data);
+  if (policy_or_bool == 1)
+  {
+    free(decoded_policy_data);
+    free(decoded_policy_branch_1_data);
+    free(decoded_policy_branch_2_data);
+  }
   *output = temp_ski;
   return retval;
 }
@@ -862,7 +1041,19 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          TPM2B_PRIVATE * sealed_key_private_blob,
                          uint8_t * sealed_key_private_data,
                          size_t sealed_key_private_data_size,
-                         size_t sealed_key_private_data_offset)
+                         size_t sealed_key_private_data_offset,
+                         TPM2B_DIGEST * policy_struct,
+                         uint8_t * policy_struct_data,
+                         size_t policy_struct_data_size,
+                         size_t policy_struct_data_offset,
+                         TPM2B_DIGEST * policy_branch_1_struct,
+                         uint8_t * policy_branch_1_struct_data,
+                         size_t policy_branch_1_struct_data_size,
+                         size_t policy_branch_1_struct_data_offset,
+                         TPM2B_DIGEST * policy_branch_2_struct,
+                         uint8_t * policy_branch_2_struct_data,
+                         size_t policy_branch_2_struct_data_size,
+                         size_t policy_branch_2_struct_data_offset)
 {
   int retval = 0;
 
@@ -871,6 +1062,24 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        pcr_selection_struct_data,
                        pcr_selection_struct_data_size,
                        pcr_selection_struct_data_offset);
+
+  if (policy_struct_data != NULL && policy_branch_1_struct_data != NULL
+      && policy_branch_2_struct_data != NULL)
+  {
+    retval |= unpack_digest(policy_struct,
+                            policy_struct_data,
+                            policy_struct_data_size, policy_struct_data_offset);
+
+    retval |= unpack_digest(policy_branch_1_struct,
+                            policy_branch_1_struct_data,
+                            policy_branch_1_struct_data_size,
+                            policy_branch_1_struct_data_offset);
+
+    retval |= unpack_digest(policy_branch_2_struct,
+                            policy_branch_2_struct_data,
+                            policy_branch_2_struct_data_size,
+                            policy_branch_2_struct_data_offset);
+  }
 
   // Unmarshal public data for Kmyth storage key (SK)
   retval |= unpack_public(storage_key_public_blob,
@@ -1038,7 +1247,7 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
 }
 
 //############################################################################
-// pack_private()
+// pack_digest()
 //############################################################################
 int pack_digest(TPM2B_DIGEST * digest_in,
                 uint8_t * digest_data_out,
@@ -1054,6 +1263,28 @@ int pack_digest(TPM2B_DIGEST * digest_in,
   {
     kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_DIGEST_Marshal(): 0x%08X ... exiting", rc);
+    return 1;
+  }
+
+  return 0;
+}
+
+//############################################################################
+// unpack_digest()
+//############################################################################
+int unpack_digest(TPM2B_DIGEST * digest_out,
+                  uint8_t * packed_data_in,
+                  size_t packed_data_in_size, size_t packed_data_in_offset)
+{
+  // "Unmarshal" input packed (.ski file) format into a TPM2B_PRIVATE struct
+  TSS2_RC rc = 0;
+
+  if ((rc = Tss2_MU_TPM2B_DIGEST_Unmarshal(packed_data_in,
+                                           packed_data_in_size,
+                                           &packed_data_in_offset, digest_out)))
+  {
+    kmyth_log(LOG_ERR,
+              "Tss2_MU_TPM2B_DIGEST_Unmarshal(): 0x%08x ... exiting", rc);
     return 1;
   }
 
