@@ -922,17 +922,9 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   // declare a session structure variable for the trial policy session
   SESSION trialPolicySession;
 
-  if (assign_session_nonces(&trialPolicySession))
+  if (create_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
   {
-    kmyth_log(LOG_ERR, "error assigning nonces for trial session ... exiting");
-    return 1;
-  };
-
-  // create (start) unbound, unsalted trial policy session
-  // consistent with the Kmyth authorization criteria
-  if (start_policy_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
-  {
-    kmyth_log(LOG_ERR, "start policy session error ... exiting");
+    kmyth_log(LOG_ERR, "error creating auth session ... exiting");
     return 1;
   }
 
@@ -978,15 +970,22 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// create_policy_auth_session
+// create_auth_session
 //############################################################################
-int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                               SESSION * policySession)
+int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * policySession, TPM2_SE session_type)
 {
   // create initial callerNonce
   TPM2B_NONCE initialNonce;
 
-  initialNonce.size = 0;        // start with empty nonce
+  if (session_type != TPM2_SE_POLICY)
+  {
+    initialNonce.size = KMYTH_DIGEST_SIZE;
+  }
+  else
+  {
+    initialNonce.size = 0;      // start with empty nonce
+  }
   create_caller_nonce(&initialNonce);
 
   // initialize session state with "start-up" nonce values
@@ -995,6 +994,12 @@ int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   //   - nonceTPM initialized to empty nonce
   policySession->nonceNewer.size = KMYTH_DIGEST_SIZE;
   memset(policySession->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
+
+  if (session_type != TPM2_SE_POLICY)
+  {
+    policySession->nonceOlder.size = KMYTH_DIGEST_SIZE;
+  }
+
   if (rollNonces(policySession, initialNonce))
   {
     kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
@@ -1003,7 +1008,7 @@ int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   policySession->nonceTPM.size = 0;
 
   // initiate an unbound, unsalted policy session
-  if (start_policy_auth_session(sapi_ctx, policySession, TPM2_SE_POLICY))
+  if (start_policy_auth_session(sapi_ctx, policySession, session_type))
   {
     kmyth_log(LOG_ERR, "error starting policy session ... exiting");
     return 1;
@@ -1178,6 +1183,12 @@ int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
   // Apply authorization value (AuthValue) policy command
   TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
   TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+
+  // initializing all digests to empty buffers
+  for (size_t i; i < 8; i++)
+  {
+    pHashList->digests[0].size = 0;
+  }
 
   pHashList->count = 2;
   pHashList->digests[0] = *policy1;

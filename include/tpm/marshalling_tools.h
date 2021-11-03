@@ -643,8 +643,6 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
                    uint8_t * packed_data_in,
                    size_t packed_data_in_size, size_t packed_data_in_offset);
 
-
-
 /**
  * @brief As the contents of memory containing the digest of a
  *        TPM 2.0 object may have platform-specific formatting

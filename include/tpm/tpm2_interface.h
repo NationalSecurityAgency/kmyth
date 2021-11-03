@@ -486,10 +486,12 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
  * @param[out] policySession Pointer to policy session parameters struct
  *                           initialized by this function
  *
+ * @param[in]  session_type  The type of session to create (Trial or Policy)
+ *
  * @return 0 if success, 1 if error
  */
-int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                               SESSION * policySession);
+int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * policySession, TPM2_SE session_type);
 
 /**
  * @brief Initiates (starts) a new authorization session (called by
@@ -625,6 +627,5 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce);
  *
  * @return 0 if success, 1 if error.
  */
-int assign_session_nonces(SESSION * session);
 
 #endif /* TPM2_INTERFACE_H */

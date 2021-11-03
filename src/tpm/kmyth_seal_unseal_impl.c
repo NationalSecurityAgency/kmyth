@@ -208,11 +208,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     // initializing a new session for the policyOR
     SESSION policySessionOR;
 
-    // assigning nonces for the session
-    assign_session_nonces(&policySessionOR);
-
-    // begins an unsalted, unbounded trial session
-    start_policy_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
+    create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
 
     // applies the policy_or using the 2 indicated policy branches:
     // objAuthPolicy = results from current pcr readings
@@ -660,7 +656,7 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   // storage key (SK) to create the sealed wrapping key object
   SESSION sealData_session;
 
-  if (create_policy_auth_session(sapi_ctx, &sealData_session))
+  if (create_auth_session(sapi_ctx, &sealData_session, TPM2_SE_POLICY))
   {
     kmyth_log(LOG_ERR, "error starting auth policy session ... exiting");
     return 1;
@@ -723,7 +719,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   //   2. unseal it in order to retrieve the wrapping key
   SESSION unsealData_session;
 
-  if (create_policy_auth_session(sapi_ctx, &unsealData_session))
+  if (create_auth_session(sapi_ctx, &unsealData_session, TPM2_SE_POLICY))
   {
     kmyth_log(LOG_ERR, "error starting auth policy session ... exiting");
     return 1;

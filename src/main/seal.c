@@ -169,7 +169,7 @@ const struct option longopts[] = {
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
-  {"expectedPolicy", required_argument, 0, 'e'},
+  {"expected_policy", required_argument, 0, 'e'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
   {"list_ciphers", no_argument, 0, 'l'},
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
   char *pcrsString = NULL;
   char *cipherString = NULL;
   bool forceOverwrite = false;
-  char *expectedPolicy = NULL;
+  char *expected_policy = NULL;
 
   // Parse and apply command line options
   int options;
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
       forceOverwrite = true;
       break;
     case 'e':
-      expectedPolicy = optarg;
+      expected_policy = optarg;
       break;
     case 'p':
       pcrsString = optarg;
@@ -348,7 +348,7 @@ int main(int argc, char **argv)
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, pcrs_len, cipherString, expectedPolicy))
+                           pcrs, pcrs_len, cipherString, expected_policy))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
