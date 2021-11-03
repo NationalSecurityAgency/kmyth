@@ -62,16 +62,17 @@
  */
 int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                          uint8_t * sdo_data,
-                         int sdo_dataSize,
+                         size_t sdo_dataSize,
                          TPM2_HANDLE sk_handle,
                          TPM2B_AUTH sk_authVal,
                          TPML_PCR_SELECTION sk_pcrList,
                          TPM2B_AUTH sdo_authVal,
                          TPML_PCR_SELECTION sdo_pcrList,
                          TPM2B_DIGEST sdo_authPolicy,
+                         TPM2B_DIGEST sdo_policyBranch1,
+                         TPM2B_DIGEST sdo_policyBranch2,
                          TPM2B_PUBLIC * sdo_public,
                          TPM2B_PRIVATE * sdo_private);
-
 /**
  * @brief Unseal data using TPM 2.0.
  *
@@ -120,6 +121,6 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_AUTH authVal,
                            TPML_PCR_SELECTION pcrList,
                            TPM2B_DIGEST authPolicy,
-                           uint8_t ** result, size_t * result_size);
+                           uint8_t ** result, size_t *result_size);
 
 #endif /* KMYTH_SEAL_UNSEAL_IMPL_H */

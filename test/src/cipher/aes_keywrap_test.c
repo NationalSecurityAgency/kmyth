@@ -49,11 +49,11 @@ int aes_keywrap_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 int get_aes_keywrap_vector_from_file(FILE * fid,
                                      uint8_t ** K_vec,
-                                     size_t * K_vec_len,
+                                     size_t *K_vec_len,
                                      uint8_t ** P_vec,
-                                     size_t * P_vec_len,
+                                     size_t *P_vec_len,
                                      uint8_t ** C_vec,
-                                     size_t * C_vec_len, bool * expect_pass)
+                                     size_t *C_vec_len, bool *expect_pass)
 {
   // create buffer to hold vector data read in from file a line at a time
   // specify buffer size to handle largest vector component (must include

@@ -18,7 +18,7 @@
 int aes_gcm_encrypt(unsigned char *key,
                     size_t key_len,
                     unsigned char *inData, size_t inData_len,
-                    unsigned char **outData, size_t * outData_len)
+                    unsigned char **outData, size_t *outData_len)
 {
   kmyth_log(LOG_DEBUG, "AES/GCM encryption starting");
 
@@ -169,7 +169,7 @@ int aes_gcm_encrypt(unsigned char *key,
 int aes_gcm_decrypt(unsigned char *key,
                     size_t key_len,
                     unsigned char *inData, size_t inData_len,
-                    unsigned char **outData, size_t * outData_len)
+                    unsigned char **outData, size_t *outData_len)
 {
   kmyth_log(LOG_DEBUG, "AES/GCM decryption starting");
 

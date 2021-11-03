@@ -331,7 +331,8 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         TPML_PCR_SELECTION object_pcrSelect,
                         TPM2_HANDLE object_dest_handle,
                         TPM2B_PRIVATE * object_private,
-                        TPM2B_PUBLIC * object_public)
+                        TPM2B_PUBLIC * object_public,
+                        TPM2B_DIGEST policyBranch1, TPM2B_DIGEST policyBranch2)
 {
   // Initialize TSS2 response code to failure, initially
   TSS2_RC rc = TPM2_RC_FAILURE;
@@ -400,12 +401,11 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
               temp_handle);
 
     // Make the newly recreated SRK primary object persistent
-    TSS2_RC rc = Tss2_Sys_EvictControl(sapi_ctx,
-                                       TPM2_RH_OWNER,
-                                       temp_handle,
-                                       &createObjectCmdAuths,
-                                       object_dest_handle,
-                                       &createObjectRspAuths);
+    rc = Tss2_Sys_EvictControl(sapi_ctx,
+                               TPM2_RH_OWNER,
+                               temp_handle,
+                               &createObjectCmdAuths,
+                               object_dest_handle, &createObjectRspAuths);
 
     if (rc != TSS2_RC_SUCCESS)
     {
@@ -448,6 +448,15 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
         kmyth_log(LOG_ERR,
                   "error applying policy to session context ... exiting");
         return 1;
+      }
+
+      // if both policy branches have a size, policyor digest should be calculated
+      if (policyBranch1.size != 0 && policyBranch2.size != 0)
+      {
+        TPML_DIGEST pHashList;
+
+        apply_policy_or(sapi_ctx, createObjectAuthSession->sessionHandle,
+                        &policyBranch1, &policyBranch2, &pHashList);
       }
 
       // Obtain policy session digest

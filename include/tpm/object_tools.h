@@ -324,7 +324,8 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         TPML_PCR_SELECTION object_pcrSelect,
                         TPM2_HANDLE object_dest_handle,
                         TPM2B_PRIVATE * object_private,
-                        TPM2B_PUBLIC * object_public);
+                        TPM2B_PUBLIC * object_public,
+                        TPM2B_DIGEST policyBranch1, TPM2B_DIGEST policyBranch2);
 
 /**
  * @brief Loads an object (e.g., key) into the TPM 2.0.

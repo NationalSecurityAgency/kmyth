@@ -26,6 +26,10 @@ typedef struct Ski_s
   TPM2B_PUBLIC sk_pub;
   TPM2B_PRIVATE sk_priv;
 
+  TPM2B_DIGEST policyBranch1;
+  TPM2B_DIGEST policyBranch2;
+  TPM2B_DIGEST policy;
+
   //The cipher used to encrypt the data
   cipher_t cipher;
 
@@ -65,7 +69,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
  *
  * @return 0 on success, 1 on error
  */
-int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
+int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length);
 
 /**
  * @brief Frees the contents of a ski struct
@@ -194,23 +198,23 @@ Ski get_default_ski(void);
  */
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t * pcr_selection_struct_data_size,
+                       size_t *pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t * storage_key_public_data_size,
+                       size_t *storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t * storage_key_private_data_size,
+                       size_t *storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
                        TPM2B_PUBLIC * sealed_key_public_blob,
                        uint8_t ** sealed_key_public_data,
-                       size_t * sealed_key_public_data_size,
+                       size_t *sealed_key_public_data_size,
                        size_t sealed_key_public_data_offset,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
-                       size_t * sealed_key_private_data_size,
+                       size_t *sealed_key_private_data_size,
                        size_t sealed_key_private_data_offset);
 
 /**

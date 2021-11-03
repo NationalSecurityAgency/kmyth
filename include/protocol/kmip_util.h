@@ -26,7 +26,7 @@
  */
 int build_kmip_get_request(KMIP * ctx,
                            unsigned char *id, size_t id_len,
-                           unsigned char **request, size_t * request_len);
+                           unsigned char **request, size_t *request_len);
 
 /**
  * <pre>
@@ -47,7 +47,7 @@ int build_kmip_get_request(KMIP * ctx,
  */
 int parse_kmip_get_request(KMIP * ctx,
                            unsigned char *request, size_t request_len,
-                           unsigned char **id, size_t * id_len);
+                           unsigned char **id, size_t *id_len);
 
 /**
  * <pre>
@@ -73,7 +73,7 @@ int parse_kmip_get_request(KMIP * ctx,
 int build_kmip_get_response(KMIP * ctx,
                             unsigned char *id, size_t id_len,
                             unsigned char *key, size_t key_len,
-                            unsigned char **response, size_t * response_len);
+                            unsigned char **response, size_t *response_len);
 
 /**
  * <pre>
@@ -98,8 +98,8 @@ int build_kmip_get_response(KMIP * ctx,
  */
 int parse_kmip_get_response(KMIP * ctx,
                             unsigned char *response, size_t response_len,
-                            unsigned char **id, size_t * id_len,
-                            unsigned char **key, size_t * key_len);
+                            unsigned char **id, size_t *id_len,
+                            unsigned char **key, size_t *key_len);
 
 /**
  * <pre>
@@ -127,7 +127,7 @@ int retrieve_key_with_session_key(int socket_fd,
                                   unsigned char *session_key,
                                   size_t session_key_len, unsigned char *key_id,
                                   size_t key_id_len, unsigned char **key,
-                                  size_t * key_len);
+                                  size_t *key_len);
 
 /**
  * <pre>

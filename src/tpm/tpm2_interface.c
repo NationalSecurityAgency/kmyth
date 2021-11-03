@@ -386,7 +386,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // get_tpm2_impl_type()
 //############################################################################
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator)
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 {
   TPMS_CAPABILITY_DATA capData;
 
@@ -1150,6 +1150,35 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     }
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
   }
+  return 0;
+}
+
+//############################################################################
+// apply_policy_or()
+//############################################################################
+int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
+                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
+                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList)
+{
+  // Apply authorization value (AuthValue) policy command
+  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
+  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+
+  pHashList->count = 2;
+  pHashList->digests[0] = *policy1;
+  pHashList->digests[1] = *policy2;
+
+  TPM2_RC rc =
+    Tss2_Sys_PolicyOR(sapi_ctx, policySessionHandle, nullCmdAuths, pHashList,
+                      nullRspAuths);
+
+  if (rc != TPM2_RC_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "Tss2_Sys_PolicyOR(): rc = 0x%08X, %s", rc,
+              getErrorString(rc));
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "applied PCR policyOR to session context");
   return 0;
 }
 

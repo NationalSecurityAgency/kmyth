@@ -137,8 +137,8 @@ int kmyth_encrypt_data(unsigned char *data,
                        size_t data_size,
                        cipher_t cipher_spec,
                        unsigned char **enc_data,
-                       size_t * enc_data_size,
-                       unsigned char **enc_key, size_t * enc_key_size)
+                       size_t *enc_data_size,
+                       unsigned char **enc_key, size_t *enc_key_size)
 {
   if (cipher_spec.cipher_name == NULL)
   {
@@ -198,7 +198,7 @@ int kmyth_decrypt_data(unsigned char *enc_data,
                        cipher_t cipher_spec,
                        unsigned char *key,
                        size_t key_size,
-                       unsigned char **result, size_t * result_size)
+                       unsigned char **result, size_t *result_size)
 {
   if (enc_data == NULL || enc_data_size == 0)
   {

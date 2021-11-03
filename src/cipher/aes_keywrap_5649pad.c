@@ -17,7 +17,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
                                 size_t key_len,
                                 unsigned char *inData,
                                 size_t inData_len, unsigned char **outData,
-                                size_t * outData_len)
+                                size_t *outData_len)
 {
   // validate non-NULL and non-empty encryption key specified
   if (key == NULL || key_len == 0)
@@ -158,7 +158,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
                                 size_t key_len,
                                 unsigned char *inData,
                                 size_t inData_len, unsigned char **outData,
-                                size_t * outData_len)
+                                size_t *outData_len)
 {
   // validate non-NULL and non-empty decryption key specified
   if (key == NULL || key_len == 0)

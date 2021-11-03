@@ -319,7 +319,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 //############################################################################
 // create_ski_bytes
 //############################################################################
-int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length)
+int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 {
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
@@ -563,7 +563,9 @@ Ski get_default_ski(void)
 {
   Ski ret = {
     .pcr_list = {.count = 0,},
-    .sk_pub = {.size = 0,},
+    .policyBranch1 = {.size = 0,},
+    .policyBranch2 = {.size = 0,},
+    .policy = {.size = 0,},
     .sk_priv = {.size = 0,},
     .cipher = {.cipher_name = NULL,},
     .wk_pub = {.size = 0},
@@ -580,23 +582,23 @@ Ski get_default_ski(void)
 //############################################################################
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t * pcr_selection_struct_data_size,
+                       size_t *pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t * storage_key_public_data_size,
+                       size_t *storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t * storage_key_private_data_size,
+                       size_t *storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
                        TPM2B_PUBLIC * sealed_key_public_blob,
                        uint8_t ** sealed_key_public_data,
-                       size_t * sealed_key_public_data_size,
+                       size_t *sealed_key_public_data_size,
                        size_t sealed_key_public_data_offset,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
-                       size_t * sealed_key_private_data_size,
+                       size_t *sealed_key_private_data_size,
                        size_t sealed_key_private_data_offset)
 {
   // Validate that all input data structures to be packed in preparation

@@ -143,7 +143,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // check_if_srk()
 //############################################################################
-int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool * isSRK)
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
   // initialize 'isSRK' result to false - early termination should not result
   // in a true value passed back (even if the return code indicates an error)
@@ -371,6 +371,8 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2B_PRIVATE *nullPrivateBlob = NULL;  // TPM derives SRK, not exported
   TPM2B_PUBLIC *nullPublicBlob = NULL;
   TPML_PCR_SELECTION emptyPCRList;  // no PCR auth (SRK or SPS)
+  TPM2B_DIGEST policyBranch1 = {.size = 0 };  // SRK does not use policy branches
+  TPM2B_DIGEST policyBranch2 = {.size = 0 };  // SRK does not use policy branches
 
   emptyPCRList.count = 0;
   if (create_kmyth_object(sapi_ctx,
@@ -381,7 +383,8 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
                           srk_sensitive,
                           srk_template,
                           emptyPCRList,
-                          srkHandle, nullPrivateBlob, nullPublicBlob))
+                          srkHandle, nullPrivateBlob, nullPublicBlob,
+                          policyBranch1, policyBranch2))
   {
     kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
     return 1;
@@ -437,6 +440,9 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
 
   emptyPCRList.count = 0;       // no auth policy session means no PCR criteria
+  TPM2B_DIGEST policyBranch1 = {.size = 0 };  // policy branches not needed for SK creation
+  TPM2B_DIGEST policyBranch2 = {.size = 0 };  // policy branches not needed for SK creation
+
   if (create_kmyth_object(sapi_ctx,
                           nullSession,
                           srk_handle,
@@ -444,7 +450,8 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                           emptyPCRList,
                           sk_sensitive,
                           sk_template,
-                          sk_pcrList, unusedHandle, sk_private, sk_public))
+                          sk_pcrList, unusedHandle, sk_private, sk_public,
+                          policyBranch1, policyBranch2))
   {
     kmyth_log(LOG_ERR, "error creating storage key ... exiting");
     return 1;

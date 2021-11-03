@@ -170,7 +170,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator);
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
 
 /**
  * @brief Translates error string from hex into human readable.
@@ -531,6 +531,32 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPM2_HANDLE policySessionHandle,
                  TPML_PCR_SELECTION policySession_pcrList);
+
+/**
+ * @brief Executes the Kmyth-specific authorization policy steps and updates
+ *        the authorization policy session context for the specified TPM 2.0
+ *        session handle.
+ *
+ * @param[in]  sapi_ctx              Pointer to the System API (SAPI) context
+ *
+ * @param[in]  policySessionHandle   Handle referencing authorization policy
+ *                                   session whose context will be updated
+ *                                   by applying these policy commands.
+ *
+ * @param[in]  policy1               one of two policy branches capable of
+ *                                   satisfying the compound policy
+ *
+ * @param[in]  policy2               The second of two policy branches capable
+ *                                   of satisfying the compound policy
+ *
+ * @param[out] pHashList            Pointer to a structure containing each policy
+ *                                  hash branch. 2 supported, 8 possible.
+ *
+ * @return 0 if success, 1 if error.
+ */
+int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
+                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
+                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList);
 
 /**
  * @brief Creates a random initial nonce value that the caller can send to the

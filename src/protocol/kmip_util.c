@@ -14,7 +14,7 @@
 //
 int build_kmip_get_request(KMIP * ctx,
                            unsigned char *id, size_t id_len,
-                           unsigned char **request, size_t * request_len)
+                           unsigned char **request, size_t *request_len)
 {
   // Set up the encoding buffer.
   size_t buffer_blocks = 1;
@@ -93,7 +93,7 @@ int build_kmip_get_request(KMIP * ctx,
 //
 int parse_kmip_get_request(KMIP * ctx,
                            unsigned char *request, size_t request_len,
-                           unsigned char **id, size_t * id_len)
+                           unsigned char **id, size_t *id_len)
 {
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
@@ -156,7 +156,7 @@ int parse_kmip_get_request(KMIP * ctx,
 int build_kmip_get_response(KMIP * ctx,
                             unsigned char *id, size_t id_len,
                             unsigned char *key, size_t key_len,
-                            unsigned char **response, size_t * response_len)
+                            unsigned char **response, size_t *response_len)
 {
   // Set up the encoding buffer
   size_t buffer_blocks = 1;
@@ -250,8 +250,8 @@ int build_kmip_get_response(KMIP * ctx,
 //
 int parse_kmip_get_response(KMIP * ctx,
                             unsigned char *response, size_t response_len,
-                            unsigned char **id, size_t * id_len,
-                            unsigned char **key, size_t * key_len)
+                            unsigned char **id, size_t *id_len,
+                            unsigned char **key, size_t *key_len)
 {
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
@@ -351,7 +351,7 @@ int retrieve_key_with_session_key(int socket_fd,
                                   unsigned char *session_key,
                                   size_t session_key_len, unsigned char *key_id,
                                   size_t key_id_len, unsigned char **key,
-                                  size_t * key_len)
+                                  size_t *key_len)
 {
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
