@@ -24,39 +24,45 @@
  * a data blob. It does not handle file I/O. It takes input data,
  * in the form of hex data bytes (uint8_t *), and seals it to the TPM 2.0.
  *
- * @param[in]  sapi_ctx       System API (SAPI) context, must be initialized
- *                            and passed in as pointer to the SAPI context
+ * @param[in]  sapi_ctx          System API (SAPI) context, must be initialized
+ *                               and passed in as pointer to the SAPI context
  *
- * @param[in]  sdo_data       Input data (e.g., symmetric wrapping key) to be
- *                            sealed - pass pointer to input plaintext buffer
+ * @param[in]  sdo_data          Input data (e.g., symmetric wrapping key) to be
+ *                               sealed - pass pointer to input plaintext buffer
  *
- * @param[in]  sdo_dataSize   Size, in bytes, of the input plaintext data
+ * @param[in]  sdo_dataSize      Size, in bytes, of the input plaintext data
  *
- * @param[in]  sk_handle      Handle value for the storage key in the
- *                            hierarchy this data is to be sealed under
+ * @param[in]  sk_handle         Handle value for the storage key in the
+ *                               hierarchy this data is to be sealed under
  *
- * @param[in]  sk_authVal     Authorization value to be used for creating this
- *                            object (satisfy SK authorization policy)
+ * @param[in]  sk_authVal        Authorization value to be used for creating this
+ *                               object (satisfy SK authorization policy)
  *
- * @param[in]  sk_pcrList     PCR Selection List used by the policy authorizing
- *                            use of this object (satisfy SK auth policy)
+ * @param[in]  sk_pcrList        PCR Selection List used by the policy authorizing
+ *                               use of this object (satisfy SK auth policy)
  *
- * @param[in]  sdo_authVal    Authorization value to be applied to the auth
- *                            policy for the newly created sealed data object
+ * @param[in]  sdo_authVal       Authorization value to be applied to the auth
+ *                               policy for the newly created sealed data object
  *
- * @param[in]  sdo_pcrList    PCR Selection List to be applied to the auth
- *                            policy for the newly created sealed data object
+ * @param[in]  sdo_pcrList       PCR Selection List to be applied to the auth
+ *                               policy for the newly created sealed data object
  *
- * @param[in]  sdo_authPolicy Authorization policy digest that should result
- *                            when completing the steps for the newly created
- *                            sealed data object's auth policy completely and
- *                            correctly
+ * @param[in]  sdo_authPolicy    Authorization policy digest that should result
+ *                               when completing the steps for the newly created
+ *                               sealed data object's auth policy completely and
+ *                               correctly
  *
- * @param[out] sdo_public     TPM 2.0 sized buffer to hold the returned 'public
- *                            area' structure for the sealed data object
+ * @param[in]  sdo_policyBranch1 Optional policy branch to be used in the
+ *                               calculation of a compound "policy or" policy
  *
- * @param[out] sdo_private    TPM 2.0 sized buffer to hold the returned
- *                            'private area' struct for the sealed data object
+ * @param[in]  sdo_policyBranch2 Second optional policy branch to be used in the
+ *                               calculation of a compound "policy or" policy
+ *
+ * @param[out] sdo_public        TPM 2.0 sized buffer to hold the returned 'public
+ *                               area' structure for the sealed data object
+ *
+ * @param[out] sdo_private       TPM 2.0 sized buffer to hold the returned
+ *                               'private area' struct for the sealed data object
  *
  * @return 0 on success, 1 on error
  */
@@ -104,7 +110,13 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @param[in]  authPolicy     Authorization policy digest used to authorize
  *                            loading the input 'data' blob under the SK and
- *                            then unsealing it. 
+ *                            then unsealing it.
+ *
+ * @param[in]  policyBranch1  1 of 2 optional policy branch arguments
+ *                            needed for compound policy calculations
+ *
+ * @param[in]  policyBranch2  2 of 2 optional policy branch arguments
+ *                            needed for compound policy calculations
  *
  * @param[out] result         The kmyth-unsealed result
  *                            (passed as pointer to byte buffer)

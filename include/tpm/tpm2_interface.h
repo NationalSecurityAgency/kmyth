@@ -595,4 +595,14 @@ int create_caller_nonce(TPM2B_NONCE * nonceOut);
  */
 int rollNonces(SESSION * session, TPM2B_NONCE newNonce);
 
+/**
+ * @brief Generates nonce for the session and TPM
+ *
+ * @param[out] session:   Pointer to session structure to be updated
+ *
+ *
+ * @return 0 if success, 1 if error.
+ */
+int assign_session_nonces(SESSION * session);
+
 #endif /* TPM2_INTERFACE_H */

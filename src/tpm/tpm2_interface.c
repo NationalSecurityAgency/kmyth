@@ -922,25 +922,11 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   // declare a session structure variable for the trial policy session
   SESSION trialPolicySession;
 
-  // create an initial callerNonce
-  TPM2B_NONCE initialNonce;
-
-  initialNonce.size = KMYTH_DIGEST_SIZE;
-  create_caller_nonce(&initialNonce);
-
-  // initialize session state with "start-up" nonce values
-  //   - nonceNewer initialized to nonceCaller value just generated
-  //   - nonceOlder initialized to all-zero value of KMYTH_DIGEST_SIZE length
-  //   - nonceTPM initialized to empty nonce
-  trialPolicySession.nonceNewer.size = KMYTH_DIGEST_SIZE;
-  memset(trialPolicySession.nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
-  trialPolicySession.nonceOlder.size = KMYTH_DIGEST_SIZE;
-  if (rollNonces(&trialPolicySession, initialNonce))
+  if (assign_session_nonces(&trialPolicySession))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    kmyth_log(LOG_ERR, "error assigning nonces for trial session ... exiting");
     return 1;
-  }
-  trialPolicySession.nonceTPM.size = 0;
+  };
 
   // create (start) unbound, unsalted trial policy session
   // consistent with the Kmyth authorization criteria
@@ -1225,6 +1211,30 @@ int create_caller_nonce(TPM2B_NONCE * nonceOut)
 
   kmyth_log(LOG_DEBUG, "nonceCaller: 0x%02X..%02X",
             nonceOut->buffer[0], nonceOut->buffer[nonceOut->size - 1]);
+  return 0;
+}
+
+//############################################################################
+// assign_session_nonces()
+//############################################################################
+int assign_session_nonces(SESSION * session)
+{
+  // create an initial nonce
+  TPM2B_NONCE initialNonce;
+
+  initialNonce.size = KMYTH_DIGEST_SIZE;
+  create_caller_nonce(&initialNonce);
+
+  session->nonceNewer.size = KMYTH_DIGEST_SIZE;
+  memset(session->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
+  session->nonceOlder.size = KMYTH_DIGEST_SIZE;
+  if (rollNonces(session, initialNonce))
+  {
+    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    return 1;
+  }
+  session->nonceTPM.size = 0;
+
   return 0;
 }
 

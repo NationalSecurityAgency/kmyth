@@ -52,6 +52,11 @@ extern "C"
  *                               for encrypting the input data. Must be NULL 
  *                               or '\0' terminated
  *
+ * @param[in]  expected_policy   Optional string indicating an alternative
+ *                               policy digest to be used for authorizing
+ *                               actions
+ *
+ *
  * @return 0 on success, 1 on error
  */
   int tpm2_kmyth_seal(uint8_t * input, size_t input_len,
@@ -59,7 +64,7 @@ extern "C"
                       uint8_t * auth_bytes, size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                       int *pcrs, size_t pcrs_len, char *cipher_string,
-                      char *expectedPolicy);
+                      char *expected_policy);
 
 /**
  * @brief High-level function implementing kmyth-unseal using TPM 2.0.
@@ -85,6 +90,7 @@ extern "C"
  *                               must provide via this parameter.
  *
  * @param[in] oa_bytes_len       Number of bytes in owner_auth_bytes
+ *
  *
  * @return 0 on success, 1 on error
  */
@@ -128,6 +134,10 @@ extern "C"
  *                               for encrypting the input data. Must be NULL
  *                               or '\0' terminated
  *
+ * @param[in]  expected_policy   Optional string indicating an alternative
+ *                               policy digest to be used for authorizing
+ *                               actions
+ *
  * @return 0 on success, 1 on error
  */
   int tpm2_kmyth_seal_file(char *input_path,
@@ -135,7 +145,7 @@ extern "C"
                            uint8_t * auth_bytes, size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                            int *pcrs, size_t pcrs_len, char *cipher_string,
-                           char *expectedPolicy);
+                           char *expected_policy);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.

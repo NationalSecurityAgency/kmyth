@@ -56,23 +56,6 @@ static int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
 }
 
 //############################################################################
-// assign_session_nonces()
-//############################################################################
-static int assign_session_nonces(SESSION * session)
-{
-  TPM2B_NONCE initialNonce;
-
-  initialNonce.size = KMYTH_DIGEST_SIZE;
-  create_caller_nonce(&initialNonce);
-  session->nonceNewer.size = KMYTH_DIGEST_SIZE;
-  memset(session->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
-  session->nonceOlder.size = KMYTH_DIGEST_SIZE;
-  rollNonces(session, initialNonce);
-  session->nonceTPM.size = 0;
-  return 0;
-}
-
-//############################################################################
 // tpm2_kmyth_seal()
 //############################################################################
 int tpm2_kmyth_seal(uint8_t * input,
@@ -83,7 +66,7 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
                     size_t oa_bytes_len, int *pcrs, size_t pcrs_len,
-                    char *cipher_string, char *expectedPolicy)
+                    char *cipher_string, char *expected_policy)
 {
 
   //init connection to the resource manager
@@ -198,17 +181,17 @@ int tpm2_kmyth_seal(uint8_t * input,
   // if the user has passed in secondary policy, this indicates that they wish to use
   // this policy as an alternative condition that can be used to satisfy the policy
   // of the sealed data object
-  if (expectedPolicy != NULL)
+  if (expected_policy != NULL)
   {
     // digest that will hold the second auth policy branch
     TPM2B_DIGEST secondObjAuthPolicy;
 
     // takes the user-supplied policy and converts it into TPM2B_DIGEST
-    if (convert_string_to_digest(expectedPolicy, &secondObjAuthPolicy))
+    if (convert_string_to_digest(expected_policy, &secondObjAuthPolicy))
     {
       kmyth_log(LOG_ERR,
                 "failed to convert secondary policy %s to digest ... exiting",
-                expectedPolicy);
+                expected_policy);
       return 1;
     }
     TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
@@ -585,7 +568,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
                          int *pcrs, size_t pcrs_len, char *cipher_string,
-                         char *expectedPolicy)
+                         char *expected_policy)
 {
 
   // Verify input path exists with read permissions
@@ -618,7 +601,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                       output, output_len,
                       auth_bytes, auth_bytes_len,
                       owner_auth_bytes, oa_bytes_len,
-                      pcrs, pcrs_len, cipher_string, expectedPolicy))
+                      pcrs, pcrs_len, cipher_string, expected_policy))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
     free(data);
