@@ -82,11 +82,11 @@
  */
 int get_aes_gcm_vector_from_file(FILE * fid,
                                  uint8_t ** key_vec,
-                                 size_t *key_vec_len,
+                                 size_t * key_vec_len,
                                  uint8_t ** input_vec,
-                                 size_t *input_vec_len,
+                                 size_t * input_vec_len,
                                  uint8_t ** result_vec,
-                                 size_t *result_vec_len, bool *expect_pass);
+                                 size_t * result_vec_len, bool * expect_pass);
 
 //---------------------- Test Suite Setup ------------------------------------
 

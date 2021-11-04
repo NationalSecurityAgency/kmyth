@@ -39,11 +39,11 @@
  *
  * @return 0 on success, 1 on error.
  */
-typedef int (*cipher)(unsigned char *key,
-                      size_t key_len,
-                      unsigned char *inData,
-                      size_t inData_len,
-                      unsigned char **outData, size_t *outData_len);
+typedef int (*cipher) (unsigned char *key,
+                       size_t key_len,
+                       unsigned char *inData,
+                       size_t inData_len,
+                       unsigned char **outData, size_t * outData_len);
 
 /**
  * cipher_t:
@@ -118,8 +118,8 @@ int kmyth_encrypt_data(unsigned char *data,
                        size_t data_size,
                        cipher_t enc_cipher,
                        unsigned char **enc_data,
-                       size_t *enc_data_size, unsigned char **enc_key,
-                       size_t *enc_key_size);
+                       size_t * enc_data_size, unsigned char **enc_key,
+                       size_t * enc_key_size);
 
 /**
  * @brief Performs the symmetric decryption specified by the caller.
@@ -145,6 +145,6 @@ int kmyth_decrypt_data(unsigned char *enc_data,
                        cipher_t cipher_spec,
                        unsigned char *key,
                        size_t key_size,
-                       unsigned char **result, size_t *result_size);
+                       unsigned char **result, size_t * result_size);
 
 #endif /* CIPHER_H */
