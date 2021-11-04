@@ -35,11 +35,11 @@ static int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
   char substr[3];
   size_t strlength = strlen(str);
 
-  if (strlength != (size_t) 68)
+  if (strlength != (size_t) 132)
   {
     return 1;
   }
-  unsigned char expectedPolicyBuffer[66] = { 0x00 };
+  unsigned char expectedPolicyBuffer[132] = { 0x00 };
   unsigned long ul;
 
   substr[2] = '\0';
@@ -51,6 +51,32 @@ static int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
     expectedPolicyBuffer[i / 2] = ul;
   }
   memcpy(digest, expectedPolicyBuffer, sizeof(expectedPolicyBuffer));
+  return 0;
+}
+
+//############################################################################
+// convert_digest_to_string()
+//############################################################################
+static int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
+{
+  // number of hex values in the TPM2B digest
+  size_t digest_size = (8 * sizeof(digest)) + 2;
+
+  char hex_buf[digest_size];
+
+  memcpy(hex_buf, digest, digest_size);
+
+  char *ptr = &string_buf[0];
+  char *end = &string_buf[133];
+
+  for (size_t i = 0; i < digest_size; i++)
+  {
+    if (ptr + 2 < end)
+    {
+      ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) hex_buf[i]);
+    }
+  }
+
   return 0;
 }
 
@@ -185,7 +211,6 @@ int tpm2_kmyth_seal(uint8_t * input,
     // digest that will hold the second auth policy branch
     TPM2B_DIGEST secondObjAuthPolicy;
 
-    // takes the user-supplied policy and converts it into TPM2B_DIGEST
     if (convert_string_to_digest(expected_policy, &secondObjAuthPolicy))
     {
       kmyth_log(LOG_ERR,
