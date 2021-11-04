@@ -64,7 +64,7 @@ extern "C"
                       uint8_t * auth_bytes, size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                       int *pcrs, size_t pcrs_len, char *cipher_string,
-                      char *expected_policy);
+                      char *expected_policy, uint8_t bool_trial_only);
 
 /**
  * @brief High-level function implementing kmyth-unseal using TPM 2.0.
@@ -146,7 +146,7 @@ extern "C"
                            uint8_t * auth_bytes, size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                            int *pcrs, size_t pcrs_len, char *cipher_string,
-                           char *expected_policy);
+                           char *expected_policy, uint8_t bool_trial_only);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.

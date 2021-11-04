@@ -91,7 +91,8 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
                     size_t oa_bytes_len, int *pcrs, size_t pcrs_len,
-                    char *cipher_string, char *expected_policy)
+                    char *cipher_string, char *expected_policy,
+                    uint8_t bool_trial_only)
 {
 
   //init connection to the resource manager
@@ -201,6 +202,20 @@ int tpm2_kmyth_seal(uint8_t * input,
     kmyth_clear(ownerAuth.buffer, ownerAuth.size);
     free_tpm2_resources(&sapi_ctx);
     return 1;
+  }
+
+  if (bool_trial_only == 1)
+  {
+    // size of string is 128 chars for the size of the TPM2B_DIGEST buffer + 4
+    // for TPM2B struct which encodes size in memory + 1 byte for null termination
+    // since this is only used to print the policy digest to the user (for future usage
+    // in a policyOR function) this simply prints to the console and returns 0
+    size_t string_size = (16 * sizeof(objAuthPolicy)) + 5;
+    char output_string[string_size];
+
+    convert_digest_to_string(&objAuthPolicy, output_string);
+    printf("%s", output_string);
+    return 0;
   }
 
   // if the user has passed in secondary policy, this indicates that they wish to use
@@ -554,7 +569,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
                          int *pcrs, size_t pcrs_len, char *cipher_string,
-                         char *expected_policy)
+                         char *expected_policy, uint8_t bool_trial_only)
 {
 
   // Verify input path exists with read permissions
@@ -587,7 +602,8 @@ int tpm2_kmyth_seal_file(char *input_path,
                       output, output_len,
                       auth_bytes, auth_bytes_len,
                       owner_auth_bytes, oa_bytes_len,
-                      pcrs, pcrs_len, cipher_string, expected_policy))
+                      pcrs, pcrs_len, cipher_string, expected_policy,
+                      bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");
     free(data);
