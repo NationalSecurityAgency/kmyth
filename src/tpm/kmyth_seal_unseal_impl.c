@@ -12,7 +12,6 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "formatting_tools.h"
 #include "marshalling_tools.h"
 #include "memory_util.h"
 #include "object_tools.h"
@@ -179,8 +178,8 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
 
   // if the user has passed in secondary policy, this indicates that they wish to use
-  // this policy as an alternative condition that can be used to satisfy the policy
-  // of the sealed data object
+  // the compound policy, PolicyOR and the argument they've passed in as an alternative
+  // policy digest that can be used to satisfy the policy of the sealed data object
   if (expected_policy != NULL)
   {
     // digest that will hold the second auth policy branch

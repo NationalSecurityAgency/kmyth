@@ -195,9 +195,9 @@ Ski get_default_ski(void);
  *                                             the destination buffer for the
  *                                             sealed key private data.
  *
- * @param[in] policy                          TPM 2.0 PCR policy digest
- *                                            struct to be packed - passed
- *                                            as a pointer to the struct.
+ * @param[in] policy                           TPM 2.0 PCR policy digest
+ *                                             struct to be packed - passed
+ *                                             as a pointer to the struct.
  *
  * @param[out] policy_data                     Pointer to a pointer to the
  *                                             location where the marshaled
@@ -214,41 +214,41 @@ Ski get_default_ski(void);
  *                                             the destination buffer for the
  *                                             policy struct data.
  *
- * @param[in] policyBranch1                  TPM 2.0 PCR policy digest
- *                                            struct to be packed - passed
- *                                            as a pointer to the struct.
- *
- * @param[out] pb1_data                        Pointer to a pointer to the
- *                                             location where the marshaled
- *                                             policy data will be
- *                                             stored. Memory for this is
- *                                             allocated within this function
- *                                             but must be freed by the caller.
- *
- * @param[out] pb1_data_size                   Pointer to a size_t to hold the
- *                                             length (in bytes) of
- *                                             pb1_data_size
- *
- * @param[in] pb1_data_offset                  Specifies the starting byte in
- *                                             the destination buffer for the
- *                                             policy struct data.
- *
- * @param[in] policyBranch2                    TPM 2.0 PCR policy digest
+ * @param[in] p_branch_1                       TPM 2.0 PCR policy digest
  *                                             struct to be packed - passed
  *                                             as a pointer to the struct.
  *
- * @param[out] pb2_data                        Pointer to a pointer to the
+ * @param[out] p_branch_1_data                 Pointer to a pointer to the
  *                                             location where the marshaled
  *                                             policy data will be
  *                                             stored. Memory for this is
  *                                             allocated within this function
  *                                             but must be freed by the caller.
  *
- * @param[out] pb2_data_size                   Pointer to a size_t to hold the
+ * @param[out] p_branch_1_data_size            Pointer to a size_t to hold the
+ *                                             length (in bytes) of
+ *                                             pb1_data_size
+ *
+ * @param[in] p_branch_1_data_offset           Specifies the starting byte in
+ *                                             the destination buffer for the
+ *                                             policy struct data.
+ *
+ * @param[in] p_branch_2                       TPM 2.0 PCR policy digest
+ *                                             struct to be packed - passed
+ *                                             as a pointer to the struct.
+ *
+ * @param[out] p_branch_2_data                 Pointer to a pointer to the
+ *                                             location where the marshaled
+ *                                             policy data will be
+ *                                             stored. Memory for this is
+ *                                             allocated within this function
+ *                                             but must be freed by the caller.
+ *
+ * @param[out] p_branch_2_data_size            Pointer to a size_t to hold the
  *                                             length (in bytes) of
  *                                             pb2_data_size
  *
- * @param[in] pb2_data_offset                  Specifies the starting byte in
+ * @param[in] p_branch_2_data_offset           Specifies the starting byte in
  *                                             the destination buffer for the
  *                                             policy struct data.
  * @return 0 if success, 1 if error
@@ -277,13 +277,14 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** policy_data,
                        size_t *policy_data_size,
                        size_t policy_data_offset,
-                       TPM2B_DIGEST * policyBranch1,
-                       uint8_t ** pb1_data,
-                       size_t *pb1_data_size,
-                       size_t pb1_data_offset,
-                       TPM2B_DIGEST * policyBranch2,
-                       uint8_t ** pb2_data,
-                       size_t *pb2_data_size, size_t pb2_data_offset);
+                       TPM2B_DIGEST * p_branch_1,
+                       uint8_t ** p_branch_1_data,
+                       size_t *p_branch_1_data_size,
+                       size_t p_branch_1_data_offset,
+                       TPM2B_DIGEST * p_branch_2,
+                       uint8_t ** p_branch_2_data,
+                       size_t *p_branch_2_data_size,
+                       size_t p_branch_2_data_offset);
 
 /**
  * @brief Unmarshals TPM 2.0 objects read from a .ski file.
@@ -370,53 +371,53 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *                                            the source (input) buffer for the
  *                                            sealed key private data.
  *
- * @param[in] policy_struct                   TPM 2.0 PCR policy struct
+ * @param[in] policy                          TPM 2.0 PCR policy struct
  *                                            passed as a pointer to the
  *                                            TPM2B_DIGEST struct to be
  *                                            populated with the policy
  *                                            data read from file.
  *
- * @param[out] policy_struct_data             Buffer containing policy
+ * @param[out] policy_data                    Buffer containing policy
  *                                            struct data.
  *
- * @param[out] policy_struct_data_size        Size (in bytes) of
- *                                            policy_struct_data
+ * @param[out] policy_data_size               Size (in bytes) of
+ *                                            policy_data
  *
- * @param[in] policy_struct_data_offset       Specifies the starting byte in
+ * @param[in] policy_data_offset              Specifies the starting byte in
  *                                            the destination buffer for the
  *                                            policy struct data.
  *
- * @param[in]  policy_branch_1_struct         TPM 2.0 PCR policy struct
+ * @param[in]  p_branch_1                     TPM 2.0 PCR policy struct
  *                                            passed as a pointer to the
  *                                            TPM2B_DIGEST struct to be
  *                                            populated with the policy
  *                                            data read from file.
  *
- * @param[out] policy_branch_1_struct_data        Buffer containing policy branch 1
- *                                                struct data.
+ * @param[out] p_branch_1_data                Buffer containing policy branch 1
+ *                                            struct data.
  *
- * @param[out] policy_branch_1_struct_data_size   Size (in bytes) of
- *                                                policy_branch_1_struct_data
+ * @param[out] p_branch_1_data_size           Size (in bytes) of
+ *                                            policy_branch_1_struct_data
  *
- * @param[in] policy_branch_1_struct_data_offset  Specifies the starting byte in
- *                                                the destination buffer for the
- *                                                policy_branch_1 struct data.
+ * @param[in] p_branch_1_data_offset          Specifies the starting byte in
+ *                                            the destination buffer for the
+ *                                            policy_branch_1 struct data.
  *
- * @param[in]  policy_branch_2_struct             TPM 2.0 PCR policy struct
- *                                                passed as a pointer to the
- *                                                TPM2B_DIGEST struct to be
- *                                                populated with the policy
- *                                                data read from file.
+ * @param[in]  p_branch_2                     TPM 2.0 PCR policy struct
+ *                                            passed as a pointer to the
+ *                                            TPM2B_DIGEST struct to be
+ *                                            populated with the policy
+ *                                            data read from file.
  *
- * @param[out] policy_branch_2_struct_data        Buffer containing policy branch 2
- *                                                struct data.
+ * @param[out] p_branch_2_data                Buffer containing policy branch 2
+ *                                            struct data.
  *
- * @param[out] policy_branch_2_struct_data_size   Size (in bytes) of
- *                                                policy_branch_2_struct_data
+ * @param[out] p_branch_2_data_size           Size (in bytes) of
+ *                                            policy_branch_2_struct_data
  *
- * @param[in] policy_branch_2_struct_data_offset  Specifies the starting byte in
- *                                                the destination buffer for the
- *                                                policy_branch_2 struct data.
+ * @param[in] p_branch_2_data_offset          Specifies the starting byte in
+ *                                            the destination buffer for the
+ *                                            policy_branch_2 struct data.
  *
  * @return 0 if success, 1 if error
  */
@@ -440,18 +441,18 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          uint8_t * sealed_key_private_data,
                          size_t sealed_key_private_data_size,
                          size_t sealed_key_private_data_offset,
-                         TPM2B_DIGEST * policy_struct,
-                         uint8_t * policy_struct_data,
-                         size_t policy_struct_data_size,
-                         size_t policy_struct_data_offset,
-                         TPM2B_DIGEST * policy_branch_1_struct,
-                         uint8_t * policy_branch_1_struct_data,
-                         size_t policy_branch_1_struct_data_size,
-                         size_t policy_branch_1_struct_data_offset,
-                         TPM2B_DIGEST * policy_branch_2_struct,
-                         uint8_t * policy_branch_2_struct_data,
-                         size_t policy_branch_2_struct_data_size,
-                         size_t policy_branch_2_struct_data_offset);
+                         TPM2B_DIGEST * policy,
+                         uint8_t * policy_data,
+                         size_t policy_data_size,
+                         size_t policy_data_offset,
+                         TPM2B_DIGEST * p_branch_1,
+                         uint8_t * p_branch_1_data,
+                         size_t p_branch_1_data_size,
+                         size_t p_branch_1_data_offset,
+                         TPM2B_DIGEST * p_branch_2,
+                         uint8_t * p_branch_2_data,
+                         size_t p_branch_2_data_size,
+                         size_t p_branch_2_data_offset);
 
 /**
  * @brief This function packs an input TPM 2.0 PCR selection list structure
