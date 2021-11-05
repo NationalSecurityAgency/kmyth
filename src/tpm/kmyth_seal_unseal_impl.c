@@ -110,6 +110,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 {
 
   //init connection to the resource manager
+
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
   if (init_tpm2_connection(&sapi_ctx))
@@ -239,10 +240,14 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (expected_policy != NULL)
   {
     // digest that will hold the second auth policy branch
-    TPM2B_DIGEST secondObjAuthPolicy;
+    TPM2B_DIGEST policy_branch_1;
+    TPM2B_DIGEST policy_branch_2;
 
-    // fills secondObjAuthPolicy with a policy specified by the user
-    if (convert_string_to_digest(expected_policy, &secondObjAuthPolicy))
+    // assigns the previously calculated objAuthPolicy to policy branch 1
+    policy_branch_1 = objAuthPolicy;
+
+    // fills the second policy branch with a policy specified by the user
+    if (convert_string_to_digest(expected_policy, &policy_branch_2))
     {
       kmyth_log(LOG_ERR,
                 "failed to convert secondary policy %s to digest ... exiting",
@@ -269,8 +274,8 @@ int tpm2_kmyth_seal(uint8_t * input,
     // applies policy_or to the session 2 policy branches:
     // objAuthPolicy = results from current pcr readings
     // objAuthPolicy2 = a user-supplied policy for a known future state of pcrs
-    apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &objAuthPolicy,
-                    &secondObjAuthPolicy, &pHashList);
+    apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy_branch_1,
+                    &policy_branch_2, &pHashList);
 
     // obtains the policy digest from the policyOR calculation
     Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
@@ -281,15 +286,9 @@ int tpm2_kmyth_seal(uint8_t * input,
 
     // stores the 2 policy branches in the ski file, they will be needed for future calculations
     // specifies the policyOR digest as the primary policy used for authorizing actions
-    ski.policyBranch1 = objAuthPolicy;
-    ski.policyBranch2 = secondObjAuthPolicy;
-    ski.policy = policyOR;
-  }
-  else
-  {
-    // this code is reached if policyOR is not used. The primary policy for
-    // authorizing actions will be objAuthPolicy. No need to store policy branches
-    ski.policy = objAuthPolicy;
+    ski.policyBranch1 = policy_branch_1;
+    ski.policyBranch2 = policy_branch_2;
+    objAuthPolicy = policyOR;
   }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
@@ -324,7 +323,7 @@ int tpm2_kmyth_seal(uint8_t * input,
                          ownerAuth,
                          objAuthVal,
                          ski.pcr_list,
-                         ski.policy,
+                         objAuthPolicy,
                          &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
   {
     kmyth_log(LOG_ERR, "failed to create and load a storage key ... exiting");
@@ -388,7 +387,7 @@ int tpm2_kmyth_seal(uint8_t * input,
                            ski.pcr_list,
                            objAuthVal,
                            ski.pcr_list,
-                           ski.policy,
+                           objAuthPolicy,
                            ski.policyBranch1,
                            ski.policyBranch2, &ski.wk_pub, &ski.wk_priv))
   {
