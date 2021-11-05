@@ -331,8 +331,7 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         TPML_PCR_SELECTION object_pcrSelect,
                         TPM2_HANDLE object_dest_handle,
                         TPM2B_PRIVATE * object_private,
-                        TPM2B_PUBLIC * object_public,
-                        TPM2B_DIGEST policyBranch1, TPM2B_DIGEST policyBranch2)
+                        TPM2B_PUBLIC * object_public)
 {
   // Initialize TSS2 response code to failure, initially
   TSS2_RC rc = TPM2_RC_FAILURE;
@@ -440,30 +439,6 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a non-NULL authorization session (indicating policy authorization)
       // was passed in, the object being created is a sealed data object
       //   - SK authorization is required for use of the SK to seal
-
-      // Apply policy to session context, in preparation for the "create" command
-      if (apply_policy(sapi_ctx,
-                       createObjectAuthSession->sessionHandle, parent_pcrList))
-      {
-        kmyth_log(LOG_ERR,
-                  "error applying policy to session context ... exiting");
-        return 1;
-      }
-
-      // if both policy branches have a size, policyor digest should be calculated
-      if (policyBranch1.size != 0 && policyBranch2.size != 0)
-      {
-        TPML_DIGEST pHashList;
-
-        for (size_t i = 0; i < 8; i++)
-        {
-          pHashList.digests[i].size = 0;
-        }
-
-        apply_policy_or(sapi_ctx, createObjectAuthSession->sessionHandle,
-                        &policyBranch1, &policyBranch2, &pHashList);
-      }
-
       // Obtain policy session digest
       TPM2B_DIGEST session_digest;
 
@@ -658,8 +633,6 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                       TPM2_HANDLE parent_handle,
                       TPM2B_AUTH parent_auth,
                       TPML_PCR_SELECTION parent_pcrList,
-                      TPM2B_DIGEST policyBranch1,
-                      TPM2B_DIGEST policyBranch2,
                       TPM2B_PRIVATE * in_private,
                       TPM2B_PUBLIC * in_public, TPM2_HANDLE * object_handle)
 {
@@ -729,16 +702,6 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a non-NULL authorization session (indicating policy authorization)
     // was passed in, the object being loaded is a sealed data object
     //   - Storage Key (SK) auth is required to load it under the SK
-
-    // Apply policy to session context, in preparation for the "load" command
-    if (unseal_apply_policy
-        (sapi_ctx, loadObjectAuthSession->sessionHandle, parent_pcrList,
-         policyBranch1, policyBranch2))
-    {
-      kmyth_log(LOG_ERR, "apply policy to session context error ... exiting");
-      return 1;
-    }
-
     // Get policy session digest (hash)
     TPM2B_DIGEST session_digest;
 
