@@ -295,7 +295,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
   // persistent storage. We do this by getting the loaded persistent handle
-  // values, inspecting each of their their public structures, and comparing
+  // values, inspecting each of their public structures, and comparing
   // these public area parameters against those for the SRK. None of these
   // activities require authorization. If the key is not already loaded,
   // though, it must be re-derived using the storage hierarchy's primary

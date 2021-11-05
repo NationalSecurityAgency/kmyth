@@ -585,6 +585,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   size_t p_branch_2_offset = 0;
   uint8_t *p_branch_2_data = NULL;
 
+  // if both policy branches are present, includes
+  // policy branch info to be marshalled to ski file
   if (input.policy.size > 0 && input.policyBranch1.size > 0
       && input.policyBranch2.size > 0)
   {
@@ -763,6 +765,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
       return 1;
     }
   }
+  // else condition: policy branches are not written to ski file
   else
   {
     if (encodeBase64Data
@@ -822,6 +825,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   free(pcr64_select_data);
   pcr64_select_data = NULL;
 
+  // if policyOR is used, includes policy branch information in ski file
   if (bool_policy_or == 1)
   {
     concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY,
@@ -1039,8 +1043,10 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     return 1;
   }
 
+  // if policyOR is selected, policy branch information to be included in ski file
   if (policy_data != NULL && p_branch_1_data != NULL && p_branch_2_data != NULL)
   {
+    // Marshal (pack) TPM primary policy digest struct
     if (pack_digest(policy,
                     *policy_data, *policy_data_size, policy_data_offset))
     {
@@ -1048,6 +1054,7 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
       return 1;
     }
 
+    // Marshal (pack) TPM digest struct for policy branch 1
     if (pack_digest
         (p_branch_1, *p_branch_1_data, *p_branch_1_data_size,
          p_branch_1_data_offset))
@@ -1056,6 +1063,7 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
       return 1;
     }
 
+    // Marshal (pack) TPM digest struct for policy branch 2
     if (pack_digest
         (p_branch_2, *p_branch_2_data, *p_branch_2_data_size,
          p_branch_2_data_offset))
@@ -1112,15 +1120,19 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        pcr_selection_struct_data_size,
                        pcr_selection_struct_data_offset);
 
+  // if policyOR is selected, policy branch information was included in ski file
   if (policy_data != NULL && p_branch_1_data != NULL && p_branch_2_data != NULL)
   {
+    // Unmarshal TPM Digest struct for primary policy
     retval |= unpack_digest(policy,
                             policy_data, policy_data_size, policy_data_offset);
 
+    // Unmarshal TPM Digest struct for policy branch 1
     retval |= unpack_digest(p_branch_1,
                             p_branch_1_data,
                             p_branch_1_data_size, p_branch_1_data_offset);
 
+    // Unmarshal TPM Digest struct for policy branch 2
     retval |= unpack_digest(p_branch_2,
                             p_branch_2_data,
                             p_branch_2_data_size, p_branch_2_data_offset);
@@ -1321,7 +1333,7 @@ int unpack_digest(TPM2B_DIGEST * digest_out,
                   uint8_t * packed_data_in,
                   size_t packed_data_in_size, size_t packed_data_in_offset)
 {
-  // "Unmarshal" input packed (.ski file) format into a TPM2B_PRIVATE struct
+  // "Unmarshal" input packed (.ski file) format into a TPM2B_DIGEST struct
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPM2B_DIGEST_Unmarshal(packed_data_in,
