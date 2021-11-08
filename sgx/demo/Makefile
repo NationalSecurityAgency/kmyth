@@ -86,17 +86,17 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-    SGX_COMMON_CFLAGS += -O0 -g
+	SGX_COMMON_CFLAGS += -O0 -g
 else
-    SGX_COMMON_CFLAGS += -O2
+	SGX_COMMON_CFLAGS += -O2
 endif
 
 ######## App (untrusted code) Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-    Urts_Library_Name := sgx_urts_sim
+	Urts_Library_Name := sgx_urts_sim
 else
-    Urts_Library_Name := sgx_urts
+	Urts_Library_Name := sgx_urts
 endif
 
 App_Name := bin/kmyth_sgx_retrieve_key_demo
@@ -121,11 +121,11 @@ App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-    App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+	App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
-    App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+	App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
-    App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+	App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
@@ -138,9 +138,9 @@ App_Link_Flags += -Lenclave
 App_Link_Flags += -lsgx_usgxssl
 
 ifneq ($(SGX_MODE), HW)
-    App_Link_Flags += -lsgx_uae_service_sim
+	App_Link_Flags += -lsgx_uae_service_sim
 else
-    App_Link_Flags += -lsgx_uae_service
+	App_Link_Flags += -lsgx_uae_service
 endif
 
 App_Link_Flags += -lpthread
@@ -151,11 +151,11 @@ App_Link_Flags += -lcrypto
 ######## Enclave Build Settings ########
 
 ifneq ($(SGX_MODE), HW)
-    Trts_Library_Name := sgx_trts_sim
-    Service_Library_Name := sgx_tservice_sim
+	Trts_Library_Name := sgx_trts_sim
+	Service_Library_Name := sgx_tservice_sim
 else
-    Trts_Library_Name := sgx_trts
-    Service_Library_Name := sgx_tservice
+	Trts_Library_Name := sgx_trts
+	Service_Library_Name := sgx_tservice
 endif
 
 Crypto_Library_Name := sgx_tcrypto
@@ -302,24 +302,25 @@ enclave/ecdh_dummy_server.o: ../untrusted/src/util/ecdh_dummy_server.c
 
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
-		                            --search-path $(SGX_SDK)/include \
-		                            --search-path . \
-				                        --search-path ../../trusted \
-				                        --search-path $(SGX_SSL_INCLUDE_PATH)
+	                              --search-path $(SGX_SDK)/include \
+	                              --search-path . \
+	                              --search-path ../../trusted \
+	                              --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
-	                               enclave/ec_key_cert_marshal.o \
-	                               enclave/ec_key_cert_unmarshal.o \
-	                               enclave/ecdh_util.o \
-				                         enclave/ecdh_ocall.o \
-																 enclave/ecdh_dummy_server.o \
-				                         enclave/memory_ocall.o \
-				                         enclave/log_ocall.o 
+$(App_Name): $(App_Source_Files) \
+             enclave/$(Enclave_Name)_u.o \
+             enclave/ec_key_cert_marshal.o \
+             enclave/ec_key_cert_unmarshal.o \
+             enclave/ecdh_util.o \
+             enclave/ecdh_ocall.o \
+             enclave/ecdh_dummy_server.o \
+             enclave/memory_ocall.o \
+             enclave/log_ocall.o 
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
 		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
@@ -328,10 +329,10 @@ $(App_Name): $(App_Source_Files) enclave/$(Enclave_Name)_u.o \
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --trusted $(Enclave_Name).edl \
-                                --search-path $(SGX_SDK)/include \
-                                --search-path . \
-                                --search-path ../../trusted \
-                                --search-path $(SGX_SSL_INCLUDE_PATH)
+	                              --search-path $(SGX_SDK)/include \
+	                              --search-path . \
+	                              --search-path ../../trusted \
+	                              --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 enclave/$(Enclave_Name)_t.o: enclave/$(Enclave_Name)_t.c
@@ -359,14 +360,14 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retriev
 	@echo "CC   <=  $<"
 
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
-	                      enclave/kmyth_enclave_memory_util.o \
-	                      enclave/sgx_retrieve_key_impl.o \
-	                      enclave/ec_key_cert_marshal.o \
-	                      enclave/ec_key_cert_unmarshal.o \
-	                      enclave/ecdh_util.o \
-	                      enclave/kmyth_enclave_seal.o \
-			                  enclave/kmyth_enclave_unseal.o \
-		                    enclave/kmyth_enclave_retrieve_key.o
+                        enclave/kmyth_enclave_memory_util.o \
+                        enclave/sgx_retrieve_key_impl.o \
+                        enclave/ec_key_cert_marshal.o \
+                        enclave/ec_key_cert_unmarshal.o \
+                        enclave/ecdh_util.o \
+                        enclave/kmyth_enclave_seal.o \
+                        enclave/kmyth_enclave_unseal.o \
+                        enclave/kmyth_enclave_retrieve_key.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -375,9 +376,9 @@ enclave/$(Enclave_Signing_Key):
 
 enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing_Key)
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/$(Enclave_Signing_Key) \
-		                    -enclave enclave/$(Enclave_Lib) \
-				                -out $@ \
-			                  -config enclave/$(Enclave_Config_File)
+	                            -enclave enclave/$(Enclave_Lib) \
+	                            -out $@ \
+	                            -config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 data/client_priv_test.pem: data/gen_test_keys_certs.bash
