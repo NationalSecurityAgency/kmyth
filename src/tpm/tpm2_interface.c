@@ -1231,30 +1231,6 @@ int create_caller_nonce(TPM2B_NONCE * nonceOut)
 }
 
 //############################################################################
-// assign_session_nonces()
-//############################################################################
-int assign_session_nonces(SESSION * session)
-{
-  // create an initial nonce
-  TPM2B_NONCE initialNonce;
-
-  initialNonce.size = KMYTH_DIGEST_SIZE;
-  create_caller_nonce(&initialNonce);
-
-  session->nonceNewer.size = KMYTH_DIGEST_SIZE;
-  memset(session->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
-  session->nonceOlder.size = KMYTH_DIGEST_SIZE;
-  if (rollNonces(session, initialNonce))
-  {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
-    return 1;
-  }
-  session->nonceTPM.size = 0;
-
-  return 0;
-}
-
-//############################################################################
 // rollNonces()
 //############################################################################
 int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
