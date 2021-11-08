@@ -14,18 +14,18 @@
 int create_ecdh_ephemeral_key_pair(int ec_nid,
                                    EC_KEY ** ephemeral_ec_key_pair_out)
 {
-	// create new EC_KEY object for the specified built-in curve
+  // create new EC_KEY object for the specified built-in curve
   //   The EC_KEY object passed to 'generate_key' below must be associated
   //   with the desired EC_GROUP.
   *ephemeral_ec_key_pair_out = EC_KEY_new_by_curve_name(ec_nid);
-	if (*ephemeral_ec_key_pair_out == NULL)
+  if (*ephemeral_ec_key_pair_out == NULL)
   {
     kmyth_sgx_log(3, "failed to create new elliptic curve key object by NID");
     return EXIT_FAILURE;
   }
 
   // generate the ephemeral EC key pair
-	if (1 != EC_KEY_generate_key(*ephemeral_ec_key_pair_out))
+  if (1 != EC_KEY_generate_key(*ephemeral_ec_key_pair_out))
   {
     kmyth_sgx_log(3, "ephemeral key pair generation failed");
     return EXIT_FAILURE;
