@@ -441,37 +441,6 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
-  // pcrextend {0, 1, 2}
-  unsigned char hex[] =
-    { 0xb4, 0xbb, 0x9d, 0x80, 0x14, 0xa0, 0xf9, 0xb1, 0xd6, 0x1e, 0x21, 0xe7,
-    0x96, 0xd7, 0x8d, 0xcc, 0xdf, 0x13, 0x52, 0xf2, 0x3c, 0xd3, 0x28, 0x12,
-    0xf4, 0x85, 0x0b,
-    0x87, 0x8a, 0xe4, 0x94, 0x4c
-  };
-
-  size_t num_pcrs = 3;
-
-  TSS2L_SYS_AUTH_COMMAND sessionsData = {.count = 1,.auths =
-      {{.sessionHandle = TPM2_RS_PW,
-        .sessionAttributes = 0,
-        .nonce = {.size = 0},
-        .hmac = {.size = 0}}}
-  };
-
-  TPML_DIGEST_VALUES digest_values;
-
-  digest_values.count = num_pcrs;
-  for (size_t i = 0; i < num_pcrs; i++)
-  {
-    digest_values.digests[i].hashAlg = KMYTH_HASH_ALG;
-    memcpy(digest_values.digests[i].digest.sha256, hex, KMYTH_DIGEST_SIZE);
-  }
-
-  for (size_t i = 0; i < num_pcrs; i++)
-  {
-    Tss2_Sys_PCR_Extend(sapi_ctx, i, &sessionsData, &digest_values, 0);
-  }
-
   // Create owner (storage) hierarchy authorization structure
   // to provide password session authorization criteria for use of:
   //   - Storage Root Key (SRK)
