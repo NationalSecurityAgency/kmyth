@@ -332,6 +332,20 @@ $(App_Name): $(App_Source_Files) \
 		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
 
+######## Test Server ########
+
+server/ecdh_server.o: server/ecdh_server.c
+	@$(CC) $(App_C_Flags) -c $< -o $@ \
+        -I../../include/network -I../../include/protocol
+	@echo "CC   <=  $<"
+
+bin/ecdh-server: server/ecdh_server.o \
+                 enclave/ecdh_util.o \
+                 enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
+        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@echo "LINK =>  $@"
+
 ######## Enclave Objects ########
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
@@ -401,4 +415,5 @@ clean:
 	@rm -f enclave/*_u.h enclave/*_t.h enclave/*_u.c enclave/*_t.c
 	@rm -f enclave/*.o enclave/*.so
 	@rm -f enclave/*.pem data/*.pem
+	@rm -f server/*.o
 	@rm -rf bin
