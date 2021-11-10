@@ -229,19 +229,7 @@ Generate or install build/$(Enclave_Signing_Key)
 e.g., run 'openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072'
 endef
 
-.PHONY: pre all run
-pre:
-	mkdir -p bin 
-	@if [ ! -f enclave/$(Enclave_Signing_Key) ]; then \
-	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
-	 fi
-	@indent $(INDENT_OPTS) app/*.c
-	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
-	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
-	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
-	@rm -f app/*~
-	@rm -f ../untrusted/src/*/*~ ../untrusted/include/*/*~
-	@rm -f ../trusted/src/*/*~ ../trusted/include/*~ ../trusted/include/*/*~
+.PHONY: all pre test-keys-certs run demo
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Lib)
@@ -261,11 +249,30 @@ else
 all: pre $(App_Name) enclave/$(Signed_Enclave_Name)
 endif
 
-run: all
+pre:
+	@mkdir -p bin 
+	@if [ ! -f enclave/$(Enclave_Signing_Key) ]; then \
+	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
+	 fi
+	@indent $(INDENT_OPTS) app/*.c
+	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
+	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
+	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
+	@rm -f app/*~
+	@rm -f ../untrusted/src/*/*~ ../untrusted/include/*/*~
+	@rm -f ../trusted/src/*/*~ ../trusted/include/*~ ../trusted/include/*/*~
+
+test-keys-certs: data/client_priv_test.pem \
+	               data/client_cert_test.pem \
+                 data/server_priv_test.pem \
+                 data/server_cert_test.pem
+
+demo: all test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
+
 
 ######## Common Objects ########
 
@@ -381,18 +388,12 @@ enclave/$(Signed_Enclave_Name): enclave/$(Enclave_Lib) enclave/$(Enclave_Signing
 	                            -config enclave/$(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
-data/client_priv_test.pem: data/gen_test_keys_certs.bash
-	@cd data && ./gen_test_keys_certs.bash
-	@echo "GEN => Test Key/Cert Files"
-
+data/client_priv_test.pem \
+data/client_cert_test.pem \
+data/server_priv_test.pem \
 data/server_cert_test.pem: data/gen_test_keys_certs.bash
 	@cd data && ./gen_test_keys_certs.bash
 	@echo "GEN => Test Key/Cert Files"
-
-.PHONY: demo
-
-demo: all data/client_priv_test.pem data/server_cert_test.pem
-	./$(App_Name)
 
 .PHONY: clean
 
