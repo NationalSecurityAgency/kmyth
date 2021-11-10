@@ -229,7 +229,7 @@ Generate or install build/$(Enclave_Signing_Key)
 e.g., run 'openssl genrsa -out sgx/$(Enclave_Signing_Key) -3 3072'
 endef
 
-.PHONY: all pre test-keys-certs run demo
+.PHONY: all pre test-keys-certs demo
 
 ifeq ($(Build_Mode), HW_RELEASE)
 all: $(App_Name) $(Enclave_Lib)
