@@ -144,7 +144,7 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
 {
   // create buffer (allocate memory) for the shared secret (session key) result
   int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
-	*shared_secret_len = (field_size + 7) / 8;
+  *shared_secret_len = (field_size + 7) / 8;
   *shared_secret = OPENSSL_malloc(*shared_secret_len);
 
   // derive the 'shared secret' (session key) value
