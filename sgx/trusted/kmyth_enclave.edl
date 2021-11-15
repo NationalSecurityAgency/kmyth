@@ -164,14 +164,14 @@ enclave {
      */
     int ecdh_exchange_ocall([in, count=enclave_contribution_len]
                                unsigned char *enclave_contribution,
-                             int enclave_contribution_len,
+                             size_t enclave_contribution_len,
                              [in, count=enclave_contribution_signature_len]
                                unsigned char *enclave_contribution_signature,
-                             int enclave_contribution_signature_len,
+                             unsigned int enclave_contribution_signature_len,
                              [out] unsigned char **remote_contribution,
-                             [out] int *remote_contribution_len,
+                             [out] size_t *remote_contribution_len,
                              [out] unsigned char **remote_contribution_signature,
-                             [out] int *remote_contribution_signature_len);
+                             [out] unsigned int *remote_contribution_signature_len);
 
   };
 

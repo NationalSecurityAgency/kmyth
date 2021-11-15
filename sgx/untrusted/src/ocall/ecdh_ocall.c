@@ -11,13 +11,13 @@
  * ecdh_exchange_ocall()
  ****************************************************************************/
 int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
-                        int enclave_ephemeral_public_len,
+                        size_t enclave_ephemeral_public_len,
                         unsigned char *enclave_eph_pub_signature,
-                        int enclave_eph_pub_signature_len,
+                        unsigned int enclave_eph_pub_signature_len,
                         unsigned char **remote_ephemeral_public,
-                        int *remote_ephemeral_public_len,
+                        size_t * remote_ephemeral_public_len,
                         unsigned char **remote_eph_pub_signature,
-                        int *remote_eph_pub_signature_len)
+                        unsigned int *remote_eph_pub_signature_len)
 {
   // The ECDH exchange is envisioned as a implementation of the following two
   // steps:

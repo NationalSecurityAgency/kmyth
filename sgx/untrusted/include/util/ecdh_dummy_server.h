@@ -41,13 +41,13 @@ extern "C"
  *                                     ephemeral contribution to be exchanged
  *                                     with remote peer (server).
  *
- * @param[in]  client_pub_len          Pointer to length (in bytes) of enclave
+ * @param[in]  client_pub_len          Length (in bytes) of enclave
  *                                     (client) public ephemeral contribution.
  *
  * @param[in]  client_pub_sig          Pointer to signature over enclave
  *                                     (client) public ephemeral contribution.
  *
- * @param[in]  client_pub_sig_len      Pointer to length (in bytes) of
+ * @param[in]  client_pub_sig_len      Length (in bytes) of
  *                                     signature for client (enclave) public
  *                                     ephemeral contribution.
  *
@@ -68,13 +68,13 @@ extern "C"
  * @return 0 on success, 1 on failure
  */
   int ecdh_dummy_server(unsigned char *client_pub,
-                        int client_pub_len,
+                        size_t client_pub_len,
                         unsigned char *client_pub_sig,
-                        int client_pub_sig_len,
+                        unsigned int client_pub_sig_len,
                         unsigned char **server_pub,
-                        int *server_pub_len,
+                        size_t * server_pub_len,
                         unsigned char **server_pub_sig,
-                        int *server_pub_sig_len);
+                        unsigned int *server_pub_sig_len);
 
 #ifdef __cplusplus
 }

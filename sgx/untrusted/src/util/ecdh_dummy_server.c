@@ -12,12 +12,13 @@
  * ecdh_dummy_server()
  ****************************************************************************/
 int ecdh_dummy_server(unsigned char *client_pub,
-                      int client_pub_len,
+                      size_t client_pub_len,
                       unsigned char *client_pub_sig,
-                      int client_pub_sig_len,
+                      unsigned int client_pub_sig_len,
                       unsigned char **server_pub,
-                      int *server_pub_len,
-                      unsigned char **server_pub_sig, int *server_pub_sig_len)
+                      size_t * server_pub_len,
+                      unsigned char **server_pub_sig,
+                      unsigned int *server_pub_sig_len)
 {
   // read server private EC signing key from file (.pem formatted)
   EVP_PKEY *server_sign_privkey = NULL;
@@ -140,7 +141,7 @@ int ecdh_dummy_server(unsigned char *client_pub,
 
   // generate shared secret result for ECDH key agreement (server side)
   unsigned char *session_secret = NULL;
-  int session_secret_len = 0;
+  size_t session_secret_len = 0;
 
   ret = compute_ecdh_shared_secret(server_ephemeral_keypair,
                                    client_ephemeral_pub_pt,
@@ -158,7 +159,7 @@ int ecdh_dummy_server(unsigned char *client_pub,
 
   // generate session key result for ECDH key agreement (server side)
   unsigned char *session_key = NULL;
-  int session_key_len = 0;
+  unsigned int session_key_len = 0;
 
   ret = compute_ecdh_session_key(session_secret,
                                  session_secret_len,

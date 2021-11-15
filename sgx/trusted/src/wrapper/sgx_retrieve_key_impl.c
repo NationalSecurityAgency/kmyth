@@ -26,7 +26,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   // create client's ephemeral contribution to the session key
   EC_KEY *client_ephemeral_keypair = NULL;
   unsigned char *client_ephemeral_pub = NULL;
-  int client_ephemeral_pub_len = 0;
+  size_t client_ephemeral_pub_len = 0;
 
   int ret_val = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
                                                &client_ephemeral_keypair);
@@ -56,7 +56,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
 
   // sign client's ephemeral contribution
   unsigned char *client_eph_pub_signature = NULL;
-  int client_eph_pub_signature_len = 0;
+  unsigned int client_eph_pub_signature_len = 0;
 
   ret_val = sign_buffer(enclave_sign_privkey,
                         client_ephemeral_pub,
@@ -80,9 +80,9 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
 
   // exchange signed client/server 'public key' contributions
   unsigned char *server_ephemeral_pub = NULL;
-  int server_ephemeral_pub_len = 0;
+  size_t server_ephemeral_pub_len = 0;
   unsigned char *server_eph_pub_signature = NULL;
-  int server_eph_pub_signature_len = 0;
+  unsigned int server_eph_pub_signature_len = 0;
 
   ret_val = ecdh_exchange_ocall(&ret_val,
                                 client_ephemeral_pub,
@@ -153,7 +153,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
 
   // generate shared secret value result for ECDH key agreement (client side)
   unsigned char *session_secret = NULL;
-  int session_secret_len = 0;
+  size_t session_secret_len = 0;
 
   ret_val = compute_ecdh_shared_secret(client_ephemeral_keypair,
                                        server_ephemeral_pub_pt,
@@ -168,7 +168,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   }
   char msg[MAX_LOG_MSG_LEN] = { 0 };
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side shared secret = 0x%02x%02x...%02x%02x (%d bytes)",
+           "client-side shared secret = 0x%02x%02x...%02x%02x (%lu bytes)",
            session_secret[0], session_secret[1],
            session_secret[session_secret_len - 2],
            session_secret[session_secret_len - 1], session_secret_len);
@@ -182,7 +182,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
 
   // generate session key result for ECDH key agreement (client side)
   unsigned char *session_key = NULL;
-  int session_key_len = 0;
+  unsigned int session_key_len = 0;
 
   ret_val = compute_ecdh_session_key(session_secret,
                                      session_secret_len,

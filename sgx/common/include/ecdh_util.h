@@ -87,7 +87,7 @@ int create_ecdh_ephemeral_key_pair(int ec_nid,
  */
 int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
                                  unsigned char ** ephemeral_ec_pub_out,
-                                 int * ephemeral_ec_pub_out_len);
+                                 size_t * ephemeral_ec_pub_out_len);
 
 
 /**
@@ -111,7 +111,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
  */
 int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
                                             unsigned char * ec_octet_str_in,
-                                            int ec_octet_str_in_len,
+                                            size_t ec_octet_str_in_len,
                                             EC_POINT ** ec_point_out);
 
 
@@ -140,8 +140,8 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
  */
 int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
                                EC_POINT * remote_eph_pub_point,
-                               unsigned char ** session_key,
-                               int * session_key_len);
+                               unsigned char ** shared_secret,
+                               size_t * shared_secret_len);
 
 /**
  * @brief Computes session key from a shared secret value input.
@@ -161,9 +161,9 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
  * @return 0 on success, 1 on error
  */
 int compute_ecdh_session_key(unsigned char * secret,
-                             int secret_len,
+                             size_t secret_len,
                              unsigned char ** session_key,
-                             int * session_key_len);
+                             unsigned int * session_key_len);
 
 
 /**
@@ -190,8 +190,8 @@ int compute_ecdh_session_key(unsigned char * secret,
  * @return 0 on success, 1 on error
  */
   int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                  unsigned char * buf_in, int buf_in_len,
-                  unsigned char ** sig_out, int * sig_out_len);
+                  unsigned char * buf_in, size_t buf_in_len,
+                  unsigned char ** sig_out, unsigned int * sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
@@ -217,58 +217,8 @@ int compute_ecdh_session_key(unsigned char * secret,
  *         1 on error (signature verofification failed)
  */
   int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                    unsigned char * buf_in, int buf_in_len,
-                    unsigned char * sig_in, int sig_in_len);
-
-/**
- * @brief Provides a 'test fixture' that emulates the remote peer (server)
- *        in an ECDH exchange. This function is passed the enclave (client)
- *        public ephemeral contribution for ECDH key agreement to emulate an
- *        "ECDH connection request" message to the remote peer (server). Just
- *        as a real remote peer would, this function generates it's own
- *        epehemeral contribution and uses that to derive a 'shared secret'
- *        and a 'session key' result. It returns its signed epehemeral
- *        contribution so that the client can independently derive the same
- *        'shared secret' and 'session key' values.
- * 
- * @param[in]  client_pub              Pointer to enclave (client) public
- *                                     ephemeral contribution to be exchanged
- *                                     with remote peer (server).
- *
- * @param[in]  client_pub_len          Pointer to length (in bytes) of enclave
- *                                     (client) public ephemeral contribution.
- *
- * @param[in]  client_pub_sig          Pointer to signature over enclave
- *                                     (client) public ephemeral contribution.
- *
- * @param[in]  client_pub_sig_len      Pointer to length (in bytes) of
- *                                     signature for client (enclave) public
- *                                     ephemeral contribution.
- *
- * @param[in]  server_pub              Pointer to remote (server) public
- *                                     ephemeral contribution to be exchanged
- *                                     with peer (enclave client).
- *
- * @param[in]  server_pub_len          Pointer to length (in bytes) of remote
- *                                     (server) public ephemeral contribution.
- *
- * @param[in]  server_pub_sig          Pointer to signature over remote
- *                                     (server) public ephemeral contribution.
- *
- * @param[in]  server_pub_sig_len      Pointer to length (in bytes) of
- *                                     signature for remote (server) public
- *                                     ephemeral contribution.
- *
- * @return 0 on success, 1 on failure
- */
-  int dummy_ecdh_server(unsigned char *client_pub,
-                        int client_pub_len,
-                        unsigned char *client_pub_sig,
-                        int client_pub_sig_len,
-                        unsigned char **server_pub,
-                        int *server_pub_len,
-                        unsigned char **server_pub_sig,
-                        int *server_pub_sig_len);
+                    unsigned char * buf_in, size_t buf_in_len,
+                    unsigned char * sig_in, unsigned int sig_in_len);
 
 #ifdef __cplusplus
 }

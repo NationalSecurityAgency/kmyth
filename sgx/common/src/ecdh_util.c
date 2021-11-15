@@ -39,7 +39,7 @@ int create_ecdh_ephemeral_key_pair(int ec_nid,
  ****************************************************************************/
 int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
                                  unsigned char ** ephemeral_ec_pub_out,
-                                 int * ephemeral_ec_pub_out_len)
+                                 size_t * ephemeral_ec_pub_out_len)
 {
   // need EC_GROUP (elliptic curve definition) as parameter for API calls
   EC_GROUP const* grp = EC_KEY_get0_group(ephemeral_ec_key_pair_in);
@@ -64,12 +64,12 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   // that will be produced. This enables memory allocation for a buffer of the
   // required size. The second call passes a pointer to this newly allocated
   // buffer, and gets populated with the required octet string representation.
-  int required_buffer_len = EC_POINT_point2oct(grp,
-                                               pub_pt,
-                                               POINT_CONVERSION_UNCOMPRESSED,
-                                               NULL,
-                                               0,
-                                               NULL);
+  size_t required_buffer_len = EC_POINT_point2oct(grp,
+                                                  pub_pt,
+                                                  POINT_CONVERSION_UNCOMPRESSED,
+                                                  NULL,
+                                                  0,
+                                                  NULL);
   if (required_buffer_len <= 0)
   {
     kmyth_sgx_log(3, "failed to get size for ephemeral pubkey octet string");
@@ -101,7 +101,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
  ****************************************************************************/
 int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
                                             unsigned char * ec_octet_str_in,
-                                            int ec_octet_str_in_len,
+                                            size_t ec_octet_str_in_len,
                                             EC_POINT ** ec_point_out)
 {
   // need 'group' parameter to create new EC_POINT on this elliptic curve
@@ -140,7 +140,7 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
                                EC_POINT * remote_eph_pub_point,
                                unsigned char ** shared_secret,
-                               int * shared_secret_len)
+                               size_t * shared_secret_len)
 {
   // create buffer (allocate memory) for the shared secret (session key) result
   int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
@@ -170,9 +170,9 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
  * compute_ecdh_session_key()
  ****************************************************************************/
 int compute_ecdh_session_key(unsigned char * secret,
-                             int secret_len,
+                             size_t secret_len,
                              unsigned char ** session_key,
-                             int * session_key_len)
+                             unsigned int * session_key_len)
 {
   // specify hash algorithm to employ as a KDF
   const EVP_MD *kdf = EVP_shake256();
@@ -220,7 +220,7 @@ int compute_ecdh_session_key(unsigned char * secret,
   }
   *session_key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
 
-  result = EVP_DigestFinal_ex(ctx, *session_key, (unsigned int *) session_key_len);
+  result = EVP_DigestFinal_ex(ctx, *session_key, session_key_len);
   if (0 == result)
   {
     kmyth_sgx_log(3, "failed to finalize the message digest context");
@@ -237,8 +237,8 @@ int compute_ecdh_session_key(unsigned char * secret,
  * sign_buffer()
  ****************************************************************************/
 int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                unsigned char * buf_in, int buf_in_len,
-                unsigned char ** sig_out, int * sig_out_len)
+                unsigned char * buf_in, size_t buf_in_len,
+                unsigned char ** sig_out, unsigned int * sig_out_len)
 {
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -281,7 +281,8 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   }
 
   // sign the data (create signature)
-  if (EVP_SignFinal(mdctx, *sig_out, sig_out_len, ec_sign_pkey) != 1)
+  if (EVP_SignFinal(mdctx, *sig_out,
+                    (unsigned int *) sig_out_len, ec_sign_pkey) != 1)
   {
     kmyth_sgx_log(3, "signature creation failed");
     EVP_MD_CTX_free(mdctx);
@@ -298,8 +299,8 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
  * verify_buffer()
  ****************************************************************************/
 int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                  unsigned char * buf_in, int buf_in_len,
-                  unsigned char * sig_in, int sig_in_len)
+                  unsigned char * buf_in, size_t buf_in_len,
+                  unsigned char * sig_in, unsigned int sig_in_len)
 {
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();

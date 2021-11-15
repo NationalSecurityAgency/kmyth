@@ -45,7 +45,7 @@ extern "C"
  *                                                to be exchanged with remote
  *                                                peer (server)
  *
- * @param[in]  enclave_ephemeral_public_len       Pointer to length (in bytes)
+ * @param[in]  enclave_ephemeral_public_len       Length (in bytes)
  *                                                of enclave (client) public
  *                                                ephemeral contribution
  *
@@ -53,7 +53,7 @@ extern "C"
  *                                                enclave (client) public
  *                                                ephemeral contribution.
  *
- * @param[in]  enclave_eph_pub_signature_len      Pointer to length (in bytes)
+ * @param[in]  enclave_eph_pub_signature_len      Length (in bytes)
  *                                                of signature for client
  *                                                (enclave) public ephemeral
  *                                                contribution.
@@ -80,13 +80,13 @@ extern "C"
  * @return 0 on success, 1 on failure
  */
   int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
-                          int enclave_ephemeral_public_len,
+                          size_t enclave_ephemeral_public_len,
                           unsigned char *enclave_eph_pub_signature,
-                          int enclave_eph_pub_signature_len,
+                          unsigned int enclave_eph_pub_signature_len,
                           unsigned char **remote_ephemeral_public,
-                          int *remote_ephemeral_public_len,
+                          size_t * remote_ephemeral_public_len,
                           unsigned char **remote_eph_pub_signature,
-                          int *remote_eph_pub_signature_len);
+                          unsigned int *remote_eph_pub_signature_len);
 
 #ifdef __cplusplus
 }
