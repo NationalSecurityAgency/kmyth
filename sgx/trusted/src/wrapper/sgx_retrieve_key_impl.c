@@ -211,7 +211,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
            session_key[session_key_len - 2],
            session_key[session_key_len - 1], session_key_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
-  // TODO: session key will have to be placed into the desired enclave location
+
   // done with session secret/key
   kmyth_enclave_clear_and_free(session_secret, session_secret_len);
   kmyth_enclave_clear_and_free(session_key, session_key_len);
