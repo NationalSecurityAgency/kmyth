@@ -20,14 +20,14 @@ int create_ecdh_ephemeral_key_pair(int ec_nid,
   *ephemeral_ec_key_pair_out = EC_KEY_new_by_curve_name(ec_nid);
   if (*ephemeral_ec_key_pair_out == NULL)
   {
-    kmyth_sgx_log(3, "failed to create new elliptic curve key object by NID");
+    kmyth_sgx_log(LOG_ERR, "failed to create new elliptic curve key object by NID");
     return EXIT_FAILURE;
   }
 
   // generate the ephemeral EC key pair
   if (1 != EC_KEY_generate_key(*ephemeral_ec_key_pair_out))
   {
-    kmyth_sgx_log(3, "ephemeral key pair generation failed");
+    kmyth_sgx_log(LOG_ERR, "ephemeral key pair generation failed");
     return EXIT_FAILURE;
   }
 
@@ -45,7 +45,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   EC_GROUP const* grp = EC_KEY_get0_group(ephemeral_ec_key_pair_in);
   if (grp == NULL)
   {
-    kmyth_sgx_log(3, "'get' EC_GROUP from EC_KEY failed");
+    kmyth_sgx_log(LOG_ERR, "'get' EC_GROUP from EC_KEY failed");
     return EXIT_FAILURE;
   }
 
@@ -53,7 +53,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   EC_POINT const* pub_pt = EC_KEY_get0_public_key(ephemeral_ec_key_pair_in);
   if (pub_pt == NULL)
   {
-    kmyth_sgx_log(3, "'public key' extraction from EC_KEY failed");
+    kmyth_sgx_log(LOG_ERR, "'public key' extraction from EC_KEY failed");
     return EXIT_FAILURE;
   }
 
@@ -72,14 +72,14 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
                                                   NULL);
   if (required_buffer_len <= 0)
   {
-    kmyth_sgx_log(3, "failed to get size for ephemeral pubkey octet string");
+    kmyth_sgx_log(LOG_ERR, "failed to get size for ephemeral pubkey octet string");
     return EXIT_FAILURE;
   }
 
   *ephemeral_ec_pub_out = (unsigned char *) malloc(required_buffer_len);
   if (*ephemeral_ec_pub_out == NULL)
   {
-    kmyth_sgx_log(3, "malloc of ephemeral pubkey octet string buffer failed");
+    kmyth_sgx_log(LOG_ERR, "malloc of ephemeral pubkey octet string buffer failed");
     return EXIT_FAILURE;
   }
   *ephemeral_ec_pub_out_len = EC_POINT_point2oct(grp,
@@ -89,7 +89,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
                                                  required_buffer_len, NULL);
   if (*ephemeral_ec_pub_out_len <= 0)
   {
-    kmyth_sgx_log(3, "EC_POINT to octet string conversion failed");
+    kmyth_sgx_log(LOG_ERR, "EC_POINT to octet string conversion failed");
     return EXIT_FAILURE;
   }
 
@@ -108,14 +108,14 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
   EC_GROUP * group = EC_GROUP_new_by_curve_name(ec_nid);
   if (group == NULL)
   {
-    kmyth_sgx_log(3, "EC_GROUP creation for built-in curve NID failed");
+    kmyth_sgx_log(LOG_ERR, "EC_GROUP creation for built-in curve NID failed");
     return EXIT_FAILURE;
   }
 
   *ec_point_out = EC_POINT_new(group);
   if (*ec_point_out == NULL)
   {
-    kmyth_sgx_log(3, "init of empty EC_POINT for specified group failed");
+    kmyth_sgx_log(LOG_ERR, "init of empty EC_POINT for specified group failed");
     return EXIT_FAILURE;
   }
 
@@ -124,7 +124,7 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
                          ec_octet_str_in, ec_octet_str_in_len, NULL) != 1)
   {
     EC_GROUP_clear_free(group);
-    kmyth_sgx_log(3, "octet string to EC_POINT conversion failed");
+    kmyth_sgx_log(LOG_ERR, "octet string to EC_POINT conversion failed");
     return EXIT_FAILURE;
   }
 
@@ -158,7 +158,7 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
 
   if (*shared_secret_len <= 0)
   {
-    kmyth_sgx_log(3, "computation of ECDH shared secret value failed");
+    kmyth_sgx_log(LOG_ERR, "computation of ECDH shared secret value failed");
     return EXIT_FAILURE;
   }
 
@@ -179,7 +179,7 @@ int compute_ecdh_session_key(unsigned char * secret,
 
   if (NULL == kdf)
   {
-    kmyth_sgx_log(3, "failed to locate the specifed hash function");
+    kmyth_sgx_log(LOG_ERR, "failed to locate the specifed hash function");
     return EXIT_FAILURE;
   }
 
@@ -188,7 +188,7 @@ int compute_ecdh_session_key(unsigned char * secret,
 
   if (NULL == ctx)
   {
-    kmyth_sgx_log(3, "failed to create the message digest context");
+    kmyth_sgx_log(LOG_ERR, "failed to create the message digest context");
     return EXIT_FAILURE;
   }
 
@@ -197,7 +197,7 @@ int compute_ecdh_session_key(unsigned char * secret,
 
   if (0 == result)
   {
-    kmyth_sgx_log(3, "failed to initialize the message digest context.");
+    kmyth_sgx_log(LOG_ERR, "failed to initialize the message digest context.");
     EVP_MD_CTX_free(ctx);
     return EXIT_FAILURE;
   }
@@ -206,7 +206,7 @@ int compute_ecdh_session_key(unsigned char * secret,
   result = EVP_DigestUpdate(ctx, secret, secret_len);
   if (0 == result)
   {
-    kmyth_sgx_log(3, "failed to update the message digest context");
+    kmyth_sgx_log(LOG_ERR, "failed to update the message digest context");
     EVP_MD_CTX_free(ctx);
     return EXIT_FAILURE;
   }
@@ -214,7 +214,7 @@ int compute_ecdh_session_key(unsigned char * secret,
   *session_key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
   if (NULL == *session_key)
   {
-    kmyth_sgx_log(3, "failed to allocate the session key buffer");
+    kmyth_sgx_log(LOG_ERR, "failed to allocate the session key buffer");
     EVP_MD_CTX_free(ctx);
     return EXIT_FAILURE;
   }
@@ -223,7 +223,7 @@ int compute_ecdh_session_key(unsigned char * secret,
   result = EVP_DigestFinal_ex(ctx, *session_key, session_key_len);
   if (0 == result)
   {
-    kmyth_sgx_log(3, "failed to finalize the message digest context");
+    kmyth_sgx_log(LOG_ERR, "failed to finalize the message digest context");
     EVP_MD_CTX_free(ctx);
     return 1;
   }
@@ -244,14 +244,14 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (mdctx == NULL)
   {
-    kmyth_sgx_log(3, "creation of message digest context failed");
+    kmyth_sgx_log(LOG_ERR, "creation of message digest context failed");
     return EXIT_FAILURE;
   }
 
   // configure signing context
   if (EVP_SignInit(mdctx, EVP_sha512()) != 1)
   {
-    kmyth_sgx_log(3, "config of message digest signature context failed");
+    kmyth_sgx_log(LOG_ERR, "config of message digest signature context failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -259,7 +259,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   // hash data into the signature context
   if (EVP_SignUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
-    kmyth_sgx_log(3, "error hashing data into signature context");
+    kmyth_sgx_log(LOG_ERR, "error hashing data into signature context");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -268,14 +268,14 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   int max_sig_len = EVP_PKEY_size(ec_sign_pkey);
   if (max_sig_len <= 0)
   {
-    kmyth_sgx_log(3, "invalid value for maximum signature length");
+    kmyth_sgx_log(LOG_ERR, "invalid value for maximum signature length");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
   *sig_out = OPENSSL_malloc(max_sig_len);
   if (*sig_out == NULL)
   {
-    kmyth_sgx_log(3, "malloc of signature buffer failed");
+    kmyth_sgx_log(LOG_ERR, "malloc of signature buffer failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -284,7 +284,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   if (EVP_SignFinal(mdctx, *sig_out,
                     (unsigned int *) sig_out_len, ec_sign_pkey) != 1)
   {
-    kmyth_sgx_log(3, "signature creation failed");
+    kmyth_sgx_log(LOG_ERR, "signature creation failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -306,7 +306,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (mdctx == NULL)
   {
-    kmyth_sgx_log(3, "creation of message digest context failed");
+    kmyth_sgx_log(LOG_ERR, "creation of message digest context failed");
     return EXIT_FAILURE;
   }
 
@@ -314,7 +314,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   if (EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(),
                            NULL, ec_verify_pkey) != 1)
   {
-    kmyth_sgx_log(3, "initialization of message digest context failed");
+    kmyth_sgx_log(LOG_ERR, "initialization of message digest context failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -322,7 +322,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   // 'update' with signed data
   if (EVP_DigestVerifyUpdate(mdctx, buf_in, buf_in_len) != 1)
   {
-    kmyth_sgx_log(3, "message digest context update with signed data failed");
+    kmyth_sgx_log(LOG_ERR, "message digest context update with signed data failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
@@ -331,7 +331,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   unsigned char *sig_ptr = sig_in;
   if (EVP_DigestVerifyFinal(mdctx, sig_ptr, sig_in_len) != 1)
   {
-    kmyth_sgx_log(3, "signature verification failed");
+    kmyth_sgx_log(LOG_ERR, "signature verification failed");
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }

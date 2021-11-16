@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <syslog.h>
 
 #include <openssl/bio.h>
 #include <openssl/pem.h>
@@ -113,10 +112,9 @@ int main(int argc, char **argv)
 
   if (ret_val)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    demo_log(LOG_ERR, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "untrusted kmyth_sgx_log() test message");
 
   // read server public certificate (X509) from file (.pem formatted)
   X509 *server_pub_ec_cert = NULL;

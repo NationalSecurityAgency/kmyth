@@ -24,13 +24,14 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 
   if (ret_val)
   {
-    kmyth_sgx_log(3, "unmarshal of client private signing key failed");
+    kmyth_sgx_log(LOG_ERR, "unmarshal of client private signing key failed");
     kmyth_enclave_clear(client_private_bytes, client_private_bytes_len);
     kmyth_enclave_clear(client_sign_privkey, sizeof(client_sign_privkey));
     EVP_PKEY_free(client_sign_privkey);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "unmarshalled client private signing key (to EVP_PKEY)");
+  kmyth_sgx_log(LOG_DEBUG,
+                "unmarshalled client private signing key (to EVP_PKEY)");
 
   // now that input client private bytes processed, clear this sensitive data
   kmyth_enclave_clear(client_private_bytes, client_private_bytes_len);
@@ -42,18 +43,19 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                      &server_cert_bytes_len, &server_cert);
   if (ret_val)
   {
-    kmyth_sgx_log(3, "unmarshal of server certificate (to X509) failed");
+    kmyth_sgx_log(LOG_ERR, "unmarshal of server certificate (to X509) failed");
     kmyth_enclave_clear(client_sign_privkey, sizeof(client_sign_privkey));
     EVP_PKEY_free(client_sign_privkey);
     X509_free(server_cert);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "unmarshalled server certificate (to X509)");
+  kmyth_sgx_log(LOG_DEBUG, "unmarshalled server certificate (to X509)");
 
   ret_val = enclave_retrieve_key(client_sign_privkey, server_cert);
   if (ret_val)
   {
-    kmyth_sgx_log(3, "enclave_retrieve_key() wrapper function call failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "enclave_retrieve_key() wrapper function call failed");
     return EXIT_FAILURE;
   }
 

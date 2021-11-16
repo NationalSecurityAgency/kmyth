@@ -17,11 +17,13 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
   server_sign_pubkey = X509_get_pubkey(peer_cert);
   if (server_sign_pubkey == NULL)
   {
-    kmyth_sgx_log(3, "public key extraction from server certificate failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "public key extraction from server certificate failed");
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "extracted server signature verification key from cert");
+  kmyth_sgx_log(LOG_DEBUG,
+                "extracted server signature verification key from cert");
 
   // create client's ephemeral contribution to the session key
   EC_KEY *client_ephemeral_keypair = NULL;
@@ -33,7 +35,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
 
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "client ECDH ephemeral key pair creation failed");
+    kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
@@ -45,14 +47,16 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                          &client_ephemeral_pub_len);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "client ECDH 'public key' octet string creation failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "client ECDH 'public key' octet string creation failed");
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "created client's ephemeral 'public key' octet string");
+  kmyth_sgx_log(LOG_DEBUG,
+                "created client's ephemeral 'public key' octet string");
 
   // sign client's ephemeral contribution
   unsigned char *client_eph_pub_signature = NULL;
@@ -65,7 +69,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                         &client_eph_pub_signature_len);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "error signing client ephemeral 'public key' bytes");
+    kmyth_sgx_log(LOG_ERR, "error signing client ephemeral 'public key' bytes");
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
@@ -73,7 +77,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
     free(client_eph_pub_signature);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "client signed ECDH ephemeral 'public key' octet string");
+  kmyth_sgx_log(LOG_DEBUG,
+                "client signed ECDH ephemeral 'public key' octet string");
 
   // done with client private signing key, so clear this sensitive data
   kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
@@ -95,7 +100,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                 &server_eph_pub_signature_len);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "ECDH ephemeral 'public key' exchange unsuccessful");
+    kmyth_sgx_log(LOG_ERR, "ECDH ephemeral 'public key' exchange unsuccessful");
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
@@ -104,7 +109,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
     free(server_eph_pub_signature);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "successfully exchanged ECDH ephemeral 'public keys'");
+  kmyth_sgx_log(LOG_DEBUG,
+                "successfully exchanged ECDH ephemeral 'public keys'");
 
   // done with client ephemeral 'public key' related info (completed exchange)
   free(client_ephemeral_pub);
@@ -118,14 +124,15 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                           server_eph_pub_signature_len);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "client ephemeral 'public key' signature invalid");
+    kmyth_sgx_log(LOG_ERR, "client ephemeral 'public key' signature invalid");
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(server_ephemeral_pub);
     free(server_eph_pub_signature);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "validated client ECDH ephemeral 'public key' signature");
+  kmyth_sgx_log(LOG_DEBUG,
+                "validated client ECDH ephemeral 'public key' signature");
 
   // done with signature verification of server contribution
   EVP_PKEY_free(server_sign_pubkey);
@@ -140,13 +147,15 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                                     &server_ephemeral_pub_pt);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(3, "reconstruct client ephemeral 'public key' point failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "reconstruct client ephemeral 'public key' point failed");
     EC_KEY_free(client_ephemeral_keypair);
     free(server_ephemeral_pub);
     EC_POINT_free(server_ephemeral_pub_pt);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "reconstructed server ECDH ephemeral 'public key' point");
+  kmyth_sgx_log(LOG_DEBUG,
+                "reconstructed server ECDH ephemeral 'public key' point");
 
   // done with server_ephemeral_pub
   OPENSSL_free_ocall((void **) &server_ephemeral_pub);
@@ -160,7 +169,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                        &session_secret, &session_secret_len);
   if (ret_val)
   {
-    kmyth_sgx_log(3, "mutually agreed upon shared secret computation failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "mutually agreed upon shared secret computation failed");
     EC_KEY_free(client_ephemeral_keypair);
     EC_POINT_free(server_ephemeral_pub_pt);
     free(session_secret);
@@ -172,7 +182,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
            session_secret[0], session_secret[1],
            session_secret[session_secret_len - 2],
            session_secret[session_secret_len - 1], session_secret_len);
-  kmyth_sgx_log(7, msg);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // done with inputs to shared secret contribution
   kmyth_enclave_clear(client_ephemeral_keypair,
@@ -189,7 +199,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                      &session_key, &session_key_len);
   if (ret_val)
   {
-    kmyth_sgx_log(3, "mutually agreed upon session key computation failed");
+    kmyth_sgx_log(LOG_ERR,
+                  "mutually agreed upon session key computation failed");
     free(session_secret);
     free(session_key);
     return EXIT_FAILURE;
@@ -199,16 +210,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
            session_key[0], session_key[1],
            session_key[session_key_len - 2],
            session_key[session_key_len - 1], session_key_len);
-  kmyth_sgx_log(7, msg);
-
+  kmyth_sgx_log(LOG_DEBUG, msg);
   // TODO: session key will have to be placed into the desired enclave location
-
   // done with session secret/key
   kmyth_enclave_clear_and_free(session_secret, session_secret_len);
   kmyth_enclave_clear_and_free(session_key, session_key_len);
-
-  kmyth_sgx_log(7, "completed ECDH exchange");
-
+  kmyth_sgx_log(LOG_DEBUG, "completed ECDH exchange");
   return EXIT_SUCCESS;
-
 }
