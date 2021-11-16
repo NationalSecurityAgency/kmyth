@@ -143,6 +143,14 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
                                size_t * shared_secret_len)
 {
   // create buffer (allocate memory) for the shared secret (session key) result
+  //   - the field size calculated below returns the number of bits required
+  //     for a field element for the elliptic curve being used (i.e., the size
+  //     of the prime p for a prime field and the value of m for a binary (2^m)
+  //     field)
+  //   - the length of the shared secret is calculated by converting to the
+  //     maximum number of bytes required. Adding 7 to the bit length and
+  //     taking the integer portion of dividing by 8 bits in a byte returns
+  //     the necessary size in bytes.
   int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(local_eph_priv_key));
   *shared_secret_len = (field_size + 7) / 8;
   *shared_secret = OPENSSL_malloc(*shared_secret_len);
