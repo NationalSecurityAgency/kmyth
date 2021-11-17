@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <syslog.h>
 
 #include <openssl/bio.h>
 #include <openssl/pem.h>
@@ -85,8 +84,10 @@ int main(int argc, char **argv)
   {
     demo_log(LOG_ERR, "EC Key PEM file (%s) read failed",
              CLIENT_PRIVATE_KEY_FILE);
+    BIO_free(priv_ec_key_bio);
     return EXIT_FAILURE;
   }
+  BIO_free(priv_ec_key_bio);
 
   // marshal (DER format) the client's private EC signing key
   //   - facilitates passing this key into the enclave
@@ -105,16 +106,15 @@ int main(int argc, char **argv)
   //        untrusted space
   EVP_PKEY *test_key = NULL;
   int ret_val = unmarshal_ec_der_to_pkey(&client_priv_ec_key_bytes,
-                                         (size_t *) &
-                                         client_priv_ec_key_bytes_len,
+                                         (size_t *)
+                                         & client_priv_ec_key_bytes_len,
                                          &test_key);
 
   if (ret_val)
   {
-    kmyth_sgx_log(3, ERR_error_string(ERR_get_error(), NULL));
+    demo_log(LOG_ERR, ERR_error_string(ERR_get_error(), NULL));
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(7, "untrusted kmyth_sgx_log() test message");
 
   // read server public certificate (X509) from file (.pem formatted)
   X509 *server_pub_ec_cert = NULL;

@@ -21,7 +21,7 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
 
   if (EVP_PKEY_base_id(pkey_ptr) != EVP_PKEY_EC)
   {
-    kmyth_sgx_log(3, "PKEY to be marshalled is not of EC type");
+    kmyth_sgx_log(LOG_ERR, "PKEY to be marshalled is not of EC type");
     return EXIT_FAILURE;
   }
 
@@ -32,7 +32,7 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
   // required size calculation and memory allocation beforehand.
   if (*ec_der_bytes_out != NULL)
   {
-    kmyth_sgx_log(3, "initially non-NULL pointer to DER result buffer");
+    kmyth_sgx_log(LOG_ERR, "initially non-NULL pointer to DER result buffer");
     return EXIT_FAILURE;
   }
 
@@ -45,7 +45,7 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
 
   if (out_len <= 0)
   {
-    kmyth_sgx_log(3, "PKEY to DER format conversion error");
+    kmyth_sgx_log(LOG_ERR, "PKEY to DER format conversion error");
     return EXIT_FAILURE;
   }
 
@@ -70,7 +70,7 @@ int marshal_ec_x509_to_der(X509 ** ec_cert_in,
   // required size calculation and memory allocation beforehand.
   if (*ec_der_bytes_out != NULL)
   {
-    kmyth_sgx_log(3, "initially non-NULL pointer to DER result buffer");
+    kmyth_sgx_log(LOG_ERR, "initially non-NULL pointer to DER result buffer");
     return EXIT_FAILURE;
   }
 
@@ -83,7 +83,7 @@ int marshal_ec_x509_to_der(X509 ** ec_cert_in,
 
   if (out_len <= 0)
   {
-    kmyth_sgx_log(3, "X509 to DER format conversion error");
+    kmyth_sgx_log(LOG_ERR, "X509 to DER format conversion error");
     return EXIT_FAILURE;
   }
 

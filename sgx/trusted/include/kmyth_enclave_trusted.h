@@ -12,6 +12,8 @@ extern "C"
 
 #include "kmyth_enclave_memory_util.h"
 
+#include "sgx_retrieve_key_impl.h"
+
 #include "kmyth_enclave_common.h"
 
 #include "sgx_urts.h"
@@ -19,6 +21,8 @@ extern "C"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+#include ENCLAVE_HEADER_TRUSTED
 
   typedef struct unseal_data_s
   {
