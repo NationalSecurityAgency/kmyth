@@ -14,7 +14,7 @@
 //
 int build_kmip_get_request(KMIP * ctx,
                            unsigned char *id, size_t id_len,
-                           unsigned char **request, size_t * request_len)
+                           unsigned char **request, size_t *request_len)
 {
   // Set up the encoding buffer.
   size_t buffer_blocks = 1;
@@ -93,7 +93,7 @@ int build_kmip_get_request(KMIP * ctx,
 //
 int parse_kmip_get_request(KMIP * ctx,
                            unsigned char *request, size_t request_len,
-                           unsigned char **id, size_t * id_len)
+                           unsigned char **id, size_t *id_len)
 {
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
@@ -156,7 +156,7 @@ int parse_kmip_get_request(KMIP * ctx,
 int build_kmip_get_response(KMIP * ctx,
                             unsigned char *id, size_t id_len,
                             unsigned char *key, size_t key_len,
-                            unsigned char **response, size_t * response_len)
+                            unsigned char **response, size_t *response_len)
 {
   // Set up the encoding buffer
   size_t buffer_blocks = 1;
@@ -250,8 +250,8 @@ int build_kmip_get_response(KMIP * ctx,
 //
 int parse_kmip_get_response(KMIP * ctx,
                             unsigned char *response, size_t response_len,
-                            unsigned char **id, size_t * id_len,
-                            unsigned char **key, size_t * key_len)
+                            unsigned char **id, size_t *id_len,
+                            unsigned char **key, size_t *key_len)
 {
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
@@ -351,7 +351,7 @@ int retrieve_key_with_session_key(int socket_fd,
                                   unsigned char *session_key,
                                   size_t session_key_len, unsigned char *key_id,
                                   size_t key_id_len, unsigned char **key,
-                                  size_t * key_len)
+                                  size_t *key_len)
 {
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
@@ -491,6 +491,7 @@ int send_key_with_session_key(int socket_fd,
                                  0,
                                  (struct sockaddr *) &peer_addr,
                                  &peer_addr_len);
+
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to receive the key request.");
@@ -503,6 +504,7 @@ int send_key_with_session_key(int socket_fd,
 
   int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host,
                       NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
+
   if (0 != s)
   {
     kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
@@ -519,6 +521,7 @@ int send_key_with_session_key(int socket_fd,
   int result = aes_gcm_decrypt(session_key, session_key_len,
                                encrypted_request, read_result,
                                &request, &request_len);
+
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
   encrypted_request = NULL;
   if (result)
@@ -596,6 +599,7 @@ int send_key_with_session_key(int socket_fd,
                                encrypted_response, encrypted_response_len,
                                0, (struct sockaddr *) &peer_addr,
                                peer_addr_len);
+
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   encrypted_response = NULL;
   if (encrypted_response_len != send_result)
