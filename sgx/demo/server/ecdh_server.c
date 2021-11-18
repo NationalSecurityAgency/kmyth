@@ -32,7 +32,8 @@
 #define INIT_MSG_SIZE 4
 #define MAX_RESP_SIZE 16384
 
-typedef struct ECDHServer {
+typedef struct ECDHServer
+{
   bool client_mode;
   char *private_key_path;
   char *public_cert_path;
@@ -64,7 +65,7 @@ const struct option longopts[] = {
   {0, 0, 0, 0}
 };
 
-void init(ECDHServer *this)
+void init(ECDHServer * this)
 {
   memset(this, 0, sizeof(ECDHServer));
   this->socket_fd = UNSET_FD;
@@ -72,7 +73,7 @@ void init(ECDHServer *this)
   this->peer_addr_len = sizeof(this->peer_addr);
 }
 
-void cleanup(ECDHServer *this)
+void cleanup(ECDHServer * this)
 {
   /* Note: These clear and free functions should all be safe to use with null pointer values. */
 
@@ -95,13 +96,15 @@ void cleanup(ECDHServer *this)
 
   if (this->local_ephemeral_keypair != NULL)
   {
-    kmyth_clear(this->local_ephemeral_keypair, sizeof(this->local_ephemeral_keypair));
+    kmyth_clear(this->local_ephemeral_keypair,
+                sizeof(this->local_ephemeral_keypair));
     EC_KEY_free(this->local_ephemeral_keypair);
   }
 
   if (this->remote_ephemeral_pubkey != NULL)
   {
-    kmyth_clear_and_free(this->remote_ephemeral_pubkey, this->remote_ephemeral_pubkey_len);
+    kmyth_clear_and_free(this->remote_ephemeral_pubkey,
+                         this->remote_ephemeral_pubkey_len);
   }
 
   if (this->session_key != NULL)
@@ -112,7 +115,8 @@ void cleanup(ECDHServer *this)
   init(this);
 }
 
-void error(ECDHServer *this) {
+void error(ECDHServer * this)
+{
   cleanup(this);
   exit(EXIT_FAILURE);
 }
@@ -131,11 +135,10 @@ static void usage(const char *prog)
           "  -p or --port     The port number to use.\n"
           "  -i or --ip       The IP address or hostname of the server (only used in client mode).\n"
           "Misc --\n"
-          "  -h or --help     Help (displays this usage).\n\n",
-          prog);
+          "  -h or --help     Help (displays this usage).\n\n", prog);
 }
 
-void get_options(ECDHServer *this, int argc, char **argv)
+void get_options(ECDHServer * this, int argc, char **argv)
 {
   // Exit early if there are no arguments.
   if (1 == argc)
@@ -152,25 +155,25 @@ void get_options(ECDHServer *this, int argc, char **argv)
   {
     switch (options)
     {
-    // Program mode
+      // Program mode
     case 'c':
       this->client_mode = true;
       break;
-    // Key files
+      // Key files
     case 'r':
       this->private_key_path = optarg;
       break;
     case 'u':
       this->public_cert_path = optarg;
       break;
-    // Network
+      // Network
     case 'p':
       this->port = optarg;
       break;
     case 'i':
       this->ip = optarg;
       break;
-    // Misc
+      // Misc
     case 'h':
       usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -180,9 +183,10 @@ void get_options(ECDHServer *this, int argc, char **argv)
   }
 }
 
-void check_options(ECDHServer *this)
+void check_options(ECDHServer * this)
 {
   bool err = false;
+
   if (this->private_key_path == NULL)
   {
     fprintf(stderr, "Private key path argument (-r) is required.\n");
@@ -210,9 +214,10 @@ void check_options(ECDHServer *this)
   }
 }
 
-void send_dgram(ECDHServer *this, const void *buf, size_t len)
+void send_dgram(ECDHServer * this, const void *buf, size_t len)
 {
   int ret;
+
   /* Messages from the server must be addressed, but the client can simply write to the socket. */
   if (this->client_mode)
   {
@@ -220,25 +225,30 @@ void send_dgram(ECDHServer *this, const void *buf, size_t len)
   }
   else
   {
-    ret = sendto(this->socket_fd, buf, len, 0, (struct sockaddr *) &this->peer_addr, this->peer_addr_len);
+    ret =
+      sendto(this->socket_fd, buf, len, 0, (struct sockaddr *) &this->peer_addr,
+             this->peer_addr_len);
   }
-  if (ret == -1) {
+  if (ret == -1)
+  {
     kmyth_log(LOG_ERR, "Failed to send a datagram.");
     error(this);
   }
 }
 
-void recv_dgram(ECDHServer *this, void *buf, size_t len)
+void recv_dgram(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   int ret = read(this->socket_fd, buf, len);
-  if (ret == -1) {
+
+  if (ret == -1)
+  {
     kmyth_log(LOG_ERR, "Failed to receive a datagram.");
     error(this);
   }
 }
 
-void create_server_socket(ECDHServer *this)
+void create_server_socket(ECDHServer * this)
 {
   char msg_buf[INIT_MSG_SIZE];
   int ret;
@@ -254,7 +264,8 @@ void create_server_socket(ECDHServer *this)
   // This populates the peer_addr information used to send responses back to the client
   ret = recvfrom(this->socket_fd, msg_buf, sizeof(msg_buf),
                  0, (struct sockaddr *) &this->peer_addr, &this->peer_addr_len);
-  if (ret == -1) {
+  if (ret == -1)
+  {
     kmyth_log(LOG_ERR, "Failed to receive init message.");
     error(this);
   }
@@ -265,7 +276,7 @@ void create_server_socket(ECDHServer *this)
   }
 }
 
-void create_client_socket(ECDHServer *this)
+void create_client_socket(ECDHServer * this)
 {
   kmyth_log(LOG_INFO, "Setting up client socket");
   if (setup_client_socket(this->ip, this->port, &this->socket_fd))
@@ -278,10 +289,11 @@ void create_client_socket(ECDHServer *this)
   send_dgram(this, INIT_MSG, INIT_MSG_SIZE);
 }
 
-void load_private_key(ECDHServer *this)
+void load_private_key(ECDHServer * this)
 {
   // read server private EC signing key from file (.pem formatted)
   BIO *priv_key_bio = BIO_new_file(this->private_key_path, "r");
+
   if (priv_key_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
@@ -302,12 +314,13 @@ void load_private_key(ECDHServer *this)
   kmyth_log(LOG_DEBUG, "obtained local private signing key from file");
 }
 
-void load_public_key(ECDHServer *this)
+void load_public_key(ECDHServer * this)
 {
   // read remote certificate (X509) from file (.pem formatted)
   X509 *client_cert = NULL;
 
   BIO *pub_cert_bio = BIO_new_file(this->public_cert_path, "r");
+
   if (pub_cert_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
@@ -337,10 +350,12 @@ void load_public_key(ECDHServer *this)
   kmyth_log(LOG_DEBUG, "extracted public key from remote certificate");
 }
 
-void make_ephemeral_keypair(ECDHServer *this)
+void make_ephemeral_keypair(ECDHServer * this)
 {
   // create local ephemeral contribution (public/private key pair)
-  int ret = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID, &this->local_ephemeral_keypair);
+  int ret = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
+                                           &this->local_ephemeral_keypair);
+
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "creation of local ephemeral key pair failed");
@@ -349,21 +364,24 @@ void make_ephemeral_keypair(ECDHServer *this)
   kmyth_log(LOG_DEBUG, "created local ephemeral EC key pair");
 }
 
-void recv_ephemeral_public(ECDHServer *this)
+void recv_ephemeral_public(ECDHServer * this)
 {
   unsigned char *remote_pub_sig = NULL;
   unsigned int remote_pub_sig_len = 0;
   int ret;
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
-  recv_dgram(this, &this->remote_ephemeral_pubkey_len, sizeof(this->remote_ephemeral_pubkey_len));
+  recv_dgram(this, &this->remote_ephemeral_pubkey_len,
+             sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
     error(this);
   }
-  this->remote_ephemeral_pubkey = calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
-  recv_dgram(this, this->remote_ephemeral_pubkey, this->remote_ephemeral_pubkey_len);
+  this->remote_ephemeral_pubkey =
+    calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
+  recv_dgram(this, this->remote_ephemeral_pubkey,
+             this->remote_ephemeral_pubkey_len);
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key signature.");
   recv_dgram(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
@@ -377,8 +395,9 @@ void recv_ephemeral_public(ECDHServer *this)
 
   // check signature on received ephemeral contribution from remote
   ret = verify_buffer(this->remote_pubkey,
-                      this->remote_ephemeral_pubkey, this->remote_ephemeral_pubkey_len,
-                      remote_pub_sig, remote_pub_sig_len);
+                      this->remote_ephemeral_pubkey,
+                      this->remote_ephemeral_pubkey_len, remote_pub_sig,
+                      remote_pub_sig_len);
   kmyth_clear_and_free(remote_pub_sig, remote_pub_sig_len);
   remote_pub_sig = NULL;
   if (ret != EXIT_SUCCESS)
@@ -389,7 +408,7 @@ void recv_ephemeral_public(ECDHServer *this)
   kmyth_log(LOG_DEBUG, "validated signature on ECDH remote 'public key'");
 }
 
-void send_ephemeral_public(ECDHServer *this)
+void send_ephemeral_public(ECDHServer * this)
 {
   unsigned char *local_pub = NULL, *local_pub_sig = NULL;
   size_t local_pub_len = 0;
@@ -427,7 +446,7 @@ void send_ephemeral_public(ECDHServer *this)
   kmyth_clear_and_free(local_pub_sig, local_pub_sig_len);
 }
 
-void get_session_key(ECDHServer *this)
+void get_session_key(ECDHServer * this)
 {
   EC_POINT *remote_ephemeral_pub_pt = NULL;
   unsigned char *session_secret = NULL;
@@ -449,8 +468,7 @@ void get_session_key(ECDHServer *this)
   // generate shared secret result for ECDH key agreement (server side)
   ret = compute_ecdh_shared_secret(this->local_ephemeral_keypair,
                                    remote_ephemeral_pub_pt,
-                                   &session_secret,
-                                   &session_secret_len);
+                                   &session_secret, &session_secret_len);
   EC_POINT_clear_free(remote_ephemeral_pub_pt);
   remote_ephemeral_pub_pt = NULL;
   if (ret != EXIT_SUCCESS)
@@ -462,14 +480,12 @@ void get_session_key(ECDHServer *this)
             session_secret[0],
             session_secret[1],
             session_secret[session_secret_len - 2],
-            session_secret[session_secret_len - 1],
-            session_secret_len);
+            session_secret[session_secret_len - 1], session_secret_len);
 
   // generate session key result for ECDH key agreement (server side)
   ret = compute_ecdh_session_key(session_secret,
                                  session_secret_len,
-                                 &this->session_key,
-                                 &this->session_key_len);
+                                 &this->session_key, &this->session_key_len);
   kmyth_clear_and_free(session_secret, session_secret_len);
   session_secret = NULL;
   if (ret != EXIT_SUCCESS)
@@ -485,9 +501,10 @@ void get_session_key(ECDHServer *this)
             this->session_key_len);
 }
 
-void send_operational_key(ECDHServer *this)
+void send_operational_key(ECDHServer * this)
 {
   int ret;
+
   unsigned char static_key[OP_KEY_SIZE] = {
     0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
     0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
@@ -505,7 +522,7 @@ void send_operational_key(ECDHServer *this)
   }
 }
 
-void get_operational_key(ECDHServer *this)
+void get_operational_key(ECDHServer * this)
 {
   unsigned char *static_key = NULL;
   size_t static_key_len = 0;
@@ -528,7 +545,7 @@ void get_operational_key(ECDHServer *this)
   kmyth_clear_and_free(static_key, static_key_len);
 }
 
-void server_main(ECDHServer *this)
+void server_main(ECDHServer * this)
 {
   create_server_socket(this);
 
@@ -545,7 +562,7 @@ void server_main(ECDHServer *this)
   send_operational_key(this);
 }
 
-void client_main(ECDHServer *this)
+void client_main(ECDHServer * this)
 {
   create_client_socket(this);
 
@@ -565,6 +582,7 @@ void client_main(ECDHServer *this)
 int main(int argc, char **argv)
 {
   ECDHServer this;
+
   init(&this);
 
   set_applog_severity_threshold(LOG_DEBUG);

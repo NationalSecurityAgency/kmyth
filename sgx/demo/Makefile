@@ -255,6 +255,7 @@ pre:
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
+	@indent $(INDENT_OPTS) server/*.c
 	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
 	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
 	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
