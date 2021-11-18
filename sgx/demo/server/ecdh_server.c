@@ -291,6 +291,7 @@ void load_private_key(ECDHServer *this)
 
   this->local_privkey = PEM_read_bio_PrivateKey(priv_key_bio, NULL, 0, NULL);
   BIO_free(priv_key_bio);
+  priv_key_bio = NULL;
   if (!this->local_privkey)
   {
     kmyth_log(LOG_ERR, "EC Key PEM file (%s) read failed",
@@ -316,6 +317,7 @@ void load_public_key(ECDHServer *this)
 
   client_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
   BIO_free(pub_cert_bio);
+  pub_cert_bio = NULL;
   if (!client_cert)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
@@ -326,6 +328,7 @@ void load_public_key(ECDHServer *this)
 
   this->remote_pubkey = X509_get_pubkey(client_cert);
   X509_free(client_cert);
+  client_cert = NULL;
   if (this->remote_pubkey == NULL)
   {
     kmyth_log(LOG_ERR, "extracting public key from remote certificate failed");
@@ -377,6 +380,7 @@ void recv_ephemeral_public(ECDHServer *this)
                       this->remote_ephemeral_pubkey, this->remote_ephemeral_pubkey_len,
                       remote_pub_sig, remote_pub_sig_len);
   kmyth_clear_and_free(remote_pub_sig, remote_pub_sig_len);
+  remote_pub_sig = NULL;
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "signature of ECDH remote 'public key' invalid");
@@ -447,7 +451,8 @@ void get_session_key(ECDHServer *this)
                                    remote_ephemeral_pub_pt,
                                    &session_secret,
                                    &session_secret_len);
-  EC_POINT_free(remote_ephemeral_pub_pt);
+  EC_POINT_clear_free(remote_ephemeral_pub_pt);
+  remote_ephemeral_pub_pt = NULL;
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
@@ -466,6 +471,7 @@ void get_session_key(ECDHServer *this)
                                  &this->session_key,
                                  &this->session_key_len);
   kmyth_clear_and_free(session_secret, session_secret_len);
+  session_secret = NULL;
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session key' result failed");

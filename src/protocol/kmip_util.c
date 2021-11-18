@@ -377,6 +377,7 @@ int retrieve_key_with_session_key(int socket_fd,
                            key_request, key_request_len,
                            &encrypted_request, &encrypted_request_len);
   kmyth_clear_and_free(key_request, key_request_len);
+  key_request = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to encrypt the KMIP key request.");
@@ -389,6 +390,7 @@ int retrieve_key_with_session_key(int socket_fd,
   ssize_t write_result =
     write(socket_fd, encrypted_request, encrypted_request_len);
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
+  encrypted_request = NULL;
 
   if (write_result != encrypted_request_len)
   {
@@ -430,6 +432,7 @@ int retrieve_key_with_session_key(int socket_fd,
                            encrypted_response, read_result,
                            &response, &response_len);
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
+  encrypted_response = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to decrypt the KMIP key response.");
@@ -446,6 +449,7 @@ int retrieve_key_with_session_key(int socket_fd,
                                    &received_key_id, &received_key_id_len,
                                    key, key_len);
   kmyth_clear_and_free(response, response_len);
+  response = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to parse the KMIP Get response.");
@@ -516,6 +520,7 @@ int send_key_with_session_key(int socket_fd,
                                encrypted_request, read_result,
                                &request, &request_len);
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
+  encrypted_request = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to decrypt the KMIP key request.");
@@ -539,6 +544,7 @@ int send_key_with_session_key(int socket_fd,
   result = parse_kmip_get_request(&kmip_context,
                                   request, request_len, &key_id, &key_id_len);
   kmyth_clear_and_free(request, request_len);
+  request = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to parse the KMIP Get request.");
@@ -555,6 +561,7 @@ int send_key_with_session_key(int socket_fd,
                                    key_id, key_id_len,
                                    key, key_len, &response, &response_len);
   kmyth_clear_and_free(key_id, key_id_len);
+  key_id = NULL;
   kmip_destroy(&kmip_context);
   if (result)
   {
@@ -569,6 +576,7 @@ int send_key_with_session_key(int socket_fd,
                            response, response_len,
                            &encrypted_response, &encrypted_response_len);
   kmyth_clear_and_free(response, response_len);
+  response = NULL;
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to encrypt the KMIP key response.");
@@ -589,6 +597,7 @@ int send_key_with_session_key(int socket_fd,
                                0, (struct sockaddr *) &peer_addr,
                                peer_addr_len);
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
+  encrypted_response = NULL;
   if (encrypted_response_len != send_result)
   {
     kmyth_log(LOG_ERR, "Failed to fully send the encrypted KMIP key response.");
