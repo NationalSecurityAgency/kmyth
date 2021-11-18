@@ -43,9 +43,9 @@ typedef struct ECDHServer {
   EVP_PKEY *remote_pubkey;
   EC_KEY *local_ephemeral_keypair;
   unsigned char *remote_ephemeral_pubkey;
-  int remote_ephemeral_pubkey_len;
+  size_t remote_ephemeral_pubkey_len;
   unsigned char *session_key;
-  int session_key_len;
+  unsigned int session_key_len;
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len;
 } ECDHServer;
@@ -348,8 +348,8 @@ void make_ephemeral_keypair(ECDHServer *this)
 
 void recv_ephemeral_public(ECDHServer *this)
 {
-  unsigned char *remote_pub_sig;
-  int remote_pub_sig_len;
+  unsigned char *remote_pub_sig = NULL;
+  unsigned int remote_pub_sig_len = 0;
   int ret;
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
@@ -387,8 +387,9 @@ void recv_ephemeral_public(ECDHServer *this)
 
 void send_ephemeral_public(ECDHServer *this)
 {
-  unsigned char *local_pub, *local_pub_sig;
-  int local_pub_len, local_pub_sig_len;
+  unsigned char *local_pub = NULL, *local_pub_sig = NULL;
+  size_t local_pub_len = 0;
+  unsigned int local_pub_sig_len = 0;
   int ret;
 
   ret = create_ecdh_ephemeral_public(this->local_ephemeral_keypair,
@@ -426,7 +427,7 @@ void get_session_key(ECDHServer *this)
 {
   EC_POINT *remote_ephemeral_pub_pt = NULL;
   unsigned char *session_secret = NULL;
-  int session_secret_len = 0;
+  size_t session_secret_len = 0;
   int ret;
 
   // re-construct EVP_PKEY for client's public contribution
@@ -500,8 +501,8 @@ void send_operational_key(ECDHServer *this)
 
 void get_operational_key(ECDHServer *this)
 {
-  unsigned char *static_key;
-  size_t static_key_len;
+  unsigned char *static_key = NULL;
+  size_t static_key_len = 0;
   int ret;
   unsigned char *key_id = (unsigned char *) "test_key_id";
 
