@@ -157,7 +157,7 @@ void test_put_srk_into_persistent_storage(void)
   TPM2_HANDLE next = 0;
   TPM2_HANDLE srk_handle = 0;
 
-  //Other tests will hvae already persisted the key
+  //Other tests will have already persisted the key
   get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
   TPM2_HANDLE old_srk = srk_handle;
 
