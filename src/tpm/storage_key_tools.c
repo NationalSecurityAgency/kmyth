@@ -163,7 +163,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if (ptype != TPM2_PT_HR_PERSISTENT_AVAIL)
   {
     kmyth_log(LOG_ERR, "retrieved unexpected (0x%08X) property ... exiting",
-              property_list.data.tpmProperties.tpmProperty[0].property);
+              ptype);
     return 1;
   }
   if (pval <= 0)
