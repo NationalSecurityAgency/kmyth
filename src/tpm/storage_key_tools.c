@@ -75,52 +75,141 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // Check to see if the SRK is already in persistent memory by:
+  //
   //   1. Getting a list of all persistent objects
-  //   2. Using the persistent object list to find the next available handle
-  //      in persistent storage (needed for re-derived SRK if not found,
-  //      API returns a valid result regardless)
-  //   3. Searching list for the SRK
+  //
+  //   2. Searching list for the SRK
+  //
+  //   3. Computing the next available persistent storage handle.
+  //      This is accomplished by retrieving the TPM2_PT_HR_PERSISTENT_AVAIL
+  //      property from the TPM, which provides an estimated number of
+  //      additional objects that could be loaded into the TPM's non-volatile
+  //      memory. If the value is at least one, then at least one object of
+  //      any type may be made persistent. While this handle is intended to
+  //      be used for a re-derived SRK, for API safety, a valid next handle
+  //      is provided whether or not the SRK is found to already be in
+  //      persistent storage.
+  //
 
-  // Step 1 - getting the list of persistent handles
-  TPMS_CAPABILITY_DATA capData;
+  // Step 1:  Get the list of persistent handles currently loaded into TPM
+  //
+  //          Note: At the time this was written, TPM2_MAX_CAP_HANDLES=254.
+  //                If more than 254 persistent handles were to exist, the
+  //                get_tpm2_properties() call would return partial data.
+  //                As this limit seems to be much more than the TPM
+  //                hardware is expected to support, for now, this seems
+  //                an acceptable assumption.
+
+  TPMS_CAPABILITY_DATA persistent_handle_list;
 
   if (get_tpm2_properties(sapi_ctx,
                           TPM2_CAP_HANDLES,
-                          TPM2_HR_PERSISTENT, TPM2_MAX_CAP_HANDLES, &capData))
+                          TPM2_HR_PERSISTENT,
+                          TPM2_MAX_CAP_HANDLES, &persistent_handle_list))
   {
-    kmyth_log(LOG_ERR, "get persistent object info error ... exiting");
+    kmyth_log(LOG_ERR, "error getting list of persistent handles ... exiting");
     return 1;
   }
 
-  // Step 2 - find next available persistent storage handle
-  //            - start at first address in range
-  //            - if no currently used handles, first in range is available
-  //            - if currently used handles, increment through addresses in
-  //              range until first unused handle is found
-  *nextSrkHandle = TPM2_PERSISTENT_FIRST; // 0x81010000
-  if (capData.data.handles.count > 0)
+  // Step 2:  Search the list for the SRK
+
+  if (persistent_handle_list.data.handles.count == 0)
   {
-    while (*nextSrkHandle <= TPM2_PERSISTENT_LAST)
+    kmyth_log(LOG_DEBUG, "no handles for existing persistent objects found");
+  }
+  else
+  {
+    kmyth_log(LOG_DEBUG, "checking %d persistent data handle(s) for SRK",
+              persistent_handle_list.data.handles.count);
+  }
+
+  for (int i = 0; i < persistent_handle_list.data.handles.count; i++)
+  {
+    bool SRK_flag = false;
+
+    if (check_if_srk(sapi_ctx,
+                     persistent_handle_list.data.handles.handle[i], &SRK_flag))
+    {
+      kmyth_log(LOG_ERR,
+                "error checking if handle = 0x%08X references SRK ... exiting",
+                persistent_handle_list.data.handles.handle[i]);
+      return 1;
+    }
+    if (SRK_flag)
+    {
+      *srkHandle = persistent_handle_list.data.handles.handle[i];
+      kmyth_log(LOG_DEBUG, "SRK found ... done searching");
+      break;
+    }
+  }
+
+  // Step 3:  Find next available persistent storage handle
+
+  TPMS_CAPABILITY_DATA property_list;
+
+  if (get_tpm2_properties(sapi_ctx,
+                          TPM2_CAP_TPM_PROPERTIES,
+                          TPM2_PT_HR_PERSISTENT_AVAIL,
+                          TPM2_MAX_TPM_PROPERTIES, &property_list))
+  {
+    kmyth_log(LOG_ERR, "error getting TPM properties ... exiting");
+    return 1;
+  }
+
+  // first property in returned list should be TPM2_PT_HR_PERSISTENT_AVAIL
+  uint32_t ptype = property_list.data.tpmProperties.tpmProperty[0].property;
+  uint32_t pval = property_list.data.tpmProperties.tpmProperty[0].value;
+
+  if (ptype != TPM2_PT_HR_PERSISTENT_AVAIL)
+  {
+    kmyth_log(LOG_ERR, "retrieved unexpected (0x%08X) property ... exiting",
+              property_list.data.tpmProperties.tpmProperty[0].property);
+    return 1;
+  }
+  if (pval <= 0)
+  {
+    kmyth_log(LOG_WARNING, "TPM cannot support additional persistent objects");
+    *nextSrkHandle = 0;         // set to "empty handle"
+  }
+  else
+  {
+    kmyth_log(LOG_DEBUG, "TPM supports %u (est) additional persistent objects",
+              pval);
+
+    // step through persistent handles until an unused one is found
+    // (if persistent handle list empty, first handle in range is available)
+    *nextSrkHandle = TPM2_PERSISTENT_FIRST; // 0x81000000 
+    bool avail_handle_found = false;
+
+    while ((*nextSrkHandle < TPM2_PLATFORM_PERSISTENT) && (!avail_handle_found))
     {
       bool handleInUse = false;
 
-      for (int i = 0; i < capData.data.handles.count; i++)
+      for (int i = 0; i < persistent_handle_list.data.handles.count; i++)
       {
-        if (*nextSrkHandle == capData.data.handles.handle[i])
+        if (*nextSrkHandle == persistent_handle_list.data.handles.handle[i])
         {
-          handleInUse = true;
+          handleInUse = true;   // handle being checked is "in use" (on list)
+          break;                // no need to compare with other handles in list
         }
       }
       if (!handleInUse)
       {
         // found available handle
-        break;
+        avail_handle_found = true;
       }
-      // handle just checked was in use -- prepare to check next one
-      *nextSrkHandle = *nextSrkHandle + 1;
+      else
+      {
+        // handle just checked was in use -- prepare to check next one
+        *nextSrkHandle = *nextSrkHandle + 1;
+      }
     }
   }
-  if (*nextSrkHandle > TPM2_PERSISTENT_LAST)
+
+  // although the TPM will never be able to load objects at all possible
+  // persistent storage handles, this check that we didn't find all handles
+  // in use is for completeness (i.e., this check should probably never fail)
+  if (*nextSrkHandle >= TPM2_PLATFORM_PERSISTENT)
   {
     kmyth_log(LOG_ERR, "no available persistent storage handles");
     return 1;
@@ -128,34 +217,12 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   kmyth_log(LOG_DEBUG, "next available persistent storage handle at 0x%08X",
             *nextSrkHandle);
 
-  // Step 3 - searching the list for the SRK
-  if (capData.data.handles.count == 0)
+  // if SRK must be re-derived, check valid next handle was also supplied
+  if ((*srkHandle == 0) && (*nextSrkHandle == 0))
   {
-    kmyth_log(LOG_DEBUG, "no handles for existing persistent objects found");
-  }
-  else
-  {
-    kmyth_log(LOG_DEBUG, "checking %d persistent data handle(s) for SRK",
-              capData.data.handles.count);
-  }
-
-  for (int i = 0; i < capData.data.handles.count; i++)
-  {
-    bool SRK_flag = false;
-
-    if (check_if_srk(sapi_ctx, capData.data.handles.handle[i], &SRK_flag))
-    {
-      kmyth_log(LOG_ERR,
-                "error checking if handle = 0x%08X references SRK ... exiting",
-                capData.data.handles.handle[i]);
-      return 1;
-    }
-    if (SRK_flag)
-    {
-      *srkHandle = capData.data.handles.handle[i];
-      kmyth_log(LOG_DEBUG, "SRK found ... done searching");
-      break;
-    }
+    kmyth_log(LOG_ERR, "SRK must be re-derived, but TPM cannot support %s"
+              "loading additional persistent objects ... exiting");
+    return 1;
   }
 
   return 0;
