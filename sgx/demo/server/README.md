@@ -21,9 +21,9 @@ and add both to the dynamic linker configuration (ldconfig).
 To build the program and generate new test keys:
 ```
 cd sgx/demo
-make pre bin/ecdh-server
+make pre bin/ecdh-server bin/ecdh-client
 cd data
-./gen_test_keys_certs.bash
+bash gen_test_keys_certs.bash
 ```
 
 ## Usage
@@ -35,7 +35,7 @@ To run as a key server (all arguments are required):
 
 To run as a client application (all arguments are required):
 ```
-./bin/ecdh-server -c -r data/client_priv_test.pem -u data/server_cert_test.pem -i localhost -p 7000
+./bin/ecdh-client -r data/client_priv_test.pem -u data/server_cert_test.pem -i localhost -p 7000
 ```
 
 The client application should only be started after the server is already running.

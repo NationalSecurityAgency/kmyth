@@ -109,6 +109,7 @@ App_Include_Paths += -I../untrusted/include/util
 App_Include_Paths += -I../untrusted/include/wrapper
 App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
+App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
@@ -335,12 +336,21 @@ $(App_Name): $(App_Source_Files) \
 
 ######## Test Server ########
 
-server/ecdh_server.o: server/ecdh_server.c
+server/%.o: server/%.c server/ecdh_demo.h
 	@$(CC) $(App_C_Flags) -c $< -o $@ \
         -I../../include/network -I../../include/protocol
 	@echo "CC   <=  $<"
 
 bin/ecdh-server: server/ecdh_server.o \
+                 server/ecdh_demo.o \
+                 enclave/ecdh_util.o \
+                 enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
+        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@echo "LINK =>  $@"
+
+bin/ecdh-client: server/ecdh_client.o \
+                 server/ecdh_demo.o \
                  enclave/ecdh_util.o \
                  enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
