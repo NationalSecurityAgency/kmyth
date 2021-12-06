@@ -27,7 +27,7 @@
 //
 int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
                           const unsigned char *p, size_t p_len,
-                          unsigned char **c, size_t * c_len)
+                          unsigned char **c, size_t *c_len)
 {
   // Initialize the context for encryption.
   int result = EVP_PKEY_encrypt_init(ctx);
@@ -71,7 +71,7 @@ int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 //
 int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
                           const unsigned char *c, size_t c_len,
-                          unsigned char **p, size_t * p_len)
+                          unsigned char **p, size_t *p_len)
 {
   // Initialize the context for decryption.
   int result = EVP_PKEY_decrypt_init(ctx);
@@ -116,7 +116,7 @@ int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 int build_nonce_request(EVP_PKEY_CTX * ctx,
                         unsigned char *nonce, size_t nonce_len,
                         unsigned char *id, size_t id_len,
-                        unsigned char **request, size_t * request_len)
+                        unsigned char **request, size_t *request_len)
 {
   if (NSL_NONCE_LEN != nonce_len)
   {
@@ -171,8 +171,8 @@ int build_nonce_request(EVP_PKEY_CTX * ctx,
 //
 int parse_nonce_request(EVP_PKEY_CTX * ctx,
                         unsigned char *request, size_t request_len,
-                        unsigned char **nonce, size_t * nonce_len,
-                        unsigned char **id, size_t * id_len)
+                        unsigned char **nonce, size_t *nonce_len,
+                        unsigned char **id, size_t *id_len)
 {
   // Decrypt the nonce request.
   unsigned char *message = NULL;
@@ -236,7 +236,7 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
                          unsigned char *nonce_a, size_t nonce_a_len,
                          unsigned char *nonce_b, size_t nonce_b_len,
                          unsigned char *id, size_t id_len,
-                         unsigned char **response, size_t * response_len)
+                         unsigned char **response, size_t *response_len)
 {
   // Allocate the unencrypted response buffer.
   unsigned char *message = NULL;
@@ -285,9 +285,9 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
 //
 int parse_nonce_response(EVP_PKEY_CTX * ctx,
                          unsigned char *response, size_t response_len,
-                         unsigned char **nonce_a, size_t * nonce_a_len,
-                         unsigned char **nonce_b, size_t * nonce_b_len,
-                         unsigned char **id, size_t * id_len)
+                         unsigned char **nonce_a, size_t *nonce_a_len,
+                         unsigned char **nonce_b, size_t *nonce_b_len,
+                         unsigned char **id, size_t *id_len)
 {
   // Decrypt the nonce response.
   unsigned char *message = NULL;
@@ -402,7 +402,7 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
 int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char *nonce, size_t nonce_len,
                              unsigned char **confirmation,
-                             size_t * confirmation_len)
+                             size_t *confirmation_len)
 {
   if (NSL_NONCE_LEN != nonce_len)
   {
@@ -453,7 +453,7 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
 int parse_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char *confirmation,
                              size_t confirmation_len, unsigned char **nonce,
-                             size_t * nonce_len)
+                             size_t *nonce_len)
 {
   // Decrypt the nonce confirmation.
   unsigned char *message = NULL;
@@ -588,7 +588,7 @@ EVP_PKEY_CTX *setup_private_evp_context(const char *filepath)
 //
 int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
                          unsigned char *nonce_b, size_t nonce_b_len,
-                         unsigned char **key, size_t * key_len)
+                         unsigned char **key, size_t *key_len)
 {
   if (NSL_NONCE_LEN != nonce_a_len)
   {
@@ -699,7 +699,7 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
 // generate_nonce()
 //
 int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
-                   size_t * nonce_len)
+                   size_t *nonce_len)
 {
   size_t size = 1;
 
@@ -738,7 +738,7 @@ int negotiate_client_session_key(int socket_fd,
                                  unsigned char *expected_id,
                                  size_t expected_id_len,
                                  unsigned char **session_key,
-                                 size_t * session_key_len)
+                                 size_t *session_key_len)
 {
   // Generate nonce A
   unsigned char *nonce_a = NULL;
@@ -924,7 +924,7 @@ int negotiate_server_session_key(int socket_fd,
                                  EVP_PKEY_CTX * private_key_ctx,
                                  unsigned char *id, size_t id_len,
                                  unsigned char **session_key,
-                                 size_t * session_key_len)
+                                 size_t *session_key_len)
 {
   // Generate nonce B
   unsigned char *nonce_b = NULL;

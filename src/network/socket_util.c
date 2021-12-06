@@ -103,7 +103,7 @@ int setup_server_socket(const char *service, int *socket_fd)
 
     // Avoid bind errors when reusing a port soon after closing it.
     if (setsockopt(*socket_fd, SOL_SOCKET, SO_REUSEADDR,
-                   &optval , sizeof(optval)))
+                   &optval, sizeof(optval)))
     {
       kmyth_log(LOG_ERR, "setsockopt error");
       return 1;
