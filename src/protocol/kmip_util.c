@@ -483,14 +483,8 @@ int send_key_with_session_key(int socket_fd,
 
   size_t encrypted_request_len = 8192 * sizeof(unsigned char);
 
-  struct sockaddr_storage peer_addr;
-  socklen_t peer_addr_len = sizeof(peer_addr);
-
-  ssize_t read_result = recvfrom(socket_fd,
-                                 encrypted_request, encrypted_request_len,
-                                 0,
-                                 (struct sockaddr *) &peer_addr,
-                                 &peer_addr_len);
+  ssize_t read_result = read(socket_fd,
+                             encrypted_request, encrypted_request_len);
 
   if (-1 == read_result)
   {
@@ -498,22 +492,6 @@ int send_key_with_session_key(int socket_fd,
     kmyth_clear_and_free(encrypted_request, encrypted_request_len);
     return 1;
   }
-
-  char host[NI_MAXHOST] = { 0 };
-  char service[NI_MAXSERV] = { 0 };
-
-  int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host,
-                      NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(encrypted_request, encrypted_request_len);
-    return 1;
-  }
-
-  kmyth_log(LOG_INFO, "Received %zd bytes from %s:%s", read_result, host,
-            service);
 
   unsigned char *request = NULL;
   size_t request_len = 0;
@@ -586,19 +564,8 @@ int send_key_with_session_key(int socket_fd,
     return 1;
   }
 
-  s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len,
-                  host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(encrypted_response, encrypted_response_len);
-    return 1;
-  }
-
-  ssize_t send_result = sendto(socket_fd,
-                               encrypted_response, encrypted_response_len,
-                               0, (struct sockaddr *) &peer_addr,
-                               peer_addr_len);
+  ssize_t send_result = write(socket_fd,
+                              encrypted_response, encrypted_response_len);
 
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   encrypted_response = NULL;

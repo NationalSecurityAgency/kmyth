@@ -949,14 +949,7 @@ int negotiate_server_session_key(int socket_fd,
   }
   size_t response_len = 8192;
 
-  struct sockaddr_storage peer_addr;
-  socklen_t peer_addr_len = sizeof(peer_addr);
-
-  ssize_t read_result = recvfrom(socket_fd,
-                                 response, response_len,
-                                 0,
-                                 (struct sockaddr *) &peer_addr,
-                                 &peer_addr_len);
+  ssize_t read_result = read(socket_fd, response, response_len);
 
   if (-1 == read_result)
   {
@@ -965,23 +958,6 @@ int negotiate_server_session_key(int socket_fd,
     kmyth_clear_and_free(response, response_len);
     return 1;
   }
-
-  char host[NI_MAXHOST] = { 0 };
-  char service[NI_MAXSERV] = { 0 };
-
-  int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len,
-                      host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(nonce_b, nonce_b_len);
-    kmyth_clear_and_free(response, response_len);
-    return 1;
-  }
-
-  kmyth_log(LOG_INFO, "Received %zd bytes from %s:%s", read_result, host,
-            service);
 
   unsigned char *received_nonce_a = NULL;
   size_t received_nonce_a_len = 0;
@@ -1016,10 +992,7 @@ int negotiate_server_session_key(int socket_fd,
     return 1;
   }
 
-  ssize_t send_result = sendto(socket_fd,
-                               response, response_len,
-                               0,
-                               (struct sockaddr *) &peer_addr, peer_addr_len);
+  ssize_t send_result = write(socket_fd, response, response_len);
 
   if (response_len != send_result)
   {
@@ -1041,9 +1014,7 @@ int negotiate_server_session_key(int socket_fd,
   }
   response_len = 8192 * sizeof(unsigned char);
 
-  read_result = recvfrom(socket_fd,
-                         response, response_len,
-                         0, (struct sockaddr *) &peer_addr, &peer_addr_len);
+  read_result = read(socket_fd, response, response_len);
   if (-1 == read_result)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce confirmation.");
@@ -1052,20 +1023,6 @@ int negotiate_server_session_key(int socket_fd,
     kmyth_clear_and_free(response, response_len);
     return 1;
   }
-
-  s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len,
-                  host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(nonce_b, nonce_b_len);
-    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
-    kmyth_clear_and_free(response, response_len);
-    return 1;
-  }
-
-  kmyth_log(LOG_INFO, "Received %zd bytes from %s:%s", read_result, host,
-            service);
 
   unsigned char *received_nonce_b = NULL;
   size_t received_nonce_b_len = 0;

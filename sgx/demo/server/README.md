@@ -43,11 +43,8 @@ The client application should only be started after the server is already runnin
 
 ## Key Sharing Protocol
 
-The test server uses UDP for consistency with the other KMIP applications in Kmyth.
-The network port is configurable.
-
-After starting up, the server waits to receive an init message from the client.
-This establishes the client address info used in all communications from the server to the client.
+The test server uses TCP for network communications.
+The port number is configurable.
 
 The client always shares its signed ephemeral public key first,
 then the server does the same.

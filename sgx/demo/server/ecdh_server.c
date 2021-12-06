@@ -28,8 +28,6 @@
 
 #define UNSET_FD -1
 #define OP_KEY_SIZE 16
-#define INIT_MSG "init"
-#define INIT_MSG_SIZE 4
 #define MAX_RESP_SIZE 16384
 
 typedef struct ECDHServer
@@ -47,8 +45,6 @@ typedef struct ECDHServer
   size_t remote_ephemeral_pubkey_len;
   unsigned char *session_key;
   unsigned int session_key_len;
-  struct sockaddr_storage peer_addr;
-  socklen_t peer_addr_len;
 } ECDHServer;
 
 const struct option longopts[] = {
@@ -67,10 +63,9 @@ const struct option longopts[] = {
 
 void init(ECDHServer * this)
 {
-  memset(this, 0, sizeof(ECDHServer));
+  secure_memset(this, 0, sizeof(ECDHServer));
   this->socket_fd = UNSET_FD;
   this->client_mode = false;
-  this->peer_addr_len = sizeof(this->peer_addr);
 }
 
 void cleanup(ECDHServer * this)
@@ -214,66 +209,57 @@ void check_options(ECDHServer * this)
   }
 }
 
-void send_dgram(ECDHServer * this, const void *buf, size_t len)
+void send_msg(ECDHServer * this, const void *buf, size_t len)
 {
-  int ret;
+  /* Wrapper function to simplify error handling. */
+  int ret = write(this->socket_fd, buf, len);
 
-  /* Messages from the server must be addressed, but the client can simply write to the socket. */
-  if (this->client_mode)
-  {
-    ret = write(this->socket_fd, buf, len);
-  }
-  else
-  {
-    ret =
-      sendto(this->socket_fd, buf, len, 0, (struct sockaddr *) &this->peer_addr,
-             this->peer_addr_len);
-  }
   if (ret == -1)
   {
-    kmyth_log(LOG_ERR, "Failed to send a datagram.");
+    kmyth_log(LOG_ERR, "Failed to send a message.");
     error(this);
   }
 }
 
-void recv_dgram(ECDHServer * this, void *buf, size_t len)
+void recv_msg(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   int ret = read(this->socket_fd, buf, len);
 
   if (ret == -1)
   {
-    kmyth_log(LOG_ERR, "Failed to receive a datagram.");
+    kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(this);
   }
 }
 
 void create_server_socket(ECDHServer * this)
 {
-  char msg_buf[INIT_MSG_SIZE];
-  int ret;
+  int listen_fd = UNSET_FD;
 
   kmyth_log(LOG_INFO, "Setting up server socket");
-  if (setup_server_socket(this->port, &this->socket_fd))
+  if (setup_server_socket(this->port, &listen_fd))
   {
-    kmyth_log(LOG_ERR, "Failed to setup server socket.");
+    kmyth_log(LOG_ERR, "Failed to set up server socket.");
     error(this);
   }
 
-  kmyth_log(LOG_INFO, "Waiting for init message");
-  // This populates the peer_addr information used to send responses back to the client
-  ret = recvfrom(this->socket_fd, msg_buf, sizeof(msg_buf),
-                 0, (struct sockaddr *) &this->peer_addr, &this->peer_addr_len);
-  if (ret == -1)
+  if (listen(listen_fd, 1))
   {
-    kmyth_log(LOG_ERR, "Failed to receive init message.");
+    kmyth_log(LOG_ERR, "Socket listen failed.");
+    close(listen_fd);
     error(this);
   }
-  if (strncmp(INIT_MSG, msg_buf, INIT_MSG_SIZE) != 0)
+
+  this->socket_fd = accept(listen_fd, NULL, NULL);
+  if (this->socket_fd == -1)
   {
-    kmyth_log(LOG_ERR, "Received an invalid init message.");
+    kmyth_log(LOG_ERR, "Socket accept failed.");
+    close(listen_fd);
     error(this);
   }
+
+  close(listen_fd);
 }
 
 void create_client_socket(ECDHServer * this)
@@ -284,9 +270,6 @@ void create_client_socket(ECDHServer * this)
     kmyth_log(LOG_ERR, "Failed to setup client socket.");
     error(this);
   }
-
-  kmyth_log(LOG_INFO, "Sending init message");
-  send_dgram(this, INIT_MSG, INIT_MSG_SIZE);
 }
 
 void load_private_key(ECDHServer * this)
@@ -371,7 +354,7 @@ void recv_ephemeral_public(ECDHServer * this)
   int ret;
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
-  recv_dgram(this, &this->remote_ephemeral_pubkey_len,
+  recv_msg(this, &this->remote_ephemeral_pubkey_len,
              sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
   {
@@ -380,18 +363,18 @@ void recv_ephemeral_public(ECDHServer * this)
   }
   this->remote_ephemeral_pubkey =
     calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
-  recv_dgram(this, this->remote_ephemeral_pubkey,
+  recv_msg(this, this->remote_ephemeral_pubkey,
              this->remote_ephemeral_pubkey_len);
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key signature.");
-  recv_dgram(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
+  recv_msg(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
   if (remote_pub_sig_len > MAX_RESP_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key signature size.");
     error(this);
   }
   remote_pub_sig = calloc(remote_pub_sig_len, sizeof(unsigned char));
-  recv_dgram(this, remote_pub_sig, remote_pub_sig_len);
+  recv_msg(this, remote_pub_sig, remote_pub_sig_len);
 
   // check signature on received ephemeral contribution from remote
   ret = verify_buffer(this->remote_pubkey,
@@ -436,11 +419,11 @@ void send_ephemeral_public(ECDHServer * this)
   kmyth_log(LOG_DEBUG, "signed local ephemeral ECDH 'public key'");
 
   kmyth_log(LOG_INFO, "Sending ephemeral public key.");
-  send_dgram(this, &local_pub_len, sizeof(local_pub_len));
-  send_dgram(this, local_pub, local_pub_len);
+  send_msg(this, &local_pub_len, sizeof(local_pub_len));
+  send_msg(this, local_pub, local_pub_len);
   kmyth_log(LOG_INFO, "Sending ephemeral public key signature.");
-  send_dgram(this, &local_pub_sig_len, sizeof(local_pub_sig_len));
-  send_dgram(this, local_pub_sig, local_pub_sig_len);
+  send_msg(this, &local_pub_sig_len, sizeof(local_pub_sig_len));
+  send_msg(this, local_pub_sig, local_pub_sig_len);
 
   kmyth_clear_and_free(local_pub, local_pub_len);
   kmyth_clear_and_free(local_pub_sig, local_pub_sig_len);
