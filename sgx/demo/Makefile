@@ -109,6 +109,7 @@ App_Include_Paths += -I../untrusted/include/util
 App_Include_Paths += -I../untrusted/include/wrapper
 App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
+App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
@@ -255,6 +256,7 @@ pre:
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
+	@indent $(INDENT_OPTS) server/*.c
 	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
 	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
 	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
@@ -332,6 +334,29 @@ $(App_Name): $(App_Source_Files) \
 		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
 	@echo "LINK =>  $@"
 
+######## Test Server ########
+
+server/%.o: server/%.c server/ecdh_demo.h
+	@$(CC) $(App_C_Flags) -c $< -o $@ \
+        -I../../include/network -I../../include/protocol
+	@echo "CC   <=  $<"
+
+bin/ecdh-server: server/ecdh_server.o \
+                 server/ecdh_demo.o \
+                 enclave/ecdh_util.o \
+                 enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
+        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@echo "LINK =>  $@"
+
+bin/ecdh-client: server/ecdh_client.o \
+                 server/ecdh_demo.o \
+                 enclave/ecdh_util.o \
+                 enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
+        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@echo "LINK =>  $@"
+
 ######## Enclave Objects ########
 
 enclave/$(Enclave_Name)_t.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
@@ -401,4 +426,5 @@ clean:
 	@rm -f enclave/*_u.h enclave/*_t.h enclave/*_u.c enclave/*_t.c
 	@rm -f enclave/*.o enclave/*.so
 	@rm -f enclave/*.pem data/*.pem
+	@rm -f server/*.o
 	@rm -rf bin

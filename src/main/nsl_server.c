@@ -18,7 +18,7 @@ static void usage(const char *prog)
           "\nusage: %s [options]\n\n"
           "options are :\n\n"
           "Server Information --\n"
-          "  -r or --priv   Path to the file containing the server's private key.\n"
+          "  -r or --priv  Path to the file containing the server's private key.\n"
           "  -p or --port  The port number to connect to.\n"
           "Client Information --\n"
           "  -u or --pub  Path to the file containing the client's public key.\n"
@@ -92,14 +92,31 @@ int main(int argc, char **argv)
   // Create server socket
   kmyth_log(LOG_INFO, "Setting up server socket");
 
-  int socket_fd = -1;
-  int result = setup_server_socket(port, &socket_fd);
+  int listen_fd = -1, socket_fd = -1;
+  int result = setup_server_socket(port, &listen_fd);
 
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to setup server socket.");
     return 1;
   }
+
+  if (listen(listen_fd, 1))
+  {
+    kmyth_log(LOG_ERR, "Socket listen failed.");
+    close(listen_fd);
+    return 1;
+  }
+
+  socket_fd = accept(listen_fd, NULL, NULL);
+  if (socket_fd == -1)
+  {
+    kmyth_log(LOG_ERR, "Socket accept failed.");
+    close(listen_fd);
+    return 1;
+  }
+
+  close(listen_fd);
 
   // Load public/private keys; create EVP contexts
   EVP_PKEY_CTX *public_key_ctx = setup_public_evp_context(cert);
