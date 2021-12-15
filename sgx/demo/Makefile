@@ -111,6 +111,8 @@ App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
 App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
+App_Include_Paths += -I../../include/network
+App_Include_Paths += -I../../include/protocol
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
 App_C_Flags += -fPIC -Wno-attributes
@@ -147,7 +149,9 @@ endif
 App_Link_Flags += -lpthread
 App_Link_Flags += -lkmyth-utils
 App_Link_Flags += -lkmyth-logger
+App_Link_Flags += -lkmyth-tpm
 App_Link_Flags += -lcrypto
+App_Link_Flags += -lkmip
 
 ######## Enclave Build Settings ########
 
@@ -256,7 +260,7 @@ pre:
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
-	@indent $(INDENT_OPTS) server/*.c
+	@indent $(INDENT_OPTS) server/*.c server/*.h
 	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
 	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
 	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
@@ -321,7 +325,13 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Source_Files) \
+enclave/$(ENCLAVE_HEADER_UNTRUSTED): enclave/$(Enclave_Name)_u.c
+
+app/%.o: app/%.c enclave/$(ENCLAVE_HEADER_UNTRUSTED)
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(App_Name): app/kmyth_sgx_retrieve_key_demo.o \
              enclave/$(Enclave_Name)_u.o \
              enclave/ec_key_cert_marshal.o \
              enclave/ec_key_cert_unmarshal.o \
@@ -330,31 +340,27 @@ $(App_Name): $(App_Source_Files) \
              enclave/ecdh_dummy_server.o \
              enclave/memory_ocall.o \
              enclave/log_ocall.o 
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
+	$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Test Server ########
 
 server/%.o: server/%.c server/ecdh_demo.h
-	@$(CC) $(App_C_Flags) -c $< -o $@ \
-        -I../../include/network -I../../include/protocol
+	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 bin/ecdh-server: server/ecdh_server.o \
                  server/ecdh_demo.o \
                  enclave/ecdh_util.o \
                  enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 bin/ecdh-client: server/ecdh_client.o \
                  server/ecdh_demo.o \
                  enclave/ecdh_util.o \
                  enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########

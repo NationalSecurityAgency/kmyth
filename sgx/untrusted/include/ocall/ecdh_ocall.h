@@ -30,8 +30,6 @@ extern "C"
 #include <kmyth/kmyth_log.h>
 #include <kmyth/memory_util.h>
 
-#include "ecdh_dummy_server.h"
-
 #include "kmyth_enclave_common.h"
 
 /**
@@ -84,9 +82,10 @@ extern "C"
                           unsigned char *enclave_eph_pub_signature,
                           unsigned int enclave_eph_pub_signature_len,
                           unsigned char **remote_ephemeral_public,
-                          size_t * remote_ephemeral_public_len,
+                          size_t *remote_ephemeral_public_len,
                           unsigned char **remote_eph_pub_signature,
-                          unsigned int *remote_eph_pub_signature_len);
+                          unsigned int *remote_eph_pub_signature_len,
+                          int socket_fd);
 
 #ifdef __cplusplus
 }

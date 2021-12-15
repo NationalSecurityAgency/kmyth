@@ -9,7 +9,8 @@
 //############################################################################
 // enclave_retrieve_key()
 //############################################################################
-int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
+int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
+                         int socket_fd)
 {
   // recover public key from certificate
   EVP_PKEY *server_sign_pubkey = NULL;
@@ -97,7 +98,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
                                 &server_ephemeral_pub,
                                 &server_ephemeral_pub_len,
                                 &server_eph_pub_signature,
-                                &server_eph_pub_signature_len);
+                                &server_eph_pub_signature_len, socket_fd);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "ECDH ephemeral 'public key' exchange unsuccessful");
@@ -211,6 +212,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert)
            session_key[session_key_len - 2],
            session_key[session_key_len - 1], session_key_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // TODO: retrieve_key_with_session_key
 
   // done with session secret/key
   kmyth_enclave_clear_and_free(session_secret, session_secret_len);

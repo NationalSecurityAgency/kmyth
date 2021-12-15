@@ -46,9 +46,12 @@ extern "C"
  *                                    the enclave as part of an ECDH key
  *                                    agreement protocol.
  *
+ * @param[in]  socket_fd              File descriptor number for a socket
+ *                                    connected to the remote key server.
+ *
  * @return 0 on success, 1 on error
  */
-  int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert);
+  int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert, int socket_fd);
 
 #ifdef __cplusplus
 }

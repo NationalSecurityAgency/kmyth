@@ -97,7 +97,8 @@ enclave {
                                                       size_t client_private_bytes_len,
                                                       [in, count=server_cert_bytes_len]
                                                         uint8_t* server_cert_bytes,
-                                                      size_t server_cert_bytes_len);
+                                                      size_t server_cert_bytes_len,
+                                                      int socket_fd);
 
 
   };
@@ -171,7 +172,8 @@ enclave {
                              [out] unsigned char **remote_contribution,
                              [out] size_t *remote_contribution_len,
                              [out] unsigned char **remote_contribution_signature,
-                             [out] unsigned int *remote_contribution_signature_len);
+                             [out] unsigned int *remote_contribution_signature_len,
+                             int socket_fd);
 
   };
 
