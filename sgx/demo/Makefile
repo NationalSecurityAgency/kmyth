@@ -112,7 +112,6 @@ App_Include_Paths += -Ienclave
 App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
 App_Include_Paths += -I../../include/network
-App_Include_Paths += -I../../include/protocol
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
 App_C_Flags += -fPIC -Wno-attributes
@@ -151,7 +150,6 @@ App_Link_Flags += -lkmyth-utils
 App_Link_Flags += -lkmyth-logger
 App_Link_Flags += -lkmyth-tpm
 App_Link_Flags += -lcrypto
-App_Link_Flags += -lkmip
 
 ######## Enclave Build Settings ########
 
@@ -174,6 +172,7 @@ Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
 Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
+Enclave_Include_Paths += -I/usr/local/include
 
 Enclave_C_Flags := -Wall
 Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
@@ -197,6 +196,7 @@ Enclave_Link_Flags += -nostartfiles
 Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
 Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
 Enclave_Link_Flags += -L/usr/local/include
+Enclave_Link_Flags += -L/usr/local/lib
 Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
 Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
 Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
@@ -206,6 +206,8 @@ Enclave_Link_Flags +=   -lsgx_tcxx
 Enclave_Link_Flags +=   -lsgx_pthread
 Enclave_Link_Flags +=   -l$(Crypto_Library_Name)
 Enclave_Link_Flags +=   -l$(Service_Library_Name)
+# Enclave_Link_Flags += -static
+Enclave_Link_Flags += -lkmip
 Enclave_Link_Flags += -Wl,--end-group
 Enclave_Link_Flags += -Wl,-Bstatic
 Enclave_Link_Flags += -Wl,-Bsymbolic
@@ -237,7 +239,7 @@ endef
 .PHONY: all pre test-keys-certs demo
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: $(App_Name) $(Enclave_Lib)
+all: $(Enclave_Lib) $(App_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Enclave_Lib) first with your signing key before"
 	@echo "you run the $(App_Name) to launch and access the enclave."
@@ -340,7 +342,7 @@ $(App_Name): app/kmyth_sgx_retrieve_key_demo.o \
              enclave/ecdh_dummy_server.o \
              enclave/memory_ocall.o \
              enclave/log_ocall.o 
-	$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Test Server ########

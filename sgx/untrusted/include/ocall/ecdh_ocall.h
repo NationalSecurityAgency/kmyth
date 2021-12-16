@@ -34,7 +34,7 @@ extern "C"
 
 /**
  * @brief Supports exchanging signed 'public key' contributions between the
- *        client (enclave) and the server (emulated in the untrusted app).
+ *        client (enclave) and the server (separate process).
  *        With the exchange of this information, they can independently
  *        generate a common session key.
  * 
@@ -73,6 +73,10 @@ extern "C"
  *                                                of signature for remote
  *                                                (server) public ephemeral
  *                                                contribution.
+ * 
+ * @param[in] socket_fd                           File descriptor number for
+ *                                                a socket connected to
+ *                                                the remote key server.
  *
  * 
  * @return 0 on success, 1 on failure
@@ -86,6 +90,36 @@ extern "C"
                           unsigned char **remote_eph_pub_signature,
                           unsigned int *remote_eph_pub_signature_len,
                           int socket_fd);
+
+/**
+ * @brief Supports retrieving an operational key from the demo key server
+ *        by sending an encrypted KMIP key request and receiving an
+ *        encrypted KMIP response message.
+ * 
+ * @param[in]  encrypted_request          Pointer to the encrypted request
+ *                                        message to be sent to the key server.
+ *
+ * @param[in]  encrypted_request_len      Length (in bytes) of the encrypted
+ *                                        request message for the key server.
+ *
+ * @param[out] encrypted_response         Pointer to the encrypted response
+ *                                        message received from the key server.
+ *
+ * @param[out] encrypted_response_len     Pointer to length (in bytes)
+ *                                        of the response message.
+ *                                        This may be smaller than the
+ *                                        allocated buffer size.
+ *
+ * @param[in] socket_fd                   File descriptor number for
+ *                                        a socket connected to
+ *                                        the remote key server.
+ *
+ * @return 0 on success, 1 on failure
+ */
+  int retrieve_key_ocall(unsigned char *encrypted_request,
+                         size_t encrypted_request_len,
+                         unsigned char **encrypted_response,
+                         size_t *encrypted_response_len, int socket_fd);
 
 #ifdef __cplusplus
 }

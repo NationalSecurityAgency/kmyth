@@ -119,3 +119,42 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
 
   return EXIT_SUCCESS;
 }
+
+/*****************************************************************************
+ * retrieve_key_ocall()
+ ****************************************************************************/
+int retrieve_key_ocall(unsigned char *encrypted_request,
+                       size_t encrypted_request_len,
+                       unsigned char **encrypted_response,
+                       size_t *encrypted_response_len, int socket_fd)
+{
+  ssize_t write_result, read_result;
+  size_t response_buffer_size = MAX_RESP_SIZE;
+
+  kmyth_log(LOG_DEBUG, "Sending kmip request.");
+  write_result = write(socket_fd, encrypted_request, encrypted_request_len);
+  if (write_result != encrypted_request_len)
+  {
+    kmyth_log(LOG_ERR, "Failed to send the key request.");
+    return EXIT_FAILURE;
+  }
+
+  *encrypted_response = calloc(response_buffer_size, sizeof(unsigned char));
+  if (*encrypted_response == NULL)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocate the encrypted response buffer.");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "Receiving kmip response.");
+  read_result = read(socket_fd, *encrypted_response, response_buffer_size);
+  if (read_result == -1)
+  {
+    kmyth_log(LOG_ERR, "Failed to read the key response.");
+    kmyth_clear_and_free(*encrypted_response, response_buffer_size);
+    return EXIT_FAILURE;
+  }
+  *encrypted_response_len = read_result;
+
+  return EXIT_SUCCESS;
+}

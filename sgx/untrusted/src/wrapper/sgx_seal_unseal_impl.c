@@ -22,7 +22,7 @@
 // kmyth_sgx_seal_nkl()
 //############################################################################
 int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
-                       uint8_t ** output, size_t * output_len,
+                       uint8_t ** output, size_t *output_len,
                        uint16_t key_policy, sgx_attributes_t attribute_mask)
 {
   uint8_t *data = NULL;

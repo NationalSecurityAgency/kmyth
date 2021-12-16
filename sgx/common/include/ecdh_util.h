@@ -214,7 +214,7 @@ int compute_ecdh_session_key(unsigned char * secret,
  *                                signature buffer
  *
  * @return 0 on success (signature verification passed),
- *         1 on error (signature verofification failed)
+ *         1 on error (signature verification failed)
  */
   int verify_buffer(EVP_PKEY * ec_verify_pkey,
                     unsigned char * buf_in, size_t buf_in_len,

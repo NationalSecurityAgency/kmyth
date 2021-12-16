@@ -293,7 +293,7 @@ void recv_ephemeral_public(ECDHServer * this)
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
   recv_msg(this, &this->remote_ephemeral_pubkey_len,
-             sizeof(this->remote_ephemeral_pubkey_len));
+           sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
@@ -302,7 +302,7 @@ void recv_ephemeral_public(ECDHServer * this)
   this->remote_ephemeral_pubkey =
     calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
   recv_msg(this, this->remote_ephemeral_pubkey,
-             this->remote_ephemeral_pubkey_len);
+           this->remote_ephemeral_pubkey_len);
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key signature.");
   recv_msg(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
@@ -377,7 +377,8 @@ void get_session_key(ECDHServer * this)
   // re-construct EVP_PKEY for client's public contribution
   ret = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
                                                 this->remote_ephemeral_pubkey,
-                                                this->remote_ephemeral_pubkey_len,
+                                                this->
+                                                remote_ephemeral_pubkey_len,
                                                 &remote_ephemeral_pub_pt);
   if (ret != EXIT_SUCCESS)
   {
@@ -448,7 +449,7 @@ void get_operational_key(ECDHServer * this)
   unsigned char *static_key = NULL;
   size_t static_key_len = 0;
   int ret;
-  unsigned char *key_id = (unsigned char *) "test_key_id";
+  unsigned char *key_id = (unsigned char *) "fake_key_id";
 
   ret = retrieve_key_with_session_key(this->socket_fd,
                                       this->session_key, this->session_key_len,

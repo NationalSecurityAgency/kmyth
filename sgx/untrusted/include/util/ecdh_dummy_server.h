@@ -72,7 +72,7 @@ extern "C"
                         unsigned char *client_pub_sig,
                         unsigned int client_pub_sig_len,
                         unsigned char **server_pub,
-                        size_t * server_pub_len,
+                        size_t *server_pub_len,
                         unsigned char **server_pub_sig,
                         unsigned int *server_pub_sig_len);
 

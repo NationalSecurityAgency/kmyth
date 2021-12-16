@@ -20,6 +20,11 @@ extern "C"
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
+#include <kmip/kmip.h>
+
+#include "aes_gcm.h"
+#include "kmip_util.h"
+
 #include "kmyth_enclave_trusted.h"
 
 /**
