@@ -112,6 +112,7 @@ App_Include_Paths += -Ienclave
 App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
 App_Include_Paths += -I../../include/network
+App_Include_Paths += -I../../include/protocol
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
 App_C_Flags += -fPIC -Wno-attributes
@@ -206,14 +207,13 @@ Enclave_Link_Flags +=   -lsgx_tcxx
 Enclave_Link_Flags +=   -lsgx_pthread
 Enclave_Link_Flags +=   -l$(Crypto_Library_Name)
 Enclave_Link_Flags +=   -l$(Service_Library_Name)
-# Enclave_Link_Flags += -static
-Enclave_Link_Flags += -lkmip
 Enclave_Link_Flags += -Wl,--end-group
 Enclave_Link_Flags += -Wl,-Bstatic
 Enclave_Link_Flags += -Wl,-Bsymbolic
 Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
 Enclave_Link_Flags += -Wl,--export-dynamic
 Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
+Enclave_Link_Flags += -lkmip-core
 
 Enclave_Name := kmyth_sgx_retrieve_key_demo_enclave
 Enclave_Lib := $(Enclave_Name).so
@@ -253,7 +253,7 @@ all: $(Enclave_Lib) $(App_Name)
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build"
 	@echo "the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: pre $(App_Name) enclave/$(Signed_Enclave_Name)
+all: pre enclave/$(Signed_Enclave_Name) $(App_Name)
 endif
 
 pre:

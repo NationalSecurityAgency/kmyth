@@ -19,11 +19,9 @@ extern "C"
 #include <openssl/x509v3.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/rand.h>
 
 #include <kmip/kmip.h>
-
-#include "aes_gcm.h"
-#include "kmip_util.h"
 
 #include "kmyth_enclave_trusted.h"
 
