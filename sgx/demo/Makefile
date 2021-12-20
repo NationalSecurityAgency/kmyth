@@ -196,7 +196,6 @@ Enclave_Link_Flags += -nodefaultlibs
 Enclave_Link_Flags += -nostartfiles
 Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
 Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
-Enclave_Link_Flags += -L/usr/local/include
 Enclave_Link_Flags += -L/usr/local/lib
 Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
 Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
@@ -229,6 +228,11 @@ endif
 endif
 endif
 
+######## Demo Server Build Settings ########
+
+Server_Name := bin/ecdh-server
+Client_Name := bin/ecdh-client
+
 # Message for missing Enclave Signing Key - Fatal Build Error
 define err_no_enclave_signing_key
 FAIL - No Enclave Signing Key found
@@ -239,7 +243,7 @@ endef
 .PHONY: all pre test-keys-certs demo
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: $(Enclave_Lib) $(App_Name)
+all: pre $(Enclave_Lib) $(App_Name) $(Server_Name) $(Client_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Enclave_Lib) first with your signing key before"
 	@echo "you run the $(App_Name) to launch and access the enclave."
@@ -253,7 +257,7 @@ all: $(Enclave_Lib) $(App_Name)
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build"
 	@echo "the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: pre enclave/$(Signed_Enclave_Name) $(App_Name)
+all: pre enclave/$(Signed_Enclave_Name) $(App_Name) $(Server_Name) $(Client_Name)
 endif
 
 pre:
@@ -351,17 +355,17 @@ server/%.o: server/%.c server/ecdh_demo.h
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-bin/ecdh-server: server/ecdh_server.o \
-                 server/ecdh_demo.o \
-                 enclave/ecdh_util.o \
-                 enclave/log_ocall.o
+$(Server_Name): server/ecdh_server.o \
+                server/ecdh_demo.o \
+                enclave/ecdh_util.o \
+                enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-bin/ecdh-client: server/ecdh_client.o \
-                 server/ecdh_demo.o \
-                 enclave/ecdh_util.o \
-                 enclave/log_ocall.o
+$(Client_Name): server/ecdh_client.o \
+                server/ecdh_demo.o \
+                enclave/ecdh_util.o \
+                enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
