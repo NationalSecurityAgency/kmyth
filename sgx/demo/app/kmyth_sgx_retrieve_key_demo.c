@@ -105,8 +105,10 @@ int main(int argc, char **argv)
                              &client_priv_ec_key_bytes_len))
   {
     demo_log(LOG_ERR, "error marshalling EC PKEY struct into byte array");
+    EVP_PKEY_free(client_priv_ec_key);
     return EXIT_FAILURE;
   }
+  EVP_PKEY_free(client_priv_ec_key);
 
   // Test - Included to test logging by "common" utils called from
   //        untrusted space
@@ -115,6 +117,7 @@ int main(int argc, char **argv)
                                          (size_t *)
                                          &client_priv_ec_key_bytes_len,
                                          &test_key);
+  EVP_PKEY_free(test_key);
 
   if (ret_val)
   {
