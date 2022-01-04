@@ -281,6 +281,8 @@ test-keys-certs: data/client_priv_test.pem \
 
 demo: all test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
+	@$(CURDIR)/$(Server_Name) -r data/server_priv_test.pem -u data/client_cert_test.pem -p 7000 &
+	@sleep 1
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
