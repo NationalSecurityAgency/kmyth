@@ -22,21 +22,16 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // validate non-NULL and non-empty encryption key specified
   if (key == NULL || key_len == 0)
   {
-    kmyth_log(LOG_ERR, "no key data ... exiting");
     return 1;
   }
 
   // verify non-NULL, non-empty input plaintext buffer of valid size
   if (inData == NULL || inData_len == 0)
   {
-    kmyth_log(LOG_ERR, "no input data provided ... exiting");
     return 1;
   }
   if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN)
   {
-    kmyth_log(LOG_ERR, "input data exceeds maximum "
-              "allowable length (%lu provided, %lu maximum) ... exiting",
-              inData_len, AES_KEYWRAP_5649PAD_MAX_DATA_LEN);
     return 1;
   }
 
@@ -49,8 +44,6 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   *outData = malloc(*outData_len);
   if (*outData == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error (%d bytes) for output data ... exiting",
-              *outData_len);
     return 1;
   }
 
@@ -61,7 +54,6 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    kmyth_log(LOG_ERR, "error creating cipher context ... exiting");
     free(*outData);
     return 1;
   }
@@ -83,22 +75,18 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
       EVP_EncryptInit_ex(ctx, EVP_aes_256_wrap_pad(), NULL, NULL, NULL);
     break;
   default:
-    kmyth_log(LOG_ERR, "invalid key length (%d bytes)", key_len);
+    break;
   }
   if (!init_result)
   {
-    kmyth_log(LOG_ERR, "error initializing cipher context ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "AES/KeyWrap/RFC5649Padding/%d cipher context",
-            key_len * 8);
 
   // set the encryption key in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting key ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -115,18 +103,15 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // encrypt (wrap) the input PT, put result in the output CT buffer
   if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    kmyth_log(LOG_ERR, "error wrapping data ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
   ciphertext_len = tmp_len;
-  kmyth_log(LOG_DEBUG, "key wrap produced %d-byte CT output", ciphertext_len);
 
   // OpenSSL requires a "finalize" operation
   if (!EVP_EncryptFinal_ex(ctx, (*outData) + ciphertext_len, &tmp_len))
   {
-    kmyth_log(LOG_ERR, "error finalizing ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -137,9 +122,6 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // plus 4-byte IV plus 4-byte counter + any necessary padding)
   if (ciphertext_len != *outData_len)
   {
-    kmyth_log(LOG_ERR, "invalid ciphertext length "
-              "(expected %lu bytes, actual %d bytes) ... exiting",
-              *outData_len, ciphertext_len);
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -163,7 +145,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   // validate non-NULL and non-empty decryption key specified
   if (key == NULL || key_len == 0)
   {
-    kmyth_log(LOG_ERR, "no key data ... exiting");
     return 1;
   }
 
@@ -175,27 +156,18 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   //       size) for the AES codebook
   if (inData == NULL || inData_len == 0)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
   if (inData_len < 8)
   {
-    kmyth_log(LOG_ERR,
-              "input data size (%lu bytes) < 8 ... exiting", inData_len);
     return 1;
   }
   if (inData_len % 8 != 0)
   {
-    kmyth_log(LOG_ERR,
-              "data length (%lu bytes) not multiple of 8 ... exiting",
-              inData_len);
     return 1;
   }
   if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN)
   {
-    kmyth_log(LOG_ERR,
-              "input data length error (%lu bytes, max = %lu) ... exiting",
-              inData_len, AES_KEYWRAP_5649PAD_MAX_DATA_LEN);
     return 1;
   }
 
@@ -207,8 +179,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   *outData = malloc(inData_len);
   if (*outData == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error (%ld bytes) for PT data ... exiting",
-              inData_len);
     return 1;
   }
 
@@ -218,7 +188,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    kmyth_log(LOG_ERR, "error creating cipher context ... exiting");
     free(*outData);
     return 1;
   }
@@ -241,12 +210,11 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
       EVP_DecryptInit_ex(ctx, EVP_aes_256_wrap_pad(), NULL, NULL, NULL);
     break;
   default:
-    kmyth_log(LOG_ERR, "invalid key length (%d bytes) specified", key_len);
+    break;
   }
 
   if (!init_result)
   {
-    kmyth_log(LOG_ERR, "failed to initialize cipher context ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -254,7 +222,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting key ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -264,7 +231,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    kmyth_log(LOG_ERR, "unwrapping error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -273,7 +239,6 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   *outData_len = tmp_len;
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
   {
-    kmyth_log(LOG_ERR, "finalization error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;

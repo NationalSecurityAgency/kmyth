@@ -22,7 +22,6 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   // validate non-NULL and non-empty encryption key specified
   if (key == NULL || key_len == 0)
   {
-    kmyth_log(LOG_ERR, "no key data ... exiting");
     return 1;
   }
 
@@ -30,14 +29,10 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   // a multiple of eight (8) bytes greater than or equal to 16 was specified
   if (inData == NULL || inData_len == 0)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
   if (inData_len < 16 || inData_len % 8 != 0)
   {
-    kmyth_log(LOG_ERR,
-              "bad data size (%lu) - not div by 8/min 16 bytes ... exiting",
-              inData_len);
     return 1;
   }
 
@@ -49,7 +44,6 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   *outData = malloc(*outData_len);
   if (*outData == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error for output ciphertext ... exiting");
     return 1;
   }
 
@@ -60,8 +54,6 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    kmyth_log(LOG_ERR,
-              "error creating AES Key Wrap cipher context ... exiting");
     free(*outData);
     return 1;
   }
@@ -80,11 +72,10 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
     init_result = EVP_EncryptInit_ex(ctx, EVP_aes_256_wrap(), NULL, NULL, NULL);
     break;
   default:
-    kmyth_log(LOG_ERR, "invalid key size (%d bytes)", key_len);
+    break;
   }
   if (!init_result)
   {
-    kmyth_log(LOG_ERR, "AES Key Wrap cipher context init error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -93,7 +84,6 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   // set the encryption key in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting key ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -110,18 +100,15 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   // encrypt (wrap) the input PT, put result in the output CT buffer
   if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    kmyth_log(LOG_ERR, "error wrapping key ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
   ciphertext_len = tmp_len;
-  kmyth_log(LOG_DEBUG, "key wrap produced %d output CT bytes", ciphertext_len);
 
   // OpenSSL requires a "finalize" operation
   if (!EVP_EncryptFinal_ex(ctx, (*outData) + ciphertext_len, &tmp_len))
   {
-    kmyth_log(LOG_ERR, "finalization error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -132,9 +119,6 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   // eight bytes for prepended integrity check value)
   if (ciphertext_len != *outData_len)
   {
-    kmyth_log(LOG_ERR,
-              "CT length error (expected %lu, actual %d) bytes ... exiting",
-              *outData_len, ciphertext_len);
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -158,7 +142,6 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // validate non-NULL and non-empty decryption key specified
   if (key == NULL || key_len == 0)
   {
-    kmyth_log(LOG_ERR, "no key data ... exiting");
     return 1;
   }
 
@@ -170,21 +153,14 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   //       requires the plaintext consist of an integer number of semiblocks.
   if (inData == NULL || inData_len == 0)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
   if (inData_len < 24)
   {
-    kmyth_log(LOG_ERR,
-              "input data must be >= 24 bytes, only %lu bytes) ... exiting",
-              inData_len);
     return 1;
   }
   if (inData_len % 8 != 0)
   {
-    kmyth_log(LOG_ERR,
-              "bad (%lu) data size - not div by 8/min 16 bytes ... exiting",
-              inData_len);
     return 1;
   }
 
@@ -195,8 +171,6 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   *outData = malloc(inData_len);
   if (*outData == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error (%d bytes) for PT output ... exiting",
-              inData_len);
     return 1;
   }
 
@@ -207,7 +181,6 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    kmyth_log(LOG_ERR, "error creating cipher context ... exiting");
     free(*outData);
     return 1;
   }
@@ -226,22 +199,18 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
     init_result = EVP_DecryptInit_ex(ctx, EVP_aes_256_wrap(), NULL, NULL, NULL);
     break;
   default:
-    kmyth_log(LOG_DEBUG, "invalid key length (%d bytes) ", key_len);
+    break;
   }
   if (!init_result)
   {
-    kmyth_log(LOG_ERR, "AES Key Wrap cipher context init error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "AES Key Wrap (RFC3394NoPadding/%d) cipher context",
-            key_len * 8);
 
   // set the decryption key in the cipher context
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting key ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -256,18 +225,15 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // check value validated and removed) in the output plaintext buffer
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    kmyth_log(LOG_ERR, "key unwrapping error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
   *outData_len = tmp_len;
-  kmyth_log(LOG_DEBUG, "key unwrap produced  %d PT bytes", *outData_len);
 
   // "finalize" decryption
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
   {
-    kmyth_log(LOG_ERR, "key unwrap 'finalize' error ... exiting");
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -278,8 +244,6 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // the length of the 8-byte integrity check value
   if (*outData_len != inData_len - 8)
   {
-    kmyth_log(LOG_ERR, "unwrapped data length (%d bytes) mis-matches expected "
-              "(%lu bytes) ... exiting", *outData_len, inData_len - 8);
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
