@@ -117,6 +117,7 @@ int main(int argc, char **argv)
                                          (size_t *)
                                          &client_priv_ec_key_bytes_len,
                                          &test_key);
+
   EVP_PKEY_free(test_key);
 
   if (ret_val)

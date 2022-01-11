@@ -377,8 +377,7 @@ void get_session_key(ECDHServer * this)
   // re-construct EVP_PKEY for client's public contribution
   ret = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
                                                 this->remote_ephemeral_pubkey,
-                                                this->
-                                                remote_ephemeral_pubkey_len,
+                                                this->remote_ephemeral_pubkey_len,
                                                 &remote_ephemeral_pub_pt);
   if (ret != EXIT_SUCCESS)
   {

@@ -20,7 +20,8 @@ int setup_socket_ocall(const char *server_host, int server_host_len,
   *socket_fd = UNSET_FD;
 
   // connect to server
-  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %s", server_host, server_port);
+  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %s",
+            server_host, server_port);
   if (setup_client_socket(server_host, server_port, socket_fd))
   {
     kmyth_log(LOG_ERR, "Failed to connect to the server.");
@@ -104,8 +105,7 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  *remote_ephemeral_public =
-    OPENSSL_zalloc(*remote_ephemeral_public_len);
+  *remote_ephemeral_public = OPENSSL_zalloc(*remote_ephemeral_public_len);
   if (*remote_ephemeral_public == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");
@@ -133,8 +133,7 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  *remote_eph_pub_signature =
-    OPENSSL_zalloc(*remote_eph_pub_signature_len);
+  *remote_eph_pub_signature = OPENSSL_zalloc(*remote_eph_pub_signature_len);
   if (*remote_eph_pub_signature == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");

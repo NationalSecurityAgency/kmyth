@@ -8,7 +8,6 @@
 
 #include "cipher/aes_gcm.h"
 
-
 int build_kmip_get_request(KMIP * ctx,
                            unsigned char *id, size_t id_len,
                            unsigned char **request, size_t *request_len)
@@ -188,13 +187,14 @@ int parse_kmip_get_response(KMIP * ctx,
 // enclave_retrieve_key()
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
-                         const char * server_host, int server_host_len,
-                         const char * server_port, int server_port_len)
+                         const char *server_host, int server_host_len,
+                         const char *server_port, int server_port_len)
 {
   int ret_val, ret_ocall;
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
   int socket_fd = -1;
+
   ret_ocall = setup_socket_ocall(&ret_val, server_host, server_host_len,
                                  server_port, server_port_len, &socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
