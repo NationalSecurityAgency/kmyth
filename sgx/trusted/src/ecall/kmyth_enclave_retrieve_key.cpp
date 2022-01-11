@@ -15,7 +15,10 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                            size_t client_private_bytes_len,
                                            uint8_t * server_cert_bytes,
                                            size_t server_cert_bytes_len,
-                                           int socket_fd)
+                                           const char * server_host,
+                                           int server_host_len,
+                                           const char * server_port,
+                                           int server_port_len)
 {
   // unmarshal client private signing key
   EVP_PKEY *client_sign_privkey = NULL;
@@ -52,7 +55,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   }
   kmyth_sgx_log(LOG_DEBUG, "unmarshalled server certificate (to X509)");
 
-  ret_val = enclave_retrieve_key(client_sign_privkey, server_cert, socket_fd);
+  ret_val = enclave_retrieve_key(client_sign_privkey, server_cert, server_host, server_host_len, server_port, server_port_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR,

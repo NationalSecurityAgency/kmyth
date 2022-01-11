@@ -45,7 +45,7 @@
 #define SERVER_PUBLIC_CERT_FILE "data/server_cert_test.pem"
 
 /* These parameters are hard-coded for now. */
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "localhost"
 #define SERVER_PORT "7000"
 
 /*****************************************************************************
@@ -174,18 +174,13 @@ int main(int argc, char **argv)
   }
   demo_log(LOG_INFO, "initialized SGX enclave - EID = 0x%016lx", eid);
 
-  // connect to server
-  int socket_fd = -1;
-
-  demo_log(LOG_DEBUG, "Setting up client socket");
-  if (setup_client_socket(SERVER_IP, SERVER_PORT, &socket_fd))
-  {
-    demo_log(LOG_ERR, "Failed to connect to the server.");
-    return EXIT_FAILURE;
-  }
-
   // make ECALL to retrieve key into enclave from the key server
   int retval = -1;
+
+  const char *server_host = SERVER_IP;
+  const char *server_port = SERVER_PORT;
+  int server_host_len = strlen(server_host) + 1;
+  int server_port_len = strlen(server_port) + 1;
 
   sgx_ret = kmyth_enclave_retrieve_key_from_server(eid,
                                                    &retval,
@@ -193,9 +188,10 @@ int main(int argc, char **argv)
                                                    client_priv_ec_key_bytes_len,
                                                    server_pub_ec_cert_bytes,
                                                    server_pub_ec_cert_bytes_len,
-                                                   socket_fd);
-
-  close(socket_fd);
+                                                   server_host,
+                                                   server_host_len,
+                                                   server_port,
+                                                   server_port_len);
 
   free(client_priv_ec_key_bytes);
   free(server_pub_ec_cert_bytes);

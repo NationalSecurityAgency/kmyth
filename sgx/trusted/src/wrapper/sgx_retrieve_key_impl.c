@@ -188,9 +188,20 @@ int parse_kmip_get_response(KMIP * ctx,
 // enclave_retrieve_key()
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
-                         int socket_fd)
+                         const char * server_host, int server_host_len,
+                         const char * server_port, int server_port_len)
 {
   int ret_val, ret_ocall;
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
+
+  int socket_fd = -1;
+  ret_ocall = setup_socket_ocall(&ret_val, server_host, server_host_len,
+                                 server_port, server_port_len, &socket_fd);
+  if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "Client socket setup failed.");
+    return EXIT_FAILURE;
+  }
 
   // recover public key from certificate
   EVP_PKEY *server_sign_pubkey = NULL;
@@ -201,6 +212,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from server certificate failed");
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -220,6 +232,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
 
@@ -234,6 +247,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -256,6 +270,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -288,6 +303,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     free(client_eph_pub_signature);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -310,6 +326,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -333,6 +350,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     free(server_ephemeral_pub);
     EC_POINT_free(server_ephemeral_pub_pt);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG,
@@ -355,9 +373,9 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     EC_POINT_free(server_ephemeral_pub_pt);
     free(session_secret);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  char msg[MAX_LOG_MSG_LEN] = { 0 };
   snprintf(msg, MAX_LOG_MSG_LEN,
            "client-side shared secret = 0x%02x%02x...%02x%02x (%lu bytes)",
            session_secret[0], session_secret[1],
@@ -384,6 +402,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon session key computation failed");
     kmyth_enclave_clear_and_free(session_key, session_key_len);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
@@ -409,6 +428,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR, "Failed to build the KMIP Get request.");
     kmip_destroy(&kmip_context);
     kmyth_enclave_clear_and_free(session_key, session_key_len);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
 
@@ -424,6 +444,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR, "Failed to encrypt the KMIP key request.");
     kmip_destroy(&kmip_context);
     kmyth_enclave_clear_and_free(session_key, session_key_len);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
 
@@ -437,6 +458,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                                  &encrypted_response,
                                  &encrypted_response_len, socket_fd);
   kmyth_enclave_clear_and_free(encrypted_request, encrypted_request_len);
+  close_socket_ocall(socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "Failed to send the KMIP key request.");

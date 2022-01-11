@@ -177,7 +177,6 @@ Enclave_Include_Paths += -I/usr/local/include
 Enclave_Include_Paths += -I../../include
 Enclave_Include_Paths += -I../../utils/include/kmyth
 
-
 Enclave_C_Flags := -Wall
 Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
 Enclave_C_Flags += -nostdinc

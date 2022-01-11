@@ -8,6 +8,38 @@
 #include "ecdh_ocall.h"
 
 #define MAX_RESP_SIZE 16384
+#define UNSET_FD -1
+
+/*****************************************************************************
+ * setup_socket_ocall()
+ ****************************************************************************/
+int setup_socket_ocall(const char *server_host, int server_host_len,
+                       const char *server_port, int server_port_len,
+                       int *socket_fd)
+{
+  *socket_fd = UNSET_FD;
+
+  // connect to server
+  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %s", server_host, server_port);
+  if (setup_client_socket(server_host, server_port, socket_fd))
+  {
+    kmyth_log(LOG_ERR, "Failed to connect to the server.");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * close_socket_ocall()
+ ****************************************************************************/
+void close_socket_ocall(int socket_fd)
+{
+  if (socket_fd != UNSET_FD)
+  {
+    close(socket_fd);
+  }
+}
 
 /*****************************************************************************
  * ecdh_exchange_ocall()

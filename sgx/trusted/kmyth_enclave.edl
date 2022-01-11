@@ -98,8 +98,12 @@ enclave {
                                                       [in, count=server_cert_bytes_len]
                                                         uint8_t* server_cert_bytes,
                                                       size_t server_cert_bytes_len,
-                                                      int socket_fd);
-
+                                                      [in, count=server_host_len]
+                                                        const char* server_host,
+                                                      int server_host_len,
+                                                      [in, count=server_port_len]
+                                                        const char* server_port,
+                                                      int server_port_len);
 
   };
 
@@ -145,6 +149,43 @@ enclave {
      */
     void OPENSSL_free_ocall([user_check] void ** mem_block_ptr);
 
+    /**
+     * @brief Creates a socket connected to the external key server.
+     *
+     * @param[in]  server_host                String IP address or hostname used to
+     *                                        connect to the key server.
+     *
+     * @param[in]  server_host_len            Length (in bytes) of server_host string.
+     *
+     * @param[in]  server_port                String TCP port number used to
+     *                                        connect to the key server.
+     *
+     * @param[in]  server_port_len            Length (in bytes) of server_port string.
+     *
+     * @param[out] socket_fd                  Pointer to the file descriptor
+     *                                        number for a socket connected to
+     *                                        the remote key server.
+     *
+     * @return 0 on success, 1 on failure
+     */
+    int setup_socket_ocall([in, count=server_host_len]
+                             const char *server_host,
+                           int server_host_len,
+                           [in, count=server_port_len]
+                             const char *server_port,
+                           int server_port_len,
+                           [out] int *socket_fd);
+
+    /**
+     * @brief Closes a socket connected to the external key server.
+     *
+     * @param[in] socket_fd                   File descriptor
+     *                                        number for a socket connected to
+     *                                        the remote key server.
+     *
+     * @return None
+     */
+    void close_socket_ocall(int socket_fd);
 
     /**
      * @brief Supports exchanging signed 'public key' contributions between the
