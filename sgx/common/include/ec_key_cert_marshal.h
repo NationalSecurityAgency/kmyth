@@ -51,9 +51,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
-                           unsigned char ** ec_der_bytes_out,
-                           int * ec_der_bytes_out_len);
+  int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
+                             unsigned char **ec_der_bytes_out,
+                             int *ec_der_bytes_out_len);
 
 /**
  * @brief DER formats elliptic curve public certificate struct (X509).
@@ -77,9 +77,9 @@ int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
  *
  * @return 0 on success, 1 on error
  */
-int marshal_ec_x509_to_der(X509 ** ec_cert_in,
-                           unsigned char ** ec_der_bytes_out,
-                           int * ec_der_bytes_out_len);
+  int marshal_ec_x509_to_der(X509 ** ec_cert_in,
+                             unsigned char **ec_der_bytes_out,
+                             int *ec_der_bytes_out_len);
 
 #ifdef __cplusplus
 }

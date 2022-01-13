@@ -11,7 +11,7 @@
  * unmarshal_ec_der_to_pkey()
  ****************************************************************************/
 int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
+                             size_t *ec_der_bytes_in_len,
                              EVP_PKEY ** ec_pkey_out)
 {
   // validate that DER formatted input is non-NULL
@@ -38,8 +38,7 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
  * unmarshal_ec_der_to_x509()
  ****************************************************************************/
 int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
-                             X509 ** ec_x509_out)
+                             size_t *ec_der_bytes_in_len, X509 ** ec_x509_out)
 {
   // validate that DER formatted input is non-NULL
   if (*ec_der_bytes_in == NULL)

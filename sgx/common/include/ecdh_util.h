@@ -63,9 +63,8 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-int create_ecdh_ephemeral_key_pair(int ec_nid,
-                                   EC_KEY ** ephemeral_ec_key_pair_out);
-
+  int create_ecdh_ephemeral_key_pair(int ec_nid,
+                                     EC_KEY ** ephemeral_ec_key_pair_out);
 
 /**
  * @brief Creates an ephemeral 'public key' contribution (in byte array or
@@ -85,10 +84,9 @@ int create_ecdh_ephemeral_key_pair(int ec_nid,
  *
  * @return 0 on success, 1 on error
  */
-int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
-                                 unsigned char ** ephemeral_ec_pub_out,
-                                 size_t * ephemeral_ec_pub_out_len);
-
+  int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
+                                   unsigned char **ephemeral_ec_pub_out,
+                                   size_t *ephemeral_ec_pub_out_len);
 
 /**
  * @brief Reconstructs the curve point for an elliptic curve 'public key' in
@@ -109,11 +107,10 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
  *
  * @return 0 on success, 1 on error
  */
-int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
-                                            unsigned char * ec_octet_str_in,
-                                            size_t ec_octet_str_in_len,
-                                            EC_POINT ** ec_point_out);
-
+  int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
+                                              unsigned char *ec_octet_str_in,
+                                              size_t ec_octet_str_in_len,
+                                              EC_POINT ** ec_point_out);
 
 /**
  * @brief Computes shared secret value, using ECDH, from a local private
@@ -138,10 +135,10 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
  *
  * @return 0 on success, 1 on error
  */
-int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
-                               EC_POINT * remote_eph_pub_point,
-                               unsigned char ** shared_secret,
-                               size_t * shared_secret_len);
+  int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+                                 EC_POINT * remote_eph_pub_point,
+                                 unsigned char **shared_secret,
+                                 size_t *shared_secret_len);
 
 /**
  * @brief Computes session key from a shared secret value input.
@@ -160,11 +157,10 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
  *
  * @return 0 on success, 1 on error
  */
-int compute_ecdh_session_key(unsigned char * secret,
-                             size_t secret_len,
-                             unsigned char ** session_key,
-                             unsigned int * session_key_len);
-
+  int compute_ecdh_session_key(unsigned char *secret,
+                               size_t secret_len,
+                               unsigned char **session_key,
+                               unsigned int *session_key_len);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed
@@ -190,8 +186,8 @@ int compute_ecdh_session_key(unsigned char * secret,
  * @return 0 on success, 1 on error
  */
   int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                  unsigned char * buf_in, size_t buf_in_len,
-                  unsigned char ** sig_out, unsigned int * sig_out_len);
+                  unsigned char *buf_in, size_t buf_in_len,
+                  unsigned char **sig_out, unsigned int *sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
@@ -217,8 +213,8 @@ int compute_ecdh_session_key(unsigned char * secret,
  *         1 on error (signature verification failed)
  */
   int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                    unsigned char * buf_in, size_t buf_in_len,
-                    unsigned char * sig_in, unsigned int sig_in_len);
+                    unsigned char *buf_in, size_t buf_in_len,
+                    unsigned char *sig_in, unsigned int sig_in_len);
 
 #ifdef __cplusplus
 }
