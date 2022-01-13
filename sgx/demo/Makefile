@@ -269,6 +269,7 @@ pre:
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
 	@indent $(INDENT_OPTS) server/*.c server/*.h
+	@indent $(INDENT_OPTS) ../common/src/*.c ../common/include/*.h
 	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
 	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
 	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
