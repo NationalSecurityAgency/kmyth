@@ -128,8 +128,7 @@ int parse_kmip_get_request(KMIP * ctx,
 
   if (message.request_header->batch_count != 1)
   {
-    // kmyth_log(LOG_ERR, "Expected to receive one request; received: %d",
-    //           message.request_header->batch_count);
+    kmyth_log(LOG_ERR, "Received incorrect number of requests (expected 1).");
     kmip_free_request_message(ctx, &message);
     kmip_set_buffer(ctx, NULL, 0);
     return 1;
@@ -286,8 +285,7 @@ int parse_kmip_get_response(KMIP * ctx,
 
   if (message.response_header->batch_count != 1)
   {
-    // kmyth_log(LOG_ERR, "Expected to receive one response; received: %d",
-    //           message.response_header->batch_count);
+    kmyth_log(LOG_ERR, "Received incorrect number of responses (expected 1).");
     kmip_free_response_message(ctx, &message);
     kmip_set_buffer(ctx, NULL, 0);
     return 1;
@@ -304,9 +302,7 @@ int parse_kmip_get_response(KMIP * ctx,
   }
   if (batch_item.result_status != KMIP_STATUS_SUCCESS)
   {
-    // kmyth_log(LOG_ERR, "The KMIP Get request failed: %.*s",
-    //           batch_item.result_message->size,
-    //           batch_item.result_message->value);
+    kmyth_log(LOG_ERR, "The KMIP Get request failed.");
     kmip_free_response_message(ctx, &message);
     kmip_set_buffer(ctx, NULL, 0);
     return 1;

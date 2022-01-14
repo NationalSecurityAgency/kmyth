@@ -334,6 +334,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
            key[0], key[key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  kmyth_sgx_log(LOG_DEBUG, "completed ECDH exchange");
+  kmyth_sgx_log(LOG_DEBUG, "completed key retrieval from server into enclave");
   return EXIT_SUCCESS;
 }
