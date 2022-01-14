@@ -175,6 +175,8 @@ Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
 Enclave_Include_Paths += -I/usr/local/include
 Enclave_Include_Paths += -I../../include
+Enclave_Include_Paths += -I../../include/cipher
+Enclave_Include_Paths += -I../../include/protocol
 Enclave_Include_Paths += -I../../utils/include/kmyth
 
 Enclave_C_Flags := -Wall
@@ -185,6 +187,7 @@ Enclave_C_Flags += -fpie
 Enclave_C_Flags += -fstack-protector
 Enclave_C_Flags += $(Enclave_Include_Paths)
 Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
+Enclave_C_Flags += -DKMYTH_SGX
 
 Enclave_Cpp_Flags := $(Enclave_C_Flags)
 Enclave_Cpp_Flags += -std=c++03
@@ -411,6 +414,10 @@ enclave/memory_util.o: ../../utils/src/memory_util.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/kmip_util.o: ../../src/protocol/kmip_util.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/kmyth_enclave_memory_util.o \
                         enclave/sgx_retrieve_key_impl.o \
@@ -421,7 +428,8 @@ enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/kmyth_enclave_unseal.o \
                         enclave/kmyth_enclave_retrieve_key.o \
                         enclave/aes_gcm.o \
-                        enclave/memory_util.o
+                        enclave/memory_util.o \
+						enclave/kmip_util.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 

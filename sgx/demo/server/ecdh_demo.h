@@ -24,7 +24,7 @@
 #include <kmyth/memory_util.h>
 
 #include "ecdh_util.h"
-#include "kmip_util.h"
+#include "kmip_io_util.h"
 #include "socket_util.h"
 
 #define UNSET_FD -1
