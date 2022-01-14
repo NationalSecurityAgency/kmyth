@@ -112,6 +112,7 @@ App_Include_Paths += -I../common/include
 App_Include_Paths += -I$(SGX_SDK)/include
 App_Include_paths += -I../../utils/include
 App_Include_Paths += -I../../logger/include
+App_Include_Paths += -I../../include/network
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
 App_C_Flags += -fPIC
@@ -142,7 +143,7 @@ App_Link_Flags += -l$(Urts_Library_Name)
 App_Link_Flags += -lcunit
 App_Link_Flags += -lpthread
 App_Link_Flags += -lsgx_usgxssl
-App_Link_Flags += -Wl,-rpath=../../lib -lkmyth-utils -lkmyth-logger
+App_Link_Flags += -Wl,-rpath=../../lib -lkmyth-utils -lkmyth-logger -lkmyth-tpm
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -170,6 +171,9 @@ Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
 Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
+Enclave_Include_Paths += -I/usr/local/include
+Enclave_Include_Paths += -I../../include
+Enclave_Include_Paths += -I../../utils/include/kmyth
 
 Enclave_C_Flags := -Wall
 Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
@@ -207,6 +211,7 @@ Enclave_Link_Flags += -Wl,-Bsymbolic
 Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
 Enclave_Link_Flags += -Wl,--export-dynamic
 Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
+Enclave_Link_Flags += -lkmip-core
 
 Enclave_Name := kmyth_sgx_test_enclave
 Enclave_Lib := $(Enclave_Name).so
@@ -361,6 +366,14 @@ enclave/kmyth_enclave_retrieve_key.o: \
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/aes_gcm.o: ../../src/cipher/aes_gcm.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/memory_util.o: ../../utils/src/memory_util.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/kmyth_sgx_test_trusted.o \
                         enclave/ec_key_cert_marshal.o \
@@ -370,7 +383,9 @@ enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/sgx_retrieve_key_impl.o \
                         enclave/kmyth_enclave_seal.o \
                         enclave/kmyth_enclave_unseal.o \
-                        enclave/kmyth_enclave_retrieve_key.o
+                        enclave/kmyth_enclave_retrieve_key.o \
+						enclave/aes_gcm.o \
+                        enclave/memory_util.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
