@@ -3,15 +3,12 @@
 
 #include <kmip/kmip.h>
 
+#include "defines.h"
 #include "memory_util.h"
 #include "aes_gcm.h"
 
 #ifdef KMYTH_SGX
-  #include "kmyth_enclave_trusted.h"
-  #define kmyth_log(severity, message) { kmyth_sgx_log((severity), (message)) }
   #define time(ret_ptr) 0
-#else
-  #include "defines.h"
 #endif
 
 //

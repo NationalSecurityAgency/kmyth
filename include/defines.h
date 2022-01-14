@@ -8,7 +8,13 @@
 
 #include <openssl/evp.h>
 
-#include "kmyth_log.h"
+
+#ifdef KMYTH_SGX
+  #include "kmyth_enclave_trusted.h"
+  #define kmyth_log(severity, message) { kmyth_sgx_log((severity), (message)) }
+#else
+  #include "kmyth_log.h"
+#endif
 
 /**
  * The version of a specific Kmyth release, library, and code
