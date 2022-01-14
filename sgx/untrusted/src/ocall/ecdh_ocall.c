@@ -45,7 +45,7 @@ void close_socket_ocall(int socket_fd)
 /*****************************************************************************
  * time_ocall()
  ****************************************************************************/
-time_t time_ocall(time_t* timer)
+time_t time_ocall(time_t * timer)
 {
   return time(timer);
 }
@@ -120,7 +120,8 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  num_bytes = read(socket_fd, *remote_ephemeral_public, *remote_ephemeral_public_len);
+  num_bytes =
+    read(socket_fd, *remote_ephemeral_public, *remote_ephemeral_public_len);
   if (num_bytes != *remote_ephemeral_public_len)
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");

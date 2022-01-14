@@ -62,8 +62,8 @@ extern "C"
  * @return 0 on success, 1 on error
  */
   int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
-                           const char * server_host, int server_host_len,
-                           const char * server_port, int server_port_len);
+                           const char *server_host, int server_host_len,
+                           const char *server_port, int server_port_len);
 
 #ifdef __cplusplus
 }

@@ -76,7 +76,7 @@ extern "C"
  *
  * @return The current calendar time as a time_t object.
  */
-  time_t time_ocall(time_t *timer);
+  time_t time_ocall(time_t * timer);
 
 /**
  * @brief Supports exchanging signed 'public key' contributions between the
