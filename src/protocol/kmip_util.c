@@ -1,4 +1,5 @@
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <kmip/kmip.h>
@@ -8,7 +9,19 @@
 #include "aes_gcm.h"
 
 #ifdef KMYTH_SGX
-  #define time(ret_ptr) 0
+  #define time(ret_ptr) time_sgx((ret_ptr))
+
+  time_t time_sgx(time_t *timer)
+  {
+    time_t current_time;
+    sgx_status_t ret_ocall = time_ocall(&current_time, timer);
+    if (ret_ocall != SGX_SUCCESS)
+    {
+      kmyth_sgx_log(LOG_ERR, "Calendar time access failed.");
+      return EXIT_FAILURE;
+    }
+    return current_time;
+  }
 #endif
 
 //

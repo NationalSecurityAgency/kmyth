@@ -17,6 +17,7 @@ extern "C"
 #include <unistd.h>
 #include <syslog.h>
 #include <errno.h>
+#include <time.h>
 
 #include <openssl/bio.h>
 #include <openssl/ec.h>
@@ -66,6 +67,16 @@ extern "C"
  * @return None
  */
   void close_socket_ocall(int socket_fd);
+
+/**
+ * @brief Gets the current calendar time.
+ *
+ * @param[out] time                   Pointer to an object of type time_t,
+ *                                    where the time value is stored.
+ *
+ * @return The current calendar time as a time_t object.
+ */
+  time_t time_ocall(time_t *timer);
 
 /**
  * @brief Supports exchanging signed 'public key' contributions between the
