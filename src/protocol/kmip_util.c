@@ -415,7 +415,7 @@ int retrieve_key_with_session_key(int socket_fd,
 
   int read_result = read(socket_fd, encrypted_response, encrypted_response_len);
 
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to read the key response.");
     kmyth_clear_and_free(encrypted_response, encrypted_response_len);
@@ -486,7 +486,7 @@ int send_key_with_session_key(int socket_fd,
   ssize_t read_result = read(socket_fd,
                              encrypted_request, encrypted_request_len);
 
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to receive the key request.");
     kmyth_clear_and_free(encrypted_request, encrypted_request_len);

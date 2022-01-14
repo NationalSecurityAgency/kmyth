@@ -150,9 +150,9 @@ void check_options(ECDHServer * this)
 void send_msg(ECDHServer * this, const void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int ret = write(this->socket_fd, buf, len);
+  int bytes_sent = write(this->socket_fd, buf, len);
 
-  if (ret == -1)
+  if (bytes_sent != len)
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     error(this);
@@ -162,9 +162,9 @@ void send_msg(ECDHServer * this, const void *buf, size_t len)
 void recv_msg(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int ret = read(this->socket_fd, buf, len);
+  int bytes_read = read(this->socket_fd, buf, len);
 
-  if (ret == -1)
+  if (bytes_read != len)
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(this);

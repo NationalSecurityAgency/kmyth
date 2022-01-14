@@ -794,7 +794,7 @@ int negotiate_client_session_key(int socket_fd,
 
   ssize_t read_result = read(socket_fd, response, response_len);
 
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to read the nonce response message.");
     kmyth_clear_and_free(nonce_a, nonce_a_len);
@@ -951,7 +951,7 @@ int negotiate_server_session_key(int socket_fd,
 
   ssize_t read_result = read(socket_fd, response, response_len);
 
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce request.");
     kmyth_clear_and_free(nonce_b, nonce_b_len);
@@ -1015,7 +1015,7 @@ int negotiate_server_session_key(int socket_fd,
   response_len = 8192 * sizeof(unsigned char);
 
   read_result = read(socket_fd, response, response_len);
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce confirmation.");
     kmyth_clear_and_free(nonce_b, nonce_b_len);

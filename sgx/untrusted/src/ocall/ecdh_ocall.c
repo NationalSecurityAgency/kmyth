@@ -55,46 +55,46 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
                         unsigned int *remote_eph_pub_signature_len,
                         int socket_fd)
 {
-  int ret;
+  int num_bytes;
 
   kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
-  ret =
+  num_bytes =
     write(socket_fd, &enclave_ephemeral_public_len,
           sizeof(enclave_ephemeral_public_len));
-  if (ret == -1)
+  if (num_bytes != sizeof(enclave_ephemeral_public_len))
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     return EXIT_FAILURE;
   }
-  ret =
+  num_bytes =
     write(socket_fd, enclave_ephemeral_public, enclave_ephemeral_public_len);
-  if (ret == -1)
+  if (num_bytes != enclave_ephemeral_public_len)
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "Sending ephemeral public key signature.");
-  ret =
+  num_bytes =
     write(socket_fd, &enclave_eph_pub_signature_len,
           sizeof(enclave_eph_pub_signature_len));
-  if (ret == -1)
+  if (num_bytes != sizeof(enclave_eph_pub_signature_len))
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     return EXIT_FAILURE;
   }
-  ret =
+  num_bytes =
     write(socket_fd, enclave_eph_pub_signature, enclave_eph_pub_signature_len);
-  if (ret == -1)
+  if (num_bytes != enclave_eph_pub_signature_len)
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
-  ret = read(socket_fd, remote_ephemeral_public_len,
-             sizeof(*remote_ephemeral_public_len));
-  if (ret == -1)
+  num_bytes = read(socket_fd, remote_ephemeral_public_len,
+                   sizeof(*remote_ephemeral_public_len));
+  if (num_bytes != sizeof(*remote_ephemeral_public_len))
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
@@ -112,17 +112,17 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  ret = read(socket_fd, *remote_ephemeral_public, *remote_ephemeral_public_len);
-  if (ret == -1)
+  num_bytes = read(socket_fd, *remote_ephemeral_public, *remote_ephemeral_public_len);
+  if (num_bytes != *remote_ephemeral_public_len)
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
-  ret = read(socket_fd, remote_eph_pub_signature_len,
-             sizeof(*remote_eph_pub_signature_len));
-  if (ret == -1)
+  num_bytes = read(socket_fd, remote_eph_pub_signature_len,
+                   sizeof(*remote_eph_pub_signature_len));
+  if (num_bytes != sizeof(*remote_eph_pub_signature_len))
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
@@ -140,9 +140,9 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  ret = read(socket_fd, *remote_eph_pub_signature,
-             *remote_eph_pub_signature_len);
-  if (ret == -1)
+  num_bytes = read(socket_fd, *remote_eph_pub_signature,
+                   *remote_eph_pub_signature_len);
+  if (num_bytes != *remote_eph_pub_signature_len)
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
@@ -179,7 +179,7 @@ int retrieve_key_ocall(unsigned char *encrypted_request,
 
   kmyth_log(LOG_DEBUG, "Receiving kmip response.");
   read_result = read(socket_fd, *encrypted_response, response_buffer_size);
-  if (read_result == -1)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to read the key response.");
     kmyth_clear_and_free(*encrypted_response, response_buffer_size);
