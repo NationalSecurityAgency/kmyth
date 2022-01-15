@@ -111,6 +111,8 @@ App_Include_Paths += -I../common/include
 App_Include_Paths += -Ienclave
 App_Include_Paths += -Iserver/include
 App_Include_Paths += -I$(SGX_SDK)/include
+App_Include_Paths += -I../../include/network
+App_Include_Paths += -I../../include/protocol
 
 App_C_Flags := $(SGX_COMMON_CFLAGS)
 App_C_Flags += -fPIC -Wno-attributes
@@ -147,6 +149,7 @@ endif
 App_Link_Flags += -lpthread
 App_Link_Flags += -lkmyth-utils
 App_Link_Flags += -lkmyth-logger
+App_Link_Flags += -lkmyth-tpm
 App_Link_Flags += -lcrypto
 
 ######## Enclave Build Settings ########
@@ -170,6 +173,11 @@ Enclave_Include_Paths += -I$(SGX_SDK)/include
 Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
 Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
+Enclave_Include_Paths += -I/usr/local/include
+Enclave_Include_Paths += -I../../include
+Enclave_Include_Paths += -I../../include/cipher
+Enclave_Include_Paths += -I../../include/protocol
+Enclave_Include_Paths += -I../../utils/include/kmyth
 
 Enclave_C_Flags := -Wall
 Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
@@ -179,6 +187,7 @@ Enclave_C_Flags += -fpie
 Enclave_C_Flags += -fstack-protector
 Enclave_C_Flags += $(Enclave_Include_Paths)
 Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
+Enclave_C_Flags += -DKMYTH_SGX
 
 Enclave_Cpp_Flags := $(Enclave_C_Flags)
 Enclave_Cpp_Flags += -std=c++03
@@ -192,7 +201,7 @@ Enclave_Link_Flags += -nodefaultlibs
 Enclave_Link_Flags += -nostartfiles
 Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
 Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
-Enclave_Link_Flags += -L/usr/local/include
+Enclave_Link_Flags += -L/usr/local/lib
 Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
 Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
 Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
@@ -208,6 +217,7 @@ Enclave_Link_Flags += -Wl,-Bsymbolic
 Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
 Enclave_Link_Flags += -Wl,--export-dynamic
 Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
+Enclave_Link_Flags += -lkmip-core
 
 Enclave_Name := kmyth_sgx_retrieve_key_demo_enclave
 Enclave_Lib := $(Enclave_Name).so
@@ -223,6 +233,11 @@ endif
 endif
 endif
 
+######## Demo Server Build Settings ########
+
+Server_Name := bin/ecdh-server
+Client_Name := bin/ecdh-client
+
 # Message for missing Enclave Signing Key - Fatal Build Error
 define err_no_enclave_signing_key
 FAIL - No Enclave Signing Key found
@@ -233,7 +248,7 @@ endef
 .PHONY: all pre test-keys-certs demo
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: $(App_Name) $(Enclave_Lib)
+all: pre $(Enclave_Lib) $(App_Name) $(Server_Name) $(Client_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Enclave_Lib) first with your signing key before"
 	@echo "you run the $(App_Name) to launch and access the enclave."
@@ -247,7 +262,7 @@ all: $(App_Name) $(Enclave_Lib)
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build"
 	@echo "the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: pre $(App_Name) enclave/$(Signed_Enclave_Name)
+all: pre enclave/$(Signed_Enclave_Name) $(App_Name) $(Server_Name) $(Client_Name)
 endif
 
 pre:
@@ -256,7 +271,8 @@ pre:
 	   openssl genrsa -out enclave/$(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@indent $(INDENT_OPTS) app/*.c
-	@indent $(INDENT_OPTS) server/*.c
+	@indent $(INDENT_OPTS) server/*.c server/*.h
+	@indent $(INDENT_OPTS) ../common/src/*.c ../common/include/*.h
 	@indent $(INDENT_OPTS) ../untrusted/src/*/*.c ../untrusted/include/*/*.h
 	@indent $(INDENT_OPTS) ../trusted/src/*/*.cpp ../trusted/src/*/*.c
 	@indent $(INDENT_OPTS) ../trusted/include/*.h ../trusted/include/util/*.h
@@ -271,6 +287,8 @@ test-keys-certs: data/client_priv_test.pem \
 
 demo: all test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
+	@$(CURDIR)/$(Server_Name) -r data/server_priv_test.pem -u data/client_cert_test.pem -p 7000 &
+	@sleep 1
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
@@ -305,10 +323,6 @@ enclave/ecdh_ocall.o: ../untrusted/src/ocall/ecdh_ocall.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-enclave/ecdh_dummy_server.o: ../untrusted/src/util/ecdh_dummy_server.c
-	@$(CC) $(App_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"
-
 enclave/$(Enclave_Name)_u.c: $(SGX_EDGER8R) enclave/$(Enclave_Name).edl
 	@cd enclave && $(SGX_EDGER8R) --untrusted $(Enclave_Name).edl \
 	                              --search-path $(SGX_SDK)/include \
@@ -321,40 +335,41 @@ enclave/$(Enclave_Name)_u.o: enclave/$(Enclave_Name)_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(App_Name): $(App_Source_Files) \
+enclave/$(ENCLAVE_HEADER_UNTRUSTED): enclave/$(Enclave_Name)_u.c
+
+app/%.o: app/%.c enclave/$(ENCLAVE_HEADER_UNTRUSTED)
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(App_Name): app/kmyth_sgx_retrieve_key_demo.o \
              enclave/$(Enclave_Name)_u.o \
              enclave/ec_key_cert_marshal.o \
              enclave/ec_key_cert_unmarshal.o \
              enclave/ecdh_util.o \
              enclave/ecdh_ocall.o \
-             enclave/ecdh_dummy_server.o \
              enclave/memory_ocall.o \
              enclave/log_ocall.o 
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-		         -Lenclave -lcrypto -lkmyth-utils -lkmyth-logger
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Test Server ########
 
 server/%.o: server/%.c server/ecdh_demo.h
-	@$(CC) $(App_C_Flags) -c $< -o $@ \
-        -I../../include/network -I../../include/protocol
+	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-bin/ecdh-server: server/ecdh_server.o \
-                 server/ecdh_demo.o \
-                 enclave/ecdh_util.o \
-                 enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+$(Server_Name): server/ecdh_server.o \
+                server/ecdh_demo.o \
+                enclave/ecdh_util.o \
+                enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-bin/ecdh-client: server/ecdh_client.o \
-                 server/ecdh_demo.o \
-                 enclave/ecdh_util.o \
-                 enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags) \
-        -Lenclave -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+$(Client_Name): server/ecdh_client.o \
+                server/ecdh_demo.o \
+                enclave/ecdh_util.o \
+                enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(App_Cpp_Flags) $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
@@ -391,6 +406,18 @@ enclave/kmyth_enclave_retrieve_key.o: ../trusted/src/ecall/kmyth_enclave_retriev
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+enclave/aes_gcm.o: ../../src/cipher/aes_gcm.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/memory_util.o: ../../utils/src/memory_util.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+enclave/kmip_util.o: ../../src/protocol/kmip_util.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/kmyth_enclave_memory_util.o \
                         enclave/sgx_retrieve_key_impl.o \
@@ -399,7 +426,10 @@ enclave/$(Enclave_Lib): enclave/$(Enclave_Name)_t.o \
                         enclave/ecdh_util.o \
                         enclave/kmyth_enclave_seal.o \
                         enclave/kmyth_enclave_unseal.o \
-                        enclave/kmyth_enclave_retrieve_key.o
+                        enclave/kmyth_enclave_retrieve_key.o \
+                        enclave/aes_gcm.o \
+                        enclave/memory_util.o \
+						enclave/kmip_util.o
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 

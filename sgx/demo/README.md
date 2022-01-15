@@ -12,10 +12,10 @@ on your system.
 
 ## ECDH Key Exchange with SGX
 
-The SGX demo does not require separate client/server programs, so it can be run  
-using make:  
-
-    make demo
+Use make to automatically run the demo with the SGX client and the separate key server program:
+```
+make demo
+```
 
 ## ECDHE Test Key Server
 
@@ -44,7 +44,7 @@ are the same for both the client and server.
 
 ### Build
 
-Before building, install libkmyth and the SGX SDK,
+Before building, install libkmyth, libkmip, and the SGX SDK,
 and add both to the dynamic linker configuration (ldconfig).
 
 To build the program and generate new test keys:

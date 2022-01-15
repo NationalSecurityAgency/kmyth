@@ -9,7 +9,7 @@
 #include "defines.h"
 #include "nsl_util.h"
 #include "socket_util.h"
-#include "kmip_util.h"
+#include "kmip_io_util.h"
 #include "aes_gcm.h"
 
 static void usage(const char *prog)

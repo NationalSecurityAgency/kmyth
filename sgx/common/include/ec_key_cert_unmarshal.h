@@ -21,7 +21,6 @@ extern "C"
 
 #include "kmyth_enclave_common.h"
 
-
 /**
  * @brief Restores EVP_PKEY private key struct from DER formatted input.
  *
@@ -38,9 +37,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
-                             EVP_PKEY ** ec_pkey_out);
+  int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
+                               size_t *ec_der_bytes_in_len,
+                               EVP_PKEY ** ec_pkey_out);
 
 /**
  * @brief Restores elliptic curve public certificate struct (X509) from
@@ -57,9 +56,9 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
  *
  * @return 0 on success, 1 on error
  */
-int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
-                             X509 ** ec_x509_out);
+  int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
+                               size_t *ec_der_bytes_in_len,
+                               X509 ** ec_x509_out);
 
 #ifdef __cplusplus
 }

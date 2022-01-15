@@ -9,7 +9,6 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-#include "defines.h"
 #include "memory_util.h"
 
 //############################################################################

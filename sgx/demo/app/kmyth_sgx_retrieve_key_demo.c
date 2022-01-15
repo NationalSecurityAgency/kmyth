@@ -26,6 +26,8 @@
 #include <kmyth/memory_util.h>
 #include <kmyth/kmyth_log.h>
 
+#include "socket_util.h"
+
 #include "kmyth_enclave_common.h"
 
 #include "kmyth_sgx_retrieve_key_demo_enclave_u.h"
@@ -41,6 +43,10 @@
 // Client (enclave) private key and Server certificate filenames
 #define CLIENT_PRIVATE_KEY_FILE "data/client_priv_test.pem"
 #define SERVER_PUBLIC_CERT_FILE "data/server_cert_test.pem"
+
+/* These parameters are hard-coded for now. */
+#define SERVER_IP "localhost"
+#define SERVER_PORT "7000"
 
 /*****************************************************************************
  * initialize_enclave
@@ -99,16 +105,20 @@ int main(int argc, char **argv)
                              &client_priv_ec_key_bytes_len))
   {
     demo_log(LOG_ERR, "error marshalling EC PKEY struct into byte array");
+    EVP_PKEY_free(client_priv_ec_key);
     return EXIT_FAILURE;
   }
+  EVP_PKEY_free(client_priv_ec_key);
 
   // Test - Included to test logging by "common" utils called from
   //        untrusted space
   EVP_PKEY *test_key = NULL;
   int ret_val = unmarshal_ec_der_to_pkey(&client_priv_ec_key_bytes,
                                          (size_t *)
-                                         & client_priv_ec_key_bytes_len,
+                                         &client_priv_ec_key_bytes_len,
                                          &test_key);
+
+  EVP_PKEY_free(test_key);
 
   if (ret_val)
   {
@@ -168,23 +178,32 @@ int main(int argc, char **argv)
   // make ECALL to retrieve key into enclave from the key server
   int retval = -1;
 
+  const char *server_host = SERVER_IP;
+  const char *server_port = SERVER_PORT;
+  int server_host_len = strlen(server_host) + 1;
+  int server_port_len = strlen(server_port) + 1;
+
   sgx_ret = kmyth_enclave_retrieve_key_from_server(eid,
                                                    &retval,
                                                    client_priv_ec_key_bytes,
                                                    client_priv_ec_key_bytes_len,
                                                    server_pub_ec_cert_bytes,
-                                                   server_pub_ec_cert_bytes_len);
+                                                   server_pub_ec_cert_bytes_len,
+                                                   server_host,
+                                                   server_host_len,
+                                                   server_port,
+                                                   server_port_len);
+
+  free(client_priv_ec_key_bytes);
+  free(server_pub_ec_cert_bytes);
+
+  sgx_destroy_enclave(eid);
 
   if (sgx_ret)
   {
     demo_log(LOG_ERR, "kmyth_enclave_retrieve_key_from_server() failed");
     return EXIT_FAILURE;
   }
-
-  free(client_priv_ec_key_bytes);
-  free(server_pub_ec_cert_bytes);
-
-  sgx_destroy_enclave(eid);
 
   return EXIT_SUCCESS;
 }

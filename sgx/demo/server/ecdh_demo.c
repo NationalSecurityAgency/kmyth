@@ -150,9 +150,9 @@ void check_options(ECDHServer * this)
 void send_msg(ECDHServer * this, const void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int ret = write(this->socket_fd, buf, len);
+  int bytes_sent = write(this->socket_fd, buf, len);
 
-  if (ret == -1)
+  if (bytes_sent != len)
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
     error(this);
@@ -162,9 +162,9 @@ void send_msg(ECDHServer * this, const void *buf, size_t len)
 void recv_msg(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int ret = read(this->socket_fd, buf, len);
+  int bytes_read = read(this->socket_fd, buf, len);
 
-  if (ret == -1)
+  if (bytes_read != len)
   {
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(this);
@@ -293,7 +293,7 @@ void recv_ephemeral_public(ECDHServer * this)
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
   recv_msg(this, &this->remote_ephemeral_pubkey_len,
-             sizeof(this->remote_ephemeral_pubkey_len));
+           sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
@@ -302,7 +302,7 @@ void recv_ephemeral_public(ECDHServer * this)
   this->remote_ephemeral_pubkey =
     calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
   recv_msg(this, this->remote_ephemeral_pubkey,
-             this->remote_ephemeral_pubkey_len);
+           this->remote_ephemeral_pubkey_len);
 
   kmyth_log(LOG_INFO, "Receiving ephemeral public key signature.");
   recv_msg(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
@@ -448,7 +448,7 @@ void get_operational_key(ECDHServer * this)
   unsigned char *static_key = NULL;
   size_t static_key_len = 0;
   int ret;
-  unsigned char *key_id = (unsigned char *) "test_key_id";
+  unsigned char *key_id = (unsigned char *) "fake_key_id";
 
   ret = retrieve_key_with_session_key(this->socket_fd,
                                       this->session_key, this->session_key_len,
