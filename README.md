@@ -159,8 +159,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
 * TPM 2.0 Software Stack (TSS2)
 
   * The [Feature API (FAPI)](https://trustedcomputinggroup.org/resource/tss-feature-api-specification/)
-  will eventually provide the highest-level of abstraction. This layer has
-  not yet been implemented.
+  provides the highest-level of abstraction and was the last layer implemented ([tss2-fapi](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-fapi).
 
   * [The Enhanced System API (ESAPI)](https://trustedcomputinggroup.org/resource/tcg-tss-2-0-enhanced-system-api-esapi-specification/)
   is the next layer down. While less abstract than the FAPI, it hides much
@@ -199,19 +198,25 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
   handles the physical transmission of data to and from the TPM. This is
   totally abstracted from our Kmyth code, however.
 
-### TPM 2.0 emulator
+### TPM 2.0 Simulator
 
-* [IBM's TPM 2.0 emulator](https://sourceforge.net/projects/ibmswtpm2/)
-defaults to using:
-
-  * hostname : 127.0.0.1 (or local host) 
-
-  * port : 2321 (tpm command) and 2322 (platform)
+* [IBM's Software TPM 2.0](https://sourceforge.net/projects/ibmswtpm2/) is
+  "an implementation of the TCG TPM 2.0 specification. It is based on the
+  TPM specification Parts 3 and 4 source code donated by Microsoft, with
+  additional files to complete the implementation."
 
 * Microsoft provides
-  [the official TCG reference implementation of the TPM 2.0 Specification](https://github.com/microsoft/ms-tpm-20-ref).
-  The project includes Windows (Visual Studio) and Linux (autotools) build
-  scripts. Kmyth has not yet been tested using this TPM 2.0 simulator (mssim).
+  [the official TCG reference implementation of the TPM 2.0 Specification](https://github.com/microsoft/ms-tpm-20-ref)
+  that includes a [TPM 2.0 Simulator](https://github.com/microsoft/ms-tpm-20-ref/tree/master/TPMCmd/Simulator).
+  The project provides Windows (Visual Studio) and Linux (autotools) build scripts.
+
+
+#### Default (typical) settings:
+
+* hostname : 127.0.0.1 (localhost) 
+
+* port : 2321 (TPM command)
+
 
 ### TPM 2.0 Tools (Intel) 
 
