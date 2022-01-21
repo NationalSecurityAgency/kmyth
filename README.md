@@ -159,7 +159,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
 * TPM 2.0 Software Stack (TSS2)
 
   * The [Feature API (FAPI)](https://trustedcomputinggroup.org/resource/tss-feature-api-specification/)
-  provides the highest-level of abstraction and was the last layer implemented ([tss2-fapi](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-fapi).
+  provides the highest-level of abstraction and was the last layer implemented ([tss2-fapi](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-fapi)).
 
   * [The Enhanced System API (ESAPI)](https://trustedcomputinggroup.org/resource/tcg-tss-2-0-enhanced-system-api-esapi-specification/)
   is the next layer down. While less abstract than the FAPI, it hides much
@@ -211,7 +211,7 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
   The project provides Windows (Visual Studio) and Linux (autotools) build scripts.
 
 
-#### Default (typical) settings:
+#### Default (typical) TPM 2.0 simulator settings:
 
 * hostname : 127.0.0.1 (localhost) 
 
