@@ -167,13 +167,13 @@ In order to use _kmyth-getkey_ some preliminary setup is required.
   support. Our development efforts preceded the initial release of an
   implementation of this layer ([tss2-esys](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-esys)).
 
-  * The [System API (SAPI)](https://trustedcomputinggroup.org/resource/tss-system-level-api-and-tpm-command-transmission-interface-specification/)
+  * The [System API (SAPI)](https://trustedcomputinggroup.org/resource/tcg-tss-2-0-system-level-api-sapi-specification/)
   provides the developer functionality that maps to the TPM 2.0 commands.
   The Kmyth TPM 2.0 code is currently based primarily on this layer
   ([tss2-sys](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-sys))
   of the TSS2 library.
 
-  * The [TPM Command Transmission Interface (TCTI)](https://trustedcomputinggroup.org/resource/tss-system-level-api-and-tpm-command-transmission-interface-specification/)
+  * The [TPM Command Transmission Interface (TCTI)](https://trustedcomputinggroup.org/resource/tss-tcti-specification/)
   represents the layer where the actual TPM commands and responses are
   exchanged. In the TSS2 library, this layer is implemented by the
   [tss2-tcti](https://github.com/tpm2-software/tpm2-tss/tree/master/src/tss2-tcti)
