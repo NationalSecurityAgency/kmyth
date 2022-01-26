@@ -217,7 +217,7 @@ Enclave_Link_Flags += -Wl,-Bsymbolic
 Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
 Enclave_Link_Flags += -Wl,--export-dynamic
 Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
-Enclave_Link_Flags += -lkmip-core
+Enclave_Link_Flags += -lkmip-sgx
 
 Enclave_Name := kmyth_sgx_retrieve_key_demo_enclave
 Enclave_Lib := $(Enclave_Name).so
