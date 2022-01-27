@@ -175,7 +175,7 @@ void create_server_socket(ECDHServer * this)
 {
   int listen_fd = UNSET_FD;
 
-  kmyth_log(LOG_INFO, "Setting up server socket");
+  kmyth_log(LOG_DEBUG, "Setting up server socket");
   if (setup_server_socket(this->port, &listen_fd))
   {
     kmyth_log(LOG_ERR, "Failed to set up server socket.");
@@ -202,7 +202,7 @@ void create_server_socket(ECDHServer * this)
 
 void create_client_socket(ECDHServer * this)
 {
-  kmyth_log(LOG_INFO, "Setting up client socket");
+  kmyth_log(LOG_DEBUG, "Setting up client socket");
   if (setup_client_socket(this->ip, this->port, &this->socket_fd))
   {
     kmyth_log(LOG_ERR, "Failed to setup client socket.");
@@ -291,7 +291,7 @@ void recv_ephemeral_public(ECDHServer * this)
   unsigned int remote_pub_sig_len = 0;
   int ret;
 
-  kmyth_log(LOG_INFO, "Receiving ephemeral public key.");
+  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
   recv_msg(this, &this->remote_ephemeral_pubkey_len,
            sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
@@ -304,7 +304,7 @@ void recv_ephemeral_public(ECDHServer * this)
   recv_msg(this, this->remote_ephemeral_pubkey,
            this->remote_ephemeral_pubkey_len);
 
-  kmyth_log(LOG_INFO, "Receiving ephemeral public key signature.");
+  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
   recv_msg(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
   if (remote_pub_sig_len > MAX_RESP_SIZE)
   {
@@ -356,10 +356,10 @@ void send_ephemeral_public(ECDHServer * this)
   }
   kmyth_log(LOG_DEBUG, "signed local ephemeral ECDH 'public key'");
 
-  kmyth_log(LOG_INFO, "Sending ephemeral public key.");
+  kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
   send_msg(this, &local_pub_len, sizeof(local_pub_len));
   send_msg(this, local_pub, local_pub_len);
-  kmyth_log(LOG_INFO, "Sending ephemeral public key signature.");
+  kmyth_log(LOG_DEBUG, "Sending ephemeral public key signature.");
   send_msg(this, &local_pub_sig_len, sizeof(local_pub_sig_len));
   send_msg(this, local_pub_sig, local_pub_sig_len);
 
@@ -430,7 +430,7 @@ void send_operational_key(ECDHServer * this)
     0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
     0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
   };
-  kmyth_log(LOG_INFO, "Loaded operational key: 0x%02X..%02X", static_key[0],
+  kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
             static_key[OP_KEY_SIZE - 1]);
 
   ret = send_key_with_session_key(this->socket_fd,
@@ -460,7 +460,7 @@ void get_operational_key(ECDHServer * this)
     error(this);
   }
 
-  kmyth_log(LOG_INFO, "Loaded operational key: 0x%02X..%02X", static_key[0],
+  kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
             static_key[static_key_len - 1]);
 
   kmyth_clear_and_free(static_key, static_key_len);

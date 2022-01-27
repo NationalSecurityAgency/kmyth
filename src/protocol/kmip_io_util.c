@@ -8,6 +8,8 @@
 
 #include "defines.h"
 #include "memory_util.h"
+#include "protocol/kmip_util.h"
+#include "cipher/aes_gcm.h"
 
 //
 // retrieve_key_with_session_key()

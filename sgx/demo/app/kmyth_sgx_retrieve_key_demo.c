@@ -173,7 +173,7 @@ int main(int argc, char **argv)
              (int) sgx_ret);
     return EXIT_FAILURE;
   }
-  demo_log(LOG_INFO, "initialized SGX enclave - EID = 0x%016lx", eid);
+  demo_log(LOG_DEBUG, "initialized SGX enclave - EID = 0x%016lx", eid);
 
   // make ECALL to retrieve key into enclave from the key server
   int retval = -1;
