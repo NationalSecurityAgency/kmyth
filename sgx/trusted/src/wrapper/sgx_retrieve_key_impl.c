@@ -15,8 +15,7 @@
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                          const char *server_host, int server_host_len,
-                         const char *server_port, int server_port_len,
-                         unsigned char *key_id, int key_id_len)
+                         int server_port, unsigned char *key_id, int key_id_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -25,7 +24,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   int socket_fd = -1;
 
   ret_ocall = setup_socket_ocall(&ret_val, server_host, server_host_len,
-                                 server_port, server_port_len, &socket_fd);
+                                 server_port, &socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "Client socket setup failed.");

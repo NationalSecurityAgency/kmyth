@@ -54,11 +54,9 @@ extern "C"
  *
  * @param[in]  server_host_len        Length (in bytes) of server_host string.
  *
- * @param[in]  server_port            String TCP port number used to
+ * @param[in]  server_port            TCP port number used to
  *                                    connect to the key server.
  *
- * @param[in]  server_port_len        Length (in bytes) of server_port string.
- * 
  * @param[in]  key_id                 ID string used to specify the key to be
  *                                    retrieved.
  * 
@@ -68,7 +66,7 @@ extern "C"
  */
   int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                            const char *server_host, int server_host_len,
-                           const char *server_port, int server_port_len,
+                           int server_port,
                            unsigned char *key_id, int key_id_len);
 
 #ifdef __cplusplus

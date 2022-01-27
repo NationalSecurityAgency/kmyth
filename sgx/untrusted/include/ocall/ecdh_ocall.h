@@ -42,10 +42,8 @@ extern "C"
  *
  * @param[in]  server_host_len            Length (in bytes) of server_host string.
  *
- * @param[in]  server_port                String TCP port number used to
+ * @param[in]  server_port                TCP port number used to
  *                                        connect to the key server.
- *
- * @param[in]  server_port_len            Length (in bytes) of server_port string.
  *
  * @param[out] socket_fd                  Pointer to the file descriptor
  *                                        number for a socket connected to
@@ -54,8 +52,7 @@ extern "C"
  * @return 0 on success, 1 on failure
  */
   int setup_socket_ocall(const char *server_host, int server_host_len,
-                         const char *server_port, int server_port_len,
-                         int *socket_fd);
+                         int server_port, int *socket_fd);
 
 /**
  * @brief Closes a socket connected to the external key server.

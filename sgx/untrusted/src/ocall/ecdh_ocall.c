@@ -14,15 +14,19 @@
  * setup_socket_ocall()
  ****************************************************************************/
 int setup_socket_ocall(const char *server_host, int server_host_len,
-                       const char *server_port, int server_port_len,
-                       int *socket_fd)
+                       int server_port, int *socket_fd)
 {
   *socket_fd = UNSET_FD;
 
+  // create "service" string from integer port number
+  char server_service[6]; // max port is 65535, so max string is 5 char + '\0'
+  snprintf(server_service, 6, "%d", server_port);
+
   // connect to server
-  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %s",
+  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %d",
             server_host, server_port);
-  if (setup_client_socket(server_host, server_port, socket_fd))
+
+  if (setup_client_socket(server_host, server_service, socket_fd))
   {
     kmyth_log(LOG_ERR, "Failed to connect to the server.");
     return EXIT_FAILURE;
