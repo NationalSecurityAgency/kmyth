@@ -39,7 +39,6 @@ Table of Contents
 * TPM 2.0 Access Broker and Resource Manager development libraries and headers
 * C compiler
 * Make
-* indent (GNU program for formatting C code)
 * [libkmip](https://github.com/OpenKMIP/libkmip) (used in `getkey`)
 
 With the exception of [libkmip](https://github.com/OpenKMIP/libkmip)
@@ -53,11 +52,9 @@ installed from source.
 
 ```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel tpm2-abrmd-devel```
 
-indent is available in the EPEL repository.
-
 ##### Ubuntu 20.04 Commands
 
-```apt install make indent gcc openssl libssl-dev libffi-dev```
+```apt install make gcc openssl libssl-dev libffi-dev```
 
 ```apt install tss2 libtss2-dev libtss2-tcti-tabrmd-dev tpm2-abrmd```
 
