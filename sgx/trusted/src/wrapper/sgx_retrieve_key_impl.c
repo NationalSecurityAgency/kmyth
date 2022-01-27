@@ -15,7 +15,8 @@
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                          const char *server_host, int server_host_len,
-                         const char *server_port, int server_port_len)
+                         const char *server_port, int server_port_len,
+                         unsigned char *key_id, int key_id_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -244,12 +245,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
 
-  unsigned char *key_id = (unsigned char *) "fake_key_id";
   unsigned char *key_request = NULL;
   size_t key_request_len = 0;
 
   ret_val = build_kmip_get_request(&kmip_context,
-                                   key_id, sizeof(key_id),
+                                   key_id, key_id_len,
                                    &key_request, &key_request_len);
   if (ret_val)
   {

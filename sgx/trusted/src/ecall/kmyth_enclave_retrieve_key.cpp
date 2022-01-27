@@ -18,7 +18,9 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                            const char *server_host,
                                            int server_host_len,
                                            const char *server_port,
-                                           int server_port_len)
+                                           int server_port_len,
+                                           unsigned char *key_id,
+                                           int key_id_len)
 {
   // unmarshal client private signing key
   EVP_PKEY *client_sign_privkey = NULL;
@@ -57,7 +59,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 
   ret_val =
     enclave_retrieve_key(client_sign_privkey, server_cert, server_host,
-                         server_host_len, server_port, server_port_len);
+                         server_host_len, server_port, server_port_len,
+                         key_id, key_id_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR,

@@ -58,12 +58,18 @@ extern "C"
  *                                    connect to the key server.
  *
  * @param[in]  server_port_len        Length (in bytes) of server_port string.
+ * 
+ * @param[in]  key_id                 ID string used to specify the key to be
+ *                                    retrieved.
+ * 
+ * @param[in]  key_id_len             Length (in bytes) of key ID string
  *
  * @return 0 on success, 1 on error
  */
   int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                            const char *server_host, int server_host_len,
-                           const char *server_port, int server_port_len);
+                           const char *server_port, int server_port_len,
+                           unsigned char *key_id, int key_id_len);
 
 #ifdef __cplusplus
 }

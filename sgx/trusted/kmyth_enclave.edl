@@ -104,7 +104,10 @@ enclave {
                                                       int server_host_len,
                                                       [in, count=server_port_len]
                                                         const char* server_port,
-                                                      int server_port_len);
+                                                      int server_port_len,
+                                                      [in, count=key_id_len]
+                                                        unsigned char* key_id,
+                                                      int key_id_len);
 
   };
 
