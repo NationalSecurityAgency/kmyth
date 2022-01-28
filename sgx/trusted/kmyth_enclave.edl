@@ -105,7 +105,7 @@ enclave {
                                                       int server_port,
                                                       [in, count=key_id_len]
                                                         unsigned char* key_id,
-                                                      int key_id_len);
+                                                      size_t key_id_len);
 
   };
 

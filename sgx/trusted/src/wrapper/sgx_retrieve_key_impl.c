@@ -15,7 +15,9 @@
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                          const char *server_host, int server_host_len,
-                         int server_port, unsigned char *key_id, int key_id_len)
+                         int server_port, unsigned char **key_id,
+                         size_t *key_id_len, uint8_t **retrieved_key,
+                         size_t *retrieved_key_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -248,7 +250,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   size_t key_request_len = 0;
 
   ret_val = build_kmip_get_request(&kmip_context,
-                                   key_id, key_id_len,
+                                   *key_id, *key_id_len,
                                    &key_request, &key_request_len);
   if (ret_val)
   {
@@ -310,13 +312,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
-  unsigned char *received_key_id = NULL, *key = NULL;
-  size_t received_key_id_len = 0, key_len = 0;
-
   ret_val = parse_kmip_get_response(&kmip_context,
                                     response, response_len,
-                                    &received_key_id, &received_key_id_len,
-                                    &key, &key_len);
+                                    key_id, key_id_len,
+                                    (unsigned char **) retrieved_key,
+                                    retrieved_key_len);
   kmyth_enclave_clear_and_free(response, response_len);
   kmip_destroy(&kmip_context);
   if (ret_val)
@@ -326,11 +326,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   }
 
   snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %.*s",
-           (int) received_key_id_len, received_key_id);
+           (int) *key_id_len, *key_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN, "Received operational key: 0x%02X..%02X",
-           key[0], key[key_len - 1]);
+           (*retrieved_key)[0], (*retrieved_key)[*retrieved_key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   kmyth_sgx_log(LOG_DEBUG, "completed key retrieval from server into enclave");
