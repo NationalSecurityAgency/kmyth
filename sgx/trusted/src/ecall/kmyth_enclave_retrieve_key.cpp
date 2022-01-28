@@ -57,12 +57,12 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   kmyth_sgx_log(LOG_DEBUG, "unmarshalled server certificate (to X509)");
 
   unsigned char *retrieve_key_result = NULL;
-  size_t retrieve_key_result_size = 0;
+  size_t retrieve_key_result_len = 0;
 
   ret_val =
     enclave_retrieve_key(client_sign_privkey, server_cert, server_host,
                          server_host_len, server_port, &key_id, &key_id_len,
-                         &retrieve_key_result, &retrieve_key_result_size);
+                         &retrieve_key_result, &retrieve_key_result_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR,
@@ -70,10 +70,22 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
     return EXIT_FAILURE;
   }
 
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
+  
+  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
+           (int) key_id_len, key_id);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "Retrieved into enclave key: 0x%02X..%02X",
+           retrieve_key_result[0],
+           retrieve_key_result[retrieve_key_result_len - 1]);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // free memory for parameters passed to 'retrieve key' wrapper function
   EVP_PKEY_free(client_sign_privkey);
   X509_free(server_cert);
-  kmyth_enclave_clear(retrieve_key_result, retrieve_key_result_size);
+  kmyth_enclave_clear(retrieve_key_result, retrieve_key_result_len);
   free(retrieve_key_result);
 
   return EXIT_SUCCESS;

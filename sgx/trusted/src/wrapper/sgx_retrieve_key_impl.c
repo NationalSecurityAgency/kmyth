@@ -329,10 +329,10 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
            (int) *key_id_len, *key_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Received operational key: 0x%02X..%02X",
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "Received KMIP object with key: 0x%02X..%02X",
            (*retrieved_key)[0], (*retrieved_key)[*retrieved_key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  kmyth_sgx_log(LOG_DEBUG, "completed key retrieval from server into enclave");
   return EXIT_SUCCESS;
 }
