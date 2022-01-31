@@ -58,10 +58,13 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 
   unsigned char *retrieve_key_result = NULL;
   size_t retrieve_key_result_len = 0;
+  unsigned char *retrieve_key_result_id = NULL;
+  size_t retrieve_key_result_id_len = 0;
 
   ret_val =
     enclave_retrieve_key(client_sign_privkey, server_cert, server_host,
-                         server_host_len, server_port, &key_id, &key_id_len,
+                         server_host_len, server_port, key_id, key_id_len,
+                         &retrieve_key_result_id, &retrieve_key_result_id_len,
                          &retrieve_key_result, &retrieve_key_result_len);
   if (ret_val)
   {
@@ -71,9 +74,9 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   }
 
   char msg[MAX_LOG_MSG_LEN] = { 0 };
-  
+
   snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
-           (int) key_id_len, key_id);
+           (int) retrieve_key_result_id_len, retrieve_key_result_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
@@ -82,11 +85,19 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
            retrieve_key_result[retrieve_key_result_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
+  if (strcmp((const char*) retrieve_key_result_id, (const char*) key_id) != 0)
+  {
+    kmyth_sgx_log(LOG_ERR, "retrieved key ID mismatches requested key ID");
+    return EXIT_FAILURE;
+  }
+
   // free memory for parameters passed to 'retrieve key' wrapper function
   EVP_PKEY_free(client_sign_privkey);
   X509_free(server_cert);
   kmyth_enclave_clear(retrieve_key_result, retrieve_key_result_len);
+  kmyth_enclave_clear(retrieve_key_result_id, retrieve_key_result_id_len);
   free(retrieve_key_result);
+  free(retrieve_key_result_id);
 
   return EXIT_SUCCESS;
 }

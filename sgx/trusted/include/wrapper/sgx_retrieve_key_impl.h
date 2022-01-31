@@ -57,15 +57,17 @@ extern "C"
  * @param[in]  server_port            TCP port number used to
  *                                    connect to the key server.
  *
- * @param[in/out] key_id              ID string used to specify the key to be
- *                                    retrieved. The key ID string returned in
- *                                    the key server's response is returned in 
- *                                    this parameter and should be checked by
- *                                    the calling function.
+ * @param[in] req_key_id              ID string used to specify the key to be
+ *                                    retrieved.
  * 
- * @param[in/out] key_id_len          Length (in bytes) of the ID string
- *                                    associated with the requested and
- *                                    retrieved key.
+ * @param[in] req_key_id_len          Length (in bytes) of the ID string
+ *                                    associated with the requested key.
+ *
+ * @param[out] retrieved_key_id       Pointer to the key ID string returned in
+ *                                    the key server's response.
+ * 
+ * @param[out] retrieved_key_id_len   Pointer to the length (in bytes) of the
+ *                                    ID string for the retrieved key.
  *
  * @param[out] retrieved_key          Pointer to the retrieved key result
  *                                    (byte array).
@@ -77,9 +79,11 @@ extern "C"
  */
   int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                            const char *server_host, int server_host_len,
-                           int server_port, unsigned char **key_id,
-                           size_t *key_id_len, uint8_t **retrieved_key,
-                           size_t *retrieved_key_len);
+                           int server_port, unsigned char *req_key_id,
+                           size_t req_key_id_len,
+                           unsigned char **retrieved_key_id,
+                           size_t *retrieved_key_id_len,
+                           uint8_t **retrieved_key, size_t *retrieved_key_len);
 
 #ifdef __cplusplus
 }

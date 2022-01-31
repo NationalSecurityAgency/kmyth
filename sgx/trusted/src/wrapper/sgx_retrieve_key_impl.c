@@ -15,9 +15,11 @@
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                          const char *server_host, int server_host_len,
-                         int server_port, unsigned char **key_id,
-                         size_t *key_id_len, uint8_t **retrieved_key,
-                         size_t *retrieved_key_len)
+                         int server_port, unsigned char *req_key_id,
+                         size_t req_key_id_len,
+                         unsigned char **retrieved_key_id,
+                         size_t *retrieved_key_id_len,
+                         uint8_t **retrieved_key, size_t *retrieved_key_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -250,7 +252,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   size_t key_request_len = 0;
 
   ret_val = build_kmip_get_request(&kmip_context,
-                                   *key_id, *key_id_len,
+                                   req_key_id, req_key_id_len,
                                    &key_request, &key_request_len);
   if (ret_val)
   {
@@ -314,7 +316,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
 
   ret_val = parse_kmip_get_response(&kmip_context,
                                     response, response_len,
-                                    key_id, key_id_len,
+                                    retrieved_key_id, retrieved_key_id_len,
                                     (unsigned char **) retrieved_key,
                                     retrieved_key_len);
   kmyth_enclave_clear_and_free(response, response_len);
@@ -326,7 +328,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   }
 
   snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %.*s",
-           (int) *key_id_len, *key_id);
+           (int) *retrieved_key_id_len, *retrieved_key_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
