@@ -75,8 +75,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
-           (int) retrieve_key_result_id_len, retrieve_key_result_id);
+  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %s",
+           retrieve_key_result_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
@@ -85,6 +85,10 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
            retrieve_key_result[retrieve_key_result_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
+  // Verification that the Key ID received in the response from the key server
+  // matches the requested Key ID eliminates the need to return this parameter
+  // to the ECALL caller. A successful ECALL return indicates that the
+  // returned key ID matches the input value that the caller provided.
   if (strcmp((const char*) retrieve_key_result_id, (const char*) key_id) != 0)
   {
     kmyth_sgx_log(LOG_ERR, "retrieved key ID mismatches requested key ID");

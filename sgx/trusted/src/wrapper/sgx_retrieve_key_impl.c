@@ -327,8 +327,14 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %.*s",
-           (int) *retrieved_key_id_len, *retrieved_key_id);
+  if (strlen((char *) *retrieved_key_id) != (*retrieved_key_id_len - 1))
+  {
+    kmyth_sgx_log(LOG_ERR, "Invalid Key ID string");
+    return EXIT_FAILURE;
+  }
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %s",
+           *retrieved_key_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
