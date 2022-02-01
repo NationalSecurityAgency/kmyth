@@ -91,6 +91,31 @@ enclave {
               connection with key server and then retrieves a key from the
               key server using that secure connection.
      *
+     * @param[in]  client_private_bytes      DER-formatted private signing
+     *                                       key for the client (enclave)
+     *
+     * @param[in]  client_private_bytes_len  Length (in bytes) of the client
+     *                                       (enclave) private key
+     *
+     * @param[in]  server_cert_bytes         DER-formatted public certificate
+     *                                       for the key server.
+     *
+     * @param[in]  server_cert_bytes_len     Length (in bytes) of the key
+     *                                       server certificate.
+     *
+     * @param[in]  server_host               Hostname/IP string for key server.
+     *
+     * @param[in]  server_host_len           Length of hostname/IP string for
+     *                                       the key server.
+     *
+     * @param[in]  server_port               TCP port for key server.
+     *
+     * @param[in]  key_id                    ID string used to specify the key
+     *                                       to be retrieved from the server.
+     *
+     * @param[in]  key_id_len                Length of the requested key's ID
+     *                                       string.
+     *
      * @return 0 on success, -1 on failure.
      */
     public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len]
@@ -102,9 +127,10 @@ enclave {
                                                       [in, count=server_host_len]
                                                         const char* server_host,
                                                       int server_host_len,
-                                                      [in, count=server_port_len]
-                                                        const char* server_port,
-                                                      int server_port_len);
+                                                      int server_port,
+                                                      [in, count=key_id_len]
+                                                        unsigned char* key_id,
+                                                      size_t key_id_len);
 
   };
 
@@ -158,10 +184,8 @@ enclave {
      *
      * @param[in]  server_host_len            Length (in bytes) of server_host string.
      *
-     * @param[in]  server_port                String TCP port number used to
+     * @param[in]  server_port                TCP port number used to
      *                                        connect to the key server.
-     *
-     * @param[in]  server_port_len            Length (in bytes) of server_port string.
      *
      * @param[out] socket_fd                  Pointer to the file descriptor
      *                                        number for a socket connected to
@@ -172,9 +196,7 @@ enclave {
     int setup_socket_ocall([in, count=server_host_len]
                              const char *server_host,
                            int server_host_len,
-                           [in, count=server_port_len]
-                             const char *server_port,
-                           int server_port_len,
+                           int server_port,
                            [out] int *socket_fd);
 
     /**

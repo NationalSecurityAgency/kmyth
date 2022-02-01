@@ -15,7 +15,11 @@
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                          const char *server_host, int server_host_len,
-                         const char *server_port, int server_port_len)
+                         int server_port, unsigned char *req_key_id,
+                         size_t req_key_id_len,
+                         unsigned char **retrieved_key_id,
+                         size_t *retrieved_key_id_len,
+                         uint8_t **retrieved_key, size_t *retrieved_key_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -24,7 +28,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   int socket_fd = -1;
 
   ret_ocall = setup_socket_ocall(&ret_val, server_host, server_host_len,
-                                 server_port, server_port_len, &socket_fd);
+                                 server_port, &socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "Client socket setup failed.");
@@ -244,12 +248,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
 
-  unsigned char *key_id = (unsigned char *) "fake_key_id";
   unsigned char *key_request = NULL;
   size_t key_request_len = 0;
 
   ret_val = build_kmip_get_request(&kmip_context,
-                                   key_id, sizeof(key_id),
+                                   req_key_id, req_key_id_len,
                                    &key_request, &key_request_len);
   if (ret_val)
   {
@@ -311,13 +314,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
-  unsigned char *received_key_id = NULL, *key = NULL;
-  size_t received_key_id_len = 0, key_len = 0;
-
   ret_val = parse_kmip_get_response(&kmip_context,
                                     response, response_len,
-                                    &received_key_id, &received_key_id_len,
-                                    &key, &key_len);
+                                    retrieved_key_id, retrieved_key_id_len,
+                                    (unsigned char **) retrieved_key,
+                                    retrieved_key_len);
   kmyth_enclave_clear_and_free(response, response_len);
   kmip_destroy(&kmip_context);
   if (ret_val)
@@ -326,14 +327,24 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %.*s",
-           (int) received_key_id_len, received_key_id);
+  // Note: This implementation requires that Key ID be a valid string that does
+  //       not contain any null terminators as part of the ID itself. If the
+  //       Key ID must be more generic (e.g., any combination of bytes), this
+  //       code will require some re-work to support that correctly.
+  if (strlen((char *) *retrieved_key_id) != (*retrieved_key_id_len - 1))
+  {
+    kmyth_sgx_log(LOG_ERR, "Invalid Key ID string");
+    return EXIT_FAILURE;
+  }
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %s",
+           *retrieved_key_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Received operational key: 0x%02X..%02X",
-           key[0], key[key_len - 1]);
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "Received KMIP object with key: 0x%02X..%02X",
+           (*retrieved_key)[0], (*retrieved_key)[*retrieved_key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  kmyth_sgx_log(LOG_DEBUG, "completed key retrieval from server into enclave");
   return EXIT_SUCCESS;
 }
