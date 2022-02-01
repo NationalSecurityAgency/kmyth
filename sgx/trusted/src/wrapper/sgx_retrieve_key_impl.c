@@ -327,6 +327,10 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
+  // Note: This implementation requires that Key ID be a valid string that does
+  //       not contain any null terminators as part of the ID itself. If the
+  //       Key ID must be more generic (e.g., any combination of bytes), this
+  //       code will require some re-work to support that correctly.
   if (strlen((char *) *retrieved_key_id) != (*retrieved_key_id_len - 1))
   {
     kmyth_sgx_log(LOG_ERR, "Invalid Key ID string");
