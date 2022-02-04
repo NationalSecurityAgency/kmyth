@@ -1,0 +1,397 @@
+#
+# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in
+#     the documentation and/or other materials provided with the
+#     distribution.
+#   * Neither the name of Intel Corporation nor the names of its
+#     contributors may be used to endorse or promote products derived
+#     from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+
+######## SGX SDK Build Settings ########
+
+SGX_SDK ?= /opt/intel/sgxsdk
+SGX_MODE ?= SIM
+SGX_ARCH ?= x64
+SGX_SSL_UNTRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
+SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
+SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
+
+ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
+ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_test_enclave_u.h"'
+
+ifeq ($(shell getconf LONG_BIT), 32)
+	SGX_ARCH := x86
+else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
+	SGX_ARCH := x86
+endif
+
+ifeq ($(SGX_ARCH), x86)
+	SGX_COMMON_CFLAGS := -m32
+	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
+	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+else
+	SGX_COMMON_CFLAGS := -m64
+	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+endif
+
+ifeq ($(SGX_DEBUG), 1)
+ifeq ($(SGX_PRERELEASE), 1)
+$(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
+endif
+endif
+
+ifeq ($(SGX_DEBUG), 1)
+	SGX_COMMON_CFLAGS += -O0 -g
+else
+	SGX_COMMON_CFLAGS += -O2
+endif
+
+######## App (untrusted code) Build Settings ########
+
+ifneq ($(SGX_MODE), HW)
+	Urts_Library_Name := sgx_urts_sim
+else
+	Urts_Library_Name := sgx_urts
+endif
+
+Test_App_Name := test/bin/kmyth_enclave_tests
+
+Test_App_Source_Files := test/app/kmyth_sgx_test.c \
+	                 untrusted/src/wrapper/sgx_seal_unseal_impl.c
+
+Test_App_Include_Paths := -Itest/enclave
+Test_App_Include_Paths += -Iuntrusted/include/ocall
+Test_App_Include_Paths += -Iuntrusted/include/util
+Test_App_Include_Paths += -Iuntrusted/include/wrapper
+Test_App_Include_Paths += -Icommon/include
+Test_App_Include_Paths += -I$(SGX_SDK)/include
+Test_App_Include_paths += -I../utils/include
+Test_App_Include_Paths += -I../logger/include
+Test_App_Include_Paths += -I../include/network
+
+Test_App_C_Flags := $(SGX_COMMON_CFLAGS)
+Test_App_C_Flags += -fPIC
+Test_App_C_Flags += -Wno-attributes
+Test_App_C_Flags += $(Test_App_Include_Paths)
+Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
+
+# Three configuration modes - Debug, prerelease, release
+#   Debug - Macro DEBUG enabled.
+#   Prerelease - Macro NDEBUG and EDEBUG enabled.
+#   Release - Macro NDEBUG enabled.
+ifeq ($(SGX_DEBUG), 1)
+	Test_App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	Test_App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+else
+	Test_App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+endif
+
+Test_App_Cpp_Flags := $(Test_App_C_Flags) -std=c++11
+
+Test_App_Link_Flags := $(SGX_COMMON_CFLAGS)
+Test_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
+Test_App_Link_Flags += -L$(SGX_SSL_UNTRUSTED_LIB_PATH)
+Test_App_Link_Flags += -Ltest/enclave
+Test_App_Link_Flags += -L../lib
+Test_App_Link_Flags += -l$(Urts_Library_Name)
+Test_App_Link_Flags += -lcunit
+Test_App_Link_Flags += -lpthread
+Test_App_Link_Flags += -lsgx_usgxssl
+Test_App_Link_Flags += -Wl,-rpath=../lib -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+
+ifneq ($(SGX_MODE), HW)
+	Test_App_Link_Flags += -lsgx_uae_service_sim
+else
+	Test_App_Link_Flags += -lsgx_uae_service
+endif
+
+######## Enclave Build Settings ########
+
+ifneq ($(SGX_MODE), HW)
+	Trts_Library_Name := sgx_trts_sim
+	Service_Library_Name := sgx_tservice_sim
+else
+	Trts_Library_Name := sgx_trts
+	Service_Library_Name := sgx_tservice
+endif
+Crypto_Library_Name := sgx_tcrypto
+
+Test_Enclave_Include_Paths := -Itest/enclave
+Test_Enclave_Include_Paths += -Itrusted/include
+Test_Enclave_Include_Paths += -Itrusted/include/util
+Test_Enclave_Include_Paths += -Itrusted/include/wrapper
+Test_Enclave_Include_Paths += -Icommon/include
+Test_Enclave_Include_Paths += -I$(SGX_SDK)/include
+Test_Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
+Test_Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
+Test_Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
+Test_Enclave_Include_Paths += -I/usr/local/include
+Test_Enclave_Include_Paths += -I../include
+Test_Enclave_Include_Paths += -I../include/cipher
+Test_Enclave_Include_Paths += -I../include/protocol
+Test_Enclave_Include_Paths += -I../utils/include/kmyth
+
+Test_Enclave_C_Flags := -Wall
+Test_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
+Test_Enclave_C_Flags += -nostdinc
+Test_Enclave_C_Flags += -fvisibility=hidden
+Test_Enclave_C_Flags += -fpie
+Test_Enclave_C_Flags += -fstack-protector
+Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
+Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
+Test_Enclave_C_Flags += -DKMYTH_SGX
+
+Test_Enclave_Cpp_Flags := $(Test_Enclave_C_Flags)
+Test_Enclave_Cpp_Flags += -std=c++03
+Test_Enclave_Cpp_Flags += -nostdinc++
+Test_Enclave_Cpp_Flags += --include "tsgxsslio.h"
+
+Test_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
+Test_Enclave_Link_Flags += -Wl,--no-undefined
+Test_Enclave_Link_Flags += -nostdlib
+Test_Enclave_Link_Flags += -nodefaultlibs
+Test_Enclave_Link_Flags += -nostartfiles
+Test_Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
+Test_Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
+Test_Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
+Test_Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
+Test_Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
+Test_Enclave_Link_Flags += -Wl,--no-whole-archive -Wl,--start-group
+Test_Enclave_Link_Flags +=   -lsgx_tstdc
+Test_Enclave_Link_Flags +=   -lsgx_tcxx
+Test_Enclave_Link_Flags +=   -lsgx_pthread
+Test_Enclave_Link_Flags +=   -l$(Crypto_Library_Name)
+Test_Enclave_Link_Flags +=   -l$(Service_Library_Name)
+Test_Enclave_Link_Flags += -Wl,--end-group
+Test_Enclave_Link_Flags += -Wl,-Bstatic
+Test_Enclave_Link_Flags += -Wl,-Bsymbolic
+Test_Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
+Test_Enclave_Link_Flags += -Wl,--export-dynamic
+Test_Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
+Test_Enclave_Link_Flags += -lkmip-sgx
+
+Test_Enclave_Name := kmyth_sgx_test_enclave
+Test_Enclave_Lib := $(Test_Enclave_Name).so
+Test_Enclave_Signing_Key := $(Test_Enclave_Name)_private.pem
+Test_Signed_Enclave_Name := $(Test_Enclave_Name).signed.so
+Test_Enclave_Config_File := $(Test_Enclave_Name).config.xml
+
+ifeq ($(SGX_MODE), HW)
+ifneq ($(SGX_DEBUG), 1)
+ifneq ($(SGX_PRERELEASE), 1)
+Build_Mode = HW_RELEASE
+endif
+endif
+endif
+
+# Message for missing Enclave Signing Key - Fatal Build Error
+define err_no_test_enclave_signing_key
+FAIL - No Test Enclave Signing Key found
+Generate or install test/enclave/$(Test_Enclave_Signing_Key)
+e.g., run 'openssl genrsa -out test/enclave/$(Test_Enclave_Signing_Key) -3 3072'
+endef
+
+.PHONY: pre all run
+pre:
+	@mkdir -p test/bin 
+	@if [ ! -f test/enclave/$(Test_Enclave_Signing_Key) ]; then \
+	   openssl genrsa -out test/enclave/$(Test_Enclave_Signing_Key) -3 3072; \
+	 fi
+	@rm -f test/app/*~
+	@rm -f untrusted/src/*/*~ untrusted/include/*/*~
+	@rm -f trusted/src/*/*~ trusted/include/*~ trusted/include/*/*~
+	@(test -f ../lib/libkmyth-logger.so && \
+		test -f ../lib/libkmyth-utils.so) || make libs -C ../
+
+ifeq ($(Build_Mode), HW_RELEASE)
+all: $(Test_App_Name) $(Test_Enclave_Lib)
+	@echo "The project has been built in release hardware mode."
+	@echo "Please sign the $(Test_Enclave_Lib) first with your signing key before"
+	@echo "you run the $(Test_App_Name) to launch and access the enclave."
+	@echo "To sign the enclave use the command:\n"
+	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <your key>"
+	@echo "                              -enclave $(Test_Enclave_Lib)"
+	@echo "                              -out <$(Test_Signed_Enclave_Name)>"
+	@echo "                              -config $(Test_Enclave_Config_File)\n"
+	@echo "You can also sign the enclave using an external signing tool."
+	@echo "See User's Guide for more details."
+	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build"
+	@echo "the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
+else
+all: pre $(Test_App_Name) test/enclave/$(Test_Signed_Enclave_Name)
+endif
+
+run: all
+ifneq ($(Build_Mode), HW_RELEASE)
+	@$(CURDIR)/$(Test_App_Name)
+	@echo "RUN  =>  $(Test_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
+endif
+
+######## Common Objects ########
+
+test/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/ecdh_util.o: common/src/ecdh_util.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+######## App Objects ########
+
+test/enclave/log_ocall.o: untrusted/src/ocall/log_ocall.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/ecdh_ocall.o: untrusted/src/ocall/ecdh_ocall.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/$(Test_Enclave_Name)_u.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
+	@cd test/enclave && $(SGX_EDGER8R) --untrusted $(Test_Enclave_Name).edl \
+                                      --search-path $(SGX_SDK)/include \
+                                      --search-path . \
+                                      --search-path ../../trusted \
+                                      --search-path $(SGX_SSL_INCLUDE_PATH)
+	@echo "GEN  =>  $@"
+
+test/enclave/$(Test_Enclave_Name)_u.o: test/enclave/$(Test_Enclave_Name)_u.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o \
+                                 test/enclave/ec_key_cert_marshal.o \
+                                 test/enclave/ec_key_cert_unmarshal.o \
+                                 test/enclave/ecdh_util.o \
+                                 test/enclave/ecdh_ocall.o \
+                                 test/enclave/memory_ocall.o \
+                                 test/enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(Test_App_Cpp_Flags) $(Test_App_Link_Flags) \
+	                                  -Lenclave -lcrypto -lcunit
+	@echo "LINK =>  $@"
+
+######## Enclave Objects ########
+
+test/enclave/$(Test_Enclave_Name)_t.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
+	@cd test/enclave && $(SGX_EDGER8R) --trusted $(Test_Enclave_Name).edl \
+		                      --search-path $(SGX_SDK)/include \
+                                      --search-path . \
+				      --search-path ../../trusted \
+                                      --search-path $(SGX_SSL_INCLUDE_PATH)
+	@echo "GEN  =>  $@"
+
+test/enclave/$(Test_Enclave_Name)_t.o: test/enclave/$(Test_Enclave_Name)_t.c
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmyth_enclave_memory_util.o: \
+		trusted/src/util/kmyth_enclave_memory_util.c 
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/sgx_retrieve_key_impl.o: \
+		trusted/src/wrapper/sgx_retrieve_key_impl.c 
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmyth_sgx_test_trusted.o: test/enclave/kmyth_sgx_test_trusted.c
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmyth_enclave_seal.o: trusted/src/ecall/kmyth_enclave_seal.cpp 
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmyth_enclave_unseal.o: trusted/src/ecall/kmyth_enclave_unseal.cpp
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmyth_enclave_retrieve_key.o: \
+		trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/aes_gcm.o: ../src/cipher/aes_gcm.c
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/memory_util.o: ../utils/src/memory_util.c
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/kmip_util.o: ../src/protocol/kmip_util.c
+	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+test/enclave/$(Test_Enclave_Lib): test/enclave/$(Test_Enclave_Name)_t.o \
+                        test/enclave/kmyth_sgx_test_trusted.o \
+                        test/enclave/ec_key_cert_marshal.o \
+                        test/enclave/ec_key_cert_unmarshal.o \
+                        test/enclave/ecdh_util.o \
+                        test/enclave/kmyth_enclave_memory_util.o \
+                        test/enclave/sgx_retrieve_key_impl.o \
+                        test/enclave/kmyth_enclave_seal.o \
+                        test/enclave/kmyth_enclave_unseal.o \
+                        test/enclave/kmyth_enclave_retrieve_key.o \
+                        test/enclave/aes_gcm.o \
+                        test/enclave/memory_util.o \
+                        test/enclave/kmip_util.o
+	@$(CXX) $^ -o $@ $(Test_Enclave_Link_Flags)
+	@echo "LINK =>  $@"
+
+test/enclave/$(Test_Enclave_Signing_Key):
+	$(error $(err_no_test_enclave_signing_key))
+
+test/enclave/$(Test_Signed_Enclave_Name): test/enclave/$(Test_Enclave_Lib) \
+                                test/enclave/$(Test_Enclave_Signing_Key)
+	@$(SGX_ENCLAVE_SIGNER) sign -key test/enclave/$(Test_Enclave_Signing_Key) \
+		                    -enclave test/enclave/$(Test_Enclave_Lib) \
+		                    -out $@ \
+	                            -config test/enclave/$(Test_Enclave_Config_File)
+	@echo "SIGN =>  $@"
+
+.PHONY: test
+
+test: all
+	test/bin/kmyth_enclave_tests 2> /dev/null
+
+.PHONY: clean
+
+clean:
+	@rm -f test/enclave/*_t.h test/enclave/*_u.h test/enclave/*_t.c test/enclave/*_u.c
+	@rm -f test/enclave/*.o test/enclave/*.so test/enclave/*.pem
+	@rm -rf test/bin
