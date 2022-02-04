@@ -208,38 +208,47 @@ Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
 Demo_Enclave_C_Flags := $(Common_Enclave_C_Flags)
-Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
-Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
+Demo_Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
+Demo_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
+Common_Enclave_Cpp_Flags := -std=c++03
+Common_Enclave_Cpp_Flags += -nostdinc++
+Common_Enclave_Cpp_Flags += --include "tsgxsslio.h"
 
 Test_Enclave_Cpp_Flags := $(Test_Enclave_C_Flags)
-Test_Enclave_Cpp_Flags += -std=c++03
-Test_Enclave_Cpp_Flags += -nostdinc++
-Test_Enclave_Cpp_Flags += --include "tsgxsslio.h"
+Test_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
 
-Test_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
-Test_Enclave_Link_Flags += -Wl,--no-undefined
-Test_Enclave_Link_Flags += -nostdlib
-Test_Enclave_Link_Flags += -nodefaultlibs
-Test_Enclave_Link_Flags += -nostartfiles
-Test_Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
-Test_Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
-Test_Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
-Test_Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
-Test_Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
-Test_Enclave_Link_Flags += -Wl,--no-whole-archive -Wl,--start-group
-Test_Enclave_Link_Flags +=   -lsgx_tstdc
-Test_Enclave_Link_Flags +=   -lsgx_tcxx
-Test_Enclave_Link_Flags +=   -lsgx_pthread
-Test_Enclave_Link_Flags +=   -l$(Crypto_Library_Name)
-Test_Enclave_Link_Flags +=   -l$(Service_Library_Name)
-Test_Enclave_Link_Flags += -Wl,--end-group
-Test_Enclave_Link_Flags += -Wl,-Bstatic
-Test_Enclave_Link_Flags += -Wl,-Bsymbolic
-Test_Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
-Test_Enclave_Link_Flags += -Wl,--export-dynamic
-Test_Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
-Test_Enclave_Link_Flags += -lkmip-sgx
+Demo_Enclave_Cpp_Flags := $(Demo_Enclave_C_Flags)
+Demo_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
+
+Common_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
+Common_Enclave_Link_Flags += -Wl,--no-undefined
+Common_Enclave_Link_Flags += -nostdlib
+Common_Enclave_Link_Flags += -nodefaultlibs
+Common_Enclave_Link_Flags += -nostartfiles
+Common_Enclave_Link_Flags += -L$(SGX_SSL_TRUSTED_LIB_PATH)
+Common_Enclave_Link_Flags += -L$(SGX_LIBRARY_PATH)
+Common_Enclave_Link_Flags += -Wl,--whole-archive -lsgx_tsgxssl
+Common_Enclave_Link_Flags += -Wl,--no-whole-archive -lsgx_tsgxssl_crypto
+Common_Enclave_Link_Flags += -Wl,--whole-archive -l$(Trts_Library_Name)
+Common_Enclave_Link_Flags += -Wl,--no-whole-archive -Wl,--start-group
+Common_Enclave_Link_Flags +=   -lsgx_tstdc
+Common_Enclave_Link_Flags +=   -lsgx_tcxx
+Common_Enclave_Link_Flags +=   -lsgx_pthread
+Common_Enclave_Link_Flags +=   -l$(Crypto_Library_Name)
+Common_Enclave_Link_Flags +=   -l$(Service_Library_Name)
+Common_Enclave_Link_Flags += -Wl,--end-group
+Common_Enclave_Link_Flags += -Wl,-Bstatic
+Common_Enclave_Link_Flags += -Wl,-Bsymbolic
+Common_Enclave_Link_Flags += -Wl,-pie,-eenclave_entry
+Common_Enclave_Link_Flags += -Wl,--export-dynamic
+Common_Enclave_Link_Flags += -Wl,--defsym,__ImageBase=0
+Common_Enclave_Link_Flags += -lkmip-sgx
+
+Test_Enclave_Link_Flags := $(Common_Enclave_Link_Flags)
+
+Demo_Enclave_Link_Flags := $(Common_Enclave_Link_Flags)
+Demo_Enclave_Link_Flags += -L/usr/local/lib
 
 Test_Enclave_Name := kmyth_sgx_test_enclave
 Test_Enclave_Lib := $(Test_Enclave_Name).so
