@@ -195,19 +195,22 @@ Test_Enclave_Include_Paths += -Itest/enclave
 Demo_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
 Demo_Enclave_Include_Paths += -Idemo/enclave
 
+Common_Enclave_C_Flags := -Wall
+Common_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
+Common_Enclave_C_Flags += -nostdinc
+Common_Enclave_C_Flags += -fvisibility=hidden
+Common_Enclave_C_Flags += -fpie
+Common_Enclave_C_Flags += -fstack-protector
+Common_Enclave_C_Flags += -DKMYTH_SGX
 
-
-
-
-Test_Enclave_C_Flags := -Wall
-Test_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
-Test_Enclave_C_Flags += -nostdinc
-Test_Enclave_C_Flags += -fvisibility=hidden
-Test_Enclave_C_Flags += -fpie
-Test_Enclave_C_Flags += -fstack-protector
+Test_Enclave_C_Flags := $(Common_Enclave_C_Flags)
 Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
-Test_Enclave_C_Flags += -DKMYTH_SGX
+
+Demo_Enclave_C_Flags := $(Common_Enclave_C_Flags)
+Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
+Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
+
 
 Test_Enclave_Cpp_Flags := $(Test_Enclave_C_Flags)
 Test_Enclave_Cpp_Flags += -std=c++03
