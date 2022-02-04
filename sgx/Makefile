@@ -137,22 +137,32 @@ Demo_App_C_Flags += $(Common_App_C_Flags)
 Test_App_Cpp_Flags := $(Test_App_C_Flags) -std=c++11
 Demo_App_Cpp_Flags := $(Demo_App_C_Flags) -std=c++11
 
-Test_App_Link_Flags := $(SGX_COMMON_CFLAGS)
-Test_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
-Test_App_Link_Flags += -L$(SGX_SSL_UNTRUSTED_LIB_PATH)
-Test_App_Link_Flags += -Ltest/enclave
-Test_App_Link_Flags += -L../lib
-Test_App_Link_Flags += -l$(Urts_Library_Name)
-Test_App_Link_Flags += -lcunit
-Test_App_Link_Flags += -lpthread
-Test_App_Link_Flags += -lsgx_usgxssl
-Test_App_Link_Flags += -Wl,-rpath=../lib -lkmyth-utils -lkmyth-logger -lkmyth-tpm
+Common_App_Link_Flags := $(SGX_COMMON_CFLAGS)
+Common_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
+Common_App_Link_Flags += -L$(SGX_SSL_UNTRUSTED_LIB_PATH)
+Common_App_Link_Flags += -l$(Urts_Library_Name)
+Common_App_Link_Flags += -lsgx_usgxssl
+Common_App_Link_Flags += -lpthread
+Common_App_Link_Flags += -lkmyth-utils
+Common_App_Link_Flags += -lkmyth-logger
+Common_App_Link_Flags += -lkmyth-tpm
 
 ifneq ($(SGX_MODE), HW)
-	Test_App_Link_Flags += -lsgx_uae_service_sim
+	Common_App_Link_Flags += -lsgx_uae_service_sim
 else
-	Test_App_Link_Flags += -lsgx_uae_service
+	Common_App_Link_Flags += -lsgx_uae_service
 endif
+
+Test_App_Link_Flags := $(Common_App_Link_Flags)
+Test_App_Link_Flags += -Ltest/enclave
+Test_App_Link_Flags += -L../lib
+Test_App_Link_Flags += -lcunit
+Test_App_Link_Flags += -Wl,-rpath=../lib
+
+Demo_App_Link_Flags := $(Common_App_Link_Flags)
+Demo_App_Link_Flags += -ldemo/enclave
+Demo_App_Link_Flags += -lcrypto
+
 
 ######## Enclave Build Settings ########
 
@@ -165,20 +175,29 @@ else
 endif
 Crypto_Library_Name := sgx_tcrypto
 
-Test_Enclave_Include_Paths := -Itest/enclave
-Test_Enclave_Include_Paths += -Itrusted/include
-Test_Enclave_Include_Paths += -Itrusted/include/util
-Test_Enclave_Include_Paths += -Itrusted/include/wrapper
-Test_Enclave_Include_Paths += -Icommon/include
-Test_Enclave_Include_Paths += -I$(SGX_SDK)/include
-Test_Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
-Test_Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
-Test_Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
-Test_Enclave_Include_Paths += -I/usr/local/include
-Test_Enclave_Include_Paths += -I../include
-Test_Enclave_Include_Paths += -I../include/cipher
-Test_Enclave_Include_Paths += -I../include/protocol
-Test_Enclave_Include_Paths += -I../utils/include/kmyth
+Common_Enclave_Include_Paths := -Itrusted/include
+Common_Enclave_Include_Paths += -Itrusted/include/util
+Common_Enclave_Include_Paths += -Itrusted/include/wrapper
+Common_Enclave_Include_Paths += -Icommon/include
+Common_Enclave_Include_Paths += -I$(SGX_SDK)/include
+Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
+Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
+Common_Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
+Common_Enclave_Include_Paths += -I/usr/local/include
+Common_Enclave_Include_Paths += -I../include
+Common_Enclave_Include_Paths += -I../include/cipher
+Common_Enclave_Include_Paths += -I../include/protocol
+Common_Enclave_Include_Paths += -I../utils/include/kmyth
+
+Test_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
+Test_Enclave_Include_Paths += -Itest/enclave
+
+Demo_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
+Demo_Enclave_Include_Paths += -Idemo/enclave
+
+
+
+
 
 Test_Enclave_C_Flags := -Wall
 Test_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
