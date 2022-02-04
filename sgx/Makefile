@@ -38,8 +38,11 @@ SGX_SSL_UNTRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_TRUSTED_LIB_PATH ?= /opt/intel/sgxssl/lib64/
 SGX_SSL_INCLUDE_PATH ?= /opt/intel/sgxssl/include/
 
-ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
-ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_test_enclave_u.h"'
+TEST_ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_test_enclave_t.h"'
+TEST_ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_test_enclave_u.h"'
+
+DEMO_ENCLAVE_HEADER_TRUSTED ?= '"kmyth_sgx_retrieve_key_demo_enclave_t.h"'
+DEMO_ENCLAVE_HEADER_UNTRUSTED ?= '"kmyth_sgx_retrieve_key_demo_enclave_u.h"'
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -80,39 +83,59 @@ else
 endif
 
 Test_App_Name := test/bin/kmyth_enclave_tests
+Demo_App_Name := demo/bin/kmyth_sgx_retrieve_key_demo
 
 Test_App_Source_Files := test/app/kmyth_sgx_test.c \
 	                 untrusted/src/wrapper/sgx_seal_unseal_impl.c
 
-Test_App_Include_Paths := -Itest/enclave
-Test_App_Include_Paths += -Iuntrusted/include/ocall
-Test_App_Include_Paths += -Iuntrusted/include/util
-Test_App_Include_Paths += -Iuntrusted/include/wrapper
-Test_App_Include_Paths += -Icommon/include
-Test_App_Include_Paths += -I$(SGX_SDK)/include
-Test_App_Include_paths += -I../utils/include
-Test_App_Include_Paths += -I../logger/include
-Test_App_Include_Paths += -I../include/network
+Demo_App_Source_files := demo/app/kmyth_sgx_retrieve_key_demo.c
 
-Test_App_C_Flags := $(SGX_COMMON_CFLAGS)
-Test_App_C_Flags += -fPIC
-Test_App_C_Flags += -Wno-attributes
-Test_App_C_Flags += $(Test_App_Include_Paths)
-Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(ENCLAVE_HEADER_UNTRUSTED)
+
+Common_App_Include_Paths := -Iuntrusted/include/ocall
+Common_App_Include_Paths += -Iuntrusted/include/util
+Common_App_Include_Paths += -Iuntrusted/include/wrapper
+Common_App_Include_Paths += -Icommon/include
+Common_App_Include_Paths += -I$(SGX_SDK)/include
+Common_App_Include_Paths += -I../include/network
+
+Test_App_Include_Paths := -Itest/enclave
+Test_App_Include_Paths += -I../utils/include
+Test_App_Include_Paths += -I../logger/include
+Test_App_Include_Paths += $(Common_App_Include_Paths)
+
+Demo_App_Include_Paths := -Idemo/include
+Demo_App_Include_Paths += -Idemo/enclave
+Demo_App_Include_Paths += -Idemo/server/include
+Demo_App_Include_Paths += -I../incldue/protocol
+Demo_App_Include_Paths += $(Common_App_Include_Paths)
+
+Common_App_C_Flags := $(SGX_COMMON_CFLAGS)
+Common_App_C_Flags += -fPIC
+Common_App_C_Flags += -Wno-attributes
+
+Test_App_C_Flags := $(Test_App_Include_Paths)
+Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
+
+Demo_App_C_Flags := $(Demo_App_Include_Paths)
+Demo_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
 
 # Three configuration modes - Debug, prerelease, release
 #   Debug - Macro DEBUG enabled.
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-	Test_App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+	Common_App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
-	Test_App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+	Common_App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
-	Test_App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+	Common_App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
+Test_App_C_Flags += $(Common_App_C_Flags)
+Demo_App_C_Flags += $(Common_App_C_Flags)
+
 Test_App_Cpp_Flags := $(Test_App_C_Flags) -std=c++11
+Demo_App_Cpp_Flags := $(Demo_App_C_Flags) -std=c++11
 
 Test_App_Link_Flags := $(SGX_COMMON_CFLAGS)
 Test_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
@@ -164,7 +187,7 @@ Test_Enclave_C_Flags += -fvisibility=hidden
 Test_Enclave_C_Flags += -fpie
 Test_Enclave_C_Flags += -fstack-protector
 Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
-Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(ENCLAVE_HEADER_TRUSTED)
+Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 Test_Enclave_C_Flags += -DKMYTH_SGX
 
 Test_Enclave_Cpp_Flags := $(Test_Enclave_C_Flags)
