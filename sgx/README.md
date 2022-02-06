@@ -1,3 +1,5 @@
+# Kmyth SGX Integration
+
 The code maintained here provides functionality supporting kmyth
 features implemented within SGX enclaves. This includes the ECALLs and
 OCALLs needed to seal or unseal data into the enclave. In order to use
