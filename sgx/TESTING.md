@@ -8,6 +8,11 @@ make test
 ```
 will execute a limited set of unit tests for the kmyth SGX functionality. These tests require both ```libkmip``` and ```libkmyth``` be installed.
 
+Running
+```
+make clean
+```
+will remove all build artifacts.
 
 ## ECDH Key Exchange Demo with SGX
 

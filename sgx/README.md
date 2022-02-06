@@ -1,3 +1,5 @@
+# Kmyth SGX Integration
+
 The code maintained here provides functionality supporting kmyth
 features implemented within SGX enclaves. This includes the ECALLs and
 OCALLs needed to seal or unseal data into the enclave. In order to use
@@ -7,7 +9,7 @@ functionality as part of your application and enclave. The ```demo```
 directory contains an example application that performs an ECDH key
 agreement with a "remote" server and securely retrieves a key from the
 remote server into the enclave. For more information on the demo see
-[Tests and Demo][TESTING.md].
+[Tests and Demo](TESTING.md).
 
 Some key features of the provided demonstration files worth noting include:
 * The ```kmyth_enclave.edl``` file is included in
