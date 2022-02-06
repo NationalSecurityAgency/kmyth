@@ -1,12 +1,13 @@
-The code maintained here provides functionality supporting kmyth features
-implemented within SGX enclaves. This includes the ECALLs and OCALLs
-needed to seal or unseal data into the enclave. In order to use it
-you must create your own enclave, include ```kmyth_enclave.edl``` in
-your ```.edl``` file, and build the object files for this functionality
-as part of your application and enclave. The ```demo``` directory
-contains an example application that performs an ECDH key agreement with
-a "remote" server and securely retrieves a key from the remote server
-into the enclave.
+The code maintained here provides functionality supporting kmyth
+features implemented within SGX enclaves. This includes the ECALLs and
+OCALLs needed to seal or unseal data into the enclave. In order to use
+it you must create your own enclave, include ```kmyth_enclave.edl```
+in your ```.edl``` file, and build the object files for this
+functionality as part of your application and enclave. The ```demo```
+directory contains an example application that performs an ECDH key
+agreement with a "remote" server and securely retrieves a key from the
+remote server into the enclave. For more information on the demo see
+[Tests and Demo][TESTING.md].
 
 Some key features of the provided demonstration files worth noting include:
 * The ```kmyth_enclave.edl``` file is included in
@@ -17,7 +18,7 @@ Some key features of the provided demonstration files worth noting include:
 ENCLAVE_HEADER_TRUSTED ?= '"Name of the header for the trusted portion"'
 ENCLAVE_HEADER_UNTRUSTED ?= '"Name of the header for the untrusted portion"'
 ```
-* The locations of the SGX SSL libraries are given in the ```Makefile```:
+* The locations of the SGX SSL libraries are specified in the ```Makefile```:
 ```
 SGX_SSL_UNTRUSTED_LIB_PATH ?= <path to SGX SSL untrusted libraries>
 SGX_SSL_TRUSTED_LIB_PATH ?= <path to SGX SSL trusted libraries>
