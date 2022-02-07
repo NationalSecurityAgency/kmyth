@@ -769,7 +769,7 @@ int negotiate_client_session_key(int socket_fd,
   }
   size_t response_len = 8192 * sizeof(unsigned char);
 
-  kmyth_log(LOG_INFO, "Sending nonce A: %zd bytes", nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Sending nonce A: %zd bytes", nonce_a_len);
 
   result = build_nonce_request(public_key_ctx,
                                nonce_a, nonce_a_len,
@@ -790,7 +790,7 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Successfully sent nonce A.");
+  kmyth_log(LOG_DEBUG, "Successfully sent nonce A.");
 
   ssize_t read_result = read(socket_fd, response, response_len);
 
@@ -802,7 +802,7 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Received %zd bytes", read_result);
+  kmyth_log(LOG_DEBUG, "Received %zd bytes", read_result);
 
   kmyth_clear_and_free(request, request_len);
   request = NULL;
@@ -827,9 +827,9 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Received nonce A: %zd bytes", received_nonce_a_len);
-  kmyth_log(LOG_INFO, "Received nonce B: %zd bytes", nonce_b_len);
-  kmyth_log(LOG_INFO, "Received ID: %.*s", received_id_len, received_id);
+  kmyth_log(LOG_DEBUG, "Received nonce A: %zd bytes", received_nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Received nonce B: %zd bytes", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Received ID: %.*s", received_id_len, received_id);
 
   if (nonce_a_len != received_nonce_a_len)
   {
@@ -970,15 +970,15 @@ int negotiate_server_session_key(int socket_fd,
                                &received_nonce_a, &received_nonce_a_len,
                                &received_id, &received_id_len);
 
-  kmyth_log(LOG_INFO, "Received nonce A: %zd bytes", received_nonce_a_len);
-  kmyth_log(LOG_INFO, "Received ID: %.*s", received_id_len, received_id);
+  kmyth_log(LOG_DEBUG, "Received nonce A: %zd bytes", received_nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Received ID: %.*s", received_id_len, received_id);
 
   kmyth_clear_and_free(received_id, received_id_len);
   kmyth_clear_and_free(response, response_len);
   response = NULL;
   response_len = 0;
 
-  kmyth_log(LOG_INFO, "Sending nonce B: %zd", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Sending nonce B: %zd", nonce_b_len);
 
   result = build_nonce_response(public_key_ctx,
                                 received_nonce_a, received_nonce_a_len,
@@ -1058,7 +1058,7 @@ int negotiate_server_session_key(int socket_fd,
   }
 
   kmyth_clear_and_free(received_nonce_b, received_nonce_b_len);
-  kmyth_log(LOG_INFO, "Received nonce B: %zd bytes", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Received nonce B: %zd bytes", nonce_b_len);
 
   // Use nonces to generate shared session key S
   result = generate_session_key(received_nonce_a, received_nonce_a_len,
