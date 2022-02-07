@@ -52,7 +52,7 @@ int retrieve_key_with_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Sending request for a key with ID: %.*s", key_id_len,
+  kmyth_log(LOG_DEBUG, "Sending request for a key with ID: %.*s", key_id_len,
             key_id);
   ssize_t write_result =
     write(socket_fd, encrypted_request, encrypted_request_len);
@@ -90,7 +90,7 @@ int retrieve_key_with_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Received %zd bytes.", read_result);
+  kmyth_log(LOG_DEBUG, "Received %zd bytes.", read_result);
 
   unsigned char *response = NULL;
   size_t response_len = 0;
@@ -199,7 +199,7 @@ int send_key_with_session_key(int socket_fd,
     kmip_destroy(&kmip_context);
     return 1;
   }
-  kmyth_log(LOG_INFO, "Received a KMIP Get request for key ID: %.*s",
+  kmyth_log(LOG_DEBUG, "Received a KMIP Get request for key ID: %.*s",
             key_id_len, key_id);
 
   unsigned char *response = NULL;
@@ -241,7 +241,7 @@ int send_key_with_session_key(int socket_fd,
     kmyth_log(LOG_ERR, "Failed to fully send the encrypted KMIP key response.");
     return 1;
   }
-  kmyth_log(LOG_INFO, "Successfully sent the encrypted KMIP key response.");
+  kmyth_log(LOG_DEBUG, "Successfully sent the encrypted KMIP key response.");
 
   return 0;
 }
