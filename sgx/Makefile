@@ -252,13 +252,12 @@ Demo_Enclave_Link_Flags += -L/usr/local/lib
 
 Test_Enclave_Name := kmyth_sgx_test_enclave
 Test_Enclave_Lib := $(Test_Enclave_Name).so
-Test_Enclave_Signing_Key := $(Test_Enclave_Name)_private.pem
+
 Test_Signed_Enclave_Name := $(Test_Enclave_Name).signed.so
 Test_Enclave_Config_File := $(Test_Enclave_Name).config.xml
 
 Demo_Enclave_Name := kmyth_sgx_retrieve_key_demo_enclave
 Demo_Enclave_Lib := $(Demo_Enclave_Name).so
-Demo_Enclave_Signing_Key := $(Demo_Enclave_Name)_private.pem
 Demo_Signed_Enclave_Name := $(Demo_Enclave_Name).signed.so
 Demo_Enclave_Config_File := $(Demo_Enclave_Name).config.xml
 
@@ -270,30 +269,28 @@ endif
 endif
 endif
 
+Enclave_Signing_Key := kmyth_private.pem
+
+# Message for missing Enclave Signing Key - Fatal Build Error
+define err_no_enclave_signing_key
+FAIL - No Enclave Signing Key found
+Generate or install $(Enclave_Signing_Key)
+e.g., run 'openssl genrsa -out $(Enclave_Signing_Key) -3 3072'
+endef
+
+$(Enclave_Signing_Key):
+	$(error $(err_no_enclave_signing_key))
+
 ######## Demo Server Build Settings ########
 
 Server_Name := demo/bin/ecdh-server
 Client_Name := demo/bin/ecdh-client
 
-# Message for missing Demo Enclave Signing Key - Fatal Build Error
-define err_no_demo_enclave_signing_key
-FAIL - No Demo Enclave Signing Key found
-Generate or install demo/enclave/$(DemoEnclave_Signing_Key)
-e.g., run 'openssl genrsa -out demo/enclave/$(Demo_Enclave_Signing_Key) -3 3072'
-endef
-
-# Message for missing Test Enclave Signing Key - Fatal Build Error
-define err_no_test_enclave_signing_key
-FAIL - No Test Enclave Signing Key found
-Generate or install test/enclave/$(Test_Enclave_Signing_Key)
-e.g., run 'openssl genrsa -out test/enclave/$(Test_Enclave_Signing_Key) -3 3072'
-endef
-
 .PHONY: test-pre test-all test-run demo-pre demo-all demo-test-keys-certs demo
 test-pre:
 	@mkdir -p test/bin 
-	@if [ ! -f test/enclave/$(Test_Enclave_Signing_Key) ]; then \
-	   openssl genrsa -out test/enclave/$(Test_Enclave_Signing_Key) -3 3072; \
+	@if [ ! -f $(Enclave_Signing_Key) ]; then \
+	   openssl genrsa -out $(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@rm -f test/app/*~
 	@rm -f untrusted/src/*/*~ untrusted/include/*/*~
@@ -303,8 +300,8 @@ test-pre:
 
 demo-pre:
 	@mkdir -p demo/bin 
-	@if [ ! -f demo/enclave/$(Demo_Enclave_Signing_Key) ]; then \
-	   openssl genrsa -out demo/enclave/$(Demo_Enclave_Signing_Key) -3 3072; \
+	@if [ ! -f $(Enclave_Signing_Key) ]; then \
+	   openssl genrsa -out $(Enclave_Signing_Key) -3 3072; \
 	 fi
 	@rm -f demo/app/*~
 	@rm -f untrusted/src/*/*~ untrusted/include/*/*~
@@ -566,12 +563,11 @@ test/enclave/$(Test_Enclave_Lib): test/enclave/$(Test_Enclave_Name)_t.o \
 	@$(CXX) $^ -o $@ $(Test_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
-test/enclave/$(Test_Enclave_Signing_Key):
-	$(error $(err_no_test_enclave_signing_key))
+
 
 test/enclave/$(Test_Signed_Enclave_Name): test/enclave/$(Test_Enclave_Lib) \
-                                test/enclave/$(Test_Enclave_Signing_Key)
-	@$(SGX_ENCLAVE_SIGNER) sign -key test/enclave/$(Test_Enclave_Signing_Key) \
+                                $(Enclave_Signing_Key)
+	@$(SGX_ENCLAVE_SIGNER) sign -key $(Enclave_Signing_Key) \
 		                    -enclave test/enclave/$(Test_Enclave_Lib) \
 		                    -out $@ \
 	                            -config test/enclave/$(Test_Enclave_Config_File)
@@ -586,8 +582,9 @@ test: test-all
 
 test-clean:
 	@rm -f test/enclave/*_t.h test/enclave/*_u.h test/enclave/*_t.c test/enclave/*_u.c
-	@rm -f test/enclave/*.o test/enclave/*.so test/enclave/*.pem
+	@rm -f test/enclave/*.o test/enclave/*.so
 	@rm -rf test/bin
+	@rm -f $(Enclave_Signing_Key)
 
 
 
@@ -653,11 +650,8 @@ demo/enclave/$(Demo_Enclave_Lib): demo/enclave/$(Demo_Enclave_Name)_t.o \
 	@$(CXX) $^ -o $@ $(Demo_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
-demo/enclave/$(Demo_Enclave_Signing_Key):
-	$(error $(err_no_demo_enclave_signing_key))
-
-demo/enclave/$(Demo_Signed_Enclave_Name): demo/enclave/$(Demo_Enclave_Lib) demo/enclave/$(Demo_Enclave_Signing_Key)
-	@$(SGX_ENCLAVE_SIGNER) sign -key demo/enclave/$(Demo_Enclave_Signing_Key) \
+demo/enclave/$(Demo_Signed_Enclave_Name): demo/enclave/$(Demo_Enclave_Lib) $(Enclave_Signing_Key)
+	@$(SGX_ENCLAVE_SIGNER) sign -key $(Enclave_Signing_Key) \
 	                            -enclave demo/enclave/$(Demo_Enclave_Lib) \
 	                            -out $@ \
 	                            -config demo/enclave/$(Demo_Enclave_Config_File)
@@ -675,13 +669,15 @@ demo/data/server_cert_test.pem: demo/data/gen_test_keys_certs.bash
 demo-clean:
 	@rm -f demo/enclave/*_u.h demo/enclave/*_t.h demo/enclave/*_u.c demo/enclave/*_t.c
 	@rm -f demo/enclave/*.o demo/enclave/*.so
-	@rm -f demo/enclave/*.pem demo/data/*.pem
+	@rm -f demo/data/*.pem
 	@rm -f demo/server/*.o
 	@rm -rf demo/bin
 	@rm -f demo/app/*.o
 	@rm -f *.log
+	@rm -f $(Enclave_Signing_Key)
 
 .PHONY: clean
 clean:
 	make test-clean
 	make demo-clean
+
