@@ -348,7 +348,7 @@ demo-test-keys-certs: demo/data/client_priv_test.pem \
 
 demo: demo-all demo-test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
-	@$(CURDIR)/$(Server_Name) -r demo/data/server_priv_test.pem -u demo/data/client_cert_test.pem -p 7000 &
+	@$(CURDIR)/$(Server_Name) -r demo/data/server_priv_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@echo "RUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"

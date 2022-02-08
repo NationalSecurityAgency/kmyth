@@ -71,6 +71,8 @@ static void usage(const char *prog)
           "Network Information --\n"
           "  -p or --port     The port number to use.\n"
           "  -i or --ip       The IP address or hostname of the server (only used by the client).\n"
+          "Test Options --\n"
+          "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
           "Misc --\n"
           "  -h or --help     Help (displays this usage).\n\n", prog);
 }
@@ -88,25 +90,29 @@ void get_options(ECDHServer * this, int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "r:u:p:i:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:u:p:i:m:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
-      // Key files
+    // Key files
     case 'r':
       this->private_key_path = optarg;
       break;
     case 'u':
       this->public_cert_path = optarg;
       break;
-      // Network
+    // Network
     case 'p':
       this->port = optarg;
       break;
     case 'i':
       this->ip = optarg;
       break;
-      // Misc
+    // Test
+    case 'm':
+      this->maxconn = atoi(optarg);
+      break;
+    // Misc
     case 'h':
       usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -174,6 +180,8 @@ void recv_msg(ECDHServer * this, void *buf, size_t len)
 void create_server_socket(ECDHServer * this)
 {
   int listen_fd = UNSET_FD;
+  int numconn = 0;
+  int ret;
 
   kmyth_log(LOG_DEBUG, "Setting up server socket");
   if (setup_server_socket(this->port, &listen_fd))
@@ -189,15 +197,42 @@ void create_server_socket(ECDHServer * this)
     error(this);
   }
 
-  this->socket_fd = accept(listen_fd, NULL, NULL);
-  if (this->socket_fd == -1)
-  {
-    kmyth_log(LOG_ERR, "Socket accept failed.");
-    close(listen_fd);
-    error(this);
+  if (this->maxconn > 0) {
+    kmyth_log(LOG_DEBUG, "Server will quit after receiving %d connections.", this->maxconn);
+  }
+
+  while (true) {
+    this->socket_fd = accept(listen_fd, NULL, NULL);
+    if (this->socket_fd == -1)
+    {
+      kmyth_log(LOG_ERR, "Socket accept failed.");
+      close(listen_fd);
+      error(this);
+    }
+
+    ret = fork();
+    if (ret == -1) {
+      kmyth_log(LOG_ERR, "Server fork failed.");
+      close(listen_fd);
+      error(this);
+    } else if (ret == 0) {
+      /* child */
+      close(listen_fd);
+      return;
+    } else {
+      /* parent */
+      close(this->socket_fd);
+      numconn++;
+      if (this->maxconn > 0 && numconn >= this->maxconn) {
+        break;
+      }
+    }
   }
 
   close(listen_fd);
+  while (wait(NULL) > 0);
+  cleanup(this);
+  exit(EXIT_SUCCESS);
 }
 
 void create_client_socket(ECDHServer * this)

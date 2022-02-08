@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <openssl/evp.h>
@@ -38,6 +39,7 @@ typedef struct ECDHServer
   char *public_cert_path;
   char *port;
   char *ip;
+  int maxconn;
   int socket_fd;
   EVP_PKEY *local_privkey;
   EVP_PKEY *remote_pubkey;
@@ -55,6 +57,8 @@ static const struct option longopts[] = {
   // Network info
   {"port", required_argument, 0, 'p'},
   {"ip", required_argument, 0, 'i'},
+  // Test options
+  {"maxconn", required_argument, 0, 'm'},
   // Misc
   {"help", no_argument, 0, 'h'},
   {0, 0, 0, 0}
