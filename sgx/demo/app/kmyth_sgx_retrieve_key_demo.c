@@ -32,7 +32,7 @@
 
 #include "kmyth_sgx_retrieve_key_demo_enclave_u.h"
 
-#define ENCLAVE_PATH "enclave/kmyth_sgx_retrieve_key_demo_enclave.signed.so"
+#define ENCLAVE_PATH "demo/enclave/kmyth_sgx_retrieve_key_demo_enclave.signed.so"
 
 #ifndef DEMO_LOG_LEVEL
 #define DEMO_LOG_LEVEL LOG_DEBUG
@@ -45,8 +45,8 @@
 #define demo_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 // Client (enclave) private key and Server certificate filenames
-#define CLIENT_PRIVATE_KEY_FILE "data/client_priv_test.pem"
-#define SERVER_PUBLIC_CERT_FILE "data/server_cert_test.pem"
+#define CLIENT_PRIVATE_KEY_FILE "demo/data/client_priv_test.pem"
+#define SERVER_PUBLIC_CERT_FILE "demo/data/server_cert_test.pem"
 
 /* These parameters are hard-coded for now. */
 #define SERVER_IP "localhost"

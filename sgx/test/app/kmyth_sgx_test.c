@@ -15,7 +15,7 @@
 #include "kmyth_sgx_test_enclave_u.h"
 
 // NB: Should specify as an absolute path.
-#define ENCLAVE_PATH "enclave/kmyth_sgx_test_enclave.signed.so"
+#define ENCLAVE_PATH "test/enclave/kmyth_sgx_test_enclave.signed.so"
 sgx_enclave_id_t eid = 0;
 
 void ocall_print_table_entry(size_t size, uint8_t * data)
