@@ -286,26 +286,24 @@ $(Enclave_Signing_Key):
 Server_Name := demo/bin/ecdh-server
 Client_Name := demo/bin/ecdh-client
 
-.PHONY: test-pre test-all test-run demo-pre demo-all demo-test-keys-certs demo
-test-pre:
-	@mkdir -p test/bin 
+.PHONY: pre test-pre test-all test-run demo-pre demo-all demo-test-keys-certs demo
+
+pre:
 	@if [ ! -f $(Enclave_Signing_Key) ]; then \
-	   openssl genrsa -out $(Enclave_Signing_Key) -3 3072; \
-	 fi
-	@rm -f test/app/*~
+		openssl genrsa -out $(Enclave_Signing_Key) -3 3072; \
+	fi
 	@rm -f untrusted/src/*/*~ untrusted/include/*/*~
 	@rm -f trusted/src/*/*~ trusted/include/*~ trusted/include/*/*~
+
+test-pre: pre
+	@mkdir -p test/bin
+	@rm -f test/app/*~
 	@(test -f ../lib/libkmyth-logger.so && \
 		test -f ../lib/libkmyth-utils.so) || make libs -C ../
 
-demo-pre:
+demo-pre: pre
 	@mkdir -p demo/bin 
-	@if [ ! -f $(Enclave_Signing_Key) ]; then \
-	   openssl genrsa -out $(Enclave_Signing_Key) -3 3072; \
-	 fi
 	@rm -f demo/app/*~
-	@rm -f untrusted/src/*/*~ untrusted/include/*/*~
-	@rm -f trusted/src/*/*~ trusted/include/*~ trusted/include/*/*~
 
 ifeq ($(Build_Mode), HW_RELEASE)
 test-all: $(Test_App_Name) $(Test_Enclave_Lib)
