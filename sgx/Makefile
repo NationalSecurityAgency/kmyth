@@ -103,7 +103,6 @@ Test_App_Include_Paths += -I../utils/include
 Test_App_Include_Paths += -I../logger/include
 Test_App_Include_Paths += $(Common_App_Include_Paths)
 
-#Demo_App_Include_Paths := -Idemo/include
 Demo_App_Include_Paths += -Idemo/enclave
 Demo_App_Include_Paths += -Idemo/server/include
 Demo_App_Include_Paths += -I../include/protocol
