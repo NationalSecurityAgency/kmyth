@@ -34,6 +34,10 @@
 
 #define ENCLAVE_PATH "demo/enclave/kmyth_sgx_retrieve_key_demo_enclave.signed.so"
 
+#ifndef DEMO_LOG_LEVEL
+#define DEMO_LOG_LEVEL LOG_DEBUG
+#endif
+
 /**
  * @brief Macro used to simplify logging statements initiated from
  *        untrusted space.
@@ -73,7 +77,7 @@ int main(int argc, char **argv)
   set_app_name("Kmyth_SGX_RetrieveKey_Demo");
   set_app_version("0.0.0");
   set_applog_path("../sgx/sgx_retrievekey_demo.log");
-  set_applog_severity_threshold(LOG_DEBUG);
+  set_applog_severity_threshold(DEMO_LOG_LEVEL);
   set_applog_output_mode(0);
 
   // read client (enclave) private EC signing key from file (.pem formatted)
