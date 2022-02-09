@@ -108,14 +108,14 @@ Demo_App_Include_Paths += -Idemo/server/include
 Demo_App_Include_Paths += -I../include/protocol
 Demo_App_Include_Paths += $(Common_App_Include_Paths)
 
-Common_App_C_Flags := $(SGX_COMMON_CFLAGS)
+Common_App_C_Flags += $(SGX_COMMON_CFLAGS)
 Common_App_C_Flags += -fPIC
 Common_App_C_Flags += -Wno-attributes
 
-Test_App_C_Flags := $(Test_App_Include_Paths)
+Test_App_C_Flags += $(Test_App_Include_Paths)
 Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
 
-Demo_App_C_Flags := $(Demo_App_Include_Paths)
+Demo_App_C_Flags += $(Demo_App_Include_Paths)
 Demo_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
 
 # Three configuration modes - Debug, prerelease, release
@@ -133,8 +133,8 @@ endif
 Test_App_C_Flags += $(Common_App_C_Flags)
 Demo_App_C_Flags += $(Common_App_C_Flags)
 
-Test_App_Cpp_Flags := $(Test_App_C_Flags) -std=c++11
-Demo_App_Cpp_Flags := $(Demo_App_C_Flags) -std=c++11
+Test_App_Cpp_Flags += $(Test_App_C_Flags) -std=c++11
+Demo_App_Cpp_Flags += $(Demo_App_C_Flags) -std=c++11
 
 Common_App_Link_Flags := $(SGX_COMMON_CFLAGS)
 Common_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
@@ -194,7 +194,7 @@ Test_Enclave_Include_Paths += -Itest/enclave
 Demo_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
 Demo_Enclave_Include_Paths += -Idemo/enclave
 
-Common_Enclave_C_Flags := -Wall
+Common_Enclave_C_Flags += -Wall
 Common_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
 Common_Enclave_C_Flags += -nostdinc
 Common_Enclave_C_Flags += -fvisibility=hidden
@@ -202,22 +202,22 @@ Common_Enclave_C_Flags += -fpie
 Common_Enclave_C_Flags += -fstack-protector
 Common_Enclave_C_Flags += -DKMYTH_SGX
 
-Test_Enclave_C_Flags := $(Common_Enclave_C_Flags)
+Test_Enclave_C_Flags += $(Common_Enclave_C_Flags)
 Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
-Demo_Enclave_C_Flags := $(Common_Enclave_C_Flags)
+Demo_Enclave_C_Flags += $(Common_Enclave_C_Flags)
 Demo_Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
 Demo_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
-Common_Enclave_Cpp_Flags := -std=c++03
+Common_Enclave_Cpp_Flags += -std=c++03
 Common_Enclave_Cpp_Flags += -nostdinc++
 Common_Enclave_Cpp_Flags += --include "tsgxsslio.h"
 
-Test_Enclave_Cpp_Flags := $(Test_Enclave_C_Flags)
+Test_Enclave_Cpp_Flags += $(Test_Enclave_C_Flags)
 Test_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
 
-Demo_Enclave_Cpp_Flags := $(Demo_Enclave_C_Flags)
+Demo_Enclave_Cpp_Flags += $(Demo_Enclave_C_Flags)
 Demo_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
 
 Common_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
