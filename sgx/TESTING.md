@@ -61,25 +61,23 @@ are the same for both the client and server.
 #### Build
 
 Before building, install libkmyth, libkmip, and the SGX SDK,
-and add both to the dynamic linker configuration (ldconfig).
+and add them to the dynamic linker configuration (ldconfig).
 
-To build the program and generate new test keys:
+To build the programs and generate new test keys:
 ```
-make pre bin/ecdh-server bin/ecdh-client
-cd data
-bash gen_test_keys_certs.bash
+make demo-all
 ```
 
 #### Usage
 
 To run as a key server (all arguments are required):
 ```
-./bin/ecdh-server -r data/server_priv_test.pem -u data/client_cert_test.pem -p 7000
+./demo/bin/ecdh-server -r data/server_priv_test.pem -u data/client_cert_test.pem -p 7000
 ```
 
 To run as a client application (all arguments are required):
 ```
-./bin/ecdh-client -r data/client_priv_test.pem -u data/server_cert_test.pem -i localhost -p 7000
+./demo/bin/ecdh-client -r data/client_priv_test.pem -u data/server_cert_test.pem -i localhost -p 7000
 ```
 
 The client application should only be started after the server is already running.
@@ -96,3 +94,27 @@ then the server does the same.
 The key sharing messages are in a custom format containing:
 * the ephemeral public key point in octet string format
 * a signature digest for the octet string, signed by the persistent private key
+
+
+### ECDHE/TLS Proxy Application
+
+In addition to the ECDHE test key server,
+Kmyth also includes a proxy application supporting connections
+from the SGX demo program to any remote TLS service.
+
+This proxy is intended for test purposes only.
+It functions as a man-in-the-middle,
+so all message payloads are visible to the proxy,
+which does not use trusted hardware to protect data in use.
+The proxy should only be used for testing and demonstration purposes.
+
+The ECDHE key exchange format is identical to that used in the ECDHE test key server,
+which is described above.
+
+#### Usage
+
+The proxy usage is similar to the test key server application.
+
+```
+./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT
+```

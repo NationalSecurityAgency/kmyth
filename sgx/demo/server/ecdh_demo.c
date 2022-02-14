@@ -87,7 +87,7 @@ void get_options(ECDHServer * this, int argc, char **argv)
   }
 
   int options;
-  int option_index;
+  int option_index = 0;
 
   while ((options =
           getopt_long(argc, argv, "r:u:p:i:m:h", longopts, &option_index)) != -1)

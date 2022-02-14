@@ -5,6 +5,9 @@
  *        for the ECDHE test applications.
  */
 
+#ifndef KMYTH_ECDH_DEMO_H
+#define KMYTH_ECDH_DEMO_H
+
 #include <getopt.h>
 #include <netdb.h>
 #include <string.h>
@@ -95,3 +98,5 @@ void get_operational_key(ECDHServer * this);
 
 void server_main(ECDHServer * this);
 void client_main(ECDHServer * this);
+
+#endif
