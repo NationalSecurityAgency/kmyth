@@ -482,21 +482,21 @@ $(Server_Name): demo/server/ecdh_server.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Client_Name): demo/server/ecdh_client.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Proxy_Name):  demo/server/tls_proxy.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl
 	@echo "LINK =>  $@"
 
 ######## Test Enclave Objects ########

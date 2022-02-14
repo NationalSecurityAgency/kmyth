@@ -3,6 +3,15 @@
  * @brief Code for the ECDHE/TLS proxy application.
  */
 
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
+#include <openssl/opensslconf.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 #include "ecdh_demo.h"
 #include "tls_proxy.h"
@@ -15,14 +24,18 @@ void proxy_init(TLSProxy * this)
 {
   secure_memset(this, 0, sizeof(TLSProxy));
   init(&this->ecdhconn);
-  this->tlsconn.socket_fd = UNSET_FD;
 }
 
 static void tls_cleanup(TLSConnection *tlsconn)
 {
-  if (tlsconn->socket_fd != UNSET_FD)
+  if (tlsconn->conn != NULL)
   {
-    close(tlsconn->socket_fd);
+    BIO_free_all(tlsconn->conn);
+  }
+
+  if (tlsconn->ctx != NULL)
+  {
+    SSL_CTX_free(tlsconn->ctx);
   }
 }
 
@@ -53,6 +66,7 @@ static void proxy_usage(const char *prog)
     "TLS Connection Information --\n"
     "  -I or --remote-ip       The IP address or hostname of the remote server.\n"
     "  -P or --remote-port     The port number to use when connecting to the remote server.\n"
+    // TODO CA path
     "Test Options --\n"
     "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
     "Misc --\n"
@@ -72,7 +86,7 @@ static void proxy_get_options(TLSProxy * this, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:u:p:I:P:m:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:u:p:I:P:C:m:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
@@ -89,10 +103,13 @@ static void proxy_get_options(TLSProxy * this, int argc, char **argv)
       break;
     // TLS Connection
     case 'I':
-      this->tlsconn.ip = optarg;
+      this->tlsconn.host = optarg;
       break;
     case 'P':
       this->tlsconn.port = optarg;
+      break;
+    case 'C':
+      this->tlsconn.ca_path = optarg;
       break;
     // Test
     case 'm':
@@ -114,7 +131,7 @@ void proxy_check_options(TLSProxy * this)
 
   bool err = false;
 
-  if (this->tlsconn.ip == NULL)
+  if (this->tlsconn.host == NULL)
   {
     fprintf(stderr, "Remote IP argument (-I) is required.\n");
     err = true;
@@ -131,21 +148,145 @@ void proxy_check_options(TLSProxy * this)
   }
 }
 
-void tls_connect(TLSConnection * tlsconn)
+static void log_openssl_error(unsigned long err, const char* const label)
 {
-  
+  const char* const str = ERR_reason_error_string(err);
+  if (str)
+  {
+    kmyth_log(LOG_ERR, "%s\n", str);
+  }
+  else
+  {
+    kmyth_log(LOG_ERR, "%s failed: %lu (0x%lx)\n", label, err, err);
+  }
 }
 
-void proxy_start(TLSProxy * this)
+static int tls_config_ctx(TLSConnection * tlsconn)
 {
-  
+  int ret;
+  unsigned long ssl_err;
+
+  const SSL_METHOD* method = TLS_method();
+  ssl_err = ERR_get_error();
+  if (NULL == method)
+  {
+    log_openssl_error(ssl_err, "TLS_method");
+    return -1;
+  }
+
+  tlsconn->ctx = SSL_CTX_new(method);
+  ssl_err = ERR_get_error();
+  if (tlsconn->ctx == NULL)
+  {
+    log_openssl_error(ssl_err, "SSL_CTX_new");
+    return -1;
+  }
+
+  SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
+  SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
+
+  const long flags = SSL_OP_ALL | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
+  SSL_CTX_set_options(tlsconn->ctx, flags);
+
+  ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_path, NULL);
+  ssl_err = ERR_get_error();
+  if (1 != ret)
+  {
+    log_openssl_error(ssl_err, "SSL_CTX_load_verify_locations");
+    return -1;
+  }
+
+  return 0;
 }
 
-void proxy_main(TLSProxy * this)
+static int tls_config_conn(TLSConnection * tlsconn)
 {
-  ECDHServer *ecdhconn = &this->ecdhconn;
-  TLSConnection *tlsconn = &this->tlsconn;
+  int ret;
+  unsigned long ssl_err;
+  SSL *ssl = NULL;
 
+  tlsconn->conn = BIO_new_ssl_connect(tlsconn->ctx);
+  ssl_err = ERR_get_error();
+  if (tlsconn->conn == NULL)
+  {
+    log_openssl_error(ssl_err, "BIO_new_ssl_connect");
+    return -1;
+  }
+
+  ret = BIO_set_conn_hostname(tlsconn->conn, tlsconn->host);
+  ssl_err = ERR_get_error();
+  if (1 != ret)
+  {
+    log_openssl_error(ssl_err, "BIO_set_conn_hostname");
+    return -1;
+  }
+
+  ret = BIO_set_conn_port(tlsconn->conn, tlsconn->port);
+  ssl_err = ERR_get_error();
+  if (1 != ret)
+  {
+    log_openssl_error(ssl_err, "BIO_set_conn_port");
+    return -1;
+  }
+
+  BIO_get_ssl(tlsconn->conn, &ssl);  // internal pointer, not separate allocation
+  ssl_err = ERR_get_error();
+  if (ssl == NULL)
+  {
+    log_openssl_error(ssl_err, "BIO_get_ssl");
+    return -1;
+  }
+
+  ret = SSL_set_cipher_list(ssl, PREFERRED_CIPHERS);
+  ssl_err = ERR_get_error();
+  if (1 != ret)
+  {
+    log_openssl_error(ssl_err, "SSL_set_cipher_list");
+    return -1;
+  }
+
+  ret = SSL_set_tlsext_host_name(ssl, tlsconn->host);
+  ssl_err = ERR_get_error();
+  if (1 != ret)
+  {
+    log_openssl_error(ssl_err, "SSL_set_tlsext_host_name");
+    return -1;
+  }
+
+  return 0;
+}
+
+static int tls_connect(TLSConnection * tlsconn)
+{
+  int res;
+  unsigned long ssl_err;
+
+  res = BIO_do_connect(tlsconn->conn);
+  ssl_err = ERR_get_error();
+  if (1 != res)
+  {
+    log_openssl_error(ssl_err, "BIO_do_connect");
+    return -1;
+  }
+
+  res = BIO_do_handshake(tlsconn->conn);
+  ssl_err = ERR_get_error();
+  if (1 != res)
+  {
+    log_openssl_error(ssl_err, "BIO_do_handshake");
+    return -1;
+  }
+
+  return 0;
+}
+
+static int tls_verify_host(TLSConnection * tlsconn)
+{
+  kmyth_log(LOG_WARNING, "Not verifying remote TLS host.");
+}
+
+static int setup_ecdhconn(ECDHServer *ecdhconn)
+{
   create_server_socket(ecdhconn);
 
   load_private_key(ecdhconn);
@@ -158,7 +299,50 @@ void proxy_main(TLSProxy * this)
 
   get_session_key(ecdhconn);
 
-  tls_connect(tlsconn);
+  return 0;
+}
+
+static int setup_tlsconn(TLSConnection *tlsconn)
+{
+  int ret;
+
+  ret = tls_config_ctx(tlsconn);
+  if (ret) { return ret; }
+
+  ret = tls_config_conn(tlsconn);
+  if (ret) { return ret; }
+
+  ret = tls_connect(tlsconn);
+  if (ret) { return ret; }
+
+  ret = tls_verify_host(tlsconn);
+  if (ret) { return ret; }
+
+  return 0;
+}
+
+void proxy_start(TLSProxy * this)
+{
+  char buf[1024];
+  secure_memset(buf, 0, sizeof(buf));
+
+  kmyth_log(LOG_DEBUG, "In proxy_start");
+
+  BIO_puts(this->tlsconn.conn, "TEST proxy_start");
+
+  BIO_read(this->tlsconn.conn, buf, 1024);
+
+  kmyth_log(LOG_INFO, "received: %s", buf);
+
+}
+
+void proxy_main(TLSProxy * this)
+{
+  // setup_ecdhconn(&this->ecdhconn);
+
+  if (setup_tlsconn(&this->tlsconn)) {
+    proxy_error(this);
+  }
 
   proxy_start(this);
 }

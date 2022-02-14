@@ -9,6 +9,8 @@
 #define KMYTH_TLS_PROXY_H
 
 #include <getopt.h>
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
 
 #include "ecdh_demo.h"
 
@@ -16,11 +18,15 @@
 #define OP_KEY_SIZE 16
 #define MAX_RESP_SIZE 16384
 
+#define PREFERRED_CIPHERS "HIGH:!aNULL:!kRSA:!SRP:!PSK:!CAMELLIA:!RC4:!MD5:!DSS"
+
 typedef struct TLSConnection
 {
+  char *host;
   char *port;
-  char *ip;
-  int socket_fd;
+  char *ca_path;
+  SSL_CTX *ctx;
+  BIO *conn;
 } TLSConnection;
 
 typedef struct TLSProxy
@@ -38,6 +44,7 @@ static const struct option proxy_longopts[] = {
   // TLS connection info
   {"remote-ip", required_argument, 0, 'I'},
   {"remote-port", required_argument, 0, 'P'},
+  {"ca-path", required_argument, 0, 'C'},
   // Test options
   {"maxconn", required_argument, 0, 'm'},
   // Misc
