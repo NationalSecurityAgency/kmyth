@@ -18,8 +18,6 @@
 #define OP_KEY_SIZE 16
 #define MAX_RESP_SIZE 16384
 
-#define PREFERRED_CIPHERS "HIGH:!aNULL:!kRSA:!SRP:!PSK:!CAMELLIA:!RC4:!MD5:!DSS"
-
 typedef struct TLSConnection
 {
   char *host;
