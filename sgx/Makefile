@@ -97,6 +97,8 @@ Common_App_Include_Paths += -Iuntrusted/include/wrapper
 Common_App_Include_Paths += -Icommon/include
 Common_App_Include_Paths += -I$(SGX_SDK)/include
 Common_App_Include_Paths += -I../include/network
+Common_App_Include_Paths += -I../include/cipher
+
 
 Test_App_Include_Paths := -Itest/enclave
 Test_App_Include_Paths += -I../utils/include
@@ -145,6 +147,7 @@ Common_App_Link_Flags += -lpthread
 Common_App_Link_Flags += -lkmyth-utils
 Common_App_Link_Flags += -lkmyth-logger
 Common_App_Link_Flags += -lkmyth-tpm
+Common_App_Link_Flags += -lkmip
 
 ifneq ($(SGX_MODE), HW)
 	Common_App_Link_Flags += -lsgx_uae_service_sim

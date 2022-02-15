@@ -27,8 +27,9 @@
 #include <kmyth/kmyth_log.h>
 #include <kmyth/memory_util.h>
 
+#include "aes_gcm.h"
 #include "ecdh_util.h"
-#include "kmip_io_util.h"
+#include "kmip_util.h"
 #include "socket_util.h"
 
 #define UNSET_FD -1
@@ -77,8 +78,8 @@ void error(ECDHServer * this);
 void get_options(ECDHServer * this, int argc, char **argv);
 void check_options(ECDHServer * this);
 
-void send_msg(ECDHServer * this, const void *buf, size_t len);
-void recv_msg(ECDHServer * this, void *buf, size_t len);
+void ecdh_send_data(ECDHServer * this, const void *buf, size_t len);
+void ecdh_recv_data(ECDHServer * this, void *buf, size_t len);
 
 void create_server_socket(ECDHServer * this);
 void create_client_socket(ECDHServer * this);

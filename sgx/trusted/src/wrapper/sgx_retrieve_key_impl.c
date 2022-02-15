@@ -283,12 +283,24 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   unsigned char *encrypted_response = NULL;
   size_t encrypted_response_len = 0;
 
-  ret_ocall = retrieve_key_ocall(&ret_val,
-                                 encrypted_request,
-                                 encrypted_request_len,
-                                 &encrypted_response,
-                                 &encrypted_response_len, socket_fd);
+  ret_ocall = ecdh_send_ocall(&ret_val,
+                              encrypted_request,
+                              encrypted_request_len,
+                              socket_fd);
   kmyth_enclave_clear_and_free(encrypted_request, encrypted_request_len);
+  if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "Failed to send the KMIP key request.");
+    kmip_destroy(&kmip_context);
+    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    close_socket_ocall(socket_fd);
+    return EXIT_FAILURE;
+  }
+
+  ret_ocall = ecdh_recv_ocall(&ret_val,
+                              &encrypted_response,
+                              &encrypted_response_len,
+                              socket_fd);
   close_socket_ocall(socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {

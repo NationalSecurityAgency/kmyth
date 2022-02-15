@@ -153,7 +153,7 @@ void check_options(ECDHServer * this)
   }
 }
 
-void send_msg(ECDHServer * this, const void *buf, size_t len)
+void ecdh_send_data(ECDHServer * this, const void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   int bytes_sent = write(this->socket_fd, buf, len);
@@ -165,7 +165,7 @@ void send_msg(ECDHServer * this, const void *buf, size_t len)
   }
 }
 
-void recv_msg(ECDHServer * this, void *buf, size_t len)
+void ecdh_recv_data(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   int bytes_read = read(this->socket_fd, buf, len);
@@ -175,6 +175,74 @@ void recv_msg(ECDHServer * this, void *buf, size_t len)
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(this);
   }
+}
+
+void ecdh_send_msg(ECDHServer * this, unsigned char *buf, size_t len)
+{
+  struct ECDHMessageHeader header;
+
+  secure_memset(&header, 0, sizeof(header));
+  header.msg_size = len;
+  ecdh_send_data(this, &header, sizeof(header));
+  ecdh_send_data(this, buf, len);
+}
+
+void ecdh_recv_msg(ECDHServer * this, unsigned char **buf, size_t *len)
+{
+  struct ECDHMessageHeader header;
+
+  secure_memset(&header, 0, sizeof(header));
+  ecdh_recv_data(this, &header, sizeof(header));
+
+  *len = header.msg_size;
+  *buf = calloc(*len, sizeof(unsigned char));
+  if (*buf == NULL)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocate the response buffer.");
+    error(this);
+  }
+
+  ecdh_recv_data(this, *buf, *len);
+}
+
+void ecdh_encrypt_send(ECDHServer * this, unsigned char *plaintext, size_t plaintext_len)
+{
+  int ret;
+  unsigned char *ciphertext = NULL;
+  size_t ciphertext_len = 0;
+
+  ret = aes_gcm_encrypt(this->session_key, this->session_key_len,
+                        plaintext, plaintext_len,
+                        &ciphertext, &ciphertext_len);
+  if (ret)
+  {
+    kmyth_log(LOG_ERR, "Failed to encrypt a message.");
+    error(this);
+  }
+
+  ecdh_send_msg(this, ciphertext, ciphertext_len);
+
+  kmyth_clear_and_free(ciphertext, ciphertext_len);
+}
+
+void ecdh_recv_decrypt(ECDHServer * this, unsigned char **plaintext, size_t *plaintext_len)
+{
+  int ret;
+  unsigned char *ciphertext = NULL;
+  size_t ciphertext_len = 0;
+
+  ecdh_recv_msg(this, &ciphertext, &ciphertext_len);
+
+  ret = aes_gcm_decrypt(this->session_key, this->session_key_len,
+                        ciphertext, ciphertext_len,
+                        plaintext, plaintext_len);
+  if (ret)
+  {
+    kmyth_log(LOG_ERR, "Failed to decrypt a message.");
+    error(this);
+  }
+
+  kmyth_clear_and_free(ciphertext, ciphertext_len);
 }
 
 void create_server_socket(ECDHServer * this)
@@ -327,7 +395,7 @@ void recv_ephemeral_public(ECDHServer * this)
   int ret;
 
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
-  recv_msg(this, &this->remote_ephemeral_pubkey_len,
+  ecdh_recv_data(this, &this->remote_ephemeral_pubkey_len,
            sizeof(this->remote_ephemeral_pubkey_len));
   if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
   {
@@ -336,18 +404,18 @@ void recv_ephemeral_public(ECDHServer * this)
   }
   this->remote_ephemeral_pubkey =
     calloc(this->remote_ephemeral_pubkey_len, sizeof(unsigned char));
-  recv_msg(this, this->remote_ephemeral_pubkey,
+  ecdh_recv_data(this, this->remote_ephemeral_pubkey,
            this->remote_ephemeral_pubkey_len);
 
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
-  recv_msg(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
+  ecdh_recv_data(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
   if (remote_pub_sig_len > MAX_RESP_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key signature size.");
     error(this);
   }
   remote_pub_sig = calloc(remote_pub_sig_len, sizeof(unsigned char));
-  recv_msg(this, remote_pub_sig, remote_pub_sig_len);
+  ecdh_recv_data(this, remote_pub_sig, remote_pub_sig_len);
 
   // check signature on received ephemeral contribution from remote
   ret = verify_buffer(this->remote_pubkey,
@@ -392,11 +460,11 @@ void send_ephemeral_public(ECDHServer * this)
   kmyth_log(LOG_DEBUG, "signed local ephemeral ECDH 'public key'");
 
   kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
-  send_msg(this, &local_pub_len, sizeof(local_pub_len));
-  send_msg(this, local_pub, local_pub_len);
+  ecdh_send_data(this, &local_pub_len, sizeof(local_pub_len));
+  ecdh_send_data(this, local_pub, local_pub_len);
   kmyth_log(LOG_DEBUG, "Sending ephemeral public key signature.");
-  send_msg(this, &local_pub_sig_len, sizeof(local_pub_sig_len));
-  send_msg(this, local_pub_sig, local_pub_sig_len);
+  ecdh_send_data(this, &local_pub_sig_len, sizeof(local_pub_sig_len));
+  ecdh_send_data(this, local_pub_sig, local_pub_sig_len);
 
   kmyth_clear_and_free(local_pub, local_pub_len);
   kmyth_clear_and_free(local_pub_sig, local_pub_sig_len);
@@ -457,6 +525,119 @@ void get_session_key(ECDHServer * this)
             this->session_key_len);
 }
 
+int request_key(ECDHServer *this,
+                unsigned char *key_id, size_t key_id_len,
+                unsigned char **key, size_t *key_len)
+{
+  KMIP kmip_context = { 0 };
+  kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
+
+  unsigned char *key_request = NULL;
+  size_t key_request_len = 0;
+  unsigned char *response = NULL;
+  size_t response_len = 0;
+  unsigned char *received_key_id = NULL;
+  size_t received_key_id_len = 0;
+
+  /* Build and send request. */
+  int result = build_kmip_get_request(&kmip_context,
+                                      key_id, key_id_len,
+                                      &key_request, &key_request_len);
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to build the KMIP Get request.");
+    kmip_destroy(&kmip_context);
+    return EXIT_FAILURE;
+  }
+  ecdh_encrypt_send(this, key_request, key_request_len);
+  kmyth_clear_and_free(key_request, key_request_len);
+
+  /* Receive and parse response. */
+  ecdh_recv_decrypt(this, &response, &response_len);
+  result = parse_kmip_get_response(&kmip_context,
+                                   response, response_len,
+                                   &received_key_id, &received_key_id_len,
+                                   key, key_len);
+  kmyth_clear_and_free(response, response_len);
+  response = NULL;
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to parse the KMIP Get response.");
+    kmip_destroy(&kmip_context);
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "Received a KMIP object with ID: %.*s",
+            received_key_id_len, received_key_id);
+
+  kmyth_clear_and_free(received_key_id, received_key_id_len);
+  kmip_destroy(&kmip_context);
+
+  return EXIT_SUCCESS;
+}
+
+int handle_key_request(ECDHServer *this,
+                      unsigned char *session_key, size_t session_key_len,
+                      unsigned char *key, size_t key_len)
+{
+  int ret;
+  unsigned char *request = NULL;
+  size_t request_len = 0;
+  unsigned char *key_id = NULL;
+  size_t key_id_len = 0;
+  unsigned char *response = NULL;
+  size_t response_len = 0;
+
+  KMIP kmip_context = { 0 };
+  kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
+
+  /* Receive and parse request. */
+  ecdh_recv_decrypt(this, &request, &request_len);
+
+  if (request_len > kmip_context.max_message_size)
+  {
+    kmyth_log(LOG_ERR, "KMIP request exceeds max message size.");
+    kmyth_clear_and_free(request, request_len);
+    kmip_destroy(&kmip_context);
+    return EXIT_FAILURE;
+  }
+
+  // Assuming we received a Get request.
+  ret = parse_kmip_get_request(&kmip_context,
+                               request, request_len,
+                               &key_id, &key_id_len);
+  kmyth_clear_and_free(request, request_len);
+  request = NULL;
+  if (ret)
+  {
+    kmyth_log(LOG_ERR, "Failed to parse the KMIP Get request.");
+    kmip_destroy(&kmip_context);
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "Received a KMIP Get request for key ID: %.*s",
+            key_id_len, key_id);
+
+  /* Build and send response. */
+  ret = build_kmip_get_response(&kmip_context,
+                                key_id, key_id_len,
+                                key, key_len,
+                                &response, &response_len);
+  kmyth_clear_and_free(key_id, key_id_len);
+  key_id = NULL;
+  kmip_destroy(&kmip_context);
+  if (ret)
+  {
+    kmyth_log(LOG_ERR, "Failed to build the KMIP Get response.");
+    return EXIT_FAILURE;
+  }
+
+  ecdh_encrypt_send(this, response, response_len);
+  kmyth_clear_and_free(response, response_len);
+
+  kmyth_log(LOG_DEBUG, "Sent the KMIP key response.");
+
+  return EXIT_SUCCESS;
+}
+
 void send_operational_key(ECDHServer * this)
 {
   int ret;
@@ -468,9 +649,9 @@ void send_operational_key(ECDHServer * this)
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
             static_key[OP_KEY_SIZE - 1]);
 
-  ret = send_key_with_session_key(this->socket_fd,
-                                  this->session_key, this->session_key_len,
-                                  static_key, OP_KEY_SIZE);
+  ret = handle_key_request(this,
+                           this->session_key, this->session_key_len,
+                           static_key, OP_KEY_SIZE);
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to send the static key.");
@@ -480,25 +661,24 @@ void send_operational_key(ECDHServer * this)
 
 void get_operational_key(ECDHServer * this)
 {
-  unsigned char *static_key = NULL;
-  size_t static_key_len = 0;
+  unsigned char *op_key = NULL;
+  size_t op_key_len = 0;
   int ret;
   unsigned char *key_id = (unsigned char *) "fake_key_id";
 
-  ret = retrieve_key_with_session_key(this->socket_fd,
-                                      this->session_key, this->session_key_len,
-                                      key_id, sizeof(key_id),
-                                      &static_key, &static_key_len);
+  ret = request_key(this,
+                    key_id, sizeof(key_id),
+                    &op_key, &op_key_len);
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to send the static key.");
     error(this);
   }
 
-  kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
-            static_key[static_key_len - 1]);
+  kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", op_key[0],
+            op_key[op_key_len - 1]);
 
-  kmyth_clear_and_free(static_key, static_key_len);
+  kmyth_clear_and_free(op_key, op_key_len);
 }
 
 void server_main(ECDHServer * this)
