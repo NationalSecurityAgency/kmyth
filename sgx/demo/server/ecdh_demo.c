@@ -5,6 +5,9 @@
 
 #include "ecdh_demo.h"
 
+#define KEY_ID "7"
+#define KEY_ID_LEN 1
+
 void init(ECDHServer * this)
 {
   secure_memset(this, 0, sizeof(ECDHServer));
@@ -670,10 +673,9 @@ void get_operational_key(ECDHServer * this)
   unsigned char *op_key = NULL;
   size_t op_key_len = 0;
   int ret;
-  unsigned char *key_id = (unsigned char *) "fake_key_id";
 
   ret = request_key(this,
-                    key_id, sizeof(key_id),
+                    (unsigned char *) KEY_ID, KEY_ID_LEN,
                     &op_key, &op_key_len);
   if (ret)
   {
