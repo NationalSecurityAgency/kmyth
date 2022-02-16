@@ -65,19 +65,19 @@ and add them to the dynamic linker configuration (ldconfig).
 
 To build the programs and generate new test keys:
 ```
-make demo-all
+make demo-all demo-test-keys-certs
 ```
 
 #### Usage
 
 To run as a key server (all arguments are required):
 ```
-./demo/bin/ecdh-server -r data/server_priv_test.pem -u data/client_cert_test.pem -p 7000
+./demo/bin/ecdh-server -r demo/data/server_priv_test.pem -u demo/data/client_cert_test.pem -p 7000
 ```
 
 To run as a client application (all arguments are required):
 ```
-./demo/bin/ecdh-client -r data/client_priv_test.pem -u data/server_cert_test.pem -i localhost -p 7000
+./demo/bin/ecdh-client -r demo/data/client_priv_test.pem -u demo/data/server_cert_test.pem -i localhost -p 7000
 ```
 
 The client application should only be started after the server is already running.
@@ -116,5 +116,5 @@ which is described above.
 The proxy usage is similar to the test key server application.
 
 ```
-./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT
+./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT -C REMOTE_CA_CERT
 ```
