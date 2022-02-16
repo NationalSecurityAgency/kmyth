@@ -116,5 +116,5 @@ which is described above.
 The proxy usage is similar to the test key server application.
 
 ```
-./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT -C REMOTE_CA_CERT
+./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT -C REMOTE_CA_CERT -R CLIENT_KEY -U CLIENT_CERT
 ```

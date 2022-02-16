@@ -61,15 +61,16 @@ static void proxy_usage(const char *prog)
   fprintf(stdout,
     "\nusage: %s [options]\n\n"
     "options are:\n\n"
-    "ECDH Key File Information --\n"
-    "  -r or --private  Path to the file containing the local private key.\n"
-    "  -u or --public   Path to the file containing the remote public key.\n"
     "ECDH Connection Information --\n"
-    "  -p or --port     The port number to use for accepting connections.\n"
+    "  -p or --local-port      The port number to listen on for ECDH connections.\n"
+    "  -r or --private         Local private key PEM file used for ECDH connections.\n"
+    "  -u or --public          Remote public key PEM file used to validate ECDH connections.\n"
     "TLS Connection Information --\n"
     "  -I or --remote-ip       The IP address or hostname of the remote server.\n"
     "  -P or --remote-port     The port number to use when connecting to the remote server.\n"
     "  -C or --ca-path         Optional certificate file used to verify the remote server (if not specified, the default system CA chain will be used instead).\n"
+    "  -R or --client-key      Local private key PEM file used for TLS connections.\n"
+    "  -U or --client-cert     Local certificate PEM file used for TLS connections.\n"
     "Test Options --\n"
     "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
     "Misc --\n"
@@ -89,7 +90,7 @@ static void proxy_get_options(TLSProxy * this, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:u:p:I:P:C:m:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:u:p:I:P:C:R:U:m:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
@@ -113,6 +114,12 @@ static void proxy_get_options(TLSProxy * this, int argc, char **argv)
       break;
     case 'C':
       this->tlsconn.ca_path = optarg;
+      break;
+    case 'R':
+      this->tlsconn.client_key_path = optarg;
+      break;
+    case 'U':
+      this->tlsconn.client_cert_path = optarg;
       break;
     // Test
     case 'm':
@@ -215,6 +222,30 @@ static int tls_config_ctx(TLSConnection * tlsconn)
     if (1 != ret)
     {
       log_openssl_error(ssl_err, "SSL_CTX_set_default_verify_paths");
+      return -1;
+    }
+  }
+
+  /* Set client key - required by some servers. */
+  if (tlsconn->client_key_path)
+  {
+    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->client_key_path, SSL_FILETYPE_PEM);
+    ssl_err = ERR_get_error();
+    if (1 != ret)
+    {
+      log_openssl_error(ssl_err, "SSL_CTX_use_PrivateKey_file");
+      return -1;
+    }
+  }
+
+  /* Set client cert - required by some servers. */
+  if (tlsconn->client_cert_path)
+  {
+    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->client_cert_path, SSL_FILETYPE_PEM);
+    ssl_err = ERR_get_error();
+    if (1 != ret)
+    {
+      log_openssl_error(ssl_err, "SSL_CTX_use_certificate_file");
       return -1;
     }
   }
