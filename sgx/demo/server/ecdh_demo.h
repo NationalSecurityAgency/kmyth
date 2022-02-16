@@ -34,7 +34,6 @@
 
 #define UNSET_FD -1
 #define OP_KEY_SIZE 16
-#define MAX_RESP_SIZE 16384
 
 typedef struct ECDHServer
 {
@@ -78,8 +77,8 @@ void error(ECDHServer * this);
 void get_options(ECDHServer * this, int argc, char **argv);
 void check_options(ECDHServer * this);
 
-void ecdh_send_data(ECDHServer * this, const void *buf, size_t len);
-void ecdh_recv_data(ECDHServer * this, void *buf, size_t len);
+void ecdh_encrypt_send(ECDHServer * this, unsigned char *plaintext, size_t plaintext_len);
+void ecdh_recv_decrypt(ECDHServer * this, unsigned char **plaintext, size_t *plaintext_len);
 
 void create_server_socket(ECDHServer * this);
 void create_client_socket(ECDHServer * this);

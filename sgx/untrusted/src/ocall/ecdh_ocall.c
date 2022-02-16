@@ -8,7 +8,6 @@
 #include "ecdh_ocall.h"
 #include "ecdh_util.h"
 
-#define MAX_RESP_SIZE 16384
 #define UNSET_FD -1
 
 /*****************************************************************************
@@ -112,7 +111,7 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
   }
-  if (*remote_ephemeral_public_len > MAX_RESP_SIZE)
+  if (*remote_ephemeral_public_len > ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
     return EXIT_FAILURE;
@@ -141,7 +140,7 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
   }
-  if (*remote_eph_pub_signature_len > MAX_RESP_SIZE)
+  if (*remote_eph_pub_signature_len > ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key signature size.");
     return EXIT_FAILURE;

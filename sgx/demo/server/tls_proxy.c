@@ -12,6 +12,7 @@
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <poll.h>
 
 #include "ecdh_demo.h"
 #include "tls_proxy.h"
@@ -19,6 +20,8 @@
 #ifndef DEMO_LOG_LEVEL
 #define DEMO_LOG_LEVEL LOG_DEBUG
 #endif
+
+#define NUM_POLL_FDS 2
 
 void proxy_init(TLSProxy * this)
 {
@@ -361,22 +364,51 @@ static int setup_tlsconn(TLSProxy * this)
 
 void proxy_start(TLSProxy * this)
 {
-  char buf[1024];
-  secure_memset(buf, 0, sizeof(buf));
+  struct pollfd pfds[NUM_POLL_FDS];
+  int bytes_read = 0;
+  unsigned char tls_msg_buf[ECDH_MAX_MSG_SIZE];
+  unsigned char *ecdh_msg_buf = NULL;
+  size_t ecdh_msg_len = 0;
+  ECDHServer *ecdhconn = &this->ecdhconn;
+  BIO *tls_bio = this->tlsconn.conn;
 
-  kmyth_log(LOG_DEBUG, "In proxy_start");
+  secure_memset(pfds, 0, sizeof(pfds));
+  secure_memset(tls_msg_buf, 0, sizeof(tls_msg_buf));
 
-  BIO_puts(this->tlsconn.conn, "TEST proxy_start");
+  pfds[0].fd = ecdhconn->socket_fd;
+  pfds[0].events = POLLIN;
 
-  BIO_read(this->tlsconn.conn, buf, 1024);
+  pfds[1].fd = BIO_get_fd(tls_bio, NULL);
+  pfds[1].events = POLLIN;
 
-  kmyth_log(LOG_INFO, "received: %s", buf);
+  while (true)
+  {
+    /* Wait to receive data with no timeout. */
+    poll(pfds, NUM_POLL_FDS, -1);
 
+    if (pfds[0].revents & POLLIN)
+    {
+      ecdh_recv_decrypt(ecdhconn, &ecdh_msg_buf, &ecdh_msg_len);
+      BIO_write(tls_bio, ecdh_msg_buf, ecdh_msg_len);
+      kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
+    }
+
+    if (pfds[1].revents & POLLIN)
+    {
+      bytes_read = BIO_read(this->tlsconn.conn, tls_msg_buf, sizeof(tls_msg_buf));
+      if (bytes_read == 0)
+      {
+        kmyth_log(LOG_INFO, "TLS connection is closed");
+        break;
+      }
+      ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
+    }
+  }
 }
 
 void proxy_main(TLSProxy * this)
 {
-  // setup_ecdhconn(this);
+  setup_ecdhconn(this);
 
   setup_tlsconn(this);
 

@@ -50,6 +50,12 @@ extern "C"
 #define KMYTH_ECDH_KDF NULL
 
 /**
+ * @brief Maximum size of an encrypted ECDH message.
+ *        (This is the same value as the maximum fragment length in a TLS record.)
+ */
+#define ECDH_MAX_MSG_SIZE 16384
+
+/**
  * @brief Custom message header prepended to encrypted messages
  *        sent over an ECDH connection. (Similar to TLS record headers.)
  */

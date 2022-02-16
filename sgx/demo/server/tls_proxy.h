@@ -14,10 +14,6 @@
 
 #include "ecdh_demo.h"
 
-#define UNSET_FD -1
-#define OP_KEY_SIZE 16
-#define MAX_RESP_SIZE 16384
-
 typedef struct TLSConnection
 {
   char *host;

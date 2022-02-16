@@ -170,8 +170,14 @@ void ecdh_recv_data(ECDHServer * this, void *buf, size_t len)
   /* Wrapper function to simplify error handling. */
   int bytes_read = read(this->socket_fd, buf, len);
 
-  if (bytes_read != len)
+  if (bytes_read == 0)
   {
+    kmyth_log(LOG_ERR, "ECDH connection is closed.");
+    error(this);
+  }
+  else if (bytes_read != len)
+  {
+    /* With these protocols, we should always receive exactly (len) bytes. */
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(this);
   }
@@ -397,7 +403,7 @@ void recv_ephemeral_public(ECDHServer * this)
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
   ecdh_recv_data(this, &this->remote_ephemeral_pubkey_len,
            sizeof(this->remote_ephemeral_pubkey_len));
-  if (this->remote_ephemeral_pubkey_len > MAX_RESP_SIZE)
+  if (this->remote_ephemeral_pubkey_len > ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
     error(this);
@@ -409,7 +415,7 @@ void recv_ephemeral_public(ECDHServer * this)
 
   kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
   ecdh_recv_data(this, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
-  if (remote_pub_sig_len > MAX_RESP_SIZE)
+  if (remote_pub_sig_len > ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key signature size.");
     error(this);
