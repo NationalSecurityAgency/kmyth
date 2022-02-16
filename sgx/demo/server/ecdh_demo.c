@@ -159,7 +159,7 @@ void check_options(ECDHServer * this)
 void ecdh_send_data(ECDHServer * this, const void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int bytes_sent = write(this->socket_fd, buf, len);
+  ssize_t bytes_sent = write(this->socket_fd, buf, len);
 
   if (bytes_sent != len)
   {
@@ -171,7 +171,7 @@ void ecdh_send_data(ECDHServer * this, const void *buf, size_t len)
 void ecdh_recv_data(ECDHServer * this, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
-  int bytes_read = read(this->socket_fd, buf, len);
+  ssize_t bytes_read = read(this->socket_fd, buf, len);
 
   if (bytes_read == 0)
   {
@@ -190,6 +190,12 @@ void ecdh_send_msg(ECDHServer * this, unsigned char *buf, size_t len)
 {
   struct ECDHMessageHeader header;
 
+  if (len > ECDH_MAX_MSG_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Invalid ECDH message length in ecdh_send_msg.");
+    error(this);
+  }
+
   secure_memset(&header, 0, sizeof(header));
   header.msg_size = len;
   ecdh_send_data(this, &header, sizeof(header));
@@ -202,6 +208,12 @@ void ecdh_recv_msg(ECDHServer * this, unsigned char **buf, size_t *len)
 
   secure_memset(&header, 0, sizeof(header));
   ecdh_recv_data(this, &header, sizeof(header));
+
+  if (header.msg_size > ECDH_MAX_MSG_SIZE)
+  {
+    kmyth_log(LOG_ERR, "Received invalid ECDH message header.");
+    error(this);
+  }
 
   *len = header.msg_size;
   *buf = calloc(*len, sizeof(unsigned char));
@@ -270,6 +282,7 @@ void create_server_socket(ECDHServer * this)
   if (listen(listen_fd, 1))
   {
     kmyth_log(LOG_ERR, "Socket listen failed.");
+    perror("listen");
     close(listen_fd);
     error(this);
   }
@@ -663,7 +676,7 @@ void send_operational_key(ECDHServer * this)
                            static_key, OP_KEY_SIZE);
   if (ret)
   {
-    kmyth_log(LOG_ERR, "Failed to send the static key.");
+    kmyth_log(LOG_ERR, "Failed to send the operational key.");
     error(this);
   }
 }
@@ -679,7 +692,7 @@ void get_operational_key(ECDHServer * this)
                     &op_key, &op_key_len);
   if (ret)
   {
-    kmyth_log(LOG_ERR, "Failed to send the static key.");
+    kmyth_log(LOG_ERR, "Failed to retrieve the operational key.");
     error(this);
   }
 

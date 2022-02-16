@@ -202,6 +202,7 @@ static int tls_config_ctx(TLSConnection * tlsconn)
   }
 
   /* Enable certificate verification. */
+  // Can set a callback function here for advanced debugging.
   SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
   SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
 
@@ -300,7 +301,7 @@ static int tls_config_conn(TLSConnection * tlsconn)
     return -1;
   }
 
-  /* Set hostname for verification. */
+  /* Set hostname for certificate verification. */
   ret = SSL_set1_host(ssl, tlsconn->host);
   ssl_err = ERR_get_error();
   if (1 != ret)
@@ -397,6 +398,7 @@ void proxy_start(TLSProxy * this)
 {
   struct pollfd pfds[NUM_POLL_FDS];
   int bytes_read = 0;
+  int bytes_written = 0;
   unsigned char tls_msg_buf[ECDH_MAX_MSG_SIZE];
   unsigned char *ecdh_msg_buf = NULL;
   size_t ecdh_msg_len = 0;
@@ -412,6 +414,7 @@ void proxy_start(TLSProxy * this)
   pfds[1].fd = BIO_get_fd(tls_bio, NULL);
   pfds[1].events = POLLIN;
 
+  kmyth_log(LOG_DEBUG, "Starting proxy loop");
   while (true)
   {
     /* Wait to receive data with no timeout. */
@@ -420,7 +423,13 @@ void proxy_start(TLSProxy * this)
     if (pfds[0].revents & POLLIN)
     {
       ecdh_recv_decrypt(ecdhconn, &ecdh_msg_buf, &ecdh_msg_len);
-      BIO_write(tls_bio, ecdh_msg_buf, ecdh_msg_len);
+      kmyth_log(LOG_DEBUG, "Received %zu bytes on ECDH connection", ecdh_msg_len);
+      bytes_written = BIO_write(tls_bio, ecdh_msg_buf, ecdh_msg_len);
+      if (bytes_written != ecdh_msg_len)
+      {
+        kmyth_log(LOG_ERR, "TLS write error");
+        proxy_error(this);
+      }
       kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
     }
 
@@ -432,6 +441,12 @@ void proxy_start(TLSProxy * this)
         kmyth_log(LOG_INFO, "TLS connection is closed");
         break;
       }
+      else if (bytes_read < 0)
+      {
+        kmyth_log(LOG_ERR, "TLS read error");
+        proxy_error(this);
+      }
+      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
       ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
     }
   }
@@ -439,10 +454,9 @@ void proxy_start(TLSProxy * this)
 
 void proxy_main(TLSProxy * this)
 {
+  // The ECDH setup must come first because it forks a new process to handle each new connection.
   setup_ecdhconn(this);
-
   setup_tlsconn(this);
-
   proxy_start(this);
 }
 
