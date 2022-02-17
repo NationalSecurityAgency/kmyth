@@ -111,7 +111,8 @@ enclave {
      * @param[in]  server_port               TCP port for key server.
      *
      * @param[in]  key_id                    ID string used to specify the key
-     *                                       to be retrieved from the server.
+     *                                       to be retrieved from the server
+     *                                       (not null-terminated).
      *
      * @param[in]  key_id_len                Length of the requested key's ID
      *                                       string.
