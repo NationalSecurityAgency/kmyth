@@ -116,5 +116,19 @@ which is described above.
 The proxy usage is similar to the test key server application.
 
 ```
-./demo/bin/tls-proxy -r data/server_priv_test.pem -u data/client_cert_test.pem -p LOCAL_PORT -I REMOTE_HOST -P REMOTE_PORT -C REMOTE_CA_CERT -R CLIENT_KEY -U CLIENT_CERT
+./demo/bin/tls-proxy -r ECDH_LOCAL_KEY -u ECDH_REMOTE_CERT -p ECDH_LOCAL_PORT -I TLS_REMOTE_HOST -P TLS_REMOTE_PORT -C TLS_REMOTE_CA_CERT [ -R TLS_LOCAL_KEY -U TLS_LOCAL_CERT ]
 ```
+
+The key and cert arguments must be file paths for RSA keys in PEM format.
+
+The ECDH key and cert are used for the ECDH key exchange.
+They must be the keypair complements of the key and cert used by the ECDH client application.
+
+The TLS remote CA cert is used to authenticate the remote server.
+It must be part of the remote server certificate's chain of trust.
+
+The optional TLS local key and cert keypair are used for TLS client authentication,
+which is required some but not all TLS services.
+When client authentication is used,
+the local cert should be signed by a Certificate Authority
+that is trusted by the remote server.
