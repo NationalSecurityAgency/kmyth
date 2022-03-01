@@ -598,7 +598,6 @@ int request_key(ECDHServer *this,
 }
 
 int handle_key_request(ECDHServer *this,
-                      unsigned char *session_key, size_t session_key_len,
                       unsigned char *key, size_t key_len)
 {
   int ret;
@@ -671,9 +670,7 @@ void send_operational_key(ECDHServer * this)
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
             static_key[OP_KEY_SIZE - 1]);
 
-  ret = handle_key_request(this,
-                           this->session_key, this->session_key_len,
-                           static_key, OP_KEY_SIZE);
+  ret = handle_key_request(this, static_key, OP_KEY_SIZE);
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to send the operational key.");

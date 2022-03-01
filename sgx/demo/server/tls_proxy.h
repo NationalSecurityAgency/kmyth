@@ -49,6 +49,4 @@ static const struct option proxy_longopts[] = {
   {0, 0, 0, 0}
 };
 
-void proxy_main(TLSProxy * this);
-
 #endif
