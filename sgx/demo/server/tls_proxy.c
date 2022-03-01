@@ -23,10 +23,10 @@
 
 #define NUM_POLL_FDS 2
 
-void proxy_init(TLSProxy * this)
+void proxy_init(TLSProxy * proxy)
 {
-  secure_memset(this, 0, sizeof(TLSProxy));
-  init(&this->ecdhconn);
+  secure_memset(proxy, 0, sizeof(TLSProxy));
+  init(&proxy->ecdhconn);
 }
 
 static void tls_cleanup(TLSConnection *tlsconn)
@@ -42,17 +42,17 @@ static void tls_cleanup(TLSConnection *tlsconn)
   }
 }
 
-void proxy_cleanup(TLSProxy * this)
+void proxy_cleanup(TLSProxy * proxy)
 {
-  cleanup(&this->ecdhconn);
-  tls_cleanup(&this->tlsconn);
+  cleanup(&proxy->ecdhconn);
+  tls_cleanup(&proxy->tlsconn);
 
-  proxy_init(this);
+  proxy_init(proxy);
 }
 
-void proxy_error(TLSProxy * this)
+void proxy_error(TLSProxy * proxy)
 {
-  proxy_cleanup(this);
+  proxy_cleanup(proxy);
   exit(EXIT_FAILURE);
 }
 
@@ -77,7 +77,7 @@ static void proxy_usage(const char *prog)
     "  -h or --help     Help (displays this usage).\n\n", prog);
 }
 
-static void proxy_get_options(TLSProxy * this, int argc, char **argv)
+static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 {
   // Exit early if there are no arguments.
   if (1 == argc)
@@ -96,57 +96,57 @@ static void proxy_get_options(TLSProxy * this, int argc, char **argv)
     {
     // Key files
     case 'r':
-      this->ecdhconn.private_key_path = optarg;
+      proxy->ecdhconn.private_key_path = optarg;
       break;
     case 'u':
-      this->ecdhconn.public_cert_path = optarg;
+      proxy->ecdhconn.public_cert_path = optarg;
       break;
     // ECDH Connection
     case 'p':
-      this->ecdhconn.port = optarg;
+      proxy->ecdhconn.port = optarg;
       break;
     // TLS Connection
     case 'I':
-      this->tlsconn.host = optarg;
+      proxy->tlsconn.host = optarg;
       break;
     case 'P':
-      this->tlsconn.port = optarg;
+      proxy->tlsconn.port = optarg;
       break;
     case 'C':
-      this->tlsconn.ca_path = optarg;
+      proxy->tlsconn.ca_path = optarg;
       break;
     case 'R':
-      this->tlsconn.client_key_path = optarg;
+      proxy->tlsconn.client_key_path = optarg;
       break;
     case 'U':
-      this->tlsconn.client_cert_path = optarg;
+      proxy->tlsconn.client_cert_path = optarg;
       break;
     // Test
     case 'm':
-      this->ecdhconn.maxconn = atoi(optarg);
+      proxy->ecdhconn.maxconn = atoi(optarg);
       break;
     // Misc
     case 'h':
       proxy_usage(argv[0]);
       exit(EXIT_SUCCESS);
     default:
-      proxy_error(this);
+      proxy_error(proxy);
     }
   }
 }
 
-void proxy_check_options(TLSProxy * this)
+void proxy_check_options(TLSProxy * proxy)
 {
-  check_options(&this->ecdhconn);
+  check_options(&proxy->ecdhconn);
 
   bool err = false;
 
-  if (this->tlsconn.host == NULL)
+  if (proxy->tlsconn.host == NULL)
   {
     fprintf(stderr, "Remote IP argument (-I) is required.\n");
     err = true;
   }
-  if (this->tlsconn.port == NULL)
+  if (proxy->tlsconn.port == NULL)
   {
     fprintf(stderr, "Remote port number argument (-P) is required.\n");
     err = true;
@@ -154,7 +154,7 @@ void proxy_check_options(TLSProxy * this)
   if (err)
   {
     kmyth_log(LOG_ERR, "Invalid command-line arguments.");
-    proxy_error(this);
+    proxy_error(proxy);
   }
 }
 
@@ -353,9 +353,9 @@ static int tls_connect(TLSConnection * tlsconn)
   return 0;
 }
 
-static int setup_ecdhconn(TLSProxy * this)
+static int setup_ecdhconn(TLSProxy * proxy)
 {
-  ECDHServer *ecdhconn = &this->ecdhconn;
+  ECDHServer *ecdhconn = &proxy->ecdhconn;
 
   create_server_socket(ecdhconn);
 
@@ -372,29 +372,29 @@ static int setup_ecdhconn(TLSProxy * this)
   return 0;
 }
 
-static int setup_tlsconn(TLSProxy * this)
+static int setup_tlsconn(TLSProxy * proxy)
 {
-  TLSConnection *tlsconn = &this->tlsconn;
+  TLSConnection *tlsconn = &proxy->tlsconn;
 
   if (tls_config_ctx(tlsconn))
   {
-    proxy_error(this);
+    proxy_error(proxy);
   }
 
   if (tls_config_conn(tlsconn))
   {
-    proxy_error(this);
+    proxy_error(proxy);
   }
 
   if (tls_connect(tlsconn))
   {
-    proxy_error(this);
+    proxy_error(proxy);
   }
 
   return 0;
 }
 
-void proxy_start(TLSProxy * this)
+void proxy_start(TLSProxy * proxy)
 {
   struct pollfd pfds[NUM_POLL_FDS];
   int bytes_read = 0;
@@ -402,8 +402,8 @@ void proxy_start(TLSProxy * this)
   unsigned char tls_msg_buf[ECDH_MAX_MSG_SIZE];
   unsigned char *ecdh_msg_buf = NULL;
   size_t ecdh_msg_len = 0;
-  ECDHServer *ecdhconn = &this->ecdhconn;
-  BIO *tls_bio = this->tlsconn.conn;
+  ECDHServer *ecdhconn = &proxy->ecdhconn;
+  BIO *tls_bio = proxy->tlsconn.conn;
 
   secure_memset(pfds, 0, sizeof(pfds));
   secure_memset(tls_msg_buf, 0, sizeof(tls_msg_buf));
@@ -428,14 +428,14 @@ void proxy_start(TLSProxy * this)
       if (bytes_written != ecdh_msg_len)
       {
         kmyth_log(LOG_ERR, "TLS write error");
-        proxy_error(this);
+        proxy_error(proxy);
       }
       kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
     }
 
     if (pfds[1].revents & POLLIN)
     {
-      bytes_read = BIO_read(this->tlsconn.conn, tls_msg_buf, sizeof(tls_msg_buf));
+      bytes_read = BIO_read(proxy->tlsconn.conn, tls_msg_buf, sizeof(tls_msg_buf));
       if (bytes_read == 0)
       {
         kmyth_log(LOG_INFO, "TLS connection is closed");
@@ -444,7 +444,7 @@ void proxy_start(TLSProxy * this)
       else if (bytes_read < 0)
       {
         kmyth_log(LOG_ERR, "TLS read error");
-        proxy_error(this);
+        proxy_error(proxy);
       }
       kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
       ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
@@ -452,28 +452,28 @@ void proxy_start(TLSProxy * this)
   }
 }
 
-void proxy_main(TLSProxy * this)
+void proxy_main(TLSProxy * proxy)
 {
   // The ECDH setup must come first because it forks a new process to handle each new connection.
-  setup_ecdhconn(this);
-  setup_tlsconn(this);
-  proxy_start(this);
+  setup_ecdhconn(proxy);
+  setup_tlsconn(proxy);
+  proxy_start(proxy);
 }
 
 int main(int argc, char **argv)
 {
-  TLSProxy this;
+  TLSProxy proxy;
 
-  proxy_init(&this);
+  proxy_init(&proxy);
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
-  proxy_get_options(&this, argc, argv);
-  proxy_check_options(&this);
+  proxy_get_options(&proxy, argc, argv);
+  proxy_check_options(&proxy);
 
-  proxy_main(&this);
+  proxy_main(&proxy);
 
-  proxy_cleanup(&this);
+  proxy_cleanup(&proxy);
 
   return EXIT_SUCCESS;
 }

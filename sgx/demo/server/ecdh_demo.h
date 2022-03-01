@@ -69,34 +69,34 @@ static const struct option longopts[] = {
 
 static void usage(const char *prog);
 
-void init(ECDHServer * this);
-void cleanup(ECDHServer * this);
+void init(ECDHServer * ecdhconn);
+void cleanup(ECDHServer * ecdhconn);
 
-void error(ECDHServer * this);
+void error(ECDHServer * ecdhconn);
 
-void get_options(ECDHServer * this, int argc, char **argv);
-void check_options(ECDHServer * this);
+void get_options(ECDHServer * ecdhconn, int argc, char **argv);
+void check_options(ECDHServer * ecdhconn);
 
-void ecdh_encrypt_send(ECDHServer * this, unsigned char *plaintext, size_t plaintext_len);
-void ecdh_recv_decrypt(ECDHServer * this, unsigned char **plaintext, size_t *plaintext_len);
+void ecdh_encrypt_send(ECDHServer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
+void ecdh_recv_decrypt(ECDHServer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
 
-void create_server_socket(ECDHServer * this);
-void create_client_socket(ECDHServer * this);
+void create_server_socket(ECDHServer * ecdhconn);
+void create_client_socket(ECDHServer * ecdhconn);
 
-void load_private_key(ECDHServer * this);
-void load_public_key(ECDHServer * this);
+void load_private_key(ECDHServer * ecdhconn);
+void load_public_key(ECDHServer * ecdhconn);
 
-void make_ephemeral_keypair(ECDHServer * this);
+void make_ephemeral_keypair(ECDHServer * ecdhconn);
 
-void recv_ephemeral_public(ECDHServer * this);
-void send_ephemeral_public(ECDHServer * this);
+void recv_ephemeral_public(ECDHServer * ecdhconn);
+void send_ephemeral_public(ECDHServer * ecdhconn);
 
-void get_session_key(ECDHServer * this);
+void get_session_key(ECDHServer * ecdhconn);
 
-void send_operational_key(ECDHServer * this);
-void get_operational_key(ECDHServer * this);
+void send_operational_key(ECDHServer * ecdhconn);
+void get_operational_key(ECDHServer * ecdhconn);
 
-void server_main(ECDHServer * this);
-void client_main(ECDHServer * this);
+void server_main(ECDHServer * ecdhconn);
+void client_main(ECDHServer * ecdhconn);
 
 #endif
