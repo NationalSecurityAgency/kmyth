@@ -134,34 +134,42 @@ extern "C"
                           int socket_fd);
 
 /**
- * @brief Supports retrieving an operational key from the demo key server
- *        by sending an encrypted KMIP key request and receiving an
- *        encrypted KMIP response message.
+ * @brief Send a message over the ECDH network connection.
  *
- * @param[in]  encrypted_request          Pointer to the encrypted request
- *                                        message to be sent to the key server.
+ * @param[in]  encrypted_msg              Pointer to the encrypted message.
  *
- * @param[in]  encrypted_request_len      Length (in bytes) of the encrypted
- *                                        request message for the key server.
- *
- * @param[out] encrypted_response         Pointer to the encrypted response
- *                                        message received from the key server.
- *
- * @param[out] encrypted_response_len     Pointer to length (in bytes)
- *                                        of the response message.
- *                                        This may be smaller than the
- *                                        allocated buffer size.
+ * @param[in] encrypted_msg_len           Length (in bytes)
+ *                                        of the encrypted message.
  *
  * @param[in] socket_fd                   File descriptor number for
- *                                        a socket connected to
- *                                        the remote key server.
+ *                                        a network socket with an
+ *                                        active ECDH session.
  *
  * @return 0 on success, 1 on failure
  */
-  int retrieve_key_ocall(unsigned char *encrypted_request,
-                         size_t encrypted_request_len,
-                         unsigned char **encrypted_response,
-                         size_t *encrypted_response_len, int socket_fd);
+  int ecdh_send_ocall(unsigned char *encrypted_msg,
+                      size_t encrypted_msg_len,
+                      int socket_fd);
+
+/**
+ * @brief Receive a message over the ECDH network connection.
+ *
+ * @param[out]  encrypted_msg             Pointer used to return the address
+ *                                        of an allocated buffer containing
+ *                                        the received encrypted message.
+ *
+ * @param[out] encrypted_msg_len          Pointer to length (in bytes)
+ *                                        of the encrypted message.
+ *
+ * @param[in] socket_fd                   File descriptor number for
+ *                                        a network socket with an
+ *                                        active ECDH session.
+ *
+ * @return 0 on success, 1 on failure
+ */
+  int ecdh_recv_ocall(unsigned char **encrypted_msg,
+                      size_t *encrypted_msg_len,
+                      int socket_fd);
 
 #ifdef __cplusplus
 }

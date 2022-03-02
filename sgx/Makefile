@@ -97,6 +97,8 @@ Common_App_Include_Paths += -Iuntrusted/include/wrapper
 Common_App_Include_Paths += -Icommon/include
 Common_App_Include_Paths += -I$(SGX_SDK)/include
 Common_App_Include_Paths += -I../include/network
+Common_App_Include_Paths += -I../include/cipher
+
 
 Test_App_Include_Paths := -Itest/enclave
 Test_App_Include_Paths += -I../utils/include
@@ -145,6 +147,7 @@ Common_App_Link_Flags += -lpthread
 Common_App_Link_Flags += -lkmyth-utils
 Common_App_Link_Flags += -lkmyth-logger
 Common_App_Link_Flags += -lkmyth-tpm
+Common_App_Link_Flags += -lkmip
 
 ifneq ($(SGX_MODE), HW)
 	Common_App_Link_Flags += -lsgx_uae_service_sim
@@ -284,6 +287,7 @@ $(Enclave_Signing_Key):
 
 Server_Name := demo/bin/ecdh-server
 Client_Name := demo/bin/ecdh-client
+Proxy_Name := demo/bin/tls-proxy
 
 .PHONY: pre test-pre test-all test-run demo-pre demo-all demo-test-keys-certs demo
 
@@ -323,7 +327,7 @@ test-all: test-pre $(Test_App_Name) test/enclave/$(Test_Signed_Enclave_Name)
 endif
 
 ifeq ($(Build_Mode), HW_RELEASE)
-demo-all: demo-pre $(Demo_Enclave_Lib) $(Demo_App_Name) $(Server_Name) $(Client_Name)
+demo-all: demo-pre $(Demo_Enclave_Lib) $(Demo_App_Name) $(Server_Name) $(Client_Name) $(Proxy_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Demo_Enclave_Lib) first with your signing key before"
 	@echo "you run the $(Demo_App_Name) to launch and access the enclave."
@@ -337,7 +341,7 @@ demo-all: demo-pre $(Demo_Enclave_Lib) $(Demo_App_Name) $(Server_Name) $(Client_
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build"
 	@echo "the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-demo-all: demo-pre demo/enclave/$(Demo_Signed_Enclave_Name) $(Demo_App_Name) $(Server_Name) $(Client_Name)
+demo-all: demo-pre demo/enclave/$(Demo_Signed_Enclave_Name) $(Demo_App_Name) $(Server_Name) $(Client_Name) $(Proxy_Name)
 endif
 
 
@@ -348,7 +352,7 @@ demo-test-keys-certs: demo/data/client_priv_test.pem \
 
 demo: demo-all demo-test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
-	@$(CURDIR)/$(Server_Name) -r demo/data/server_priv_test.pem -u demo/data/client_cert_test.pem -p 7000 &
+	@$(CURDIR)/$(Server_Name) -r demo/data/server_priv_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@echo "RUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
@@ -473,7 +477,7 @@ $(Demo_App_Name): demo/app/kmyth_sgx_retrieve_key_demo.o \
 
 ######## Test Server ########
 
-demo/server/%.o: demo/server/%.c demo/server/ecdh_demo.h
+demo/server/%.o: demo/server/%.c demo/server/ecdh_demo.h demo/server/tls_proxy.h
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -481,14 +485,21 @@ $(Server_Name): demo/server/ecdh_server.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Client_Name): demo/server/ecdh_client.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
+	@echo "LINK =>  $@"
+
+$(Proxy_Name):  demo/server/tls_proxy.o \
+                demo/server/ecdh_demo.o \
+                demo/enclave/ecdh_util.o \
+                demo/enclave/log_ocall.o
+	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl
 	@echo "LINK =>  $@"
 
 ######## Test Enclave Objects ########

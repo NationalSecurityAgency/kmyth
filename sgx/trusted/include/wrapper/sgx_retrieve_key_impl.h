@@ -58,13 +58,13 @@ extern "C"
  *                                    connect to the key server.
  *
  * @param[in] req_key_id              ID string used to specify the key to be
- *                                    retrieved.
+ *                                    retrieved (not null-terminated).
  * 
  * @param[in] req_key_id_len          Length (in bytes) of the ID string
  *                                    associated with the requested key.
  *
  * @param[out] retrieved_key_id       Pointer to the key ID string returned in
- *                                    the key server's response.
+ *                                    the key server's response (not null-terminated).
  * 
  * @param[out] retrieved_key_id_len   Pointer to the length (in bytes) of the
  *                                    ID string for the retrieved key.

@@ -51,7 +51,8 @@
 /* These parameters are hard-coded for now. */
 #define SERVER_IP "localhost"
 #define SERVER_PORT 7000
-#define KEY_ID "fake_key_id"
+#define KEY_ID "7"
+#define KEY_ID_LEN 1
 
 /*****************************************************************************
  * initialize_enclave
@@ -186,8 +187,6 @@ int main(int argc, char **argv)
   const char *server_host = SERVER_IP;
   int server_host_len = strlen(server_host) + 1;
   int server_port = SERVER_PORT;
-  unsigned char *req_key_id = (unsigned char *) KEY_ID;
-  int req_key_id_len = strlen(req_key_id) + 1;
 
   sgx_ret = kmyth_enclave_retrieve_key_from_server(eid,
                                                    &retval,
@@ -198,8 +197,8 @@ int main(int argc, char **argv)
                                                    server_host,
                                                    server_host_len,
                                                    server_port,
-                                                   req_key_id,
-                                                   req_key_id_len);
+                                                   (unsigned char *) KEY_ID,
+                                                   KEY_ID_LEN);
 
   free(client_priv_ec_key_bytes);
   free(server_pub_ec_cert_bytes);

@@ -75,8 +75,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %s",
-           retrieve_key_result_id);
+  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
+           (int) retrieve_key_result_id_len, retrieve_key_result_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,

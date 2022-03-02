@@ -11,19 +11,19 @@
 
 int main(int argc, char **argv)
 {
-  ECDHServer this;
+  ECDHServer ecdhconn;
 
-  init(&this);
-  this.client_mode = true;
+  init(&ecdhconn);
+  ecdhconn.client_mode = true;
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
-  get_options(&this, argc, argv);
-  check_options(&this);
+  get_options(&ecdhconn, argc, argv);
+  check_options(&ecdhconn);
 
-  client_main(&this);
+  client_main(&ecdhconn);
 
-  cleanup(&this);
+  cleanup(&ecdhconn);
 
   return EXIT_SUCCESS;
 }
