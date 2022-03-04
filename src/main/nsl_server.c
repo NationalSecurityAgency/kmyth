@@ -7,10 +7,11 @@
 #include <kmip/kmip.h>
 
 #include "defines.h"
+#include "memory_util.h"
 #include "nsl_util.h"
 #include "socket_util.h"
-#include "kmip_io_util.h"
 #include "aes_gcm.h"
+#include "kmip_util.h"
 
 static void usage(const char *prog)
 {
@@ -45,6 +46,117 @@ const struct option longopts[] = {
   {"help", no_argument, 0, 'h'},
   {0, 0, 0, 0}
 };
+
+int send_key_with_session_key(int socket_fd,
+                              unsigned char *session_key,
+                              size_t session_key_len, unsigned char *key,
+                              size_t key_len)
+{
+  unsigned char *encrypted_request = calloc(8192, sizeof(unsigned char));
+
+  if (NULL == encrypted_request)
+  {
+    kmyth_log(LOG_ERR, "Failed to allocated the encrypted request buffer.");
+    return 1;
+  }
+
+  size_t encrypted_request_len = 8192 * sizeof(unsigned char);
+
+  ssize_t read_result = read(socket_fd,
+                             encrypted_request, encrypted_request_len);
+
+  if (read_result <= 0)
+  {
+    kmyth_log(LOG_ERR, "Failed to receive the key request.");
+    kmyth_clear_and_free(encrypted_request, encrypted_request_len);
+    return 1;
+  }
+
+  unsigned char *request = NULL;
+  size_t request_len = 0;
+
+  int result = aes_gcm_decrypt(session_key, session_key_len,
+                               encrypted_request, read_result,
+                               &request, &request_len);
+
+  kmyth_clear_and_free(encrypted_request, encrypted_request_len);
+  encrypted_request = NULL;
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to decrypt the KMIP key request.");
+    return 1;
+  }
+
+  KMIP kmip_context = { 0 };
+  kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
+
+  if (request_len > kmip_context.max_message_size)
+  {
+    kmyth_log(LOG_ERR, "KMIP request exceeds max message size.");
+    kmyth_clear_and_free(request, request_len);
+    kmip_destroy(&kmip_context);
+    return 1;
+  }
+
+  unsigned char *key_id = NULL;
+  size_t key_id_len = 0;
+
+  result = parse_kmip_get_request(&kmip_context,
+                                  request, request_len, &key_id, &key_id_len);
+  kmyth_clear_and_free(request, request_len);
+  request = NULL;
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to parse the KMIP Get request.");
+    kmip_destroy(&kmip_context);
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "Received a KMIP Get request for key ID: %.*s",
+            key_id_len, key_id);
+
+  unsigned char *response = NULL;
+  size_t response_len = 0;
+
+  result = build_kmip_get_response(&kmip_context,
+                                   key_id, key_id_len,
+                                   key, key_len, &response, &response_len);
+  kmyth_clear_and_free(key_id, key_id_len);
+  key_id = NULL;
+  kmip_destroy(&kmip_context);
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to build the KMIP Get response.");
+    return 1;
+  }
+
+  unsigned char *encrypted_response = NULL;
+  size_t encrypted_response_len = 0;
+
+  result = aes_gcm_encrypt(session_key, session_key_len,
+                           response, response_len,
+                           &encrypted_response, &encrypted_response_len);
+  kmyth_clear_and_free(response, response_len);
+  response = NULL;
+  if (result)
+  {
+    kmyth_log(LOG_ERR, "Failed to encrypt the KMIP key response.");
+    return 1;
+  }
+
+  ssize_t send_result = write(socket_fd,
+                              encrypted_response, encrypted_response_len);
+
+  kmyth_clear_and_free(encrypted_response, encrypted_response_len);
+  encrypted_response = NULL;
+  if (encrypted_response_len != send_result)
+  {
+    kmyth_log(LOG_ERR, "Failed to fully send the encrypted KMIP key response.");
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "Successfully sent the encrypted KMIP key response.");
+
+  return 0;
+}
 
 int main(int argc, char **argv)
 {
