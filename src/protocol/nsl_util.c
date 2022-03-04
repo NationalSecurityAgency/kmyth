@@ -27,7 +27,7 @@
 //
 int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
                           const unsigned char *p, size_t p_len,
-                          unsigned char **c, size_t * c_len)
+                          unsigned char **c, size_t *c_len)
 {
   // Initialize the context for encryption.
   int result = EVP_PKEY_encrypt_init(ctx);
@@ -71,7 +71,7 @@ int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 //
 int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
                           const unsigned char *c, size_t c_len,
-                          unsigned char **p, size_t * p_len)
+                          unsigned char **p, size_t *p_len)
 {
   // Initialize the context for decryption.
   int result = EVP_PKEY_decrypt_init(ctx);
@@ -116,7 +116,7 @@ int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 int build_nonce_request(EVP_PKEY_CTX * ctx,
                         unsigned char *nonce, size_t nonce_len,
                         unsigned char *id, size_t id_len,
-                        unsigned char **request, size_t * request_len)
+                        unsigned char **request, size_t *request_len)
 {
   if (NSL_NONCE_LEN != nonce_len)
   {
@@ -171,8 +171,8 @@ int build_nonce_request(EVP_PKEY_CTX * ctx,
 //
 int parse_nonce_request(EVP_PKEY_CTX * ctx,
                         unsigned char *request, size_t request_len,
-                        unsigned char **nonce, size_t * nonce_len,
-                        unsigned char **id, size_t * id_len)
+                        unsigned char **nonce, size_t *nonce_len,
+                        unsigned char **id, size_t *id_len)
 {
   // Decrypt the nonce request.
   unsigned char *message = NULL;
@@ -236,7 +236,7 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
                          unsigned char *nonce_a, size_t nonce_a_len,
                          unsigned char *nonce_b, size_t nonce_b_len,
                          unsigned char *id, size_t id_len,
-                         unsigned char **response, size_t * response_len)
+                         unsigned char **response, size_t *response_len)
 {
   // Allocate the unencrypted response buffer.
   unsigned char *message = NULL;
@@ -285,9 +285,9 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
 //
 int parse_nonce_response(EVP_PKEY_CTX * ctx,
                          unsigned char *response, size_t response_len,
-                         unsigned char **nonce_a, size_t * nonce_a_len,
-                         unsigned char **nonce_b, size_t * nonce_b_len,
-                         unsigned char **id, size_t * id_len)
+                         unsigned char **nonce_a, size_t *nonce_a_len,
+                         unsigned char **nonce_b, size_t *nonce_b_len,
+                         unsigned char **id, size_t *id_len)
 {
   // Decrypt the nonce response.
   unsigned char *message = NULL;
@@ -402,7 +402,7 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
 int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char *nonce, size_t nonce_len,
                              unsigned char **confirmation,
-                             size_t * confirmation_len)
+                             size_t *confirmation_len)
 {
   if (NSL_NONCE_LEN != nonce_len)
   {
@@ -453,7 +453,7 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
 int parse_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char *confirmation,
                              size_t confirmation_len, unsigned char **nonce,
-                             size_t * nonce_len)
+                             size_t *nonce_len)
 {
   // Decrypt the nonce confirmation.
   unsigned char *message = NULL;
@@ -588,7 +588,7 @@ EVP_PKEY_CTX *setup_private_evp_context(const char *filepath)
 //
 int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
                          unsigned char *nonce_b, size_t nonce_b_len,
-                         unsigned char **key, size_t * key_len)
+                         unsigned char **key, size_t *key_len)
 {
   if (NSL_NONCE_LEN != nonce_a_len)
   {
@@ -699,7 +699,7 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
 // generate_nonce()
 //
 int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
-                   size_t * nonce_len)
+                   size_t *nonce_len)
 {
   size_t size = 1;
 
@@ -738,7 +738,7 @@ int negotiate_client_session_key(int socket_fd,
                                  unsigned char *expected_id,
                                  size_t expected_id_len,
                                  unsigned char **session_key,
-                                 size_t * session_key_len)
+                                 size_t *session_key_len)
 {
   // Generate nonce A
   unsigned char *nonce_a = NULL;
@@ -769,7 +769,7 @@ int negotiate_client_session_key(int socket_fd,
   }
   size_t response_len = 8192 * sizeof(unsigned char);
 
-  kmyth_log(LOG_INFO, "Sending nonce A: %zd bytes", nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Sending nonce A: %zd bytes", nonce_a_len);
 
   result = build_nonce_request(public_key_ctx,
                                nonce_a, nonce_a_len,
@@ -790,11 +790,11 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Successfully sent nonce A.");
+  kmyth_log(LOG_DEBUG, "Successfully sent nonce A.");
 
   ssize_t read_result = read(socket_fd, response, response_len);
 
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to read the nonce response message.");
     kmyth_clear_and_free(nonce_a, nonce_a_len);
@@ -802,7 +802,7 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Received %zd bytes", read_result);
+  kmyth_log(LOG_DEBUG, "Received %zd bytes", read_result);
 
   kmyth_clear_and_free(request, request_len);
   request = NULL;
@@ -827,9 +827,9 @@ int negotiate_client_session_key(int socket_fd,
     return 1;
   }
 
-  kmyth_log(LOG_INFO, "Received nonce A: %zd bytes", received_nonce_a_len);
-  kmyth_log(LOG_INFO, "Received nonce B: %zd bytes", nonce_b_len);
-  kmyth_log(LOG_INFO, "Received ID: %.*s", received_id_len, received_id);
+  kmyth_log(LOG_DEBUG, "Received nonce A: %zd bytes", received_nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Received nonce B: %zd bytes", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Received ID: %.*s", received_id_len, received_id);
 
   if (nonce_a_len != received_nonce_a_len)
   {
@@ -924,7 +924,7 @@ int negotiate_server_session_key(int socket_fd,
                                  EVP_PKEY_CTX * private_key_ctx,
                                  unsigned char *id, size_t id_len,
                                  unsigned char **session_key,
-                                 size_t * session_key_len)
+                                 size_t *session_key_len)
 {
   // Generate nonce B
   unsigned char *nonce_b = NULL;
@@ -949,39 +949,15 @@ int negotiate_server_session_key(int socket_fd,
   }
   size_t response_len = 8192;
 
-  struct sockaddr_storage peer_addr;
-  socklen_t peer_addr_len = sizeof(peer_addr);
+  ssize_t read_result = read(socket_fd, response, response_len);
 
-  ssize_t read_result = recvfrom(socket_fd,
-                                 response, response_len,
-                                 0,
-                                 (struct sockaddr *) &peer_addr,
-                                 &peer_addr_len);
-
-  if (-1 == read_result)
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce request.");
     kmyth_clear_and_free(nonce_b, nonce_b_len);
     kmyth_clear_and_free(response, response_len);
     return 1;
   }
-
-  char host[NI_MAXHOST] = { 0 };
-  char service[NI_MAXSERV] = { 0 };
-
-  int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len,
-                      host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(nonce_b, nonce_b_len);
-    kmyth_clear_and_free(response, response_len);
-    return 1;
-  }
-
-  kmyth_log(LOG_INFO, "Received %zd bytes from %s:%s", read_result, host,
-            service);
 
   unsigned char *received_nonce_a = NULL;
   size_t received_nonce_a_len = 0;
@@ -994,15 +970,15 @@ int negotiate_server_session_key(int socket_fd,
                                &received_nonce_a, &received_nonce_a_len,
                                &received_id, &received_id_len);
 
-  kmyth_log(LOG_INFO, "Received nonce A: %zd bytes", received_nonce_a_len);
-  kmyth_log(LOG_INFO, "Received ID: %.*s", received_id_len, received_id);
+  kmyth_log(LOG_DEBUG, "Received nonce A: %zd bytes", received_nonce_a_len);
+  kmyth_log(LOG_DEBUG, "Received ID: %.*s", received_id_len, received_id);
 
   kmyth_clear_and_free(received_id, received_id_len);
   kmyth_clear_and_free(response, response_len);
   response = NULL;
   response_len = 0;
 
-  kmyth_log(LOG_INFO, "Sending nonce B: %zd", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Sending nonce B: %zd", nonce_b_len);
 
   result = build_nonce_response(public_key_ctx,
                                 received_nonce_a, received_nonce_a_len,
@@ -1016,10 +992,7 @@ int negotiate_server_session_key(int socket_fd,
     return 1;
   }
 
-  ssize_t send_result = sendto(socket_fd,
-                               response, response_len,
-                               0,
-                               (struct sockaddr *) &peer_addr, peer_addr_len);
+  ssize_t send_result = write(socket_fd, response, response_len);
 
   if (response_len != send_result)
   {
@@ -1041,10 +1014,8 @@ int negotiate_server_session_key(int socket_fd,
   }
   response_len = 8192 * sizeof(unsigned char);
 
-  read_result = recvfrom(socket_fd,
-                         response, response_len,
-                         0, (struct sockaddr *) &peer_addr, &peer_addr_len);
-  if (-1 == read_result)
+  read_result = read(socket_fd, response, response_len);
+  if (read_result <= 0)
   {
     kmyth_log(LOG_ERR, "Failed to receive the nonce confirmation.");
     kmyth_clear_and_free(nonce_b, nonce_b_len);
@@ -1052,20 +1023,6 @@ int negotiate_server_session_key(int socket_fd,
     kmyth_clear_and_free(response, response_len);
     return 1;
   }
-
-  s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len,
-                  host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-  if (0 != s)
-  {
-    kmyth_log(LOG_ERR, "Failed to lookup host and service information.");
-    kmyth_clear_and_free(nonce_b, nonce_b_len);
-    kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
-    kmyth_clear_and_free(response, response_len);
-    return 1;
-  }
-
-  kmyth_log(LOG_INFO, "Received %zd bytes from %s:%s", read_result, host,
-            service);
 
   unsigned char *received_nonce_b = NULL;
   size_t received_nonce_b_len = 0;
@@ -1101,7 +1058,7 @@ int negotiate_server_session_key(int socket_fd,
   }
 
   kmyth_clear_and_free(received_nonce_b, received_nonce_b_len);
-  kmyth_log(LOG_INFO, "Received nonce B: %zd bytes", nonce_b_len);
+  kmyth_log(LOG_DEBUG, "Received nonce B: %zd bytes", nonce_b_len);
 
   // Use nonces to generate shared session key S
   result = generate_session_key(received_nonce_a, received_nonce_a_len,

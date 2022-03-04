@@ -1,8 +1,8 @@
 /**
- * @file  memory_util.h
+ * @file  kmyth_enclave_memory_util.h
  *
  * @brief Provides memory utility functions for Kmyth applications
- *        using TPM 2.0
+ *        using an SGX enclave
  */
 
 #ifndef _KMYTH_ENCLAVE_MEMORY_UTIL_H_

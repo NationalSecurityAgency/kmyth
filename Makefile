@@ -278,30 +278,12 @@ SOFLAGS += -fPIC#
 LDFLAGS = -Llib#                         link path for libkmyth-*.so
 LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth-*.so
 
-# Specify indentation options
-INDENT_OPTS = -bli0#                     indent braces zero spaces
-INDENT_OPTS += -bap#                     blank lines after procedure bodies
-INDENT_OPTS += -bad#                     blank lines after declarations
-INDENT_OPTS += -sob#                     swallow optional blank lines
-INDENT_OPTS += -cli0#                    case label indent of zero spaces
-INDENT_OPTS += -npcs#                    no space after function in calls
-INDENT_OPTS += -nbc#                     don't force newlines after commas
-INDENT_OPTS += -bls#                     put braces on line after struct decl
-INDENT_OPTS += -blf#                     put braces on line after func def
-INDENT_OPTS += -lp#                      align continued lines at parentheses
-INDENT_OPTS += -ip0#                     indent parameter types zero spaces
-INDENT_OPTS += -ts2#                     set tab size to two spaces
-INDENT_OPTS += -nut#                     use spaces instead of tabs
-INDENT_OPTS += -npsl#                    type of proc on same line as name
-INDENT_OPTS += -bbo#                     prefer break before boolean operator
-INDENT_OPTS += -l80#                     max non-comment line length is 80
-
 #====================== END: TOOL CONFIGURATION ==============================
 
 #====================== START: RULES =========================================
 
 .PHONY: all
-all: pre clean-backups \
+all: clean-backups \
      $(BIN_DIR)/kmyth-seal \
      $(BIN_DIR)/kmyth-unseal \
      $(BIN_DIR)/kmyth-getkey \
@@ -311,22 +293,17 @@ all: pre clean-backups \
      $(LIB_DIR)/libkmyth-logger.so \
      $(LIB_DIR)/libkmyth-tpm.so
 
-.PHONY: pre
-pre:
-	indent $(INDENT_OPTS) $(SOURCE_FILES)
-	indent $(INDENT_OPTS) $(HEADER_FILES)
-
 .PHONY: libs
-libs: pre clean-backups \
+libs: clean-backups \
       $(LIB_DIR)/libkmyth-utils.so \
       $(LIB_DIR)/libkmyth-logger.so \
       $(LIB_DIR)/libkmyth-tpm.so
 
 .PHONY: utils-lib
-utils-lib: pre clean-backups $(LIB_DIR)/libkmyth-utils.so
+utils-lib: clean-backups $(LIB_DIR)/libkmyth-utils.so
 
 .PHONY: logger-lib
-logger-lib: pre clean-backups $(LIB_DIR)/libkmyth-logger.so
+logger-lib: clean-backups $(LIB_DIR)/libkmyth-logger.so
 
 $(LIB_DIR)/libkmyth-utils.so: $(UTILS_OBJECTS) | $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
@@ -511,14 +488,8 @@ docs: $(HEADER_FILES) \
 	doxygen Doxyfile
 
 .PHONY: test
-test: pretest clean-backups $(BIN_DIR)/kmyth-test
+test: clean-backups $(BIN_DIR)/kmyth-test
 	./bin/kmyth-test 2>/dev/null
-
-.PHONY: pretest
-pretest:
-	indent $(INDENT_OPTS) $(TEST_SOURCES)
-	indent $(INDENT_OPTS) $(TEST_HEADERS)
-
 
 $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
 	                     $(LIB_DIR)/libkmyth-utils.so \

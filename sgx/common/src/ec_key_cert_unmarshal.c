@@ -11,13 +11,13 @@
  * unmarshal_ec_der_to_pkey()
  ****************************************************************************/
 int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
+                             size_t *ec_der_bytes_in_len,
                              EVP_PKEY ** ec_pkey_out)
 {
   // validate that DER formatted input is non-NULL
   if (*ec_der_bytes_in == NULL)
   {
-    kmyth_sgx_log(3, "pointer to DER input to be unmarshalled is NULL");
+    kmyth_sgx_log(LOG_ERR, "pointer to DER input to be unmarshalled is NULL");
     return EXIT_FAILURE;
   }
 
@@ -27,7 +27,7 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
   *ec_pkey_out = d2i_PrivateKey(EVP_PKEY_EC, NULL, &buf_in, buf_len);
   if (*ec_pkey_out == NULL)
   {
-    kmyth_sgx_log(3, "DER to PKEY format conversion failed");
+    kmyth_sgx_log(LOG_ERR, "DER to PKEY format conversion failed");
     return EXIT_FAILURE;
   }
 
@@ -38,13 +38,12 @@ int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
  * unmarshal_ec_der_to_x509()
  ****************************************************************************/
 int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
-                             size_t * ec_der_bytes_in_len,
-                             X509 ** ec_x509_out)
+                             size_t *ec_der_bytes_in_len, X509 ** ec_x509_out)
 {
   // validate that DER formatted input is non-NULL
   if (*ec_der_bytes_in == NULL)
   {
-    kmyth_sgx_log(3, "pointer to DER input to be unmarshalled is NULL");
+    kmyth_sgx_log(LOG_ERR, "pointer to DER input to be unmarshalled is NULL");
     return EXIT_FAILURE;
   }
 
@@ -54,7 +53,7 @@ int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
   *ec_x509_out = d2i_X509(NULL, &buf_in, buf_len);
   if (*ec_x509_out == NULL)
   {
-    kmyth_sgx_log(3, "DER to X509 format conversion failed");
+    kmyth_sgx_log(LOG_ERR, "DER to X509 format conversion failed");
     return EXIT_FAILURE;
   }
 

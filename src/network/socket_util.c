@@ -18,7 +18,7 @@ int setup_client_socket(const char *node, const char *service, int *socket_fd)
   struct addrinfo *rp = NULL;
 
   hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = 0;
   hints.ai_protocol = 0;
 
@@ -65,15 +65,16 @@ int setup_client_socket(const char *node, const char *service, int *socket_fd)
 //
 int setup_server_socket(const char *service, int *socket_fd)
 {
-  // Setup socket settings and lookup own Internet address.
-  *socket_fd = -1;
-
   struct addrinfo hints = { 0 };
   struct addrinfo *result = NULL;
   struct addrinfo *rp = NULL;
+  int optval = 1;
+
+  // Setup socket settings and lookup own Internet address.
+  *socket_fd = -1;
 
   hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
   hints.ai_protocol = 0;
   hints.ai_canonname = NULL;
@@ -99,6 +100,15 @@ int setup_server_socket(const char *service, int *socket_fd)
       // Socket creation failed, try the next address.
       continue;
     }
+
+    // Avoid bind errors when reusing a port soon after closing it.
+    if (setsockopt(*socket_fd, SOL_SOCKET, SO_REUSEADDR,
+                   &optval, sizeof(optval)))
+    {
+      kmyth_log(LOG_ERR, "setsockopt error");
+      return 1;
+    }
+
     if (bind(*socket_fd, rp->ai_addr, rp->ai_addrlen) == 0)
     {
       // Socket successfully bound, use this socket.

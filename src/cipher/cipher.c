@@ -115,7 +115,6 @@ size_t get_key_len_from_cipher(cipher_t cipher)
   key_len_string = strrchr(cipher.cipher_name, '/') + 1;
   if (key_len_string == NULL)
   {
-    kmyth_log(LOG_ERR, "Unable to extract key length from cipher");
     return 0;
   }
 
@@ -123,7 +122,6 @@ size_t get_key_len_from_cipher(cipher_t cipher)
 
   if (key_len <= 0)
   {
-    kmyth_log(LOG_ERR, "Unable to convert key length to a positive integer");
     return 0;
   }
 
@@ -142,50 +140,38 @@ int kmyth_encrypt_data(unsigned char *data,
 {
   if (cipher_spec.cipher_name == NULL)
   {
-    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
     return 1;
   }
   if (data == NULL || data_size == 0)
   {
-    kmyth_log(LOG_ERR, "no data to encrypt ... exiting");
     return 1;
   }
   if (enc_data == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer to store the encrypted data ... exiting");
     return 1;
   }
   if (enc_key == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer to store the encryption key ... exiting");
     return 1;
   }
   if (*enc_key_size == 0)
   {
-    kmyth_log(LOG_ERR, "cannot use a 0-bit encryption key ... exiting");
     return 1;
   }
 
   // create symmetric key (wrapping key) of the desired size
   if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
   {
-    kmyth_log(LOG_ERR, "error creating %d-bit random symmetric key, error: %s "
-              "... exiting", *enc_key_size * 8,
-              ERR_error_string(ERR_get_error(), NULL));
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "created %d-bit random symmetric key",
-            *enc_key_size * 8);
 
   *enc_data_size = 0;
   if (cipher_spec.encrypt_fn(*enc_key,
                              *enc_key_size,
                              data, data_size, enc_data, enc_data_size))
   {
-    kmyth_log(LOG_ERR, "error encrypting data ... exiting");
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "encrypted data with %s", cipher_spec.cipher_name);
 
   return 0;
 }
@@ -202,22 +188,18 @@ int kmyth_decrypt_data(unsigned char *enc_data,
 {
   if (enc_data == NULL || enc_data_size == 0)
   {
-    kmyth_log(LOG_ERR, "no encrypted data to unencrypt ... exiting");
     return 1;
   }
   if (cipher_spec.cipher_name == NULL)
   {
-    kmyth_log(LOG_ERR, "cipher structure uninitialized ... exiting");
     return 1;
   }
   if (key == NULL || key_size == 0)
   {
-    kmyth_log(LOG_ERR, "no encryption key provided ... exiting");
     return 1;
   }
   if (result == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer to store the unencrypted data ... exiting");
     return 1;
   }
 
@@ -225,7 +207,6 @@ int kmyth_decrypt_data(unsigned char *enc_data,
   if (cipher_spec.decrypt_fn(key, key_size, enc_data,
                              enc_data_size, result, result_size))
   {
-    kmyth_log(LOG_ERR, "symmetric decryption error ... exiting");
     return 1;
   }
 
