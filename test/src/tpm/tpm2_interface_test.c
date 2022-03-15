@@ -353,7 +353,7 @@ void test_init_policy_cmd_auth(void)
   size_t cmdParams_size = 0;
 
   init_tpm2_connection(&sapi_ctx);
-  create_policy_auth_session(sapi_ctx, &session);
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
   init_password_cmd_auth(auth, &cmd_out, &res_out);
 
   //Valid test
@@ -538,7 +538,7 @@ void test_compute_authHMAC(void)
 
   //Valid test
   init_tpm2_connection(&sapi_ctx);
-  create_policy_auth_session(sapi_ctx, &session);
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
   TPM2_CC cc = 0;
   TPM2B_NAME auth_name = {.size = 0, };
   uint8_t *cmd = NULL;
@@ -618,12 +618,12 @@ void test_create_policy_auth_session(void)
   init_tpm2_connection(&sapi_ctx);
 
   //Valid test
-  CU_ASSERT(create_policy_auth_session(sapi_ctx, &session) == 0);
+  CU_ASSERT(create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY) == 0);
   CU_ASSERT(session.nonceNewer.size == KMYTH_DIGEST_SIZE);
   CU_ASSERT(session.nonceOlder.size == KMYTH_DIGEST_SIZE);
 
   //NULL context
-  CU_ASSERT(create_policy_auth_session(NULL, &session) != 0);
+  CU_ASSERT(create_auth_session(NULL, &session, TPM2_SE_POLICY) != 0);
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -639,7 +639,7 @@ void test_start_policy_auth_session(void)
   init_tpm2_connection(&sapi_ctx);
 
   //Valid test SE_TRIAL
-  create_policy_auth_session(sapi_ctx, &session);
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
   CU_ASSERT(start_policy_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL) == 0);
 
   //Valid test SE_POLICY
@@ -674,7 +674,7 @@ void test_apply_policy(void)
   init_tpm2_connection(&sapi_ctx);
 
   //Valid test
-  create_policy_auth_session(sapi_ctx, &session);
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
 
