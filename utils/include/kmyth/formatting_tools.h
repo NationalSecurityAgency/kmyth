@@ -229,6 +229,32 @@ int decodeBase64Data(unsigned char *base64_data,
 int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
            size_t input_length);
 
+
+/**
+ * @brief Converts hexadecimal string representation to the TPM2B digest, a serialized
+ *        compressed version
+ *
+ * @param[in]  str              The string representation of the digest
+ *
+ * @param[out] digest           The serialized strtoul version of the digest
+ *
+ * @return 0 if success, 1 if error
+ */
+int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
+
+/**
+ * @brief Converts a serialized and compressed version of a TPM2B's digest to its hexadecimal
+ *        string representation
+ *
+ * @param[in]  str              The string representation of the digest
+ *
+ * @param[out] digest           The serialized strtoul version of the digest
+ *
+ * @return 0 if success, 1 if error
+ */
+int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
+
+
 #ifdef __cplusplus
 }
 #endif
