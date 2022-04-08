@@ -33,7 +33,7 @@ For build and installation instructions see the [INSTALL](INSTALL.md) file.
 ----
 ## Usage
 
-### kmyth-seal / kmyty-reseal
+### kmyth-seal / kmyth-reseal
 
 This tool will *kmyth-seal* a file using the TPM 2.0. In TPM parlance,
 'sealing' typically refers to encrypting the file using a key known only to
@@ -79,8 +79,9 @@ be permanently lost.*
      -h or --help            Help (displays this usage).
 
 *kmyth-reseal is a specialization of kmyth-seal where the -g / --get_exp_policy option
-*is forced but otherwise all the options are available. One may think of
-*'kmyth-reseal ..' as identical functionality as 'kmyth-seal -g ..'.
+is forced but otherwise all the options are available. One may think of
+'kmyth-reseal ..' as identical functionality as 'kmyth-seal -g ..'. Use of the -g flag within kmyth-reseal while
+allowed, is superfluous.
 
 ### kmyth-unseal
 
