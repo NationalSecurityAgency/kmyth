@@ -43,7 +43,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   {
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from server certificate failed");
-    kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -61,7 +60,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
-    kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     close_socket_ocall(socket_fd);
@@ -75,7 +73,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   {
     kmyth_sgx_log(LOG_ERR,
                   "client ECDH 'public key' octet string creation failed");
-    kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
@@ -97,7 +94,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error signing client ephemeral 'public key' bytes");
-    kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
@@ -107,9 +103,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   }
   kmyth_sgx_log(LOG_DEBUG,
                 "client signed ECDH ephemeral 'public key' octet string");
-
-  // done with client private signing key, so clear this sensitive data
-  kmyth_enclave_clear(enclave_sign_privkey, sizeof(enclave_sign_privkey));
 
   // exchange signed client/server 'public key' contributions
   unsigned char *server_ephemeral_pub = NULL;
