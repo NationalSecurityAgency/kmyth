@@ -266,6 +266,11 @@ void ecdh_recv_decrypt(ECDHServer * ecdhconn, unsigned char **plaintext, size_t 
   kmyth_clear_and_free(ciphertext, ciphertext_len);
 }
 
+void cleanup_defunct() {
+  /* Clean up all defunct child processes. */
+  while (waitpid(-1, NULL, WNOHANG) > 0);
+}
+
 void create_server_socket(ECDHServer * ecdhconn)
 {
   int listen_fd = UNSET_FD;
@@ -290,6 +295,9 @@ void create_server_socket(ECDHServer * ecdhconn)
   if (ecdhconn->maxconn > 0) {
     kmyth_log(LOG_DEBUG, "Server will quit after receiving %d connections.", ecdhconn->maxconn);
   }
+
+  /* Register handler to automatically reap defunct child processes. */
+  signal(SIGCHLD, cleanup_defunct);
 
   while (true) {
     ecdhconn->socket_fd = accept(listen_fd, NULL, NULL);
