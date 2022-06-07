@@ -10,6 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <tss2/tss2_sys.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -240,7 +242,7 @@ int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
  *
  * @return 0 if success, 1 if error
  */
-int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
+int convert_string_to_digest(char *str, TPM2B_DIGEST * digest);
 
 /**
  * @brief Converts a serialized and compressed version of a TPM2B's digest to its hexadecimal
@@ -252,7 +254,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
  *
  * @return 0 if success, 1 if error
  */
-int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
+int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf);
 
 
 #ifdef __cplusplus

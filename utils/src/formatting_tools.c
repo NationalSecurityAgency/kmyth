@@ -334,10 +334,12 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
     return 1;
   }
   // initializes buffer with all 0 hex values
-  size_t digest_size = (8 * sizeof(digest)) + 2;
-  unsigned char expectedPolicyBuffer[ 2 * digest_size + 1]  = { 0x00 };
+  size_t digest_size = (8 * sizeof(digest)) + 2; // sizeof(digest) j
   unsigned long ul;
 
+  unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( 2*digest_size + 1 );
+  if( expectedPolicyBuffer == NULL ) return 1;
+  expectedPolicyBuffer[0] = 0x00; // patch - compiler won't do above assignment
 
   // iterates through each pair of hex values and fills the
   //  buffer with values indicated in the string
@@ -361,7 +363,10 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
   // total number of hex values in the TPM2B digest
   size_t digest_size = (8 * sizeof(digest)) + 2;
 
-  char hex_buf[digest_size];
+  char * hex_buf;
+
+  hex_buf = (char *) malloc( digest_size+1 );
+  if( hex_buf == NULL ) return 1;
 
   memcpy(hex_buf, digest, digest_size);
 
