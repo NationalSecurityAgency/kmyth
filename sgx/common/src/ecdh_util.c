@@ -77,7 +77,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   if (required_buffer_len <= 0)
   {
     kmyth_sgx_log(LOG_ERR,
-                  "failed to get size for ephemeral pubkey octet string");
+                  "failed to get size for ephemeral public key octet string");
     return EXIT_FAILURE;
   }
 
@@ -85,15 +85,16 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   if (*ephemeral_ec_pub_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR,
-                  "malloc of ephemeral pubkey octet string buffer failed");
+                  "ephemeral public key octet string buffer malloc failed");
     return EXIT_FAILURE;
   }
   *ephemeral_ec_pub_out_len = EC_POINT_point2oct(grp,
                                                  pub_pt,
                                                  POINT_CONVERSION_UNCOMPRESSED,
                                                  *ephemeral_ec_pub_out,
-                                                 required_buffer_len, NULL);
-  if (*ephemeral_ec_pub_out_len <= 0)
+                                                 required_buffer_len,
+                                                 NULL);
+  if (*ephemeral_ec_pub_out_len != required_buffer_len)
   {
     kmyth_sgx_log(LOG_ERR, "EC_POINT to octet string conversion failed");
     return EXIT_FAILURE;
@@ -127,8 +128,11 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
   }
 
   // convert input octet string to an EC_POINT struct 
-  if (EC_POINT_oct2point(group, *ec_point_out,
-                         ec_octet_str_in, ec_octet_str_in_len, NULL) != 1)
+  if (1 != EC_POINT_oct2point(group,
+                              *ec_point_out,
+                              ec_octet_str_in,
+                              ec_octet_str_in_len,
+                              NULL))
   {
     EC_GROUP_clear_free(group);
     kmyth_sgx_log(LOG_ERR, "octet string to EC_POINT conversion failed");
