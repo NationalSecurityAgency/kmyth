@@ -351,7 +351,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
   }
 
   // converts the byte array into a TPM2B_DIGEST struct
-  memcpy(digest, expectedPolicyBuffer, sizeof(expectedPolicyBuffer));
+  memcpy(digest, expectedPolicyBuffer, sizeof(*expectedPolicyBuffer));
   return 0;
 }
 
