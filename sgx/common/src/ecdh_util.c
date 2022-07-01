@@ -43,7 +43,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
                                  size_t *ephemeral_ec_pub_out_len)
 {
   // need EC_GROUP (elliptic curve definition) as parameter for API calls
-  EC_GROUP const *grp = EC_KEY_get0_group(ephemeral_ec_key_pair_in);
+  const EC_GROUP *grp = EC_KEY_get0_group(ephemeral_ec_key_pair_in);
 
   if (grp == NULL)
   {
@@ -52,7 +52,7 @@ int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
   }
 
   // extract 'public key' (as an EC_POINT struct)
-  EC_POINT const *pub_pt = EC_KEY_get0_public_key(ephemeral_ec_key_pair_in);
+  const EC_POINT *pub_pt = EC_KEY_get0_public_key(ephemeral_ec_key_pair_in);
 
   if (pub_pt == NULL)
   {
@@ -134,13 +134,13 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
                               ec_octet_str_in_len,
                               NULL))
   {
-    EC_GROUP_clear_free(group);
+    EC_GROUP_free(group);
     kmyth_sgx_log(LOG_ERR, "octet string to EC_POINT conversion failed");
     return EXIT_FAILURE;
   }
 
   // clean-up
-  EC_GROUP_clear_free(group);
+  EC_GROUP_free(group);
 
   return EXIT_SUCCESS;
 }
@@ -157,13 +157,15 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
   //
   //   - the field size calculated below returns the number of bits required
   //     for a field element for the elliptic curve being used (i.e., the size
-  //     of the prime p for a prime field and the value of m for a binary (2^m)
+  //     of the prime p for a prime field and the value of m for a binary [2^m]
   //     field)
   //
-  //   - the length of the shared secret is calculated by converting to the
-  //     maximum number of bytes required. Adding 7 to the bit length and
-  //     taking the integer portion of dividing by 8 bits in a byte returns
-  //     the necessary size in bytes.
+  //   - the length of the shared secret is calculated by computing the
+  //     maximum number of bytes required. Adding 7 to the bit length (to
+  //     address cases where the field size value in bits does not fall on
+  //     a byte boundary) and taking the integer portion of dividing by 8 bits
+  //     in a byte (doing bits to bytes conversion) returns the necessary
+  //     buffer size (so the required memory, in bytes, can be allocated).
   const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_key);
   int field_size = EC_GROUP_get_degree(local_eph_priv_key_group);
 
