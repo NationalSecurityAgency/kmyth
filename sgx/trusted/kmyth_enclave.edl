@@ -88,8 +88,8 @@ enclave {
 
     /**
      * @brief Negotiates a session key (using ECDH) for creating a secure
-              connection with key server and then retrieves a key from the
-              key server using that secure connection.
+     *        connection with key server and then retrieves a key from the
+     *        key server using that secure connection.
      *
      * @param[in]  client_private_bytes      DER-formatted private signing
      *                                       key for the client (enclave)

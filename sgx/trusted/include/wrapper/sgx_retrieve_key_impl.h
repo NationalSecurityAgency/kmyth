@@ -41,6 +41,13 @@ extern "C"
  *                                    peer as part of an ECDH key agreement
  *                                    protocol.
  *
+ * @param[in]  enclave_cert           Pointer to enclave's (client's)
+ *                                    certificate, containing the client's
+ *                                    identity information (subject name)
+ *                                    that will be exchanged with the peer
+ *                                    in the 'Client Hello' portion of the
+ *                                    implemented ECDH key agreement protocol.
+ *
  * @param[in]  peer_cert              Pointer to remote's (server's)
  *                                    certificate, containing the server's
  *                                    public key that can be used to validate
@@ -77,7 +84,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
+  int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
+                           X509 * enclave_cert,
+                           X509 * peer_cert,
                            const char *server_host, int server_host_len,
                            int server_port, unsigned char *req_key_id,
                            size_t req_key_id_len,

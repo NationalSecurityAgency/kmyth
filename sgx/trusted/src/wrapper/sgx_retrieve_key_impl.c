@@ -13,13 +13,18 @@
 //############################################################################
 // enclave_retrieve_key()
 //############################################################################
-int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
-                         const char *server_host, int server_host_len,
-                         int server_port, unsigned char *req_key_id,
+int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
+                         X509 * enclave_cert,
+                         X509 * peer_cert,
+                         const char *server_host,
+                         int server_host_len,
+                         int server_port,
+                         unsigned char *req_key_id,
                          size_t req_key_id_len,
                          unsigned char **retrieved_key_id,
                          size_t *retrieved_key_id_len,
-                         uint8_t **retrieved_key, size_t *retrieved_key_len)
+                         uint8_t **retrieved_key,
+                         size_t *retrieved_key_len)
 {
   int ret_val;
   sgx_status_t ret_ocall;
@@ -35,6 +40,41 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     return EXIT_FAILURE;
   }
 
+  // extract 'subject name' (distiguished name) from enclave cert
+  //   Note: The returned X509_NAME is an internal pointer
+  //         that should NOT be freed.
+  X509_NAME *enclave_subject_name = X509_get_subject_name(enclave_cert);
+  if (enclave_subject_name == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "extraction of enclave cert subject name failed");
+    close_socket_ocall(socket_fd);
+    return EXIT_FAILURE;
+  }
+  kmyth_sgx_log(LOG_DEBUG, "extracted client cert subject name (X509_NAME)");
+
+  // marshal enclave identity (DN) into binary (DER formatted) format
+  unsigned char *enclave_dn_bytes = NULL;
+  int enclave_dn_bytes_len = -1;
+
+  ret_val = marshal_x509_name_to_der(&enclave_subject_name,
+                                     &enclave_dn_bytes,
+                                     &enclave_dn_bytes_len);
+
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "enclave_dn_bytes_len = %d",
+           enclave_dn_bytes_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  if ((enclave_dn_bytes == NULL) || (enclave_dn_bytes_len <= 0))
+  {
+    kmyth_sgx_log(LOG_ERR, "error marshalling enclave cert subject name");
+    free(enclave_dn_bytes);
+    close_socket_ocall(socket_fd);
+    return EXIT_FAILURE;
+  }
+  kmyth_sgx_log(LOG_DEBUG, "marshalled client identity (cert subject name)");
+
+
   // recover public key from certificate
   EVP_PKEY *server_sign_pubkey = NULL;
 
@@ -43,6 +83,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   {
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from server certificate failed");
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -62,6 +103,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -76,6 +118,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -98,6 +141,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -128,6 +172,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     free(client_eph_pub_signature);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -151,6 +196,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -175,6 +221,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     free(server_ephemeral_pub);
     EC_POINT_free(server_ephemeral_pub_pt);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -198,6 +245,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     EC_POINT_free(server_ephemeral_pub_pt);
     free(session_secret);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -227,6 +275,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon session key computation failed");
     kmyth_enclave_clear_and_free(session_key, session_key_len);
+    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -236,6 +285,9 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
            session_key[session_key_len - 2],
            session_key[session_key_len - 1], session_key_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // done with enclave identity information
+  free(enclave_dn_bytes); 
 
   // create encrypted key request message
   KMIP kmip_context = { 0 };
@@ -350,3 +402,4 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
 
   return EXIT_SUCCESS;
 }
+ 
