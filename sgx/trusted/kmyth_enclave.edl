@@ -97,31 +97,40 @@ enclave {
      * @param[in]  client_private_bytes_len  Length (in bytes) of the client
      *                                       (enclave) private key
      *
+     * @param[in]  client_cert_bytes         DER-formatted public certificate
+     *                                       for the client (enclave)
+     *
+     * @param[in]  client_cert_bytes_len     Length (in bytes) of the client
+     *                                       (enclave) public certificate
+     *
      * @param[in]  server_cert_bytes         DER-formatted public certificate
-     *                                       for the key server.
+     *                                       for the key server
      *
      * @param[in]  server_cert_bytes_len     Length (in bytes) of the key
-     *                                       server certificate.
+     *                                       server certificate
      *
      * @param[in]  server_host               Hostname/IP string for key server.
      *
      * @param[in]  server_host_len           Length of hostname/IP string for
-     *                                       the key server.
+     *                                       the key server
      *
-     * @param[in]  server_port               TCP port for key server.
+     * @param[in]  server_port               TCP port for key server
      *
      * @param[in]  key_id                    ID string used to specify the key
      *                                       to be retrieved from the server
-     *                                       (not null-terminated).
+     *                                       (not null-terminated)
      *
      * @param[in]  key_id_len                Length of the requested key's ID
-     *                                       string.
+     *                                       string
      *
-     * @return 0 on success, -1 on failure.
+     * @return 0 on success, -1 on failure
      */
     public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len]
                                                         uint8_t* client_private_bytes,
                                                       size_t client_private_bytes_len,
+                                                      [in, count=client_cert_bytes_len]
+                                                        uint8_t* client_cert_bytes,
+                                                      size_t client_cert_bytes_len,                                                                                                              
                                                       [in, count=server_cert_bytes_len]
                                                         uint8_t* server_cert_bytes,
                                                       size_t server_cert_bytes_len,

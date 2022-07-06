@@ -13,6 +13,8 @@
 // This is the function that gets converted into the ecall.
 int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                            size_t client_private_bytes_len,
+                                           uint8_t * client_cert_bytes,
+                                           size_t client_cert_bytes_len,
                                            uint8_t * server_cert_bytes,
                                            size_t server_cert_bytes_len,
                                            const char *server_host,
