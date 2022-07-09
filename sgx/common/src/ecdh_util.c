@@ -155,17 +155,11 @@ int compose_client_hello_msg_body(unsigned char *client_id,
                                   unsigned char **msg_body_out,
                                   size_t *msg_body_out_len)
 {
-  // compute required buffer size for message body to be composed
-  int total_bytes = sizeof(client_id_len) + client_id_len +
-                    sizeof(client_ephemeral_len) + client_ephemeral_len;
-  if (total_bytes < 0)
-  {
-    kmyth_sgx_log(LOG_ERR, "invalid 'Client Hello' message body size");
-    return EXIT_FAILURE;
-  }
-
   // allocate memory for 'Client Hello' message body byte array
-  *msg_body_out = malloc(total_bytes);
+  *msg_body_out_len = sizeof(client_id_len) + client_id_len +
+                      sizeof(client_ephemeral_len) + client_ephemeral_len;
+
+  *msg_body_out = malloc(*msg_body_out_len);
   if (*msg_body_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
@@ -208,7 +202,23 @@ int append_signature_to_msg(unsigned char *signature_in,
                             unsigned char **msg,
                             size_t *msg_len)
 {
-  kmyth_sgx_log(LOG_DEBUG, "inside append_signature_to_msg() stub");
+  // create a temporary copy of the input message body
+  size_t message_copy_len = *msg_len;
+  unsigned char message_copy[message_copy_len];
+  memcpy(message_copy, *msg, *msg_len);
+
+  // resize input message buffer to make room for both body and signature
+  *msg_len += signature_in_len;
+  *msg = realloc(*msg, *msg_len);
+  if (*msg == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "realloc error for message plus signature result");
+    return EXIT_FAILURE;
+  }
+
+  // popluate output with concatenated fields
+  memcpy(*msg, message_copy, message_copy_len);
+  memcpy(*msg + message_copy_len, signature_in, signature_in_len);
 
   return EXIT_SUCCESS;
 }
@@ -378,7 +388,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   }
 
   // configure signing context
-  if (EVP_SignInit(mdctx, EVP_sha512()) != 1)
+  if (EVP_SignInit(mdctx, KMYTH_ECDH_HASH_ALG) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "config of message digest signature context failed");
     EVP_MD_CTX_free(mdctx);
@@ -442,7 +452,7 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   }
 
   // 'initialize' (e.g., load public key)
-  if (EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(),
+  if (EVP_DigestVerifyInit(mdctx, NULL, KMYTH_ECDH_HASH_ALG,
                            NULL, ec_verify_pkey) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "initialization of message digest context failed");

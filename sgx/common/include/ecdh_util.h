@@ -36,7 +36,13 @@ extern "C"
  *        calling functions a way to easily specify the kmyth default
  *        when invoking API calls that include a 'curve ID' parameter.
  */
-#define KMYTH_EC_NID NID_secp384r1
+#define KMYTH_EC_NID NID_secp521r1
+
+/**
+ * @brief Specify the cryptographic hash algorithm to be used by the
+ *        ECDH-based Kmyth 'retrieve key from server' protocol 
+ */
+#define KMYTH_ECDH_HASH_ALG EVP_sha512()
 
 /**
  * @brief OpenSSL's compute_ecdh_key() call supports optionally passing

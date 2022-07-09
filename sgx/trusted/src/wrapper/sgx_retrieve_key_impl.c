@@ -140,7 +140,13 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "created 'Client Hello' message");
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "'Client Hello' message = 0x%02x%02x...%02x%02x (%ld bytes)",
+           client_hello_msg[0], client_hello_msg[1],
+           client_hello_msg[client_hello_msg_len - 2],
+           client_hello_msg[client_hello_msg_len - 1],
+           client_hello_msg_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // sign 'Client Hello' message
   unsigned char *client_hello_msg_signature = NULL;
@@ -162,8 +168,13 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG,
-                "client signed 'Client Hello' message body");
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "'Client Hello' signature = 0x%02x%02x...%02x%02x (%d bytes)",
+           client_hello_msg_signature[0], client_hello_msg_signature[1],
+           client_hello_msg_signature[client_hello_msg_signature_len - 2],
+           client_hello_msg_signature[client_hello_msg_signature_len - 1],
+           client_hello_msg_signature_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // append signature to 'Client Hello' message
   ret_val = append_signature_to_msg(client_hello_msg_signature,
@@ -182,7 +193,13 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "'Client Hello' message complete");
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "'Client Hello' message = 0x%02x%02x...%02x%02x (%ld bytes)",
+           client_hello_msg[0], client_hello_msg[1],
+           client_hello_msg[client_hello_msg_len - 2],
+           client_hello_msg[client_hello_msg_len - 1],
+           client_hello_msg_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // DEBUG: parse 'Client Hello' message into body / signature parts
   unsigned char * signature_test = NULL;
