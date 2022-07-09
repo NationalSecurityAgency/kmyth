@@ -129,43 +129,144 @@ struct ECDHMessageHeader {
 /**
  * @brief Assembles the 'Client Hello' message, which initiates the ECDH
  *        key agreement portion of the kmyth 'retrieve key from server'
- *        protocol. The body of the 'Client Hello' message contains the
+ *        protocol.
+ * 
+ *        The body of the 'Client Hello' message contains the
  *        following fields concatenated in the below order:
  *          - client_id_len
  *          - client_id_bytes
  *          - client_ephemeral_len
  *          - client_ephemeral_bytes
- *
- * @param[in]  client_id_bytes        ID information (i.e., distinguished
- *                                    name information for the client - This
- *                                    is expected to be a DER-formatted
+ * 
+ * @param[in]  client_id_bytes        Pointer to ID information (i.e.,
+ *                                    distinguished name) for the client -
+ *                                    expected to be a DER-formatted
  *                                    X509_NAME struct (byte array)
  *
  * @param[in]  client_id_len          Length (in bytes) of the input client
  *                                    ID information byte array
  *
- * @param[in]  client_ephemeral_bytes Client's public epehemeral contribution
- *                                    This is expected to be a DER-formatted
- *                                    EC_KEY struct (byte array)
+ * @param[in]  client_ephemeral_bytes Pointer to client's public epehemeral
+ *                                    contribution - expected to be a
+ *                                    DER-formatted EC_KEY struct (byte array)
+ * 
+ * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
+ *                                    public ephemeral contribution
+ * 
+ * @param[out] msg_body_out           Pointer to pointer to byte buffer
+ *                                    containing the 'Client Hello' message
+ *                                    to be exchanged with a peer (e.g., key
+ *                                    server)
+ *
+ * @param[out] msg_body_out_len       Pointer to 'Client Hello' message length
+ *                                    (in bytes)
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compose_client_hello_msg_body(unsigned char *client_id,
+                                    size_t client_id_len,
+                                    unsigned char *client_ephemeral,
+                                    size_t client_ephemeral_len,
+                                    unsigned char **msg_body_out,
+                                    size_t *msg_body_out_len);
+
+/**
+ * @brief Parses the 'Client Hello' message body, which initiates the ECDH
+ *        key agreement portion of the kmyth 'retrieve key from server'
+ *        protocol. Each message field is returned as an output parameter
+ *        of this function.
+ * 
+ * @param[out] msg_body_in            Pointer to a byte buffer containing the
+ *                                    contents of a 'Client Hello' message
+ *
+ * @param[out] msg_body_in_len        Length (in bytes) of byte buffer
+ *                                    parameter containing the contents of a
+ *                                    'Client Hello' message
+ *
+ * @param[in]  client_id_bytes        Pointer to pointer to ID information
+ *                                    (i.e., distinguished name) for the
+ *                                    client - expect a DER-formatted
+ *                                    X509_NAME struct (byte array)
+ *
+ * @param[in]  client_id_len          Pointer to ength (in bytes) of the input
+ *                                    client ID information byte array
+ *
+ * @param[in]  client_ephemeral_bytes Pointer to pointer to client's public
+ *                                    epehemeral contribution - expect a
+ *                                    DER-formatted EC_KEY struct (byte array)
  * 
  * @param[in]  client_ephemeral_len   Input elliptic curve 'public key' in
  *                                    octet string format
  * 
- * @param[out] msg_out                Pointer to EC_POINT struct that represents
- *                                    the elliptic curve point for the input
- *                                    elliptic curve 'public key' contribution
+ 
+ * @return 0 on success, 1 on error
+ */
+  int parse_client_hello_msg_body(unsigned char *msg_body_in,
+                                  size_t msg_body_in_len,
+                                  unsigned char **client_id,
+                                  size_t *client_id_len,
+                                  unsigned char **client_ephemeral,
+                                  size_t *client_ephemeral_len);
+
+/**
+ * @brief Appends a signature (byte array passed as an input parameter
+ *        to this function) to a message. The input message is modified
+ *        (extended by appending the signature bytes to the tail end of
+ *        the message).
+ * 
+ * @param[out] signature_in      Pointer to a byte buffer containing the
+ *                               signature over the body of the message -
+ *                               bytes to be appended to end of message
  *
- * @param[out] msg_out_len            Pointer to EC_POINT struct that represents
- *                                    the elliptic curve point for the input*
+ * @param[out] signature_in_len  Length (in bytes) of byte buffer
+ *                               parameter containing the contents of a
+ *                               message signature to be appended.
+ *
+ * @param[in/out] msg            Pointer to pointer to message buffer -
+ *                               a message body is passed to this function
+ *                               as an input parameter, buffer memory is
+ *                               re-allocated to make room for the
+ *                               signature bytes, and this parameter contains
+ *                               a modified message (including the appended
+ *                               signature bytes) on exit
+ *
+ * @param[in/out] msg_len        Pointer to ength (in bytes) of the
+ *                               message buffer parameter
  *
  * @return 0 on success, 1 on error
  */
-  int compose_client_hello_msg(unsigned char *client_id,
-                               size_t client_id_len,
-                               unsigned char *client_ephemeral,
-                               size_t client_ephemeral_len,
-                               unsigned char **msg_out,
-                               size_t *msg_out_len);
+  int append_signature_to_msg(unsigned char *signature_in,
+                              size_t signature_in_len,
+                              unsigned char **msg,
+                              size_t *msg_len);
+
+/**
+ * @brief Parses a message into body and signature parts. The input message
+ *        is modified (truncated by removing the signature bytes from the
+ *        tail end of the message). The signature bytes are provided as an
+ *        output parameter.
+ * 
+ * @param[in/out] msg         Pointer to pointer to a byte buffer containing
+ *                            a complete message on function entry. On
+ *                            function exit, this buffer has been truncated
+ *                            to contain only the body of the message.
+ *
+ * @param[in/out] msg_len     Pointer to length (in bytes) of message byte
+ *                            buffer
+ *
+ * @param[out] signature      Pointer to pointer to a byte buffer containing
+ *                            the signature bytes removed from the tail end
+ *                            of the input message bytes.
+ *
+ * @param[out] signature_len  Pointer to ength (in bytes) of the
+ *                            message buffer parameter
+ *
+ * @return 0 on success, 1 on error
+ */
+int parse_msg_body_signature(unsigned char **msg,
+                             size_t *msg_len,
+                             unsigned char **signature,
+                             size_t *signature_len);
 
 /**
  * @brief Computes shared secret value, using ECDH, from a local private

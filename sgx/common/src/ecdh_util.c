@@ -146,16 +146,57 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 }
 
 /*****************************************************************************
- * compose_client_hello_msg()
+ * compose_client_hello_msg_body()
  ****************************************************************************/
-int compose_client_hello_msg(unsigned char *client_id,
-                             size_t client_id_len,
-                             unsigned char *client_ephemeral,
-                             size_t client_ephemeral_len,
-                             unsigned char **msg_out,
-                             size_t *msg_out_len)
+int compose_client_hello_msg_body(unsigned char *client_id,
+                                  size_t client_id_len,
+                                  unsigned char *client_ephemeral,
+                                  size_t client_ephemeral_len,
+                                  unsigned char **msg_body_out,
+                                  size_t *msg_body_out_len)
 {
-  kmyth_sgx_log(LOG_DEBUG, "inside compose_client_hello_msg() stub");
+  kmyth_sgx_log(LOG_DEBUG, "inside compose_client_hello_msg_body() stub");
+
+  return EXIT_SUCCESS;
+}                                 
+
+/*****************************************************************************
+ * parse_client_hello_msg_body()
+ ****************************************************************************/
+int parse_client_hello_msg_body(unsigned char *msg_body_in,
+                                size_t msg_body_in_len,
+                                unsigned char **client_id,
+                                size_t *client_id_len,
+                                unsigned char **client_ephemeral,
+                                size_t *client_ephemeral_len)
+{
+  kmyth_sgx_log(LOG_DEBUG, "inside parse_client_hello_msg() stub");
+
+  return EXIT_SUCCESS;
+}                                 
+
+/*****************************************************************************
+ * append_signature_to_msg()
+ ****************************************************************************/
+int append_signature_to_msg(unsigned char *signature_in,
+                            size_t signature_in_len,
+                            unsigned char **msg,
+                            size_t *msg_len)
+{
+  kmyth_sgx_log(LOG_DEBUG, "inside append_signature_to_msg() stub");
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * parse_msg_body_signature()
+ ****************************************************************************/
+int parse_msg_body_signature(unsigned char **msg,
+                             size_t *msg_len,
+                             unsigned char **signature,
+                             size_t *signature_len)
+{
+  kmyth_sgx_log(LOG_DEBUG, "inside parse_msg_body_signature() stub");
 
   return EXIT_SUCCESS;
 }                                 
