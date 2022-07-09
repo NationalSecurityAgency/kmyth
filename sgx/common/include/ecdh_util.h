@@ -127,6 +127,47 @@ struct ECDHMessageHeader {
                                               EC_POINT ** ec_point_out);
 
 /**
+ * @brief Assembles the 'Client Hello' message, which initiates the ECDH
+ *        key agreement portion of the kmyth 'retrieve key from server'
+ *        protocol. The body of the 'Client Hello' message contains the
+ *        following fields concatenated in the below order:
+ *          - client_id_len
+ *          - client_id_bytes
+ *          - client_ephemeral_len
+ *          - client_ephemeral_bytes
+ *
+ * @param[in]  client_id_bytes        ID information (i.e., distinguished
+ *                                    name information for the client - This
+ *                                    is expected to be a DER-formatted
+ *                                    X509_NAME struct (byte array)
+ *
+ * @param[in]  client_id_len          Length (in bytes) of the input client
+ *                                    ID information byte array
+ *
+ * @param[in]  client_ephemeral_bytes Client's public epehemeral contribution
+ *                                    This is expected to be a DER-formatted
+ *                                    EC_KEY struct (byte array)
+ * 
+ * @param[in]  client_ephemeral_len   Input elliptic curve 'public key' in
+ *                                    octet string format
+ * 
+ * @param[out] msg_out                Pointer to EC_POINT struct that represents
+ *                                    the elliptic curve point for the input
+ *                                    elliptic curve 'public key' contribution
+ *
+ * @param[out] msg_out_len            Pointer to EC_POINT struct that represents
+ *                                    the elliptic curve point for the input*
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compose_client_hello_msg(unsigned char *client_id,
+                               size_t client_id_len,
+                               unsigned char *client_ephemeral,
+                               size_t client_ephemeral_len,
+                               unsigned char **msg_out,
+                               size_t *msg_out_len);
+
+/**
  * @brief Computes shared secret value, using ECDH, from a local private
  *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
  *        secret (e.g., 'abG') that is mutually derivable by both the local

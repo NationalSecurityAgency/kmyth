@@ -125,6 +125,23 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG,
                 "created client's ephemeral 'public key' octet string");
 
+  // compose 'Client Hello' message (client to server key agreement 'request')
+  unsigned char *client_hello_msg = NULL;
+  size_t client_hello_msg_len = 0;
+
+  ret_val = compose_client_hello_msg(enclave_dn_bytes,
+                                     enclave_dn_bytes_len,
+                                     client_ephemeral_pub,
+                                     client_ephemeral_pub_len,
+                                     &client_hello_msg,
+                                     &client_hello_msg_len);
+  if (ret_val != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
+    return EXIT_FAILURE;
+  }
+  kmyth_sgx_log(LOG_DEBUG, "created 'Client Hello' message");
+
   // sign client's ephemeral contribution
   unsigned char *client_eph_pub_signature = NULL;
   unsigned int client_eph_pub_signature_len = 0;

@@ -146,6 +146,21 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 }
 
 /*****************************************************************************
+ * compose_client_hello_msg()
+ ****************************************************************************/
+int compose_client_hello_msg(unsigned char *client_id,
+                             size_t client_id_len,
+                             unsigned char *client_ephemeral,
+                             size_t client_ephemeral_len,
+                             unsigned char **msg_out,
+                             size_t *msg_out_len)
+{
+  kmyth_sgx_log(LOG_DEBUG, "inside compose_client_hello_msg() stub");
+
+  return EXIT_SUCCESS;
+}                                 
+
+/*****************************************************************************
  * compute_ecdh_shared_secret()
  ****************************************************************************/
 int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
