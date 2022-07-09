@@ -155,7 +155,32 @@ int compose_client_hello_msg_body(unsigned char *client_id,
                                   unsigned char **msg_body_out,
                                   size_t *msg_body_out_len)
 {
-  kmyth_sgx_log(LOG_DEBUG, "inside compose_client_hello_msg_body() stub");
+  // compute required buffer size for message body to be composed
+  int total_bytes = sizeof(client_id_len) + client_id_len +
+                    sizeof(client_ephemeral_len) + client_ephemeral_len;
+  if (total_bytes < 0)
+  {
+    kmyth_sgx_log(LOG_ERR, "invalid 'Client Hello' message body size");
+    return EXIT_FAILURE;
+  }
+
+  // allocate memory for 'Client Hello' message body byte array
+  *msg_body_out = malloc(total_bytes);
+  if (*msg_body_out == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
+    return EXIT_FAILURE;
+  }
+
+  // populate message buffer
+  unsigned char *buf = *msg_body_out;
+  memcpy(buf, &client_id_len, sizeof(client_id_len));
+  buf += sizeof(client_id_len);
+  memcpy(buf, client_id, client_id_len);
+  buf += client_id_len;
+  memcpy(buf, &client_ephemeral_len, sizeof(client_ephemeral_len));
+  buf += sizeof(client_ephemeral_len);
+  memcpy(buf, client_ephemeral, client_ephemeral_len);
 
   return EXIT_SUCCESS;
 }                                 
