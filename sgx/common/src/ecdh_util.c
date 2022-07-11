@@ -9,6 +9,36 @@
 #include "ecdh_util.h"
 
 /*****************************************************************************
+ * extract_identity_bytes_from_x509()
+ ****************************************************************************/
+int extract_identity_bytes_from_x509(X509 *cert_in,
+                                     unsigned char **id_out,
+                                     int *id_out_len)
+{
+  // extract 'subject name' from input certificate
+  //   Note: The returned X509_NAME is an internal pointer
+  //         that should NOT be freed.
+  X509_NAME *subj_name = X509_get_subject_name(cert_in);
+  if (subj_name == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "extraction of certificate's subject name failed");
+    return EXIT_FAILURE;
+  }
+
+  // marshal enclave identity (DN) into binary (DER formatted) format
+  int ret = marshal_x509_name_to_der(subj_name,
+                                     id_out,
+                                     id_out_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "error marshalling certificate's subject name");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
  * create_ecdh_ephemeral_key_pair()
  ****************************************************************************/
 int create_ecdh_ephemeral_key_pair(int ec_nid,

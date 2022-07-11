@@ -103,9 +103,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int marshal_x509_name_to_der(X509_NAME ** cert_dn_in,
-                               unsigned char **cert_dn_bytes_out,
-                               int *cert_dn_bytes_out_len);
+  int marshal_x509_name_to_der(X509_NAME * cert_dn_in,
+                               unsigned char ** cert_dn_bytes_out,
+                               int * cert_dn_bytes_out_len);
 
 #ifdef __cplusplus
 }

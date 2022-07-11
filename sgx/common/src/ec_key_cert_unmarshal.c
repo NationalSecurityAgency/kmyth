@@ -59,3 +59,30 @@ int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
 
   return EXIT_SUCCESS;
 }
+
+/*****************************************************************************
+ * unmarshal_der_to_x509_name()
+ ****************************************************************************/
+int unmarshal_der_to_x509_name(uint8_t ** der_bytes_in,
+                               size_t * der_bytes_in_len,
+                               X509_NAME ** x509_name_out)
+{
+  // validate that DER formatted input is non-NULL
+  if (*der_bytes_in == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "pointer to DER input to be unmarshalled is NULL");
+    return EXIT_FAILURE;
+  }
+
+  const unsigned char *buf_in = (const unsigned char *) *der_bytes_in;
+  long buf_len = (long) *der_bytes_in_len;
+
+  *x509_name_out = d2i_X509_NAME(NULL, &buf_in, buf_len);
+  if (*x509_name_out == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "DER to X509_NAME format conversion failed");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}

@@ -70,6 +70,26 @@ struct ECDHMessageHeader {
   uint16_t msg_size;
 };
 
+
+/**
+ * @brief Extracts identity information(subject name) from an input X509
+ *        certificate as a DER-formatted X509_NAME byte array
+ *
+ * @param[in]  cert_in     Pointer to internally formatted (X509 struct)
+ *                         certificate
+ *
+ * @param[out] id_out      Pointer to byte array containing DER formatted
+ *                         X509_NAME struct bytes.
+ * 
+ * @param[out] id_out_len  Pointer to length (in bytes) of the X509_NAME
+ *                         identity informaation
+ * 
+ * @return 0 on success, 1 on error
+ */
+int extract_identity_bytes_from_x509(X509 *cert_in,
+                                     unsigned char **id_out,
+                                     int *id_out_len);
+
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
  *        private and public components) for a participant's contribution

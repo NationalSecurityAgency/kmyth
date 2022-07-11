@@ -14,7 +14,7 @@
 // enclave_retrieve_key()
 //############################################################################
 int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
-                         X509 * enclave_cert,
+                         X509 * client_cert,
                          X509 * peer_cert,
                          const char *server_host,
                          int server_host_len,
@@ -30,6 +30,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   sgx_status_t ret_ocall;
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
+  // setup socket to support enclave connection to key server
   int socket_fd = -1;
 
   ret_ocall = setup_socket_ocall(&ret_val, server_host, server_host_len,
@@ -40,40 +41,23 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     return EXIT_FAILURE;
   }
 
-  // extract 'subject name' (distiguished name) from enclave cert
-  //   Note: The returned X509_NAME is an internal pointer
-  //         that should NOT be freed.
-  X509_NAME *enclave_subject_name = X509_get_subject_name(enclave_cert);
-  if (enclave_subject_name == NULL)
+  // extract client (enclave) ID (subject name) bytes from cert
+  unsigned char *client_id = NULL;
+  int client_id_len = -1;
+
+  ret_val = extract_identity_bytes_from_x509(client_cert,
+                                            &client_id,
+                                            &client_id_len);
+  if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "extraction of enclave cert subject name failed");
+    free(client_id);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "extracted client cert subject name (X509_NAME)");
-
-  // marshal enclave identity (DN) into binary (DER formatted) format
-  unsigned char *enclave_dn_bytes = NULL;
-  int enclave_dn_bytes_len = -1;
-
-  ret_val = marshal_x509_name_to_der(&enclave_subject_name,
-                                     &enclave_dn_bytes,
-                                     &enclave_dn_bytes_len);
-
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "enclave_dn_bytes_len = %d",
-           enclave_dn_bytes_len);
+  snprintf(msg, MAX_LOG_MSG_LEN, "extracted client ID (%d bytes) from cert",
+           client_id_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
-
-  if ((enclave_dn_bytes == NULL) || (enclave_dn_bytes_len <= 0))
-  {
-    kmyth_sgx_log(LOG_ERR, "error marshalling enclave cert subject name");
-    free(enclave_dn_bytes);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG, "marshalled client identity (cert subject name)");
-
 
   // recover public key from certificate
   EVP_PKEY *server_sign_pubkey = NULL;
@@ -83,12 +67,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from server certificate failed");
-    free(enclave_dn_bytes);
+    free(client_id);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG,
-                "extracted server signature verification key from cert");
+  kmyth_sgx_log(LOG_DEBUG, "extracted server public signing key from cert");
 
   // create client's ephemeral contribution to the session key
   EC_KEY *client_ephemeral_keypair = NULL;
@@ -103,7 +86,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
-    free(enclave_dn_bytes);
+    free(client_id);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -118,7 +101,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
-    free(enclave_dn_bytes);
+    free(client_id);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -129,8 +112,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   unsigned char *client_hello_msg = NULL;
   size_t client_hello_msg_len = 0;
 
-  ret_val = compose_client_hello_msg_body(enclave_dn_bytes,
-                                          enclave_dn_bytes_len,
+  ret_val = compose_client_hello_msg_body(client_id,
+                                          client_id_len,
                                           client_ephemeral_pub,
                                           client_ephemeral_pub_len,
                                           &client_hello_msg,
@@ -138,8 +121,14 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
+    EVP_PKEY_free(server_sign_pubkey);
+    EC_KEY_free(client_ephemeral_keypair);
+    free(client_ephemeral_pub);
+    free(client_id);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  free(client_id);
   snprintf(msg, MAX_LOG_MSG_LEN,
            "'Client Hello' message = 0x%02x%02x...%02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
@@ -164,7 +153,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_hello_msg);
     free(client_hello_msg_signature);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -189,7 +177,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_hello_msg);
     free(client_hello_msg_signature);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -218,7 +205,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     free(client_hello_msg);
     free(client_hello_msg_signature);
     free(signature_test);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -245,7 +231,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -276,7 +261,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     free(client_eph_pub_signature);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -300,7 +284,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -325,7 +308,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     free(server_ephemeral_pub);
     EC_POINT_free(server_ephemeral_pub_pt);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -349,7 +331,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EC_KEY_free(client_ephemeral_keypair);
     EC_POINT_free(server_ephemeral_pub_pt);
     free(session_secret);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -379,7 +360,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon session key computation failed");
     kmyth_enclave_clear_and_free(session_key, session_key_len);
-    free(enclave_dn_bytes);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -389,9 +369,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
            session_key[session_key_len - 2],
            session_key[session_key_len - 1], session_key_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // done with enclave identity information
-  free(enclave_dn_bytes); 
 
   // create encrypted key request message
   KMIP kmip_context = { 0 };

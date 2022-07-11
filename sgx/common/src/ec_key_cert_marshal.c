@@ -96,9 +96,9 @@ int marshal_ec_x509_to_der(X509 ** ec_cert_in,
 /*****************************************************************************
  * marshal_x509_name_to_der()
  ****************************************************************************/
-int marshal_x509_name_to_der(X509_NAME ** cert_dn_in,
-                             unsigned char **cert_dn_bytes_out,
-                             int *cert_dn_bytes_out_len)
+int marshal_x509_name_to_der(X509_NAME * cert_dn_in,
+                             unsigned char ** cert_dn_bytes_out,
+                             int * cert_dn_bytes_out_len)
 {
   // Validate that a pointer to a NULL buffer pointer was passed in for
   // the binary output byte array. Put it in that state if necessary.
@@ -116,7 +116,7 @@ int marshal_x509_name_to_der(X509_NAME ** cert_dn_in,
   unsigned char **buf_ptr = cert_dn_bytes_out;
 
   // format conversion to DER (binary) formatted output
-  int out_len = i2d_X509_NAME(*cert_dn_in, cert_dn_bytes_out);
+  int out_len = i2d_X509_NAME(cert_dn_in, cert_dn_bytes_out);
 
   if (out_len <= 0)
   {
