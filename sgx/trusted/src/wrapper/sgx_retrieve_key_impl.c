@@ -13,9 +13,9 @@
 //############################################################################
 // enclave_retrieve_key()
 //############################################################################
-int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
-                         X509 * client_cert,
-                         X509 * peer_cert,
+int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
+                         X509 * client_sign_cert,
+                         X509 * server_sign_cert,
                          const char *server_host,
                          int server_host_len,
                          int server_port,
@@ -45,7 +45,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   unsigned char *client_id = NULL;
   int client_id_len = -1;
 
-  ret_val = extract_identity_bytes_from_x509(client_cert,
+  ret_val = extract_identity_bytes_from_x509(client_sign_cert,
                                             &client_id,
                                             &client_id_len);
   if (ret_val != EXIT_SUCCESS)
@@ -62,7 +62,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   // recover public key from certificate
   EVP_PKEY *server_sign_pubkey = NULL;
 
-  server_sign_pubkey = X509_get_pubkey(peer_cert);
+  server_sign_pubkey = X509_get_pubkey(server_sign_cert);
   if (server_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR,
@@ -117,7 +117,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
                                      client_id_len,
                                      client_ephemeral_pub,
                                      client_ephemeral_pub_len,
-                                     enclave_sign_privkey,
+                                     client_sign_privkey,
                                      &client_hello_msg,
                                      &client_hello_msg_len);
   if (ret_val != EXIT_SUCCESS)
@@ -168,7 +168,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   unsigned char *client_eph_pub_signature = NULL;
   unsigned int client_eph_pub_signature_len = 0;
 
-  ret_val = sign_buffer(enclave_sign_privkey,
+  ret_val = sign_buffer(client_sign_privkey,
                         client_ephemeral_pub,
                         client_ephemeral_pub_len,
                         &client_eph_pub_signature,
