@@ -176,28 +176,29 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 }
 
 /*****************************************************************************
- * compose_client_hello_msg_body()
+ * compose_client_hello_msg()
  ****************************************************************************/
-int compose_client_hello_msg_body(unsigned char *client_id,
-                                  size_t client_id_len,
-                                  unsigned char *client_ephemeral,
-                                  size_t client_ephemeral_len,
-                                  unsigned char **msg_body_out,
-                                  size_t *msg_body_out_len)
+int compose_client_hello_msg(unsigned char *client_id,
+                             size_t client_id_len,
+                             unsigned char *client_ephemeral,
+                             size_t client_ephemeral_len,
+                             EVP_PKEY *msg_sign_key,
+                             unsigned char **msg_out,
+                             size_t *msg_out_len)
 {
   // allocate memory for 'Client Hello' message body byte array
-  *msg_body_out_len = sizeof(client_id_len) + client_id_len +
-                      sizeof(client_ephemeral_len) + client_ephemeral_len;
+  *msg_out_len = sizeof(client_id_len) + client_id_len +
+                 sizeof(client_ephemeral_len) + client_ephemeral_len;
 
-  *msg_body_out = malloc(*msg_body_out_len);
-  if (*msg_body_out == NULL)
+  *msg_out = malloc(*msg_out_len);
+  if (*msg_out == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     return EXIT_FAILURE;
   }
 
-  // populate message buffer
-  unsigned char *buf = *msg_body_out;
+  // populate message body buffer
+  unsigned char *buf = *msg_out;
   memcpy(buf, &client_id_len, sizeof(client_id_len));
   buf += sizeof(client_id_len);
   memcpy(buf, client_id, client_id_len);
@@ -205,6 +206,13 @@ int compose_client_hello_msg_body(unsigned char *client_id,
   memcpy(buf, &client_ephemeral_len, sizeof(client_ephemeral_len));
   buf += sizeof(client_ephemeral_len);
   memcpy(buf, client_ephemeral, client_ephemeral_len);
+
+  // append signature
+  if (EXIT_SUCCESS != append_signature(msg_sign_key, msg_out, msg_out_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "error appending message signature");
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }                                 
@@ -225,30 +233,46 @@ int parse_client_hello_msg_body(unsigned char *msg_body_in,
 }                                 
 
 /*****************************************************************************
- * append_signature_to_msg()
+ * append_signature()
  ****************************************************************************/
-int append_signature_to_msg(unsigned char *signature_in,
-                            size_t signature_in_len,
-                            unsigned char **msg,
-                            size_t *msg_len)
+int append_signature(EVP_PKEY * sign_key,
+                     unsigned char ** buf,
+                     size_t * buf_len)
 {
-  // create a temporary copy of the input message body
-  size_t message_copy_len = *msg_len;
-  unsigned char message_copy[message_copy_len];
-  memcpy(message_copy, *msg, *msg_len);
+  // compute message signature
+  unsigned char *buf_signature = NULL;
+  int buf_signature_len = 0;
 
-  // resize input message buffer to make room for both body and signature
-  *msg_len += signature_in_len;
-  *msg = realloc(*msg, *msg_len);
-  if (*msg == NULL)
+  if (EXIT_SUCCESS != sign_buffer(sign_key,
+                                  *buf,
+                                  *buf_len,
+                                  &buf_signature,
+                                  &buf_signature_len))
   {
-    kmyth_sgx_log(LOG_ERR, "realloc error for message plus signature result");
+    kmyth_sgx_log(LOG_ERR, "error signing buffer");
+    free(buf_signature);
     return EXIT_FAILURE;
   }
 
-  // popluate output with concatenated fields
-  memcpy(*msg, message_copy, message_copy_len);
-  memcpy(*msg + message_copy_len, signature_in, signature_in_len);
+  // create a temporary copy of the input buffer on the stack
+  size_t buf_copy_len = *buf_len;
+  unsigned char buf_copy[buf_copy_len];
+  memcpy(buf_copy, *buf, *buf_len);
+
+  // resize input message buffer to make room for appended signature
+  *buf_len += buf_signature_len;
+  *buf = realloc(*buf, *buf_len);
+  if (*buf == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "realloc error for resized input buffer");
+    return EXIT_FAILURE;
+  }
+
+  // popluate output buffer with concatenated fields
+  //  - original input buffer contents
+  //  - signature bytes
+  memcpy(*buf, buf_copy, buf_copy_len);
+  memcpy(*buf + buf_copy_len, buf_signature, buf_signature_len);
 
   return EXIT_SUCCESS;
 }

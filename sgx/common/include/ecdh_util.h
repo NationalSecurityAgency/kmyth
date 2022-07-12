@@ -165,6 +165,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *          - client_ephemeral_len
  *          - client_ephemeral_bytes
  * 
+ *        An elliptic curve signature is computed over the message body
+ *        and appended to the tail end of the message.
+ * 
  * @param[in]  client_id_bytes        Pointer to ID information (i.e.,
  *                                    distinguished name) for the client -
  *                                    expected to be a DER-formatted
@@ -180,22 +183,23 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
  *                                    public ephemeral contribution
  * 
- * @param[out] msg_body_out           Pointer to pointer to byte buffer
+ * @param[out] msg_out                Pointer to pointer to byte buffer
  *                                    containing the 'Client Hello' message
  *                                    to be exchanged with a peer (e.g., key
  *                                    server)
  *
- * @param[out] msg_body_out_len       Pointer to 'Client Hello' message length
+ * @param[out] msg_out_len            Pointer to 'Client Hello' message length
  *                                    (in bytes)
  *
  * @return 0 on success, 1 on error
  */
-  int compose_client_hello_msg_body(unsigned char *client_id,
-                                    size_t client_id_len,
-                                    unsigned char *client_ephemeral,
-                                    size_t client_ephemeral_len,
-                                    unsigned char **msg_body_out,
-                                    size_t *msg_body_out_len);
+  int compose_client_hello_msg(unsigned char *client_id,
+                               size_t client_id_len,
+                               unsigned char *client_ephemeral,
+                               size_t client_ephemeral_len,
+                               EVP_PKEY *msg_sign_key,
+                               unsigned char **msg_out,
+                               size_t *msg_out_len);
 
 /**
  * @brief Parses the 'Client Hello' message body, which initiates the ECDH
@@ -236,36 +240,32 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                                   size_t *client_ephemeral_len);
 
 /**
- * @brief Appends a signature (byte array passed as an input parameter
- *        to this function) to a message. The input message is modified
- *        (extended by appending the signature bytes to the tail end of
- *        the message).
+ * @brief Computes an elliptic curve signature over the input byte array
+ *        using the provided signing key. The input buffer is then modified
+ *        to append the signature bytes to the end of the original bytes.
  * 
- * @param[out] signature_in      Pointer to a byte buffer containing the
- *                               signature over the body of the message -
- *                               bytes to be appended to end of message
+ * @param[out] sign_key      Pointer to an EVP_PKEY struct containing the
+ *                           private elliptic curve key to use when computing
+ *                           the signature.
  *
- * @param[out] signature_in_len  Length (in bytes) of byte buffer
- *                               parameter containing the contents of a
- *                               message signature to be appended.
+ * @param[in/out] buf        Pointer to byte array containing the bytes to be
+ *                           signed. On return from this function, memory is
+ *                           re-allocated to make room for the signature bytes,
+ *                           and this parameter contains the original bytes
+ *                           passed in plus the computed signature bytes
+ *                           (appended to the tail end).
  *
- * @param[in/out] msg            Pointer to pointer to message buffer -
- *                               a message body is passed to this function
- *                               as an input parameter, buffer memory is
- *                               re-allocated to make room for the
- *                               signature bytes, and this parameter contains
- *                               a modified message (including the appended
- *                               signature bytes) on exit
- *
- * @param[in/out] msg_len        Pointer to ength (in bytes) of the
- *                               message buffer parameter
+ * @param[in/out] buf_len    Pointer to length (in bytes) of the byte buffer -
+ *                           on entry the value should reflect the size of the
+ *                           data to be signed and on exit the value will be
+ *                           the combined size of the original data plus
+ *                           computed signature bytes
  *
  * @return 0 on success, 1 on error
  */
-  int append_signature_to_msg(unsigned char *signature_in,
-                              size_t signature_in_len,
-                              unsigned char **msg,
-                              size_t *msg_len);
+  int append_signature(EVP_PKEY *sign_key,
+                       unsigned char **buf,
+                       size_t *buf_len);
 
 /**
  * @brief Parses a message into body and signature parts. The input message

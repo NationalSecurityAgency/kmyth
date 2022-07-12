@@ -71,7 +71,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "extracted server public signing key from cert");
+  kmyth_sgx_log(LOG_DEBUG,
+                "extracted server's public key (signature verify) from cert");
 
   // create client's ephemeral contribution to the session key
   EC_KEY *client_ephemeral_keypair = NULL;
@@ -112,12 +113,13 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   unsigned char *client_hello_msg = NULL;
   size_t client_hello_msg_len = 0;
 
-  ret_val = compose_client_hello_msg_body(client_id,
-                                          client_id_len,
-                                          client_ephemeral_pub,
-                                          client_ephemeral_pub_len,
-                                          &client_hello_msg,
-                                          &client_hello_msg_len);
+  ret_val = compose_client_hello_msg(client_id,
+                                     client_id_len,
+                                     client_ephemeral_pub,
+                                     client_ephemeral_pub_len,
+                                     enclave_sign_privkey,
+                                     &client_hello_msg,
+                                     &client_hello_msg_len);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
@@ -129,57 +131,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     return EXIT_FAILURE;
   }
   free(client_id);
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello' message = 0x%02x%02x...%02x%02x (%ld bytes)",
-           client_hello_msg[0], client_hello_msg[1],
-           client_hello_msg[client_hello_msg_len - 2],
-           client_hello_msg[client_hello_msg_len - 1],
-           client_hello_msg_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // sign 'Client Hello' message
-  unsigned char *client_hello_msg_signature = NULL;
-  unsigned int client_hello_msg_signature_len = 0;
-
-  ret_val = sign_buffer(enclave_sign_privkey,
-                        client_hello_msg,
-                        client_hello_msg_len,
-                        &client_hello_msg_signature,
-                        &client_hello_msg_signature_len);
-  if (ret_val != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(LOG_ERR, "error signing 'Client Hello' message bytes");
-    EVP_PKEY_free(server_sign_pubkey);
-    EC_KEY_free(client_ephemeral_keypair);
-    free(client_hello_msg);
-    free(client_hello_msg_signature);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello' signature = 0x%02x%02x...%02x%02x (%d bytes)",
-           client_hello_msg_signature[0], client_hello_msg_signature[1],
-           client_hello_msg_signature[client_hello_msg_signature_len - 2],
-           client_hello_msg_signature[client_hello_msg_signature_len - 1],
-           client_hello_msg_signature_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // append signature to 'Client Hello' message
-  ret_val = append_signature_to_msg(client_hello_msg_signature,
-                                    client_hello_msg_signature_len,
-                                    &client_hello_msg,
-                                    &client_hello_msg_len);
-  if (ret_val != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "error appending signature to 'Client Hello' message");
-    EVP_PKEY_free(server_sign_pubkey);
-    EC_KEY_free(client_ephemeral_keypair);
-    free(client_hello_msg);
-    free(client_hello_msg_signature);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
   snprintf(msg, MAX_LOG_MSG_LEN,
            "'Client Hello' message = 0x%02x%02x...%02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
@@ -203,7 +154,6 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_hello_msg);
-    free(client_hello_msg_signature);
     free(signature_test);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
@@ -211,9 +161,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey,
   free(signature_test);
   kmyth_sgx_log(LOG_DEBUG, "Performed test parse of 'Client Hello' message");
 
-  // for now, clean-up 'Client Hello' message stuff
+  // for now, clean-up 'Client Hello' message
   free(client_hello_msg);
-  free(client_hello_msg_signature);
 
   // sign client's ephemeral contribution
   unsigned char *client_eph_pub_signature = NULL;
