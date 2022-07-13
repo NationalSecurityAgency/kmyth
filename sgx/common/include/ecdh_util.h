@@ -16,6 +16,7 @@ extern "C"
 
 #include <stdio.h>
 #include <string.h>
+#include <endian.h>
 
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -165,28 +166,32 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *          - client_ephemeral_len
  *          - client_ephemeral_bytes
  * 
+ *        The unsigned integer "length" values have been specified as
+ *        two-byte values (uint16_t) stored in the byte array in
+ *        big-endian (network) byte order. This is done to make these
+ *        parameters a well-defined, machine-indepenedent size so that
+ *        they can be deterministically parsed by the message recipient.
+ * 
  *        An elliptic curve signature is computed over the message body
  *        and appended to the tail end of the message.
  * 
- * @param[in]  client_id_bytes        Pointer to ID information (i.e.,
- *                                    distinguished name) for the client -
- *                                    expected to be a DER-formatted
- *                                    X509_NAME struct (byte array)
+ * @param[in]  client_id_bytes        Identity information for the client
+ *                                    (expected to be a DER-formatted
+ *                                    X509_NAME byte array)
  *
  * @param[in]  client_id_len          Length (in bytes) of the input client
  *                                    ID information byte array
  *
- * @param[in]  client_ephemeral_bytes Pointer to client's public epehemeral
- *                                    contribution - expected to be a
- *                                    DER-formatted EC_KEY struct (byte array)
+ * @param[in]  client_ephemeral_bytes Client's public epehemeral contribution
+ *                                    (expected to be a DER-formatted EC_KEY
+ *                                    byte array)
  * 
  * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
  *                                    public ephemeral contribution
  * 
- * @param[out] msg_out                Pointer to pointer to byte buffer
- *                                    containing the 'Client Hello' message
- *                                    to be exchanged with a peer (e.g., key
- *                                    server)
+ * @param[out] msg_out                Pointer to byte buffer containing the
+ *                                    'Client Hello' message to be exchanged
+ *                                    with a peer (e.g., key server)
  *
  * @param[out] msg_out_len            Pointer to 'Client Hello' message length
  *                                    (in bytes)
@@ -202,42 +207,59 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                                size_t *msg_out_len);
 
 /**
- * @brief Parses the 'Client Hello' message body, which initiates the ECDH
- *        key agreement portion of the kmyth 'retrieve key from server'
- *        protocol. Each message field is returned as an output parameter
- *        of this function.
+ * @brief Validates and then parses the 'Client Hello' message, which
+ *        initiates the ECDH key agreement portion of the kmyth
+ *        'retrieve key from server' protocol.
  * 
- * @param[out] msg_body_in            Pointer to a byte buffer containing the
- *                                    contents of a 'Client Hello' message
- *
- * @param[out] msg_body_in_len        Length (in bytes) of byte buffer
- *                                    parameter containing the contents of a
- *                                    'Client Hello' message
- *
- * @param[in]  client_id_bytes        Pointer to pointer to ID information
- *                                    (i.e., distinguished name) for the
- *                                    client - expect a DER-formatted
- *                                    X509_NAME struct (byte array)
- *
- * @param[in]  client_id_len          Pointer to ength (in bytes) of the input
- *                                    client ID information byte array
- *
- * @param[in]  client_ephemeral_bytes Pointer to pointer to client's public
- *                                    epehemeral contribution - expect a
- *                                    DER-formatted EC_KEY struct (byte array)
+ *        A received 'Client Hello' message contains the
+ *        following fields concatenated in the below order:
+ *          - client_id_len (two-byte unsigned integer)
+ *          - client_id_bytes (byte array)
+ *          - client_ephemeral_len (two-byte unsigned integer)
+ *          - client_ephemeral_bytes (byte array)
+ *          - message signature (byte array)
  * 
- * @param[in]  client_ephemeral_len   Input elliptic curve 'public key' in
- *                                    octet string format
+ *        The message is first split into body and signature components.
+ *        The elliptic curve signature is then verified (using the public
+ *        key provided as an input parameter).
  * 
- 
+ *        If the signature verifies correctly, the message body is parsed
+ *        and the contents of the message fields are placed in the
+ *        appropriate output parameters.
+ *
+ * 
+ * @param[in]  msg_sign_pubkey        Pointer to EVP_PKEY formatted public key
+ *                                    to be used in validating the message
+ * 
+ * @param[in]  msg_in                 Byte buffer containing a 'Client Hello'
+ *                                    message received from a peer (client)
+ *
+ * @param[in]  msg_in_len             'Client Hello' message length (in bytes)
+ * 
+ * @param[out] client_id_bytes        Pointer to the parsed 'client ID' value
+ *                                    containing client identity information
+ *                                    (a DER-formatted X509_NAME byte array)
+ *
+ * @param[out] client_id_len          Pointer to parsed length (in bytes) of
+ *                                    the client ID information byte array
+ *
+ * @param[out] client_ephemeral_bytes Pointer to the parsed contents of the
+ *                                    client's public epehemeral contribution
+ *                                    (DER-formatted EC_KEY byte array)
+ * 
+ * @param[out] client_ephemeral_len   Pointer to parsed length (in bytes) of
+ *                                    client's public ephemeral contribution
+ * 
+ *
  * @return 0 on success, 1 on error
  */
-  int parse_client_hello_msg_body(unsigned char *msg_body_in,
-                                  size_t msg_body_in_len,
-                                  unsigned char **client_id,
-                                  size_t *client_id_len,
-                                  unsigned char **client_ephemeral,
-                                  size_t *client_ephemeral_len);
+  int parse_client_hello_msg(EVP_PKEY *msg_sign_pubkey,
+                             unsigned char *msg_in,
+                             size_t msg_in_len,
+                             unsigned char **client_id_bytes,
+                             size_t *client_id_len,
+                             unsigned char **client_ephemeral_bytes,
+                             size_t *client_ephemeral_len);
 
 /**
  * @brief Computes an elliptic curve signature over the input byte array

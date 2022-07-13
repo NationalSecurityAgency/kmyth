@@ -187,8 +187,11 @@ int compose_client_hello_msg(unsigned char *client_id,
                              size_t *msg_out_len)
 {
   // allocate memory for 'Client Hello' message body byte array
-  *msg_out_len = sizeof(client_id_len) + client_id_len +
-                 sizeof(client_ephemeral_len) + client_ephemeral_len;
+  //  - Client ID size (two-byte unsigned integer)
+  //  - Client ID value (client_id_len sized byte array)
+  //  - Client ephemeral size (two-byte unsigned integer)
+  //  - Client ephemeral value (client_ephemeral_len sized byte array) 
+  *msg_out_len = 2 + client_id_len + 2 + client_ephemeral_len;
 
   *msg_out = malloc(*msg_out_len);
   if (*msg_out == NULL)
@@ -198,13 +201,24 @@ int compose_client_hello_msg(unsigned char *client_id,
   }
 
   // populate message body buffer
+  uint16_t temp_val = 0;
   unsigned char *buf = *msg_out;
-  memcpy(buf, &client_id_len, sizeof(client_id_len));
-  buf += sizeof(client_id_len);
+
+  // append client_id_len bytes
+  temp_val = htobe16((uint16_t) client_id_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
+
+  // append client_id bytes
   memcpy(buf, client_id, client_id_len);
   buf += client_id_len;
-  memcpy(buf, &client_ephemeral_len, sizeof(client_ephemeral_len));
-  buf += sizeof(client_ephemeral_len);
+
+  // append client_ephemeral_len bytes
+  temp_val = htobe16((uint16_t) client_ephemeral_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
+
+  // append client_ephemeral bytes
   memcpy(buf, client_ephemeral, client_ephemeral_len);
 
   // append signature
@@ -218,16 +232,59 @@ int compose_client_hello_msg(unsigned char *client_id,
 }                                 
 
 /*****************************************************************************
- * parse_client_hello_msg_body()
+ * parse_client_hello_msg()
  ****************************************************************************/
-int parse_client_hello_msg_body(unsigned char *msg_body_in,
-                                size_t msg_body_in_len,
-                                unsigned char **client_id,
-                                size_t *client_id_len,
-                                unsigned char **client_ephemeral,
-                                size_t *client_ephemeral_len)
+int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
+                           unsigned char *msg_in,
+                           size_t msg_in_len,
+                           unsigned char **client_id_bytes,
+                           size_t *client_id_len,
+                           unsigned char **client_ephemeral_bytes,
+                           size_t *client_ephemeral_len)
 {
-  kmyth_sgx_log(LOG_DEBUG, "inside parse_client_hello_msg() stub");
+  int buf_index = 0;
+  size_t msg_body_size = 0;
+  size_t msg_sig_size = 0;
+  uint16_t temp_val = 0;
+
+  // parse message body fields
+
+  // get size of client identity field (client_id_len)
+  temp_val = msg_in[buf_index] << 8;
+  temp_val += msg_in[buf_index+1];
+  *client_id_len = temp_val;
+  buf_index += 2;
+  
+  // get client identity field bytes (client_id)
+  *client_id_bytes = malloc(*client_id_len);
+  memcpy(*client_id_bytes, msg_in+buf_index, *client_id_len);
+  buf_index += *client_id_len;
+
+  // get size of client ephemeral contribution field (client_ephemeral_len)
+  temp_val = msg_in[buf_index] << 8;
+  temp_val += msg_in[buf_index+1];
+  *client_ephemeral_len = temp_val;
+  buf_index += 2;
+
+  // get client ephemeral contribution field bytes (client_ephemeral_bytes)
+  *client_ephemeral_bytes = malloc(*client_ephemeral_len);
+  memcpy(*client_ephemeral_bytes, msg_in+buf_index, *client_ephemeral_len);
+  buf_index += *client_ephemeral_len;
+
+  // buffer index is now pointing at first byte of signature field
+  msg_body_size = buf_index;
+  msg_sig_size = msg_in_len - msg_body_size;
+
+  // check signature
+  if (EXIT_SUCCESS != verify_buffer(msg_sign_key,
+                                    msg_in,
+                                    msg_body_size,
+                                    msg_in+msg_body_size,
+                                    msg_sig_size))
+  {
+    kmyth_sgx_log(LOG_ERR, "signature over 'Client Hello' message invalid");
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }                                 
