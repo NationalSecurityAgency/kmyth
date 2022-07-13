@@ -13,6 +13,13 @@ int main(int argc, char **argv)
 {
   ECDHServer ecdhconn;
 
+  // setup default logging parameters
+  set_app_name("kmyth/serverTLSproxy");
+  set_app_version("0.0.0");
+  set_applog_path("../sgx/sgx_retrievekey_demo.log");
+  set_applog_severity_threshold(DEMO_LOG_LEVEL);
+  set_applog_output_mode(0);
+
   init(&ecdhconn);
   ecdhconn.client_mode = false;
 
@@ -22,6 +29,7 @@ int main(int argc, char **argv)
   check_options(&ecdhconn);
 
   server_main(&ecdhconn);
+
 
   cleanup(&ecdhconn);
 

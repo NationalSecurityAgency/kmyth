@@ -462,6 +462,22 @@ void recv_ephemeral_public(ECDHServer * ecdhconn)
   kmyth_log(LOG_DEBUG, "validated signature on ECDH remote 'public key'");
 }
 
+void recv_client_hello_msg(ECDHServer * ecdhconn)
+{
+  //int ret;
+
+  kmyth_log(LOG_DEBUG, "Receiving 'Client Hello' message");
+  
+  //ecdh_recv_data(ecdhconn, &ecdhconn->remote_ephemeral_pubkey_len,
+  //         sizeof(ecdhconn->remote_ephemeral_pubkey_len));
+  //if (ecdhconn->remote_ephemeral_pubkey_len > ECDH_MAX_MSG_SIZE)
+  //{
+  //  kmyth_log(LOG_ERR, "Received invalid public key size.");
+  //  error(ecdhconn);
+  //}
+
+}
+
 void send_ephemeral_public(ECDHServer * ecdhconn)
 {
   unsigned char *local_pub = NULL, *local_pub_sig = NULL;
@@ -718,6 +734,8 @@ void server_main(ECDHServer * ecdhconn)
 
   recv_ephemeral_public(ecdhconn);
   send_ephemeral_public(ecdhconn);
+
+  recv_client_hello_msg(ecdhconn);
 
   get_session_key(ecdhconn);
 

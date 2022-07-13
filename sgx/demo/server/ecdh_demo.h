@@ -91,6 +91,8 @@ void make_ephemeral_keypair(ECDHServer * ecdhconn);
 void recv_ephemeral_public(ECDHServer * ecdhconn);
 void send_ephemeral_public(ECDHServer * ecdhconn);
 
+void recv_client_hello_msg(ECDHServer * ecdhconn);
+
 void get_session_key(ECDHServer * ecdhconn);
 
 void send_operational_key(ECDHServer * ecdhconn);
