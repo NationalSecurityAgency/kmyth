@@ -484,6 +484,7 @@ demo/server/%.o: demo/server/%.c demo/server/ecdh_demo.h demo/server/tls_proxy.h
 $(Server_Name): demo/server/ecdh_server.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
+				demo/enclave/ec_key_cert_unmarshal.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
@@ -492,6 +493,7 @@ $(Server_Name): demo/server/ecdh_server.o \
 $(Client_Name): demo/server/ecdh_client.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
+				demo/enclave/ec_key_cert_unmarshal.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
@@ -500,6 +502,7 @@ $(Client_Name): demo/server/ecdh_client.o \
 $(Proxy_Name):  demo/server/tls_proxy.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
+				demo/enclave/ec_key_cert_unmarshal.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl

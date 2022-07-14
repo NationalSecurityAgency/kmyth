@@ -237,45 +237,37 @@ int compose_client_hello_msg(unsigned char *client_id,
 int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
                            unsigned char *msg_in,
                            size_t msg_in_len,
-                           unsigned char **client_id_bytes,
-                           size_t *client_id_len,
-                           unsigned char **client_ephemeral_bytes,
-                           size_t *client_ephemeral_len)
+                           X509_NAME **client_id_out,
+                           EC_POINT **client_eph_pub_out)
 {
-  int buf_index = 0;
-  size_t msg_body_size = 0;
-  size_t msg_sig_size = 0;
-  uint16_t temp_val = 0;
-
   // parse message body fields
+  int buf_index = 0;
 
   // get size of client identity field (client_id_len)
-  temp_val = msg_in[buf_index] << 8;
-  temp_val += msg_in[buf_index+1];
-  *client_id_len = temp_val;
+  uint16_t client_id_len = msg_in[buf_index] << 8;
+  client_id_len += msg_in[buf_index+1];
   buf_index += 2;
   
   // get client identity field bytes (client_id)
-  *client_id_bytes = malloc(*client_id_len);
-  memcpy(*client_id_bytes, msg_in+buf_index, *client_id_len);
-  buf_index += *client_id_len;
+  uint8_t *client_id_bytes = malloc(client_id_len);
+  memcpy(client_id_bytes, msg_in+buf_index, client_id_len);
+  buf_index += client_id_len;
 
-  // get size of client ephemeral contribution field (client_ephemeral_len)
-  temp_val = msg_in[buf_index] << 8;
-  temp_val += msg_in[buf_index+1];
-  *client_ephemeral_len = temp_val;
+  // get size of client ephemeral contribution field
+  uint16_t client_eph_pub_len = msg_in[buf_index] << 8;
+  client_eph_pub_len += msg_in[buf_index+1];
   buf_index += 2;
 
   // get client ephemeral contribution field bytes (client_ephemeral_bytes)
-  *client_ephemeral_bytes = malloc(*client_ephemeral_len);
-  memcpy(*client_ephemeral_bytes, msg_in+buf_index, *client_ephemeral_len);
-  buf_index += *client_ephemeral_len;
+  unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
+  memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
+  buf_index += client_eph_pub_len;
 
   // buffer index is now pointing at first byte of signature field
-  msg_body_size = buf_index;
-  msg_sig_size = msg_in_len - msg_body_size;
+  size_t msg_body_size = buf_index;
+  size_t msg_sig_size = msg_in_len - msg_body_size;
 
-  // check signature
+  // check message signature
   if (EXIT_SUCCESS != verify_buffer(msg_sign_key,
                                     msg_in,
                                     msg_body_size,
@@ -285,6 +277,30 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
     kmyth_sgx_log(LOG_ERR, "signature over 'Client Hello' message invalid");
     return EXIT_FAILURE;
   }
+
+  // convert client identity bytes in message to X509_NAME struct
+  int ret = unmarshal_der_to_x509_name(&client_id_bytes,
+                                       (size_t *) &client_id_len,
+                                       client_id_out);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
+    return EXIT_FAILURE;
+  }
+  free(client_id_bytes);
+
+  // convert client ephemeral public contribution to EC_POINT struct format
+  ret = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
+                                                client_eph_pub_bytes,
+                                                client_eph_pub_len,
+                                                client_eph_pub_out);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR,
+                  "reconstruct client ephemeral 'public key' point failed");
+    return EXIT_FAILURE;
+  }
+  free(client_eph_pub_bytes);
 
   return EXIT_SUCCESS;
 }                                 

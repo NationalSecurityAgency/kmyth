@@ -228,38 +228,29 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *        appropriate output parameters.
  *
  * 
- * @param[in]  msg_sign_pubkey        Pointer to EVP_PKEY formatted public key
- *                                    to be used in validating the message
+ * @param[in]  msg_sign_pubkey     Pointer to EVP_PKEY formatted public key
+ *                                 to be used in validating the message
  * 
- * @param[in]  msg_in                 Byte buffer containing a 'Client Hello'
- *                                    message received from a peer (client)
+ * @param[in]  msg_in              Byte buffer containing a 'Client Hello'
+ *                                 message received from a peer (client)
  *
- * @param[in]  msg_in_len             'Client Hello' message length (in bytes)
+ * @param[in]  msg_in_len          'Client Hello' message length (in bytes)
  * 
- * @param[out] client_id_bytes        Pointer to the parsed 'client ID' value
- *                                    containing client identity information
- *                                    (a DER-formatted X509_NAME byte array)
+ * @param[out] client_id_out       Pointer to the parsed 'client ID' value
+ *                                 containing client identity information
+ *                                 (a DER-formatted X509_NAME byte array)
  *
- * @param[out] client_id_len          Pointer to parsed length (in bytes) of
- *                                    the client ID information byte array
- *
- * @param[out] client_ephemeral_bytes Pointer to the parsed contents of the
- *                                    client's public epehemeral contribution
- *                                    (DER-formatted EC_KEY byte array)
- * 
- * @param[out] client_ephemeral_len   Pointer to parsed length (in bytes) of
- *                                    client's public ephemeral contribution
- * 
+ * @param[out] client_eph_pub_out  Pointer to the parsed contents of the
+ *                                 client's public epehemeral contribution
+ *                                 (DER-formatted EC_KEY byte array)
  *
  * @return 0 on success, 1 on error
  */
   int parse_client_hello_msg(EVP_PKEY *msg_sign_pubkey,
                              unsigned char *msg_in,
                              size_t msg_in_len,
-                             unsigned char **client_id_bytes,
-                             size_t *client_id_len,
-                             unsigned char **client_ephemeral_bytes,
-                             size_t *client_ephemeral_len);
+                             X509_NAME **client_id_out,
+                             EC_POINT **client_eph_pub_out);
 
 /**
  * @brief Computes an elliptic curve signature over the input byte array

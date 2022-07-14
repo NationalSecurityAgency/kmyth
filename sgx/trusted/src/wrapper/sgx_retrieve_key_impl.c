@@ -59,21 +59,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            client_id_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  // recover public key from certificate
-  EVP_PKEY *server_sign_pubkey = NULL;
-
-  server_sign_pubkey = X509_get_pubkey(server_sign_cert);
-  if (server_sign_pubkey == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "public key extraction from server certificate failed");
-    free(client_id);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG,
-                "extracted server's public key (signature verify) from cert");
-
   // create client's ephemeral contribution to the session key
   EC_KEY *client_ephemeral_keypair = NULL;
   unsigned char *client_ephemeral_pub = NULL;
@@ -85,7 +70,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
-    EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_id);
     close_socket_ocall(socket_fd);
@@ -99,7 +83,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR,
                   "client ECDH 'public key' octet string creation failed");
-    EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_id);
@@ -125,7 +108,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
-    EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_id);
@@ -148,17 +130,14 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // DEBUG: test validate and parse of 'Client Hello' message
   EVP_PKEY *client_sign_pubkey = NULL;
-  unsigned char *parsed_client_id = NULL;
-  size_t parsed_client_id_len = 0;
-  unsigned char *parsed_client_eph = NULL;
-  size_t parsed_client_eph_len = 0;
+  X509_NAME *parsed_client_id = NULL;
+  EC_POINT *parsed_client_eph_pub = NULL;
 
   client_sign_pubkey = X509_get_pubkey(client_sign_cert);
   if (client_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from client certificate failed");
-    EVP_PKEY_free(server_sign_pubkey);
     EVP_PKEY_free(client_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
@@ -174,21 +153,18 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                                    client_hello_msg,
                                    client_hello_msg_len,
                                    &parsed_client_id,
-                                   &parsed_client_id_len,
-                                   &parsed_client_eph,
-                                   &parsed_client_eph_len);
+                                   &parsed_client_eph_pub);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR,
                   "error parsing 'Client Hello' message into body/signature");
-    EVP_PKEY_free(server_sign_pubkey);
     EVP_PKEY_free(client_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     EVP_PKEY_free(client_sign_privkey);
     free(client_hello_msg);
     free(parsed_client_id);
-    free(parsed_client_eph);
+    free(parsed_client_eph_pub);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -196,7 +172,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   // clean-up
   EVP_PKEY_free(client_sign_pubkey);
   free(parsed_client_id);
-  free(parsed_client_eph);
+  free(parsed_client_eph_pub);
 
   kmyth_sgx_log(LOG_DEBUG, "Successful test: 'Client Hello' validate/parse");
 
@@ -215,7 +191,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error signing client ephemeral 'public key' bytes");
-    EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
@@ -243,7 +218,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "ECDH ephemeral 'public key' exchange unsuccessful");
-    EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
@@ -258,6 +232,21 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   // done with client ephemeral 'public key' related info (completed exchange)
   free(client_ephemeral_pub);
   free(client_eph_pub_signature);
+
+  // recover public signature verification key from server's certificate
+  EVP_PKEY *server_sign_pubkey = NULL;
+
+  server_sign_pubkey = X509_get_pubkey(server_sign_cert);
+  if (server_sign_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR,
+                  "public key extraction from server certificate failed");
+    free(client_id);
+    close_socket_ocall(socket_fd);
+    return EXIT_FAILURE;
+  }
+  kmyth_sgx_log(LOG_DEBUG,
+                "extracted server's public key (signature verify) from cert");
 
   // validate signature over server's ephemeral 'public key' contribution
   ret_val = verify_buffer(server_sign_pubkey,
