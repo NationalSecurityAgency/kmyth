@@ -236,52 +236,40 @@ enclave {
      *        With the exchange of this information, they can independently
      *        generate a common session key.
      *
-     * @param[in]  enclave_ephemeral_public           Pointer to enclave (client)
-     *                                                public ephemeral contribution
-     *                                                to be exchanged with remote
-     *                                                peer (server)
+     * @param[in]  client_hello                  Byte array containing enclave's
+     *                                           'Client Hello' message, which
+     *                                           initiates ECDH key agreement
+     *                                           between enclave and remote
+     *                                           peer (server)
      *
-     * @param[in]  enclave_ephemeral_public_len       Length (in bytes)
-     *                                                of enclave (client) public
-     *                                                ephemeral contribution
+     * @param[in]  client_hello_len              Length (in bytes) of enclave's
+     *                                           'Client Hello' message
      *
-     * @param[in]  enclave_eph_pub_signature          Pointer to signature over
-     *                                                enclave (client) public
-     *                                                ephemeral contribution.
+     * @param[out] remote_ephemeral_public       Pointer to remote (server)
+     *                                           public ephemeral contribution
+     *                                           to be exchanged with enclave
+     *                                           (client)
      *
-     * @param[in]  enclave_eph_pub_signature_len      Length (in bytes)
-     *                                                of signature for client
-     *                                                (enclave) public ephemeral
-     *                                                contribution.
+     * @param[out] remote_ephemeral_public_len   Pointer to length (in bytes)
+     *                                           of remote (server) public
+     *                                           ephemeral contribution.
      *
-     * @param[out] remote_ephemeral_public            Pointer to remote (server)
-     *                                                public ephemeral contribution
-     *                                                to be exchanged with enclave
-     *                                                (client)
+     * @param[out] remote_eph_pub_signature      Pointer to signature over
+     *                                           remote (server) public
+     *                                           ephemeral contribution.
      *
-     * @param[out] remote_ephemeral_public_len        Pointer to length (in bytes)
-     *                                                of remote (server) public
-     *                                                ephemeral contribution.
-     *
-     * @param[out] remote_eph_pub_signature           Pointer to signature over
-     *                                                remote (server) public
-     *                                                ephemeral contribution.
-     *
-     * @param[out] remote_eph_pub_signature_len       Pointer to length (in bytes)
-     *                                                of signature for remote
-     *                                                (server) public ephemeral
-     *                                                contribution.
+     * @param[out] remote_eph_pub_signature_len  Pointer to length (in bytes)
+     *                                           of signature for remote
+     *                                           (server) public ephemeral
+     *                                           contribution.
      *
      * @param[in] socket_fd                           File descriptor number for
      *                                                a socket connected to
      *                                                the remote key server.
      */
-    int ecdh_exchange_ocall([in, count=enclave_contribution_len]
-                               unsigned char *enclave_contribution,
-                             size_t enclave_contribution_len,
-                             [in, count=enclave_contribution_signature_len]
-                               unsigned char *enclave_contribution_signature,
-                             unsigned int enclave_contribution_signature_len,
+    int ecdh_exchange_ocall([in, count=client_hello_len]
+                               unsigned char *client_hello,
+                             size_t client_hello_len,
                              [out] unsigned char **remote_contribution,
                              [out] size_t *remote_contribution_len,
                              [out] unsigned char **remote_contribution_signature,

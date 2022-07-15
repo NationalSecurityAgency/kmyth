@@ -123,10 +123,8 @@ extern "C"
  *
  * @return 0 on success, 1 on failure
  */
-  int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
-                          size_t enclave_ephemeral_public_len,
-                          unsigned char *enclave_eph_pub_signature,
-                          unsigned int enclave_eph_pub_signature_len,
+  int ecdh_exchange_ocall(unsigned char *client_hello,
+                          size_t client_hello_len,
                           unsigned char **remote_ephemeral_public,
                           size_t *remote_ephemeral_public_len,
                           unsigned char **remote_eph_pub_signature,

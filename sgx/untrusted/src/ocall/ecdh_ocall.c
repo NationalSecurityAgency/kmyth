@@ -57,49 +57,21 @@ time_t time_ocall(time_t * timer)
 /*****************************************************************************
  * ecdh_exchange_ocall()
  ****************************************************************************/
-int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
-                        size_t enclave_ephemeral_public_len,
-                        unsigned char *enclave_eph_pub_signature,
-                        unsigned int enclave_eph_pub_signature_len,
+int ecdh_exchange_ocall(unsigned char *client_hello,
+                        size_t client_hello_len,
                         unsigned char **remote_ephemeral_public,
                         size_t *remote_ephemeral_public_len,
                         unsigned char **remote_eph_pub_signature,
                         unsigned int *remote_eph_pub_signature_len,
                         int socket_fd)
 {
-  int num_bytes;
+  int num_bytes = -1;
 
-  kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
-  num_bytes =
-    write(socket_fd, &enclave_ephemeral_public_len,
-          sizeof(enclave_ephemeral_public_len));
-  if (num_bytes != sizeof(enclave_ephemeral_public_len))
+  kmyth_log(LOG_DEBUG, "Sending enclave's 'Client Hello' message to remote");
+  num_bytes = write(socket_fd, &client_hello, client_hello_len);
+  if (num_bytes != client_hello_len)
   {
-    kmyth_log(LOG_ERR, "Failed to send a message.");
-    return EXIT_FAILURE;
-  }
-  num_bytes =
-    write(socket_fd, enclave_ephemeral_public, enclave_ephemeral_public_len);
-  if (num_bytes != enclave_ephemeral_public_len)
-  {
-    kmyth_log(LOG_ERR, "Failed to send a message.");
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "Sending ephemeral public key signature.");
-  num_bytes =
-    write(socket_fd, &enclave_eph_pub_signature_len,
-          sizeof(enclave_eph_pub_signature_len));
-  if (num_bytes != sizeof(enclave_eph_pub_signature_len))
-  {
-    kmyth_log(LOG_ERR, "Failed to send a message.");
-    return EXIT_FAILURE;
-  }
-  num_bytes =
-    write(socket_fd, enclave_eph_pub_signature, enclave_eph_pub_signature_len);
-  if (num_bytes != enclave_eph_pub_signature_len)
-  {
-    kmyth_log(LOG_ERR, "Failed to send a message.");
+    kmyth_log(LOG_ERR, "Failed to send enclave's 'Client Hello' message.");
     return EXIT_FAILURE;
   }
 
