@@ -68,7 +68,7 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
   int num_bytes = -1;
 
   kmyth_log(LOG_DEBUG, "Sending enclave's 'Client Hello' message to remote");
-  num_bytes = write(socket_fd, &client_hello, client_hello_len);
+  num_bytes = write(socket_fd, client_hello, client_hello_len);
   if (num_bytes != client_hello_len)
   {
     kmyth_log(LOG_ERR, "Failed to send enclave's 'Client Hello' message.");

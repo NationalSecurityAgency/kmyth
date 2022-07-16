@@ -464,18 +464,34 @@ void recv_ephemeral_public(ECDHServer * ecdhconn)
 
 void recv_client_hello_msg(ECDHServer * ecdhconn)
 {
-  //int ret;
+  int ret;
 
   kmyth_log(LOG_DEBUG, "Receiving 'Client Hello' message");
-  
-  //ecdh_recv_data(ecdhconn, &ecdhconn->remote_ephemeral_pubkey_len,
-  //         sizeof(ecdhconn->remote_ephemeral_pubkey_len));
-  //if (ecdhconn->remote_ephemeral_pubkey_len > ECDH_MAX_MSG_SIZE)
-  //{
-  //  kmyth_log(LOG_ERR, "Received invalid public key size.");
-  //  error(ecdhconn);
-  //}
+  unsigned char msg_in_len_bytes[2] = { 0 };
 
+  ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
+  uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
+  msg_in_len += msg_in_len_bytes[1];
+
+  unsigned char *msg_in = malloc(msg_in_len);
+  ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
+
+  kmyth_log(LOG_DEBUG, "msg_in = 0x%02x%02x ... %02x%02x",
+                       msg_in[0], msg_in[1], msg_in[msg_in_len-2],
+                       msg_in[msg_in_len-1]);
+
+  ret = parse_client_hello_msg(ecdhconn->remote_pubkey,
+                               msg_in,
+                               msg_in_len,
+                               &(ecdhconn->remote_id),
+                               &(ecdhconn->remote_ephemeral_pub));
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR,
+              "error parsing and validating received 'Client Hello' message");
+    free(msg_in);
+  }
+  free(msg_in);
 }
 
 void send_ephemeral_public(ECDHServer * ecdhconn)
@@ -518,29 +534,14 @@ void send_ephemeral_public(ECDHServer * ecdhconn)
 
 void get_session_key(ECDHServer * ecdhconn)
 {
-  EC_POINT *remote_ephemeral_pub_pt = NULL;
   unsigned char *session_secret = NULL;
   size_t session_secret_len = 0;
   int ret;
 
-  // re-construct EVP_PKEY for client's public contribution
-  ret = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
-                                                ecdhconn->remote_ephemeral_pubkey,
-                                                ecdhconn->remote_ephemeral_pubkey_len,
-                                                &remote_ephemeral_pub_pt);
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "remote ephemeral public point reconstruction failed");
-    error(ecdhconn);
-  }
-  kmyth_log(LOG_DEBUG, "reconstructed remote 'public key' as EC_POINT");
-
   // generate shared secret result for ECDH key agreement (server side)
   ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_keypair,
-                                   remote_ephemeral_pub_pt,
+                                   ecdhconn->remote_ephemeral_pub,
                                    &session_secret, &session_secret_len);
-  EC_POINT_clear_free(remote_ephemeral_pub_pt);
-  remote_ephemeral_pub_pt = NULL;
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
@@ -732,7 +733,7 @@ void server_main(ECDHServer * ecdhconn)
 
   make_ephemeral_keypair(ecdhconn);
 
-  recv_ephemeral_public(ecdhconn);
+  //recv_ephemeral_public(ecdhconn);
   send_ephemeral_public(ecdhconn);
 
   recv_client_hello_msg(ecdhconn);

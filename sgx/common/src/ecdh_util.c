@@ -228,6 +228,13 @@ int compose_client_hello_msg(unsigned char *client_id,
     return EXIT_FAILURE;
   }
 
+  // prepend message size
+  if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "error prepending message length");
+    return EXIT_FAILURE;
+  }
+
   return EXIT_SUCCESS;
 }                                 
 
@@ -346,6 +353,38 @@ int append_signature(EVP_PKEY * sign_key,
   //  - signature bytes
   memcpy(*buf, buf_copy, buf_copy_len);
   memcpy(*buf + buf_copy_len, buf_signature, buf_signature_len);
+
+  free(buf_signature);
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * prepend_length()
+ ****************************************************************************/
+int prepend_length(unsigned char ** buf,
+                   size_t * buf_len)
+{
+  // allocate memory for buffer with prepended length
+  *buf_len += 2;
+  unsigned char *prepend_buf = malloc(*buf_len);
+  if (*buf == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "malloc error for prepended buffer");
+    return EXIT_FAILURE;
+  }
+
+  // popluate newly allocated buffer with concatenated fields
+  //  - buffer length: 2-byte, big-endian (network byte order) unsigned integer
+  //  - original input buffer contents
+  unsigned char *temp_buf = *buf;
+  uint16_t orig_msg_len = htobe16((uint16_t) (*buf_len - 2));
+  memcpy(prepend_buf, &orig_msg_len, 2);
+  memcpy(prepend_buf+2, temp_buf, *buf_len-2);
+  
+  // point output at temp_buffer and clean-up original memory
+  *buf = prepend_buf;
+  free(temp_buf);
 
   return EXIT_SUCCESS;
 }

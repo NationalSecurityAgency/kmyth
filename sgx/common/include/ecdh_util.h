@@ -281,6 +281,30 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                        size_t *buf_len);
 
 /**
+ * @brief Modifies the input buffer to prepend a two-byte (network or big
+ *        endian ordered) unsigned integer to the beginning of the buffer.
+ * 
+ * @param[in/out] buf        Pointer to byte array containing the bytes to be
+ *                           prepended with a size value. On return from this
+ *                           function, memory is re-allocated to make room for
+ *                           the prepended 'length' value, and this parameter
+ *                           contains the original bytes passed in plus a
+ *                           two-byte unsigned integer (big endian) containing
+ *                           the length (in bytes) of the input buffer passed
+ *                           in prepended to the beginning.
+ *
+ * @param[in/out] buf_len    Pointer to length (in bytes) of the byte buffer -
+ *                           on entry the value should reflect the size of the
+ *                           data to be prepended and on exit the value will
+ *                           be the combined size of the original data plus
+ *                           prepended length value bytes
+ *
+ * @return 0 on success, 1 on error
+ */
+  int prepend_length(unsigned char **buf,
+                     size_t *buf_len);
+
+/**
  * @brief Parses a message into body and signature parts. The input message
  *        is modified (truncated by removing the signature bytes from the
  *        tail end of the message). The signature bytes are provided as an
