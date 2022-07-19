@@ -176,6 +176,141 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 }
 
 /*****************************************************************************
+ * compute_ecdh_shared_secret()
+ ****************************************************************************/
+int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+                               EC_POINT * remote_eph_pub_point,
+                               unsigned char **shared_secret,
+                               size_t *shared_secret_len)
+{
+  // create buffer (allocate memory) for the shared secret result
+  //
+  //   - the field size calculated below returns the number of bits required
+  //     for a field element for the elliptic curve being used (i.e., the size
+  //     of the prime p for a prime field and the value of m for a binary [2^m]
+  //     field)
+  //
+  //   - the length of the shared secret is calculated by computing the
+  //     maximum number of bytes required. Adding 7 to the bit length (to
+  //     address cases where the field size value in bits does not fall on
+  //     a byte boundary) and taking the integer portion of dividing by 8 bits
+  //     in a byte (doing bits to bytes conversion) returns the necessary
+  //     buffer size (so the required memory, in bytes, can be allocated).
+  const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_key);
+  int field_size = EC_GROUP_get_degree(local_eph_priv_key_group);
+
+  int required_buffer_len = (field_size + 7) / 8;
+  *shared_secret = OPENSSL_malloc(required_buffer_len);
+  if (*shared_secret == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "allocation of buffer for shared secret failed");
+    return EXIT_FAILURE;
+  }
+
+  // verify that the public key received from the remote peer represents a
+  // point on the same curve as the local private key
+  BN_CTX *check_ctx = BN_CTX_new();
+  BN_CTX_start(check_ctx);
+  int retval = EC_POINT_is_on_curve(local_eph_priv_key_group,
+                                    remote_eph_pub_point,
+                                    check_ctx);
+  if (retval != 1)
+  {
+    kmyth_sgx_log(LOG_ERR,
+                  "peer's ephemeral public key point not on expected curve");
+    return EXIT_FAILURE;
+  }
+  BN_CTX_end(check_ctx);
+  BN_CTX_free(check_ctx);
+
+  // derive the shared secret value:
+  //   x coordinate of the ECDH key agreement result (i.e., the remote peer's
+  //                                                  public key point dotted
+  //                                                  with the local private
+  //                                                  key point)
+  *shared_secret_len = ECDH_compute_key(*shared_secret,
+                                        required_buffer_len,
+                                        remote_eph_pub_point,
+                                        local_eph_priv_key,
+                                        NULL);
+
+  if (*shared_secret_len != required_buffer_len)
+  {
+    kmyth_sgx_log(LOG_ERR, "computation of ECDH shared secret value failed");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * compute_ecdh_session_key()
+ ****************************************************************************/
+int compute_ecdh_session_key(unsigned char *secret,
+                             size_t secret_len,
+                             unsigned char **session_key,
+                             unsigned int *session_key_len)
+{
+  // specify hash algorithm to employ as a KDF
+  const EVP_MD *kdf = EVP_shake256();
+
+  if (NULL == kdf)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to locate the specifed hash function");
+    return EXIT_FAILURE;
+  }
+
+  // create message digest (EVP_MD) context
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+
+  if (NULL == ctx)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to create the message digest context");
+    return EXIT_FAILURE;
+  }
+
+  // initialize the context
+  int result = EVP_DigestInit_ex(ctx, kdf, NULL);
+
+  if (0 == result)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to initialize the message digest context.");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+
+  // apply shared secret input
+  result = EVP_DigestUpdate(ctx, secret, secret_len);
+  if (0 == result)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to update the message digest context");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+
+  *session_key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
+  if (NULL == *session_key)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to allocate the session key buffer");
+    EVP_MD_CTX_free(ctx);
+    return EXIT_FAILURE;
+  }
+  *session_key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
+
+  result = EVP_DigestFinal_ex(ctx, *session_key, session_key_len);
+  if (0 == result)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to finalize the message digest context");
+    EVP_MD_CTX_free(ctx);
+    return 1;
+  }
+
+  EVP_MD_CTX_free(ctx);
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
  * compose_client_hello_msg()
  ****************************************************************************/
 int compose_client_hello_msg(unsigned char *client_id,
@@ -313,6 +448,161 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
 }                                 
 
 /*****************************************************************************
+ * compose_server_hello_msg()
+ ****************************************************************************/
+int compose_server_hello_msg(unsigned char *server_id,
+                             size_t server_id_len,
+                             unsigned char *client_ephemeral,
+                             size_t client_ephemeral_len,
+                             unsigned char *server_ephemeral,
+                             size_t server_ephemeral_len,
+                             EVP_PKEY *msg_sign_key,
+                             unsigned char **msg_out,
+                             size_t *msg_out_len)
+{
+  // allocate memory for 'Server Hello' message body byte array
+  //  - Server ID size (two-byte unsigned integer)
+  //  - Server ID value (DER-formatted X509_NAME byte array)
+  //  - Client ephemeral size (two-byte unsigned integer)
+  //  - Client ephemeral value (DER formatted EC_KEY byte array) 
+  //  - Server ephemeral size (two-byte unsigned integer)
+  //  - Server ephemeral value (DER formatted EC_KEY byte array) 
+  *msg_out_len = 2 + server_id_len +
+                 2 + client_ephemeral_len +
+                 2 + server_ephemeral_len;
+
+  *msg_out = malloc(*msg_out_len);
+  if (*msg_out == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
+    return EXIT_FAILURE;
+  }
+
+  // populate message body buffer
+  uint16_t temp_val = 0;
+  unsigned char *buf = *msg_out;
+
+  // append server_id_len bytes
+  temp_val = htobe16((uint16_t) server_id_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
+
+  // append server_id bytes
+  memcpy(buf, server_id, server_id_len);
+  buf += server_id_len;
+
+  // append client_ephemeral_len bytes
+  temp_val = htobe16((uint16_t) client_ephemeral_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
+
+  // append client_ephemeral bytes
+  memcpy(buf, client_ephemeral, client_ephemeral_len);
+
+  // append server_ephemeral_len bytes
+  temp_val = htobe16((uint16_t) server_ephemeral_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
+
+  // append server_ephemeral bytes
+  memcpy(buf, server_ephemeral, server_ephemeral_len);
+
+  // append signature
+  if (EXIT_SUCCESS != append_signature(msg_sign_key, msg_out, msg_out_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "error appending message signature");
+    return EXIT_FAILURE;
+  }
+
+  // prepend message size
+  if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "error prepending message length");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}                                 
+
+/*****************************************************************************
+ * parse_server_hello_msg()
+ ****************************************************************************/
+int parse_server_hello_msg(EVP_PKEY *msg_sign_key,
+                           unsigned char *msg_in,
+                           size_t msg_in_len,
+                           X509_NAME **server_id_out,
+                           EC_KEY **client_eph_pub_out,
+                           EC_KEY **server_eph_pub_out)
+{
+  // parse message body fields
+  int buf_index = 0;
+
+  // get size of server identity field (server_id_len)
+  uint16_t server_id_len = msg_in[buf_index] << 8;
+  server_id_len += msg_in[buf_index+1];
+  buf_index += 2;
+  
+  // get server identity field bytes (server_id)
+  uint8_t *server_id_bytes = malloc(server_id_len);
+  memcpy(server_id_bytes, msg_in+buf_index, server_id_len);
+  buf_index += server_id_len;
+
+  // get size of client ephemeral contribution field
+  uint16_t client_eph_pub_len = msg_in[buf_index] << 8;
+  client_eph_pub_len += msg_in[buf_index+1];
+  buf_index += 2;
+
+  // get client ephemeral contribution field bytes (client_ephemeral_bytes)
+  unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
+  memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
+  buf_index += client_eph_pub_len;
+
+  // get size of server ephemeral contribution field
+  uint16_t server_eph_pub_len = msg_in[buf_index] << 8;
+  server_eph_pub_len += msg_in[buf_index+1];
+  buf_index += 2;
+
+  // get server ephemeral contribution field bytes (server_ephemeral_bytes)
+  unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
+  memcpy(server_eph_pub_bytes, msg_in+buf_index, server_eph_pub_len);
+  buf_index += server_eph_pub_len;
+
+  // buffer index is now pointing at first byte of signature field
+  size_t msg_body_size = buf_index;
+  size_t msg_sig_size = msg_in_len - msg_body_size;
+
+  // check message signature
+  if (EXIT_SUCCESS != verify_buffer(msg_sign_key,
+                                    msg_in,
+                                    msg_body_size,
+                                    msg_in+msg_body_size,
+                                    msg_sig_size))
+  {
+    kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
+    return EXIT_FAILURE;
+  }
+
+  // convert client identity bytes in message to X509_NAME struct
+  int ret = unmarshal_der_to_x509_name(&server_id_bytes,
+                                       (size_t *) &server_id_len,
+                                       server_id_out);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "error unmarshaling server identity bytes");
+    return EXIT_FAILURE;
+  }
+  free(server_id_bytes);
+
+  // convert client ephemeral public contribution to EC_KEY struct format
+  free(client_eph_pub_bytes);
+
+  // convert server ephemeral public contribution to EC_KEY struct format
+  free(server_eph_pub_bytes);
+
+  return EXIT_SUCCESS;
+}                                 
+
+/*****************************************************************************
  * append_signature()
  ****************************************************************************/
 int append_signature(EVP_PKEY * sign_key,
@@ -385,154 +675,6 @@ int prepend_length(unsigned char ** buf,
   // point output at temp_buffer and clean-up original memory
   *buf = prepend_buf;
   free(temp_buf);
-
-  return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * parse_msg_body_signature()
- ****************************************************************************/
-int parse_msg_body_signature(unsigned char **msg,
-                             size_t *msg_len,
-                             unsigned char **signature,
-                             size_t *signature_len)
-{
-  kmyth_sgx_log(LOG_DEBUG, "inside parse_msg_body_signature() stub");
-
-  return EXIT_SUCCESS;
-}                                 
-
-/*****************************************************************************
- * compute_ecdh_shared_secret()
- ****************************************************************************/
-int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
-                               EC_POINT * remote_eph_pub_point,
-                               unsigned char **shared_secret,
-                               size_t *shared_secret_len)
-{
-  // create buffer (allocate memory) for the shared secret result
-  //
-  //   - the field size calculated below returns the number of bits required
-  //     for a field element for the elliptic curve being used (i.e., the size
-  //     of the prime p for a prime field and the value of m for a binary [2^m]
-  //     field)
-  //
-  //   - the length of the shared secret is calculated by computing the
-  //     maximum number of bytes required. Adding 7 to the bit length (to
-  //     address cases where the field size value in bits does not fall on
-  //     a byte boundary) and taking the integer portion of dividing by 8 bits
-  //     in a byte (doing bits to bytes conversion) returns the necessary
-  //     buffer size (so the required memory, in bytes, can be allocated).
-  const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_key);
-  int field_size = EC_GROUP_get_degree(local_eph_priv_key_group);
-
-  int required_buffer_len = (field_size + 7) / 8;
-  *shared_secret = OPENSSL_malloc(required_buffer_len);
-  if (*shared_secret == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "allocation of buffer for shared secret failed");
-    return EXIT_FAILURE;
-  }
-
-  // verify that the public key received from the remote peer represents a
-  // point on the same curve as the local private key
-  BN_CTX *check_ctx = BN_CTX_new();
-  BN_CTX_start(check_ctx);
-  int retval = EC_POINT_is_on_curve(local_eph_priv_key_group,
-                                    remote_eph_pub_point,
-                                    check_ctx);
-  if (retval != 1)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "peer's ephemeral public key point not on expected curve");
-    return EXIT_FAILURE;
-  }
-  BN_CTX_end(check_ctx);
-  BN_CTX_free(check_ctx);
-
-  // derive the shared secret value:
-  //   x coordinate of the ECDH key agreement result (i.e., the remote peer's
-  //                                                  public key point dotted
-  //                                                  with the local private
-  //                                                  key point)
-  *shared_secret_len = ECDH_compute_key(*shared_secret,
-                                        required_buffer_len,
-                                        remote_eph_pub_point,
-                                        local_eph_priv_key,
-                                        NULL);
-
-  if (*shared_secret_len != required_buffer_len)
-  {
-    kmyth_sgx_log(LOG_ERR, "computation of ECDH shared secret value failed");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * compute_ecdh_session_key()
- ****************************************************************************/
-int compute_ecdh_session_key(unsigned char *secret,
-                             size_t secret_len,
-                             unsigned char **session_key,
-                             unsigned int *session_key_len)
-{
-  // specify hash algorithm to employ as a KDF
-  const EVP_MD *kdf = EVP_shake256();
-
-  if (NULL == kdf)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to locate the specifed hash function");
-    return EXIT_FAILURE;
-  }
-
-  // create message digest (EVP_MD) context
-  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-
-  if (NULL == ctx)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to create the message digest context");
-    return EXIT_FAILURE;
-  }
-
-  // initialize the context
-  int result = EVP_DigestInit_ex(ctx, kdf, NULL);
-
-  if (0 == result)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to initialize the message digest context.");
-    EVP_MD_CTX_free(ctx);
-    return EXIT_FAILURE;
-  }
-
-  // apply shared secret input
-  result = EVP_DigestUpdate(ctx, secret, secret_len);
-  if (0 == result)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to update the message digest context");
-    EVP_MD_CTX_free(ctx);
-    return EXIT_FAILURE;
-  }
-
-  *session_key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
-  if (NULL == *session_key)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to allocate the session key buffer");
-    EVP_MD_CTX_free(ctx);
-    return EXIT_FAILURE;
-  }
-  *session_key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
-
-  result = EVP_DigestFinal_ex(ctx, *session_key, session_key_len);
-  if (0 == result)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to finalize the message digest context");
-    EVP_MD_CTX_free(ctx);
-    return 1;
-  }
-
-  EVP_MD_CTX_free(ctx);
 
   return EXIT_SUCCESS;
 }

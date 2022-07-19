@@ -155,6 +155,56 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                                               EC_POINT ** ec_point_out);
 
 /**
+ * @brief Computes shared secret value, using ECDH, from a local private
+ *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
+ *        secret (e.g., 'abG') that is mutually derivable by both the local
+ *        and remote party.
+ *
+ * @param[in]  local_eph_priv_key   Key pair containing the ephemeral
+ *                                  'private key' for the 'local' party
+ *                                  participating in the ECDH exchange.
+ *
+ * @param[in]  remote_eph_pub_point Elliptic curve 'public key' point
+ *                                  representing remote peer's contribution
+ *                                  to the ECDH shared secret computation
+ *
+ * @param[out] shared_secret        computed X component of the remote peer's
+ *                                  'public key' point dotted with the local
+ *                                  'private key' point
+ *
+ * @param[out] shared_secret_len    Pointer to the length (in bytes) of the
+ *                                  shared secret result.
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+                                 EC_POINT * remote_eph_pub_point,
+                                 unsigned char **shared_secret,
+                                 size_t *shared_secret_len);
+
+/**
+ * @brief Computes session key from a shared secret value input.
+ *
+ * @param[in]  secret           Secret value that will be hashed to produce
+ *                              a session key result of the desired length.
+ *
+ * @param[in]  secret_len       Length (in bytes) of the input secret value
+ *
+ * @param[out] session_key      Message digest resulting from the hash of the
+ *                              input secret value. This result will be used
+ *                              as a session key value.
+ *
+ * @param[out] session_key_len  Pointer to the length (in bytes) of the
+ *                              session key result.
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compute_ecdh_session_key(unsigned char *secret,
+                               size_t secret_len,
+                               unsigned char **session_key,
+                               unsigned int *session_key_len);
+
+/**
  * @brief Assembles the 'Client Hello' message, which initiates the ECDH
  *        key agreement portion of the kmyth 'retrieve key from server'
  *        protocol.
@@ -172,12 +222,13 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *        parameters a well-defined, machine-indepenedent size so that
  *        they can be deterministically parsed by the message recipient.
  * 
- *        An elliptic curve signature is computed over the message body
- *        and appended to the tail end of the message.
+ *        An elliptic curve signature is computed, using the client's
+ *        signing key, over the message body and appended to the tail end
+ *        of the message.
  * 
  * @param[in]  client_id_bytes        Identity information for the client
- *                                    (expected to be a DER-formatted
- *                                    X509_NAME byte array)
+ *                                    (expected to be a pointer to a
+ *                                    DER-formatted X509_NAME byte array)
  *
  * @param[in]  client_id_len          Length (in bytes) of the input client
  *                                    ID information byte array
@@ -188,6 +239,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * 
  * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
  *                                    public ephemeral contribution
+ * 
+ * @param[in]  msg_sign_key           Pointer to client's elliptic curve
+ *                                    signing key (EVP_PKEY)
  * 
  * @param[out] msg_out                Pointer to byte buffer containing the
  *                                    'Client Hello' message to be exchanged
@@ -214,9 +268,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *        A received 'Client Hello' message contains the
  *        following fields concatenated in the below order:
  *          - client_id_len (two-byte unsigned integer)
- *          - client_id_bytes (byte array)
+ *          - client_id_bytes (DER-formatted X509_NAME byte array)
  *          - client_ephemeral_len (two-byte unsigned integer)
- *          - client_ephemeral_bytes (byte array)
+ *          - client_ephemeral_bytes (DER-formatted EC_KEY byte array)
  *          - message signature (byte array)
  * 
  *        The message is first split into body and signature components.
@@ -236,13 +290,14 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @param[in]  msg_in_len          'Client Hello' message length (in bytes)
  * 
- * @param[out] client_id_out       Pointer to the parsed 'client ID' value
- *                                 containing client identity information
- *                                 (a DER-formatted X509_NAME byte array)
+ * @param[out] client_id_out       Pointer to pointer to the parsed and
+ *                                 unmarshalled 'client ID' value (client
+ *                                 identity as an X509_NAME struct)
  *
- * @param[out] client_eph_pub_out  Pointer to the parsed contents of the
+ * @param[out] client_eph_pub_out  Pointer to pointer to the parsed and
+ *                                 unmarshalled contents of the
  *                                 client's public epehemeral contribution
- *                                 (DER-formatted EC_KEY byte array)
+ *                                 (EC_KEY struct)
  *
  * @return 0 on success, 1 on error
  */
@@ -251,6 +306,129 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                              size_t msg_in_len,
                              X509_NAME **client_id_out,
                              EC_POINT **client_eph_pub_out);
+
+/**
+ * @brief Assembles the 'Server Hello' message, the server response to
+ *        a received 'Client Hello' message. As the second message in
+ *        the kmyth 'retrieve key from server' protocol, it enables
+ *        completion of the 'key agreement' phase.
+ * 
+ *        The body of the 'Server Hello' message contains the
+ *        following fields concatenated in the below order:
+ *          - server_id_len
+ *          - server_id_bytes
+ *          - client_ephemeral_len
+ *          - client_ephemeral_bytes
+ *          - server ephemeral_len
+ *          - server_ephemeral_bytes
+ * 
+ *        The unsigned integer "length" values have been specified as
+ *        two-byte values (uint16_t) stored in the byte array in
+ *        big-endian (network) byte order. This is done to make these
+ *        parameters a well-defined, machine-indepenedent size so that
+ *        they can be deterministically parsed by the message recipient.
+ * 
+ *        An elliptic curve signature (using the server's signing key)
+ *        is computed over the message body and appended to the tail end
+ *        of the message.
+ * 
+ * @param[in]  server_id_bytes        Identity information for the server
+ *                                    (expected to be a DER-formatted
+ *                                    X509_NAME byte array)
+ *
+ * @param[in]  server_id_len          Length (in bytes) of the input server
+ *                                    ID information byte array
+ *
+ * @param[in]  client_ephemeral_bytes Client's public epehemeral contribution
+ *                                    (expected to be a DER-formatted EC_KEY
+ *                                    byte array)
+ * 
+ * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
+ *                                    public ephemeral contribution
+ * 
+ * @param[in]  server_ephemeral_bytes Server's public epehemeral contribution
+ *                                    (expected to be a DER-formatted EC_KEY
+ *                                    byte array)
+ * 
+ * @param[in]  client_ephemeral_len   Length (in bytes) of server's (enclave's)
+ *                                    public ephemeral contribution
+ * 
+ * @param[in]  msg_sign_key           Pointer to server's elliptic curve
+ *                                    signing key (EVP_PKEY)
+ * 
+ * @param[out] msg_out                Pointer to byte buffer containing the
+ *                                    'Client Hello' message to be exchanged
+ *                                    with a peer (e.g., key server)
+ *
+ * @param[out] msg_out_len            Pointer to 'Client Hello' message length
+ *                                    (in bytes)
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compose_server_hello_msg(unsigned char *server_id,
+                               size_t server_id_len,
+                               unsigned char *client_ephemeral,
+                               size_t client_ephemeral_len,
+                               unsigned char *server_ephemeral,
+                               size_t server_ephemeral_len,
+                               EVP_PKEY *msg_sign_key,
+                               unsigned char **msg_out,
+                               size_t *msg_out_len);
+
+/**
+ * @brief Validates and then parses the 'Server Hello' message, the
+ *        server response to a received 'Client Hello' message. As the
+ *        second message in the kmyth 'retrieve key from server' protocol,
+ *        it enables completion of the 'key agreement' phase.
+ * 
+ *        A received 'Server Hello' message contains the
+ *        following fields concatenated in the below order:
+ *          - server_id_len (two-byte, big-endian unsigned integer)
+ *          - server_id_bytes (DER-formatted X509_NAME byte array)
+ *          - client_ephemeral_len (two-byte, big-endian unsigned integer)
+ *          - client_ephemeral_bytes (DER-formatted EC_KEY byte array)
+ *          - server_ephemeral_len (two-byte, big-endian unsigned integer)
+ *          - server_ephemeral_bytes (DER-formatted EC_KEY byte array)
+ *          - message signature (byte array)
+ * 
+ *        The message is split into body and signature components.
+ *        The elliptic curve signature is then verified (using the public
+ *        key provided as an input parameter).
+ * 
+ *        If the signature verifies correctly, the message body is parsed
+ *        and the contents of the message fields are placed in the
+ *        appropriate output parameters.
+ * 
+ * @param[in]  msg_sign_pubkey     Pointer to EVP_PKEY formatted public key
+ *                                 to be used in validating the message
+ * 
+ * @param[in]  msg_in              Byte buffer containing a 'Client Hello'
+ *                                 message received from a peer (client)
+ *
+ * @param[in]  msg_in_len          'Client Hello' message length (in bytes)
+ * 
+ * @param[out] server_id_out       Pointer to pointer to the parsed and
+ *                                 unmarshalled 'served ID' value (server
+ *                                 identity information as X509_NAME struct)
+ *
+ * @param[out] client_eph_pub_out  Pointer to pointer to the parsed and
+ *                                 unmarshalled contents of the client's
+ *                                 public epehemeral contribution (EC_KEY
+ *                                 struct)
+ *
+ * @param[out] server_eph_pub_out  Pointer to pointer to the parsed and
+ *                                 unmarshalled contents of the server's
+ *                                 public epehemeral contribution (EC_KEY
+ *                                 struct)
+ *
+ * @return 0 on success, 1 on error
+ */
+  int parse_server_hello_msg(EVP_PKEY *msg_sign_pubkey,
+                             unsigned char *msg_in,
+                             size_t msg_in_len,
+                             X509_NAME **server_id_out,
+                             EC_KEY **client_eph_pub_out,
+                             EC_KEY **server_eph_pub_out);
 
 /**
  * @brief Computes an elliptic curve signature over the input byte array
@@ -303,84 +481,6 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  */
   int prepend_length(unsigned char **buf,
                      size_t *buf_len);
-
-/**
- * @brief Parses a message into body and signature parts. The input message
- *        is modified (truncated by removing the signature bytes from the
- *        tail end of the message). The signature bytes are provided as an
- *        output parameter.
- * 
- * @param[in/out] msg         Pointer to pointer to a byte buffer containing
- *                            a complete message on function entry. On
- *                            function exit, this buffer has been truncated
- *                            to contain only the body of the message.
- *
- * @param[in/out] msg_len     Pointer to length (in bytes) of message byte
- *                            buffer
- *
- * @param[out] signature      Pointer to pointer to a byte buffer containing
- *                            the signature bytes removed from the tail end
- *                            of the input message bytes.
- *
- * @param[out] signature_len  Pointer to ength (in bytes) of the
- *                            message buffer parameter
- *
- * @return 0 on success, 1 on error
- */
-int parse_msg_body_signature(unsigned char **msg,
-                             size_t *msg_len,
-                             unsigned char **signature,
-                             size_t *signature_len);
-
-/**
- * @brief Computes shared secret value, using ECDH, from a local private
- *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
- *        secret (e.g., 'abG') that is mutually derivable by both the local
- *        and remote party.
- *
- * @param[in]  local_eph_priv_key   Key pair containing the ephemeral
- *                                  'private key' for the 'local' party
- *                                  participating in the ECDH exchange.
- *
- * @param[in]  remote_eph_pub_point Elliptic curve 'public key' point
- *                                  representing remote peer's contribution
- *                                  to the ECDH shared secret computation
- *
- * @param[out] shared_secret        computed X component of the remote peer's
- *                                  'public key' point dotted with the local
- *                                  'private key' point
- *
- * @param[out] shared_secret_len    Pointer to the length (in bytes) of the
- *                                  shared secret result.
- *
- * @return 0 on success, 1 on error
- */
-  int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
-                                 EC_POINT * remote_eph_pub_point,
-                                 unsigned char **shared_secret,
-                                 size_t *shared_secret_len);
-
-/**
- * @brief Computes session key from a shared secret value input.
- *
- * @param[in]  secret           Secret value that will be hashed to produce
- *                              a session key result of the desired length.
- *
- * @param[in]  secret_len       Length (in bytes) of the input secret value
- *
- * @param[out] session_key      Message digest resulting from the hash of the
- *                              input secret value. This result will be used
- *                              as a session key value.
- *
- * @param[out] session_key_len  Pointer to the length (in bytes) of the
- *                              session key result.
- *
- * @return 0 on success, 1 on error
- */
-  int compute_ecdh_session_key(unsigned char *secret,
-                               size_t secret_len,
-                               unsigned char **session_key,
-                               unsigned int *session_key_len);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed
