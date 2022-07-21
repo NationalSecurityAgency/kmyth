@@ -49,7 +49,7 @@ typedef struct ECDHServer
   EC_KEY *local_ephemeral_keypair;
   X509_NAME *local_id;
   X509_NAME *remote_id;
-  EC_POINT *remote_ephemeral_pub;
+  EC_KEY *remote_ephemeral_pub;
   unsigned char *remote_ephemeral_pubkey;
   size_t remote_ephemeral_pubkey_len;
   unsigned char *session_key;

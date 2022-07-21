@@ -305,7 +305,7 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                              unsigned char *msg_in,
                              size_t msg_in_len,
                              X509_NAME **client_id_out,
-                             EC_POINT **client_eph_pub_out);
+                             EC_KEY **client_eph_pub_out);
 
 /**
  * @brief Assembles the 'Server Hello' message, the server response to

@@ -380,7 +380,7 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
                            unsigned char *msg_in,
                            size_t msg_in_len,
                            X509_NAME **client_id_out,
-                           EC_POINT **client_eph_pub_out)
+                           EC_KEY **client_eph_pub_out)
 {
   // parse message body fields
   int buf_index = 0;
@@ -431,18 +431,39 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
   }
   free(client_id_bytes);
 
-  // convert client ephemeral public contribution to EC_POINT struct format
-  ret = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
-                                                client_eph_pub_bytes,
-                                                client_eph_pub_len,
-                                                client_eph_pub_out);
-  if (ret != EXIT_SUCCESS)
+  // check that the buffer parameter for the public key (EC_KEY struct) was
+  // correctly passed in as a NULL pointer (memory not yet allocated)
+  if (*client_eph_pub_out != NULL)
   {
-    kmyth_sgx_log(LOG_ERR,
-                  "reconstruct client ephemeral 'public key' point failed");
+    kmyth_sgx_log(LOG_ERR, "previously allocated output public key struct");
+    return EXIT_FAILURE;
+  }
+
+  // initialize the EC_KEY struct for the right elliptic curve
+  *client_eph_pub_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  if (*client_eph_pub_out == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
+    return EXIT_FAILURE;
+  } 
+
+  // convert DER-formatted byte array to EC_KEY struct
+  if (1 != EC_KEY_oct2key(*client_eph_pub_out,
+                          client_eph_pub_bytes,
+                          client_eph_pub_len,
+                          NULL))
+  {
+    kmyth_sgx_log(LOG_ERR, "unmarshal of client ephemeral public key failed");
     return EXIT_FAILURE;
   }
   free(client_eph_pub_bytes);
+
+  // check parsed, received ephemeral public key
+  if (1 != EC_KEY_check_key(*client_eph_pub_out))
+  {
+    kmyth_sgx_log(LOG_ERR, "checks on client ephemeral public key failed");
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }                                 

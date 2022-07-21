@@ -126,53 +126,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  // DEBUG: test validate and parse of 'Client Hello' message
-  EVP_PKEY *client_sign_pubkey = NULL;
-  X509_NAME *parsed_client_id = NULL;
-  EC_POINT *parsed_client_eph_pub = NULL;
-
-  client_sign_pubkey = X509_get_pubkey(client_sign_cert);
-  if (client_sign_pubkey == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "public key extraction from client certificate failed");
-    EVP_PKEY_free(client_sign_pubkey);
-    EC_KEY_free(client_ephemeral_keypair);
-    free(client_ephemeral_pub);
-    EVP_PKEY_free(client_sign_privkey);
-    free(client_hello_msg);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG,
-                "extracted client's public key (signature verify) from cert");
-
-  ret_val = parse_client_hello_msg(client_sign_pubkey,
-                                   client_hello_msg+2,
-                                   client_hello_msg_len-2,
-                                   &parsed_client_id,
-                                   &parsed_client_eph_pub);
-  if (ret_val != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "error parsing 'Client Hello' message into body/signature");
-    EVP_PKEY_free(client_sign_pubkey);
-    EC_KEY_free(client_ephemeral_keypair);
-    free(client_ephemeral_pub);
-    EVP_PKEY_free(client_sign_privkey);
-    free(client_hello_msg);
-    free(parsed_client_id);
-    free(parsed_client_eph_pub);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG, "Successful test: 'Client Hello' validate/parse");
-
-  // clean-up variables used only to test parse_client_hello_msg()
-  EVP_PKEY_free(client_sign_pubkey);
-  free(parsed_client_id);
-  free(parsed_client_eph_pub);
-
   // exchange 'Client Hello' message / signed server 'public key'
   unsigned char *server_ephemeral_pub = NULL;
   size_t server_ephemeral_pub_len = 0;

@@ -538,9 +538,17 @@ void get_session_key(ECDHServer * ecdhconn)
   size_t session_secret_len = 0;
   int ret;
 
+  EC_POINT *reph = NULL;
+  reph =  (EC_POINT *) EC_KEY_get0_public_key(ecdhconn->remote_ephemeral_pub);
+  if (reph == NULL)
+  {
+    kmyth_log(LOG_ERR, "error extracting public key from EC_KEY struct");
+    error(ecdhconn);
+  }
+
   // generate shared secret result for ECDH key agreement (server side)
   ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_keypair,
-                                   ecdhconn->remote_ephemeral_pub,
+                                   reph,
                                    &session_secret, &session_secret_len);
   if (ret != EXIT_SUCCESS)
   {
@@ -552,6 +560,9 @@ void get_session_key(ECDHServer * ecdhconn)
             session_secret[1],
             session_secret[session_secret_len - 2],
             session_secret[session_secret_len - 1], session_secret_len);
+
+  // clean-up
+  EC_POINT_clear_free(reph);
 
   // generate session key result for ECDH key agreement (server side)
   ret = compute_ecdh_session_key(session_secret,
