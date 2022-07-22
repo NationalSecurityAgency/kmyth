@@ -89,7 +89,7 @@ struct ECDHMessageHeader {
  */
 int extract_identity_bytes_from_x509(X509 *cert_in,
                                      unsigned char **id_out,
-                                     int *id_out_len);
+                                     size_t *id_out_len);
 
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
@@ -205,6 +205,51 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
                                unsigned int *session_key_len);
 
 /**
+ * @brief Obtains the parameters required to construct the
+ *        'Client Hello' message, which initiates the ECDH
+ *        key agreement portion of the kmyth 'retrieve key from server'
+ *        protocol:
+ * 
+ *          - The 'Client Identity' is extracted as an X509_NAME struct
+ *            from the client's signing certificate and then marshalled
+ *            into a DER-formatted byte array
+ * 
+ *          - The client's ephemeral public key is extracted from the
+ *            ephemeral key pair generated for this ECDH exchange and
+ *            then marshalled into a DER-formatted EC_KEY byte array
+ * 
+ * @param[in]  client_sign_cert         Pointer to client's signing certificate
+ *                                      (X509)
+ * 
+ * @param[out] client_id_bytes          Pointer to identity information for the
+ *                                      client (DER-formatted X509_NAME byte
+ *                                      array)
+ *
+ * @param[out] client_id_len            Pointer to the length (in bytes) of the
+ *                                      client ID information byte array result
+ *
+ * @param[in]  client_ephemeral_keypair Pointer to ephemeral key pair generated
+ *                                      by the client uniquely for each session
+ *                                      (EC_KEY) 
+ * 
+ * @param[out] client_eph_pubkey_bytes  Pointer to client's public epehemeral
+ *                                      contribution (DER-formatted EC_KEY
+ *                                      byte array)
+ * 
+ * @param[out] client_eph_pubkey_len    Pointer to the length (in bytes) of the
+ *                                      client's (enclave's) public ephemeral
+ *                                      contribution
+ *
+ * @return 0 on success, 1 on error
+ */
+int get_client_hello_msg_params(X509 *client_sign_cert,
+                                unsigned char **client_id_bytes,
+                                size_t *client_id_len,
+                                EC_KEY *client_ephemeral_keypair,
+                                unsigned char **client_eph_pubkey_bytes,
+                                size_t *client_eph_pubkey_len);
+
+/**
  * @brief Assembles the 'Client Hello' message, which initiates the ECDH
  *        key agreement portion of the kmyth 'retrieve key from server'
  *        protocol.
@@ -227,15 +272,13 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *        of the message.
  * 
  * @param[in]  client_id_bytes        Identity information for the client
- *                                    (expected to be a pointer to a
- *                                    DER-formatted X509_NAME byte array)
+ *                                    as a DER-formatted X509_NAME byte array
  *
  * @param[in]  client_id_len          Length (in bytes) of the input client
  *                                    ID information byte array
  *
- * @param[in]  client_ephemeral_bytes Client's public epehemeral contribution
- *                                    (expected to be a DER-formatted EC_KEY
- *                                    byte array)
+ * @param[in]  client_ephemeral_bytes Client's public ephemeral contribution
+ *                                    as a DER-formatted EC_KEY byte array
  * 
  * @param[in]  client_ephemeral_len   Length (in bytes) of client's (enclave's)
  *                                    public ephemeral contribution
@@ -252,9 +295,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int compose_client_hello_msg(unsigned char *client_id,
+  int compose_client_hello_msg(unsigned char *client_id_bytes,
                                size_t client_id_len,
-                               unsigned char *client_ephemeral,
+                               unsigned char *client_ephemeral_bytes,
                                size_t client_ephemeral_len,
                                EVP_PKEY *msg_sign_key,
                                unsigned char **msg_out,

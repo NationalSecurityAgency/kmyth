@@ -13,7 +13,7 @@
  ****************************************************************************/
 int extract_identity_bytes_from_x509(X509 *cert_in,
                                      unsigned char **id_out,
-                                     int *id_out_len)
+                                     size_t *id_out_len)
 {
   // extract 'subject name' from input certificate
   //   Note: The returned X509_NAME is an internal pointer
@@ -28,7 +28,7 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
   // marshal enclave identity (DN) into binary (DER formatted) format
   int ret = marshal_x509_name_to_der(subj_name,
                                      id_out,
-                                     id_out_len);
+                                     (int *) id_out_len);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error marshalling certificate's subject name");
@@ -310,23 +310,59 @@ int compute_ecdh_session_key(unsigned char *secret,
   return EXIT_SUCCESS;
 }
 
+
+/*****************************************************************************
+ * get_client_hello_msg_params()
+ ****************************************************************************/
+int get_client_hello_msg_params(X509 *client_sign_cert,
+                                unsigned char **client_id_bytes,
+                                size_t *client_id_len,
+                                EC_KEY *client_ephemeral_keypair,
+                                unsigned char **client_eph_pubkey_bytes,
+                                size_t *client_eph_pubkey_len)
+{
+  int ret;
+
+  // extract client (enclave) ID (subject name) bytes from cert
+  ret = extract_identity_bytes_from_x509(client_sign_cert,
+                                         client_id_bytes,
+                                         client_id_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR, "extraction of enclave cert subject name failed");
+    return EXIT_FAILURE;
+  }
+
+  ret = create_ecdh_ephemeral_public(client_ephemeral_keypair,
+                                     client_eph_pubkey_bytes,
+                                     client_eph_pubkey_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_sgx_log(LOG_ERR,
+                  "client ECDH 'public key' octet string creation failed");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
 /*****************************************************************************
  * compose_client_hello_msg()
  ****************************************************************************/
-int compose_client_hello_msg(unsigned char *client_id,
+int compose_client_hello_msg(unsigned char *client_id_bytes,
                              size_t client_id_len,
-                             unsigned char *client_ephemeral,
-                             size_t client_ephemeral_len,
+                             unsigned char *client_eph_pubkey_bytes,
+                             size_t client_eph_pubkey_len,
                              EVP_PKEY *msg_sign_key,
                              unsigned char **msg_out,
                              size_t *msg_out_len)
 {
   // allocate memory for 'Client Hello' message body byte array
   //  - Client ID size (two-byte unsigned integer)
-  //  - Client ID value (client_id_len sized byte array)
-  //  - Client ephemeral size (two-byte unsigned integer)
-  //  - Client ephemeral value (client_ephemeral_len sized byte array) 
-  *msg_out_len = 2 + client_id_len + 2 + client_ephemeral_len;
+  //  - Client ID value (byte array)
+  //  - Client ephemeral public key size (two-byte unsigned integer)
+  //  - Client ephemeral public key value (byte array) 
+  *msg_out_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
 
   *msg_out = malloc(*msg_out_len);
   if (*msg_out == NULL)
@@ -339,31 +375,31 @@ int compose_client_hello_msg(unsigned char *client_id,
   uint16_t temp_val = 0;
   unsigned char *buf = *msg_out;
 
-  // append client_id_len bytes
+  // append client identity length bytes
   temp_val = htobe16((uint16_t) client_id_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
-  // append client_id bytes
-  memcpy(buf, client_id, client_id_len);
+  // append client identity bytes
+  memcpy(buf, client_id_bytes, client_id_len);
   buf += client_id_len;
 
-  // append client_ephemeral_len bytes
-  temp_val = htobe16((uint16_t) client_ephemeral_len);
+  // append client_ephemeral public key length bytes
+  temp_val = htobe16((uint16_t) client_eph_pubkey_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
-  // append client_ephemeral bytes
-  memcpy(buf, client_ephemeral, client_ephemeral_len);
+  // append client ephemeral public key bytes
+  memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
 
-  // append signature
+  // append signature to tail end of message
   if (EXIT_SUCCESS != append_signature(msg_sign_key, msg_out, msg_out_len))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
   }
 
-  // prepend message size
+  // prepend message size as first two bytes of message
   if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
   {
     kmyth_sgx_log(LOG_ERR, "error prepending message length");
