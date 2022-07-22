@@ -120,25 +120,18 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   free(client_ephemeral_pub);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello' message = 0x%02x%02x%02x%02x ... (%ld bytes)",
-           client_hello_msg[0], client_hello_msg[1],
-           client_hello_msg[2], client_hello_msg[3],
-           client_hello_msg_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // exchange 'Client Hello' message / signed server 'public key'
-  unsigned char *server_ephemeral_pub = NULL;
-  size_t server_ephemeral_pub_len = 0;
-  unsigned char *server_eph_pub_signature = NULL;
-  unsigned int server_eph_pub_signature_len = 0;
-
-  snprintf(msg, MAX_LOG_MSG_LEN,
            "'Client Hello' message = 0x%02x%02x ... %02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
            client_hello_msg[client_hello_msg_len - 2],
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // exchange 'Client Hello' and 'Server Hello' messages
+  unsigned char *server_ephemeral_pub = NULL;
+  size_t server_ephemeral_pub_len = 0;
+  unsigned char *server_eph_pub_signature = NULL;
+  unsigned int server_eph_pub_signature_len = 0;
 
   ret_ocall = ecdh_exchange_ocall(&ret_val,
                                   client_hello_msg,

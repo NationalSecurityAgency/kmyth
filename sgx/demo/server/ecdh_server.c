@@ -11,7 +11,7 @@
 
 int main(int argc, char **argv)
 {
-  ECDHServer ecdhconn;
+  ECDHPeer ecdhconn;
 
   // setup default logging parameters
   set_app_name("kmyth/serverTLSproxy");
@@ -21,7 +21,7 @@ int main(int argc, char **argv)
   set_applog_output_mode(0);
 
   init(&ecdhconn);
-  ecdhconn.client_mode = false;
+  ecdhconn.isClient = false;
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
@@ -29,7 +29,6 @@ int main(int argc, char **argv)
   check_options(&ecdhconn);
 
   server_main(&ecdhconn);
-
 
   cleanup(&ecdhconn);
 

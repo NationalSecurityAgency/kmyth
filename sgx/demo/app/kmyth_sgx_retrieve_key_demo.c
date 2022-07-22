@@ -101,6 +101,8 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   BIO_free(client_ec_sign_key_bio);
+  demo_log(LOG_DEBUG, "loaded client private signing key from file: %s",
+           CLIENT_PRIVATE_KEY_FILE);
 
   // marshal (DER format) the client's private EC signing key
   //   - facilitates passing this key into the enclave
@@ -116,6 +118,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   EVP_PKEY_free(client_ec_sign_key);
+  demo_log(LOG_DEBUG, "marshalled client private signing key");
 
   // read client public certificate (X509) from file (.pem formatted)
   X509 *client_ec_cert = NULL;
@@ -136,6 +139,8 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   BIO_free(client_ec_cert_bio);
+  demo_log(LOG_DEBUG, "loaded client public certificate from file: %s",
+           CLIENT_PUBLIC_CERT_FILE);
 
   // marshal (DER format) the server's certificate
   //   - facilitates passing this certificate into the enclave
@@ -151,6 +156,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   X509_free(client_ec_cert);
+  demo_log(LOG_DEBUG, "marshalled client public certificate");
 
   // read server public certificate (X509) from file (.pem formatted)
   X509 *server_ec_cert = NULL;
@@ -171,6 +177,8 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   BIO_free(server_ec_cert_bio);
+  demo_log(LOG_DEBUG, "loaded server public certificate from file: %s",
+           SERVER_PUBLIC_CERT_FILE);
 
   // marshal (DER format) the server's certificate
   //   - facilitates passing this certificate into the enclave
@@ -186,6 +194,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   X509_free(server_ec_cert);
+  demo_log(LOG_DEBUG, "marshalled server public certificate");
 
   // initialize SGX enclave
   sgx_enclave_id_t eid = 0;
@@ -202,6 +211,7 @@ int main(int argc, char **argv)
   demo_log(LOG_DEBUG, "initialized SGX enclave - EID = 0x%016lx", eid);
 
   // make ECALL to retrieve key into enclave from the key server
+  demo_log(LOG_DEBUG, "invoking 'retrieve key' ECALL ...");
   int retval = -1;
 
   const char *server_host = SERVER_IP;
@@ -233,6 +243,8 @@ int main(int argc, char **argv)
     demo_log(LOG_ERR, "kmyth_enclave_retrieve_key_from_server() failed");
     return EXIT_FAILURE;
   }
+
+  demo_log(LOG_DEBUG, "retrieve key demo complete");
 
   return EXIT_SUCCESS;
 }

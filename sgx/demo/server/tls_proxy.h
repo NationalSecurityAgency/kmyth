@@ -28,7 +28,7 @@ typedef struct TLSConnection
 typedef struct TLSProxy
 {
   TLSConnection tlsconn;
-  ECDHServer ecdhconn;
+  ECDHPeer ecdhconn;
 } TLSProxy;
 
 static const struct option proxy_longopts[] = {

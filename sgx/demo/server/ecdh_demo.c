@@ -8,32 +8,35 @@
 #define KEY_ID "7"
 #define KEY_ID_LEN 1
 
-void init(ECDHServer * ecdhconn)
+void init(ECDHPeer * ecdhconn)
 {
-  secure_memset(ecdhconn, 0, sizeof(ECDHServer));
+  secure_memset(ecdhconn, 0, sizeof(ECDHPeer));
   ecdhconn->socket_fd = UNSET_FD;
-  ecdhconn->client_mode = false;
+
+  // default to server mode
+  ecdhconn->isClient = false;
 }
 
-void cleanup(ECDHServer * ecdhconn)
+void cleanup(ECDHPeer * ecdhconn)
 {
-  /* Note: These clear and free functions should all be safe to use with null pointer values. */
+  // Note: These clear and free functions should all be safe to use with
+  // null pointer values.
 
   if (ecdhconn->socket_fd != UNSET_FD)
   {
     close(ecdhconn->socket_fd);
   }
 
-  if (ecdhconn->local_privkey != NULL)
+  if (ecdhconn->local_priv_sign_key != NULL)
   {
-    kmyth_clear(ecdhconn->local_privkey, sizeof(ecdhconn->local_privkey));
-    EVP_PKEY_free(ecdhconn->local_privkey);
+    kmyth_clear(ecdhconn->local_priv_sign_key, sizeof(ecdhconn->local_priv_sign_key));
+    EVP_PKEY_free(ecdhconn->local_priv_sign_key);
   }
 
-  if (ecdhconn->remote_pubkey != NULL)
+  if (ecdhconn->remote_pub_sign_key != NULL)
   {
-    kmyth_clear(ecdhconn->remote_pubkey, sizeof(ecdhconn->remote_pubkey));
-    EVP_PKEY_free(ecdhconn->remote_pubkey);
+    kmyth_clear(ecdhconn->remote_pub_sign_key, sizeof(ecdhconn->remote_pub_sign_key));
+    EVP_PKEY_free(ecdhconn->remote_pub_sign_key);
   }
 
   if (ecdhconn->local_ephemeral_keypair != NULL)
@@ -45,8 +48,9 @@ void cleanup(ECDHServer * ecdhconn)
 
   if (ecdhconn->remote_ephemeral_pubkey != NULL)
   {
-    kmyth_clear_and_free(ecdhconn->remote_ephemeral_pubkey,
-                         ecdhconn->remote_ephemeral_pubkey_len);
+    kmyth_clear(ecdhconn->remote_ephemeral_pubkey,
+                sizeof(ecdhconn->remote_ephemeral_pubkey));
+    EC_KEY_free(ecdhconn->remote_ephemeral_pubkey);
   }
 
   if (ecdhconn->session_key != NULL)
@@ -57,7 +61,7 @@ void cleanup(ECDHServer * ecdhconn)
   init(ecdhconn);
 }
 
-void error(ECDHServer * ecdhconn)
+void error(ECDHPeer * ecdhconn)
 {
   cleanup(ecdhconn);
   exit(EXIT_FAILURE);
@@ -80,7 +84,7 @@ static void usage(const char *prog)
           "  -h or --help     Help (displays this usage).\n\n", prog);
 }
 
-void get_options(ECDHServer * ecdhconn, int argc, char **argv)
+void get_options(ECDHPeer * ecdhconn, int argc, char **argv)
 {
   // Exit early if there are no arguments.
   if (1 == argc)
@@ -99,10 +103,10 @@ void get_options(ECDHServer * ecdhconn, int argc, char **argv)
     {
     // Key files
     case 'r':
-      ecdhconn->private_key_path = optarg;
+      ecdhconn->priv_sign_key_path = optarg;
       break;
     case 'u':
-      ecdhconn->public_cert_path = optarg;
+      ecdhconn->pub_sign_cert_path = optarg;
       break;
     // Network
     case 'p':
@@ -125,16 +129,16 @@ void get_options(ECDHServer * ecdhconn, int argc, char **argv)
   }
 }
 
-void check_options(ECDHServer * ecdhconn)
+void check_options(ECDHPeer * ecdhconn)
 {
   bool err = false;
 
-  if (ecdhconn->private_key_path == NULL)
+  if (ecdhconn->priv_sign_key_path == NULL)
   {
     fprintf(stderr, "Private key path argument (-r) is required.\n");
     err = true;
   }
-  if (ecdhconn->public_cert_path == NULL)
+  if (ecdhconn->pub_sign_cert_path == NULL)
   {
     fprintf(stderr, "Public key path argument (-u) is required.\n");
     err = true;
@@ -144,7 +148,7 @@ void check_options(ECDHServer * ecdhconn)
     fprintf(stderr, "Port number argument (-p) is required.\n");
     err = true;
   }
-  if (ecdhconn->client_mode && ecdhconn->ip == NULL)
+  if (ecdhconn->isClient && ecdhconn->ip == NULL)
   {
     fprintf(stderr, "IP address argument (-i) is required in client mode.\n");
     err = true;
@@ -156,7 +160,7 @@ void check_options(ECDHServer * ecdhconn)
   }
 }
 
-void ecdh_send_data(ECDHServer * ecdhconn, const void *buf, size_t len)
+void ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   ssize_t bytes_sent = write(ecdhconn->socket_fd, buf, len);
@@ -168,7 +172,7 @@ void ecdh_send_data(ECDHServer * ecdhconn, const void *buf, size_t len)
   }
 }
 
-void ecdh_recv_data(ECDHServer * ecdhconn, void *buf, size_t len)
+void ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
 {
   /* Wrapper function to simplify error handling. */
   ssize_t bytes_read = read(ecdhconn->socket_fd, buf, len);
@@ -186,7 +190,7 @@ void ecdh_recv_data(ECDHServer * ecdhconn, void *buf, size_t len)
   }
 }
 
-void ecdh_send_msg(ECDHServer * ecdhconn, unsigned char *buf, size_t len)
+void ecdh_send_msg(ECDHPeer * ecdhconn, unsigned char *buf, size_t len)
 {
   struct ECDHMessageHeader header;
 
@@ -202,7 +206,7 @@ void ecdh_send_msg(ECDHServer * ecdhconn, unsigned char *buf, size_t len)
   ecdh_send_data(ecdhconn, buf, len);
 }
 
-void ecdh_recv_msg(ECDHServer * ecdhconn, unsigned char **buf, size_t *len)
+void ecdh_recv_msg(ECDHPeer * ecdhconn, unsigned char **buf, size_t *len)
 {
   struct ECDHMessageHeader header;
 
@@ -226,7 +230,7 @@ void ecdh_recv_msg(ECDHServer * ecdhconn, unsigned char **buf, size_t *len)
   ecdh_recv_data(ecdhconn, *buf, *len);
 }
 
-void ecdh_encrypt_send(ECDHServer * ecdhconn, unsigned char *plaintext, size_t plaintext_len)
+void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len)
 {
   int ret;
   unsigned char *ciphertext = NULL;
@@ -246,7 +250,7 @@ void ecdh_encrypt_send(ECDHServer * ecdhconn, unsigned char *plaintext, size_t p
   kmyth_clear_and_free(ciphertext, ciphertext_len);
 }
 
-void ecdh_recv_decrypt(ECDHServer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len)
+void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len)
 {
   int ret;
   unsigned char *ciphertext = NULL;
@@ -271,7 +275,7 @@ void cleanup_defunct() {
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-void create_server_socket(ECDHServer * ecdhconn)
+void create_server_socket(ECDHPeer * ecdhconn)
 {
   int listen_fd = UNSET_FD;
   int numconn = 0;
@@ -333,7 +337,7 @@ void create_server_socket(ECDHServer * ecdhconn)
   exit(EXIT_SUCCESS);
 }
 
-void create_client_socket(ECDHServer * ecdhconn)
+void create_client_socket(ECDHPeer * ecdhconn)
 {
   kmyth_log(LOG_DEBUG, "Setting up client socket");
   if (setup_client_socket(ecdhconn->ip, ecdhconn->port, &ecdhconn->socket_fd))
@@ -343,42 +347,42 @@ void create_client_socket(ECDHServer * ecdhconn)
   }
 }
 
-void load_private_key(ECDHServer * ecdhconn)
+void load_private_key(ECDHPeer * ecdhconn)
 {
   // read server private EC signing key from file (.pem formatted)
-  BIO *priv_key_bio = BIO_new_file(ecdhconn->private_key_path, "r");
+  BIO *priv_key_bio = BIO_new_file(ecdhconn->priv_sign_key_path, "r");
 
   if (priv_key_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhconn->private_key_path);
+              ecdhconn->priv_sign_key_path);
     error(ecdhconn);
   }
 
-  ecdhconn->local_privkey = PEM_read_bio_PrivateKey(priv_key_bio, NULL, 0, NULL);
+  ecdhconn->local_priv_sign_key = PEM_read_bio_PrivateKey(priv_key_bio, NULL, 0, NULL);
   BIO_free(priv_key_bio);
   priv_key_bio = NULL;
-  if (!ecdhconn->local_privkey)
+  if (!ecdhconn->local_priv_sign_key)
   {
     kmyth_log(LOG_ERR, "EC Key PEM file (%s) read failed",
-              ecdhconn->private_key_path);
+              ecdhconn->priv_sign_key_path);
     error(ecdhconn);
   }
 
   kmyth_log(LOG_DEBUG, "obtained local private signing key from file");
 }
 
-void load_public_key(ECDHServer * ecdhconn)
+void load_public_key(ECDHPeer * ecdhconn)
 {
   // read remote certificate (X509) from file (.pem formatted)
   X509 *client_cert = NULL;
 
-  BIO *pub_cert_bio = BIO_new_file(ecdhconn->public_cert_path, "r");
+  BIO *pub_cert_bio = BIO_new_file(ecdhconn->pub_sign_cert_path, "r");
 
   if (pub_cert_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhconn->public_cert_path);
+              ecdhconn->pub_sign_cert_path);
     error(ecdhconn);
   }
 
@@ -388,15 +392,15 @@ void load_public_key(ECDHServer * ecdhconn)
   if (!client_cert)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
-              ecdhconn->public_cert_path);
+              ecdhconn->pub_sign_cert_path);
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "obtained remote certificate from file");
 
-  ecdhconn->remote_pubkey = X509_get_pubkey(client_cert);
+  ecdhconn->remote_pub_sign_key = X509_get_pubkey(client_cert);
   X509_free(client_cert);
   client_cert = NULL;
-  if (ecdhconn->remote_pubkey == NULL)
+  if (ecdhconn->remote_pub_sign_key == NULL)
   {
     kmyth_log(LOG_ERR, "extracting public key from remote certificate failed");
     error(ecdhconn);
@@ -404,7 +408,7 @@ void load_public_key(ECDHServer * ecdhconn)
   kmyth_log(LOG_DEBUG, "extracted public key from remote certificate");
 }
 
-void make_ephemeral_keypair(ECDHServer * ecdhconn)
+void make_ephemeral_keypair(ECDHPeer * ecdhconn)
 {
   // create local ephemeral contribution (public/private key pair)
   int ret = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
@@ -418,51 +422,7 @@ void make_ephemeral_keypair(ECDHServer * ecdhconn)
   kmyth_log(LOG_DEBUG, "created local ephemeral EC key pair");
 }
 
-void recv_ephemeral_public(ECDHServer * ecdhconn)
-{
-  unsigned char *remote_pub_sig = NULL;
-  unsigned int remote_pub_sig_len = 0;
-  int ret;
-
-  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
-  ecdh_recv_data(ecdhconn, &ecdhconn->remote_ephemeral_pubkey_len,
-           sizeof(ecdhconn->remote_ephemeral_pubkey_len));
-  if (ecdhconn->remote_ephemeral_pubkey_len > ECDH_MAX_MSG_SIZE)
-  {
-    kmyth_log(LOG_ERR, "Received invalid public key size.");
-    error(ecdhconn);
-  }
-  ecdhconn->remote_ephemeral_pubkey =
-    calloc(ecdhconn->remote_ephemeral_pubkey_len, sizeof(unsigned char));
-  ecdh_recv_data(ecdhconn, ecdhconn->remote_ephemeral_pubkey,
-           ecdhconn->remote_ephemeral_pubkey_len);
-
-  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
-  ecdh_recv_data(ecdhconn, &remote_pub_sig_len, sizeof(remote_pub_sig_len));
-  if (remote_pub_sig_len > ECDH_MAX_MSG_SIZE)
-  {
-    kmyth_log(LOG_ERR, "Received invalid public key signature size.");
-    error(ecdhconn);
-  }
-  remote_pub_sig = calloc(remote_pub_sig_len, sizeof(unsigned char));
-  ecdh_recv_data(ecdhconn, remote_pub_sig, remote_pub_sig_len);
-
-  // check signature on received ephemeral contribution from remote
-  ret = verify_buffer(ecdhconn->remote_pubkey,
-                      ecdhconn->remote_ephemeral_pubkey,
-                      ecdhconn->remote_ephemeral_pubkey_len, remote_pub_sig,
-                      remote_pub_sig_len);
-  kmyth_clear_and_free(remote_pub_sig, remote_pub_sig_len);
-  remote_pub_sig = NULL;
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "signature of ECDH remote 'public key' invalid");
-    error(ecdhconn);
-  }
-  kmyth_log(LOG_DEBUG, "validated signature on ECDH remote 'public key'");
-}
-
-void recv_client_hello_msg(ECDHServer * ecdhconn)
+void recv_client_hello_msg(ECDHPeer * ecdhconn)
 {
   int ret;
 
@@ -480,11 +440,11 @@ void recv_client_hello_msg(ECDHServer * ecdhconn)
                        msg_in[0], msg_in[1], msg_in[msg_in_len-2],
                        msg_in[msg_in_len-1]);
 
-  ret = parse_client_hello_msg(ecdhconn->remote_pubkey,
+  ret = parse_client_hello_msg(ecdhconn->remote_pub_sign_key,
                                msg_in,
                                msg_in_len,
                                &(ecdhconn->remote_id),
-                               &(ecdhconn->remote_ephemeral_pub));
+                               &(ecdhconn->remote_ephemeral_pubkey));
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR,
@@ -494,7 +454,17 @@ void recv_client_hello_msg(ECDHServer * ecdhconn)
   free(msg_in);
 }
 
-void send_ephemeral_public(ECDHServer * ecdhconn)
+void send_server_hello_msg(ECDHPeer * ecdhconn)
+{
+  // unsigned char *local_ephemeral_bytes = NULL;
+  // size_t local_ephemeral_bytes_len = 0;
+  // unsigned char *local_ephemeral_sig = NULL;
+  // unsigned int local_ephemeral_sig_len = 0;
+  // int ret;
+
+}
+
+void send_ephemeral_public(ECDHPeer * ecdhconn)
 {
   unsigned char *local_pub = NULL, *local_pub_sig = NULL;
   size_t local_pub_len = 0;
@@ -511,7 +481,7 @@ void send_ephemeral_public(ECDHServer * ecdhconn)
   kmyth_log(LOG_DEBUG, "created ephemeral local 'public key' octet string");
 
   // sign local ephemeral contribution
-  ret = sign_buffer(ecdhconn->local_privkey, local_pub, local_pub_len,
+  ret = sign_buffer(ecdhconn->local_priv_sign_key, local_pub, local_pub_len,
                     &local_pub_sig, &local_pub_sig_len);
   if (ret != EXIT_SUCCESS)
   {
@@ -532,14 +502,14 @@ void send_ephemeral_public(ECDHServer * ecdhconn)
   kmyth_clear_and_free(local_pub_sig, local_pub_sig_len);
 }
 
-void get_session_key(ECDHServer * ecdhconn)
+void get_session_key(ECDHPeer * ecdhconn)
 {
   unsigned char *session_secret = NULL;
   size_t session_secret_len = 0;
   int ret;
 
   EC_POINT *reph = NULL;
-  reph =  (EC_POINT *) EC_KEY_get0_public_key(ecdhconn->remote_ephemeral_pub);
+  reph =  (EC_POINT *) EC_KEY_get0_public_key(ecdhconn->remote_ephemeral_pubkey);
   if (reph == NULL)
   {
     kmyth_log(LOG_ERR, "error extracting public key from EC_KEY struct");
@@ -583,7 +553,7 @@ void get_session_key(ECDHServer * ecdhconn)
             ecdhconn->session_key_len);
 }
 
-int request_key(ECDHServer *ecdhconn,
+int request_key(ECDHPeer *ecdhconn,
                 unsigned char *key_id, size_t key_id_len,
                 unsigned char **key, size_t *key_len)
 {
@@ -633,7 +603,7 @@ int request_key(ECDHServer *ecdhconn,
   return EXIT_SUCCESS;
 }
 
-int handle_key_request(ECDHServer *ecdhconn,
+int handle_key_request(ECDHPeer *ecdhconn,
                       unsigned char *key, size_t key_len)
 {
   int ret;
@@ -695,7 +665,7 @@ int handle_key_request(ECDHServer *ecdhconn,
   return EXIT_SUCCESS;
 }
 
-void send_operational_key(ECDHServer * ecdhconn)
+void send_operational_key(ECDHPeer * ecdhconn)
 {
   int ret;
 
@@ -714,7 +684,7 @@ void send_operational_key(ECDHServer * ecdhconn)
   }
 }
 
-void get_operational_key(ECDHServer * ecdhconn)
+void get_operational_key(ECDHPeer * ecdhconn)
 {
   unsigned char *op_key = NULL;
   size_t op_key_len = 0;
@@ -735,7 +705,7 @@ void get_operational_key(ECDHServer * ecdhconn)
   kmyth_clear_and_free(op_key, op_key_len);
 }
 
-void server_main(ECDHServer * ecdhconn)
+void server_main(ECDHPeer * ecdhconn)
 {
   create_server_socket(ecdhconn);
 
@@ -744,17 +714,16 @@ void server_main(ECDHServer * ecdhconn)
 
   make_ephemeral_keypair(ecdhconn);
 
-  //recv_ephemeral_public(ecdhconn);
-  send_ephemeral_public(ecdhconn);
-
   recv_client_hello_msg(ecdhconn);
+
+  send_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
 
   send_operational_key(ecdhconn);
 }
 
-void client_main(ECDHServer * ecdhconn)
+void client_main(ECDHPeer * ecdhconn)
 {
   create_client_socket(ecdhconn);
 
@@ -764,7 +733,6 @@ void client_main(ECDHServer * ecdhconn)
   make_ephemeral_keypair(ecdhconn);
 
   send_ephemeral_public(ecdhconn);
-  recv_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
 

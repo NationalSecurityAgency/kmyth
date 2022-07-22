@@ -96,10 +96,10 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
     {
     // Key files
     case 'r':
-      proxy->ecdhconn.private_key_path = optarg;
+      proxy->ecdhconn.priv_sign_key_path = optarg;
       break;
     case 'u':
-      proxy->ecdhconn.public_cert_path = optarg;
+      proxy->ecdhconn.pub_sign_cert_path = optarg;
       break;
     // ECDH Connection
     case 'p':
@@ -355,7 +355,7 @@ static int tls_connect(TLSConnection * tlsconn)
 
 static int setup_ecdhconn(TLSProxy * proxy)
 {
-  ECDHServer *ecdhconn = &proxy->ecdhconn;
+  ECDHPeer *ecdhconn = &proxy->ecdhconn;
 
   create_server_socket(ecdhconn);
 
@@ -364,7 +364,7 @@ static int setup_ecdhconn(TLSProxy * proxy)
 
   make_ephemeral_keypair(ecdhconn);
 
-  recv_ephemeral_public(ecdhconn);
+  recv_client_hello_msg(ecdhconn);
   send_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
@@ -402,7 +402,7 @@ void proxy_start(TLSProxy * proxy)
   unsigned char tls_msg_buf[ECDH_MAX_MSG_SIZE];
   unsigned char *ecdh_msg_buf = NULL;
   size_t ecdh_msg_len = 0;
-  ECDHServer *ecdhconn = &proxy->ecdhconn;
+  ECDHPeer *ecdhconn = &proxy->ecdhconn;
   BIO *tls_bio = proxy->tlsconn.conn;
 
   secure_memset(pfds, 0, sizeof(pfds));

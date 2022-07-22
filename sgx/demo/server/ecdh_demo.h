@@ -35,26 +35,24 @@
 #define UNSET_FD -1
 #define OP_KEY_SIZE 16
 
-typedef struct ECDHServer
+typedef struct ECDHPeer
 {
-  bool client_mode;
-  char *private_key_path;
-  char *public_cert_path;
+  bool isClient;
+  char *priv_sign_key_path;
+  char *pub_sign_cert_path;
   char *port;
   char *ip;
   int maxconn;
   int socket_fd;
-  EVP_PKEY *local_privkey;
-  EVP_PKEY *remote_pubkey;
-  EC_KEY *local_ephemeral_keypair;
+  EVP_PKEY *local_priv_sign_key;
+  EVP_PKEY *remote_pub_sign_key;
   X509_NAME *local_id;
   X509_NAME *remote_id;
-  EC_KEY *remote_ephemeral_pub;
-  unsigned char *remote_ephemeral_pubkey;
-  size_t remote_ephemeral_pubkey_len;
+  EC_KEY *local_ephemeral_keypair;
+  EC_KEY *remote_ephemeral_pubkey;
   unsigned char *session_key;
   unsigned int session_key_len;
-} ECDHServer;
+} ECDHPeer;
 
 static const struct option longopts[] = {
   // Key files
@@ -72,36 +70,36 @@ static const struct option longopts[] = {
 
 static void usage(const char *prog);
 
-void init(ECDHServer * ecdhconn);
-void cleanup(ECDHServer * ecdhconn);
+void init(ECDHPeer * ecdhconn);
+void cleanup(ECDHPeer * ecdhconn);
 
-void error(ECDHServer * ecdhconn);
+void error(ECDHPeer * ecdhconn);
 
-void get_options(ECDHServer * ecdhconn, int argc, char **argv);
-void check_options(ECDHServer * ecdhconn);
+void get_options(ECDHPeer * ecdhconn, int argc, char **argv);
+void check_options(ECDHPeer * ecdhconn);
 
-void ecdh_encrypt_send(ECDHServer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
-void ecdh_recv_decrypt(ECDHServer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
+void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
+void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
 
-void create_server_socket(ECDHServer * ecdhconn);
-void create_client_socket(ECDHServer * ecdhconn);
+void create_server_socket(ECDHPeer * ecdhconn);
+void create_client_socket(ECDHPeer * ecdhconn);
 
-void load_private_key(ECDHServer * ecdhconn);
-void load_public_key(ECDHServer * ecdhconn);
+void load_private_key(ECDHPeer * ecdhconn);
+void load_public_key(ECDHPeer * ecdhconn);
 
-void make_ephemeral_keypair(ECDHServer * ecdhconn);
+void make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
-void recv_ephemeral_public(ECDHServer * ecdhconn);
-void send_ephemeral_public(ECDHServer * ecdhconn);
+void recv_client_hello_msg(ECDHPeer * ecdhconn);
 
-void recv_client_hello_msg(ECDHServer * ecdhconn);
+void send_ephemeral_public(ECDHPeer * ecdhconn);
+void send_server_hello_msg(ECDHPeer * ecdhconn);
 
-void get_session_key(ECDHServer * ecdhconn);
+void get_session_key(ECDHPeer * ecdhconn);
 
-void send_operational_key(ECDHServer * ecdhconn);
-void get_operational_key(ECDHServer * ecdhconn);
+void send_operational_key(ECDHPeer * ecdhconn);
+void get_operational_key(ECDHPeer * ecdhconn);
 
-void server_main(ECDHServer * ecdhconn);
-void client_main(ECDHServer * ecdhconn);
+void server_main(ECDHPeer * ecdhconn);
+void client_main(ECDHPeer * ecdhconn);
 
 #endif

@@ -11,10 +11,10 @@
 
 int main(int argc, char **argv)
 {
-  ECDHServer ecdhconn;
+  ECDHPeer ecdhconn;
 
   init(&ecdhconn);
-  ecdhconn.client_mode = true;
+  ecdhconn.isClient = true;
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
