@@ -310,59 +310,45 @@ int compute_ecdh_session_key(unsigned char *secret,
   return EXIT_SUCCESS;
 }
 
-
 /*****************************************************************************
- * get_client_hello_msg_params()
+ * compose_client_hello_msg()
  ****************************************************************************/
-int get_client_hello_msg_params(X509 *client_sign_cert,
-                                unsigned char **client_id_bytes,
-                                size_t *client_id_len,
-                                EC_KEY *client_ephemeral_keypair,
-                                unsigned char **client_eph_pubkey_bytes,
-                                size_t *client_eph_pubkey_len)
+int compose_client_hello_msg(X509 *client_sign_cert,
+                             unsigned char **client_id_bytes,
+                             size_t *client_id_len,
+                             EC_KEY *client_ephemeral_keypair,
+                             unsigned char **client_eph_pubkey_bytes,
+                             size_t *client_eph_pubkey_len,
+                             EVP_PKEY *msg_sign_key,
+                             unsigned char **msg_out,
+                             size_t *msg_out_len)
 {
-  int ret;
-
   // extract client (enclave) ID (subject name) bytes from cert
-  ret = extract_identity_bytes_from_x509(client_sign_cert,
-                                         client_id_bytes,
-                                         client_id_len);
-  if (ret != EXIT_SUCCESS)
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
+                                                       client_id_bytes,
+                                                       client_id_len))
   {
-    kmyth_sgx_log(LOG_ERR, "extraction of enclave cert subject name failed");
+    kmyth_sgx_log(LOG_ERR, "extraction of client cert identity failed");
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "extracted client identity from its signing cert");
 
-  ret = create_ecdh_ephemeral_public(client_ephemeral_keypair,
-                                     client_eph_pubkey_bytes,
-                                     client_eph_pubkey_len);
-  if (ret != EXIT_SUCCESS)
+  if (EXIT_SUCCESS != create_ecdh_ephemeral_public(client_ephemeral_keypair,
+                                                   client_eph_pubkey_bytes,
+                                                   client_eph_pubkey_len))
   {
     kmyth_sgx_log(LOG_ERR,
                   "client ECDH 'public key' octet string creation failed");
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "extracted/marshalled client ephemeral public key");
 
-  return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * compose_client_hello_msg()
- ****************************************************************************/
-int compose_client_hello_msg(unsigned char *client_id_bytes,
-                             size_t client_id_len,
-                             unsigned char *client_eph_pubkey_bytes,
-                             size_t client_eph_pubkey_len,
-                             EVP_PKEY *msg_sign_key,
-                             unsigned char **msg_out,
-                             size_t *msg_out_len)
-{
   // allocate memory for 'Client Hello' message body byte array
   //  - Client ID size (two-byte unsigned integer)
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
   //  - Client ephemeral public key value (byte array) 
-  *msg_out_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
+  *msg_out_len = 2 + *client_id_len + 2 + *client_eph_pubkey_len;
 
   *msg_out = malloc(*msg_out_len);
   if (*msg_out == NULL)
@@ -376,21 +362,23 @@ int compose_client_hello_msg(unsigned char *client_id_bytes,
   unsigned char *buf = *msg_out;
 
   // append client identity length bytes
-  temp_val = htobe16((uint16_t) client_id_len);
+  temp_val = htobe16((uint16_t) *client_id_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
   // append client identity bytes
-  memcpy(buf, client_id_bytes, client_id_len);
-  buf += client_id_len;
+  memcpy(buf, *client_id_bytes, *client_id_len);
+  buf += *client_id_len;
 
   // append client_ephemeral public key length bytes
-  temp_val = htobe16((uint16_t) client_eph_pubkey_len);
+  temp_val = htobe16((uint16_t) *client_eph_pubkey_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
   // append client ephemeral public key bytes
-  memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
+  memcpy(buf, *client_eph_pubkey_bytes, *client_eph_pubkey_len);
+
+  kmyth_sgx_log(LOG_DEBUG, "created 'Client Hello' message body");
 
   // append signature to tail end of message
   if (EXIT_SUCCESS != append_signature(msg_sign_key, msg_out, msg_out_len))
@@ -398,6 +386,7 @@ int compose_client_hello_msg(unsigned char *client_id_bytes,
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "signed 'Client Hello' message");
 
   // prepend message size as first two bytes of message
   if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
@@ -405,6 +394,7 @@ int compose_client_hello_msg(unsigned char *client_id_bytes,
     kmyth_sgx_log(LOG_ERR, "error prepending message length");
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "prepended 'Client Hello' message length");
 
   return EXIT_SUCCESS;
 }                                 

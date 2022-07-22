@@ -75,7 +75,7 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
     return EXIT_FAILURE;
   }
 
-  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key.");
+  kmyth_log(LOG_DEBUG, "Receiving server-side ephemeral public key.");
   num_bytes = read(socket_fd, remote_ephemeral_public_len,
                    sizeof(*remote_ephemeral_public_len));
   if (num_bytes != sizeof(*remote_ephemeral_public_len))

@@ -55,39 +55,20 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
 
-  // obtain 'Client Hello' message parameters
+  // compose 'Client Hello' message (client to server key agreement 'request')
   unsigned char *client_id = NULL;
   size_t client_id_len = 0;
-
-
-  // obtain parameters needed to construct 'Client Hello' message
-  unsigned char *client_hello_msg = NULL;
-  size_t client_hello_msg_len = 0;
   unsigned char *client_ephemeral_pubkey = NULL;
   size_t client_ephemeral_pubkey_len = 0;
+  unsigned char *client_hello_msg = NULL;
+  size_t client_hello_msg_len = 0;
 
-  ret_val = get_client_hello_msg_params(client_sign_cert,
-                                        &client_id,
-                                        &client_id_len,
-                                        client_ephemeral_keypair,
-                                        &client_ephemeral_pubkey,
-                                        &client_ephemeral_pubkey_len);
-  
-  snprintf(msg, MAX_LOG_MSG_LEN, "extracted client ID (%ld bytes) from cert",
-           client_id_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "created client's ephemeral 'public key' octet string (%ld bytes)",
-           client_ephemeral_pubkey_len);
-
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // compose 'Client Hello' message (client to server key agreement 'request')
-  ret_val = compose_client_hello_msg(client_id,
-                                     client_id_len,
-                                     client_ephemeral_pubkey,
-                                     client_ephemeral_pubkey_len,
+  ret_val = compose_client_hello_msg(client_sign_cert,
+                                     &client_id,
+                                     &client_id_len,
+                                     client_ephemeral_keypair,
+                                     &client_ephemeral_pubkey,
+                                     &client_ephemeral_pubkey_len,
                                      client_sign_privkey,
                                      &client_hello_msg,
                                      &client_hello_msg_len);
@@ -101,10 +82,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
 
-  // clean-up variables used to construct 'Client Hello' message
-  free(client_id);
-  free(client_ephemeral_pubkey);
-
   snprintf(msg, MAX_LOG_MSG_LEN,
            "'Client Hello' message = 0x%02x%02x ... %02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
@@ -112,6 +89,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // clean-up variables used to construct 'Client Hello' message
+  free(client_id);
+  free(client_ephemeral_pubkey);
 
   // exchange 'Client Hello' and 'Server Hello' messages
   unsigned char *server_ephemeral_pub = NULL;
