@@ -333,11 +333,6 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   }
   kmyth_sgx_log(LOG_DEBUG, "extracted client identity from its signing cert");
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "client_id_bytes = 0x%02X%02X ... %02X%02X",
-           client_id_bytes[0], client_id_bytes[1],
-           client_id_bytes[client_id_len-2], client_id_bytes[client_id_len-1]);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
   // Convert public key in elliptic curve key struct (EC_KEY) to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
@@ -355,13 +350,15 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   }
 
   // allocate memory for 'Client Hello' message body byte array
+  //  - Message size (two-byte unsigned integer)
   //  - Client ID size (two-byte unsigned integer)
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
   //  - Client ephemeral public key value (byte array) 
-  *msg_out_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
+  size_t msg_body_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
+  *msg_out_len = msg_body_len + 2;
 
-  *msg_out = malloc(*msg_out_len);
+  *msg_out = malloc(*msg_out_len+2);
   if (*msg_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
@@ -370,19 +367,24 @@ int compose_client_hello_msg(X509 *client_sign_cert,
     return EXIT_FAILURE;
   }
 
-  // populate message body buffer
+  // populate output message buffer
   uint16_t temp_val = 0;
   unsigned char *buf = *msg_out;
+
+  // append message length bytes
+  temp_val = htobe16((uint16_t) msg_body_len);
+  memcpy(buf, &temp_val, 2);
+  buf += 2;
 
   // append client identity length bytes
   temp_val = htobe16((uint16_t) client_id_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
-  kmyth_clear_and_free(client_id_bytes, client_id_len);
 
   // append client identity bytes
   memcpy(buf, client_id_bytes, client_id_len);
   buf += client_id_len;
+  kmyth_clear_and_free(client_id_bytes, client_id_len);
 
   // append client_ephemeral public key length bytes
   temp_val = htobe16((uint16_t) client_eph_pubkey_len);
@@ -402,14 +404,6 @@ int compose_client_hello_msg(X509 *client_sign_cert,
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG, "signed 'Client Hello' message");
-
-  // prepend message size as first two bytes of message
-  if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
-  {
-    kmyth_sgx_log(LOG_ERR, "error prepending message length");
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG, "prepended 'Client Hello' message length");
 
   return EXIT_SUCCESS;
 }                                 
@@ -448,29 +442,29 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
   memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
-  // buffer index is now pointing at first byte of signature field
+  // at end of message body, rest of message is signature length/value
   size_t msg_body_size = buf_index;
-  size_t msg_sig_size = msg_in_len - msg_body_size;
+
+  // get size of message signature
+  uint16_t msg_sig_len = msg_in[buf_index] << 8;
+  msg_sig_len += msg_in[buf_index+1];
+  buf_index += 2;
+
+  // get message signature bytes
+  uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  memcpy(msg_sig_bytes, msg_in+buf_index, msg_sig_len);
 
   // check message signature
   if (EXIT_SUCCESS != verify_buffer(msg_sign_key,
                                     msg_in,
                                     msg_body_size,
-                                    msg_in+msg_body_size,
-                                    msg_sig_size))
+                                    msg_sig_bytes,
+                                    msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Client Hello' message invalid");
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Client Hello' message");
-
-  snprintf(msg, MAX_LOG_MSG_LEN, "client_id_len = %d", client_id_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
-  snprintf(msg, MAX_LOG_MSG_LEN, "client_id_bytes = 0x%02X%02X ... %02X%02X",
-           client_id_bytes[0], client_id_bytes[1],
-           client_id_bytes[client_id_len-2], client_id_bytes[client_id_len-1]);
-  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // convert client identity bytes in message to X509_NAME struct
   int ret = unmarshal_der_to_x509_name(&client_id_bytes,
@@ -587,13 +581,6 @@ int compose_server_hello_msg(unsigned char *server_id,
     return EXIT_FAILURE;
   }
 
-  // prepend message size
-  if (EXIT_SUCCESS != prepend_length(msg_out, msg_out_len))
-  {
-    kmyth_sgx_log(LOG_ERR, "error prepending message length");
-    return EXIT_FAILURE;
-  }
-
   return EXIT_SUCCESS;
 }                                 
 
@@ -679,75 +666,73 @@ int parse_server_hello_msg(EVP_PKEY *msg_sign_key,
  * append_signature()
  ****************************************************************************/
 int append_signature(EVP_PKEY * sign_key,
-                     unsigned char ** buf,
-                     size_t * buf_len)
+                     unsigned char ** msg_buf,
+                     size_t * msg_buf_len)
 {
+  // remove message length (first two bytes of buffer) from what gets signed
+  unsigned char *msg_body = *msg_buf + 2;
+  size_t msg_body_len = *msg_buf_len - 2;
+
   // compute message signature
-  unsigned char *buf_signature = NULL;
-  int buf_signature_len = 0;
+  unsigned char *signature_bytes = NULL;
+  int signature_len = 0;
 
   if (EXIT_SUCCESS != sign_buffer(sign_key,
-                                  *buf,
-                                  *buf_len,
-                                  &buf_signature,
-                                  &buf_signature_len))
+                                  msg_body,
+                                  msg_body_len,
+                                  &signature_bytes,
+                                  &signature_len))
   {
     kmyth_sgx_log(LOG_ERR, "error signing buffer");
-    free(buf_signature);
+    free(signature_bytes);
     return EXIT_FAILURE;
   }
 
-  // create a temporary copy of the input buffer on the stack
-  size_t buf_copy_len = *buf_len;
-  unsigned char buf_copy[buf_copy_len];
-  memcpy(buf_copy, *buf, *buf_len);
+  // create a temporary copy of the input message
+  size_t buf_copy_len = *msg_buf_len;
+  unsigned char *buf_copy = malloc(buf_copy_len);
+  memcpy(buf_copy, *msg_buf, *msg_buf_len);
 
   // resize input message buffer to make room for appended signature
-  *buf_len += buf_signature_len;
-  *buf = realloc(*buf, *buf_len);
-  if (*buf == NULL)
+  //   - signature size (2 byte unsigned integer)
+  //   - signature value (byte array)
+  *msg_buf_len += 2 + signature_len;
+  *msg_buf = realloc(*msg_buf, *msg_buf_len);
+  if (*msg_buf == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "realloc error for resized input buffer");
+    free(signature_bytes);
     return EXIT_FAILURE;
   }
-
-  // popluate output buffer with concatenated fields
-  //  - original input buffer contents
-  //  - signature bytes
-  memcpy(*buf, buf_copy, buf_copy_len);
-  memcpy(*buf + buf_copy_len, buf_signature, buf_signature_len);
-
-  free(buf_signature);
-
-  return EXIT_SUCCESS;
-}
-
-/*****************************************************************************
- * prepend_length()
- ****************************************************************************/
-int prepend_length(unsigned char ** buf,
-                   size_t * buf_len)
-{
-  // allocate memory for buffer with prepended length
-  *buf_len += 2;
-  unsigned char *prepend_buf = malloc(*buf_len);
-  if (*buf == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "malloc error for prepended buffer");
-    return EXIT_FAILURE;
-  }
-
-  // popluate newly allocated buffer with concatenated fields
-  //  - buffer length: 2-byte, big-endian (network byte order) unsigned integer
-  //  - original input buffer contents
-  unsigned char *temp_buf = *buf;
-  uint16_t orig_msg_len = htobe16((uint16_t) (*buf_len - 2));
-  memcpy(prepend_buf, &orig_msg_len, 2);
-  memcpy(prepend_buf+2, temp_buf, *buf_len-2);
   
-  // point output at temp_buffer and clean-up original memory
-  *buf = prepend_buf;
-  free(temp_buf);
+  // populate output buffer with concatenated fields
+  uint16_t temp_val = 0;
+  unsigned char *buf_out = *msg_buf;
+
+  // start by copying the orignally input message to the ouput message buffer
+  memcpy(buf_out, buf_copy, buf_copy_len);
+
+  // update the overall message length
+  uint16_t msg_len_in = buf_out[0] << 8;
+  msg_len_in += buf_out[1];
+  msg_len_in += 2 + signature_len;
+  if (msg_len_in != (*msg_buf_len - 2))
+  {
+    kmyth_sgx_log(LOG_ERR, "message size field /parameter mis-match");
+    return EXIT_FAILURE;
+  }
+  temp_val = htobe16(msg_len_in);
+  memcpy(buf_out, &temp_val, 2);
+  buf_out += buf_copy_len;
+
+  // append signature size bytes
+  temp_val = htobe16((uint16_t) signature_len);
+  memcpy(buf_out, &temp_val, 2);
+  buf_out += 2;
+
+  // finally, append signature bytes
+  memcpy(buf_out, signature_bytes, signature_len);
+  free(signature_bytes);
 
   return EXIT_SUCCESS;
 }

@@ -37,7 +37,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                                  server_port, &socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "Client socket setup failed.");
+    kmyth_sgx_log(LOG_ERR, "client socket setup failed.");
     return EXIT_FAILURE;
   }
 
@@ -52,8 +52,9 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral creation failed");
-    //BN_clear(client_ephemeral_privkey->privkey);
+    kmyth_enclave_clear(client_ephemeral_privkey, sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_privkey);
+    kmyth_enclave_clear(client_ephemeral_pubkey, sizeof(client_ephemeral_pubkey));
     EC_KEY_free(client_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
@@ -71,18 +72,24 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
-    //BN_clear(client_ephemeral_privkey->privkey);
+    kmyth_enclave_clear(client_ephemeral_privkey,
+                        sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_privkey);
+    kmyth_enclave_clear(client_ephemeral_pubkey,
+                        sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  kmyth_enclave_clear(client_ephemeral_pubkey,
+                      sizeof(client_ephemeral_privkey));
   EC_KEY_free(client_ephemeral_pubkey);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello': 0x%02x%02x%02X%02X ... %02x%02x (%ld bytes)",
+           "'Client Hello': 0x%02x%02x%02X%02X%02x%02x...%02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
            client_hello_msg[2], client_hello_msg[3],
+           client_hello_msg[4], client_hello_msg[5],
            client_hello_msg[client_hello_msg_len - 2],
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
@@ -104,17 +111,17 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "key agreement message exchange unsuccessful");
-    //BN_clear(client_ephemeral_privkey->privkey);
+    kmyth_enclave_clear(client_ephemeral_privkey,
+                        sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_privkey);
-    free(client_hello_msg);
+    kmyth_enclave_clear_and_free(client_hello_msg, client_hello_msg_len);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  free(client_hello_msg);
-  kmyth_sgx_log(LOG_DEBUG,
-                "exchanged 'Client Hello' and 'Server Hello' messages");
+  kmyth_enclave_clear_and_free(client_hello_msg, client_hello_msg_len);
+  kmyth_sgx_log(LOG_DEBUG, "exchanged client/server 'Hello' messages");
 
   // recover public signature verification key from server's certificate
   EVP_PKEY *server_sign_pubkey = NULL;

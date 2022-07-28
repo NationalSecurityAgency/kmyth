@@ -65,11 +65,15 @@ extern "C"
 #include "ecdh_util.h"
 
 #ifdef _KMYTH_LOCALE_TRUSTED_
+
 #include "kmyth_enclave_trusted.h"
+
 #else
+
 #include "log_ocall.h"
 #include "memory_ocall.h"
 #include "ecdh_ocall.h"
+
 #endif
 
 #ifdef __cplusplus
