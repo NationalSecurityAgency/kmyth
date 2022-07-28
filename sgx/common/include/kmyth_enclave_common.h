@@ -65,7 +65,7 @@ extern "C"
 #include "ecdh_util.h"
 
 #ifdef _KMYTH_LOCALE_TRUSTED_
-#include ENCLAVE_HEADER_TRUSTED
+#include "kmyth_enclave_trusted.h"
 #else
 #include "log_ocall.h"
 #include "memory_ocall.h"

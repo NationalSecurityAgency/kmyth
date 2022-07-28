@@ -48,7 +48,8 @@ typedef struct ECDHPeer
   EVP_PKEY *remote_pub_sign_key;
   X509_NAME *local_id;
   X509_NAME *remote_id;
-  EC_KEY *local_ephemeral_keypair;
+  EC_KEY *local_ephemeral_privkey;
+  EC_KEY *local_ephemeral_pubkey;
   EC_KEY *remote_ephemeral_pubkey;
   unsigned char *session_key;
   unsigned int session_key_len;

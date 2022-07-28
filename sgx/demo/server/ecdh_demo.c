@@ -22,6 +22,8 @@ void cleanup(ECDHPeer * ecdhconn)
   // Note: These clear and free functions should all be safe to use with
   // null pointer values.
 
+  kmyth_log(LOG_DEBUG, "in cleanup()");
+
   if (ecdhconn->socket_fd != UNSET_FD)
   {
     close(ecdhconn->socket_fd);
@@ -39,11 +41,18 @@ void cleanup(ECDHPeer * ecdhconn)
     EVP_PKEY_free(ecdhconn->remote_pub_sign_key);
   }
 
-  if (ecdhconn->local_ephemeral_keypair != NULL)
+  if (ecdhconn->local_ephemeral_privkey != NULL)
   {
-    kmyth_clear(ecdhconn->local_ephemeral_keypair,
-                sizeof(ecdhconn->local_ephemeral_keypair));
-    EC_KEY_free(ecdhconn->local_ephemeral_keypair);
+    kmyth_clear(ecdhconn->local_ephemeral_privkey,
+                sizeof(ecdhconn->local_ephemeral_privkey));
+    EC_KEY_free(ecdhconn->local_ephemeral_privkey);
+  }
+
+  if (ecdhconn->local_ephemeral_pubkey != NULL)
+  {
+    kmyth_clear(ecdhconn->local_ephemeral_pubkey,
+                sizeof(ecdhconn->local_ephemeral_pubkey));
+    EC_KEY_free(ecdhconn->local_ephemeral_pubkey);
   }
 
   if (ecdhconn->remote_ephemeral_pubkey != NULL)
@@ -188,6 +197,15 @@ void ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     error(ecdhconn);
   }
+  
+  if (bytes_read >= 4)
+  {
+    unsigned char temp[4];
+    memcpy(temp, buf, 4);
+    kmyth_log(LOG_DEBUG, "buf = 0x%02x%02x%02x%02x ...",
+              temp[0], temp[1], temp[2], temp[3]);
+  }
+  
 }
 
 void ecdh_send_msg(ECDHPeer * ecdhconn, unsigned char *buf, size_t len)
@@ -410,13 +428,15 @@ void load_public_key(ECDHPeer * ecdhconn)
 
 void make_ephemeral_keypair(ECDHPeer * ecdhconn)
 {
-  // create local ephemeral contribution (public/private key pair)
-  int ret = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
-                                           &ecdhconn->local_ephemeral_keypair);
+  int ret = -1;
 
+  // create local ephemeral contribution (public/private key pair)
+  ret = create_ecdh_ephemeral_contribution(KMYTH_EC_NID,
+                                           &ecdhconn->local_ephemeral_privkey,
+                                           &ecdhconn->local_ephemeral_pubkey);
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "creation of local ephemeral key pair failed");
+    kmyth_log(LOG_ERR, "creation of local ephemeral contribution failed");
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "created local ephemeral EC key pair");
@@ -433,13 +453,19 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
   uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
   msg_in_len += msg_in_len_bytes[1];
 
+  kmyth_log(LOG_DEBUG, "received 'Client Hello' message length = %d",
+            msg_in_len);
+
   unsigned char *msg_in = malloc(msg_in_len);
   ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
 
-  kmyth_log(LOG_DEBUG, "msg_in = 0x%02x%02x ... %02x%02x",
-                       msg_in[0], msg_in[1], msg_in[msg_in_len-2],
-                       msg_in[msg_in_len-1]);
+  kmyth_log(LOG_DEBUG, "msg_in = 0x%02x%02x%02x%02x ... %02x%02x (%ld bytes)",
+                       msg_in[0], msg_in[1], msg_in[2], msg_in[3],
+                       msg_in[msg_in_len-2],
+                       msg_in[msg_in_len-1], msg_in_len);
 
+  kmyth_log(LOG_DEBUG, "client_id_bytes = 0x%02x%02x ...",
+            msg_in[2], msg_in[3]);
   ret = parse_client_hello_msg(ecdhconn->remote_pub_sign_key,
                                msg_in,
                                msg_in_len,
@@ -447,8 +473,7 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
                                &(ecdhconn->remote_ephemeral_pubkey));
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR,
-              "error parsing and validating received 'Client Hello' message");
+    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
     free(msg_in);
   }
   free(msg_in);
@@ -466,21 +491,64 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
 
 void send_ephemeral_public(ECDHPeer * ecdhconn)
 {
-  unsigned char *local_pub = NULL, *local_pub_sig = NULL;
-  size_t local_pub_len = 0;
-  unsigned int local_pub_sig_len = 0;
   int ret;
 
-  ret = create_ecdh_ephemeral_public(ecdhconn->local_ephemeral_keypair,
-                                     &local_pub, &local_pub_len);
-  if (ret != EXIT_SUCCESS)
+  // extract public key (EC_POINT)
+  const EC_POINT *pub_pt = NULL;
+  pub_pt = EC_KEY_get0_public_key(ecdhconn->local_ephemeral_pubkey);
+  if (ret != 1)
   {
     kmyth_log(LOG_ERR, "creation of local epehemeral 'public key' failed");
     error(ecdhconn);
   }
+
+  // obtain EC_GROUP (elliptic curve definition) for ephemeral key
+  const EC_GROUP *grp = EC_KEY_get0_group(ecdhconn->local_ephemeral_privkey);
+  if (grp == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "'get' EC_GROUP from EC_KEY failed");
+  }
+
+  // Allocate byte buffer for client ephemeral public key (EC_POINT) - Invoking
+  // point2oct() and specifying a NULL point as the output byte array parameter
+  // will return the length of octet string that will be produced. We can use
+  unsigned char *local_pub = NULL;
+  size_t local_pub_len = 0;
+
+  size_t required_buffer_len = EC_POINT_point2oct(grp,
+                                                  (EC_POINT *) pub_pt,
+                                                  POINT_CONVERSION_UNCOMPRESSED,
+                                                  NULL,
+                                                  0,
+                                                  NULL);
+
+  if (required_buffer_len <= 0)
+  {
+    kmyth_sgx_log(LOG_ERR, "get ephemeral public key byte buffer size error");
+  }
+  local_pub = (unsigned char *) malloc(required_buffer_len);
+  if (local_pub == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "ephemeral public key byte buffer malloc error");
+  }
+
+  // Convert elliptic curve point struct (EC_POINT) to an octet string array.
+  local_pub_len = EC_POINT_point2oct(grp,
+                                     (EC_POINT *) pub_pt,
+                                     POINT_CONVERSION_UNCOMPRESSED,
+                                     local_pub,
+                                     required_buffer_len,
+                                     NULL);
+  if (local_pub_len != required_buffer_len)
+  {
+    kmyth_sgx_log(LOG_ERR, "EC_POINT to octet string conversion failed");
+  }
   kmyth_log(LOG_DEBUG, "created ephemeral local 'public key' octet string");
 
   // sign local ephemeral contribution
+  unsigned char *local_pub_sig = NULL;
+  unsigned int local_pub_sig_len = 0;
+
   ret = sign_buffer(ecdhconn->local_priv_sign_key, local_pub, local_pub_len,
                     &local_pub_sig, &local_pub_sig_len);
   if (ret != EXIT_SUCCESS)
@@ -517,7 +585,7 @@ void get_session_key(ECDHPeer * ecdhconn)
   }
 
   // generate shared secret result for ECDH key agreement (server side)
-  ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_keypair,
+  ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_privkey,
                                    reph,
                                    &session_secret, &session_secret_len);
   if (ret != EXIT_SUCCESS)

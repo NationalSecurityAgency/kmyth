@@ -41,58 +41,52 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
 
- // create client's ephemeral contribution to the session key
-  EC_KEY *client_ephemeral_keypair = NULL;
+  // create public and private components of the client's ephemeral
+  // contribution to the session key
+  EC_KEY *client_ephemeral_privkey = NULL;
+  EC_KEY *client_ephemeral_pubkey = NULL;
 
-  ret_val = create_ecdh_ephemeral_key_pair(KMYTH_EC_NID,
-                                           &client_ephemeral_keypair);
-
+  ret_val = create_ecdh_ephemeral_contribution(KMYTH_EC_NID,
+                                               &client_ephemeral_privkey,
+                                               &client_ephemeral_pubkey);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral key pair creation failed");
-    EC_KEY_free(client_ephemeral_keypair);
+    kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral creation failed");
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
+    EC_KEY_free(client_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
 
   // compose 'Client Hello' message (client to server key agreement 'request')
-  unsigned char *client_id = NULL;
-  size_t client_id_len = 0;
-  unsigned char *client_ephemeral_pubkey = NULL;
-  size_t client_ephemeral_pubkey_len = 0;
   unsigned char *client_hello_msg = NULL;
   size_t client_hello_msg_len = 0;
 
   ret_val = compose_client_hello_msg(client_sign_cert,
-                                     &client_id,
-                                     &client_id_len,
-                                     client_ephemeral_keypair,
-                                     &client_ephemeral_pubkey,
-                                     &client_ephemeral_pubkey_len,
+                                     client_ephemeral_pubkey,
                                      client_sign_privkey,
                                      &client_hello_msg,
                                      &client_hello_msg_len);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
-    EC_KEY_free(client_ephemeral_keypair);
-    free(client_ephemeral_pubkey);
-    free(client_id);
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
+    EC_KEY_free(client_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  EC_KEY_free(client_ephemeral_pubkey);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello' message = 0x%02x%02x ... %02x%02x (%ld bytes)",
+           "'Client Hello': 0x%02x%02x%02X%02X ... %02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
+           client_hello_msg[2], client_hello_msg[3],
            client_hello_msg[client_hello_msg_len - 2],
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
-
-  // clean-up variables used to construct 'Client Hello' message
-  free(client_id);
-  free(client_ephemeral_pubkey);
 
   // exchange 'Client Hello' and 'Server Hello' messages
   unsigned char *server_ephemeral_pub = NULL;
@@ -110,7 +104,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "key agreement message exchange unsuccessful");
-    EC_KEY_free(client_ephemeral_keypair);
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
     free(client_hello_msg);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
@@ -129,7 +124,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR,
                   "public key extraction from server certificate failed");
-    free(client_id);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -146,7 +140,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR, "client ephemeral 'public key' signature invalid");
     EVP_PKEY_free(server_sign_pubkey);
-    EC_KEY_free(client_ephemeral_keypair);
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
     OPENSSL_free_ocall((void **) &server_ephemeral_pub);
     OPENSSL_free_ocall((void **) &server_eph_pub_signature);
     close_socket_ocall(socket_fd);
@@ -170,7 +165,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR,
                   "reconstruct server ephemeral 'public key' point failed");
-    EC_KEY_free(client_ephemeral_keypair);
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
     free(server_ephemeral_pub);
     EC_POINT_free(server_ephemeral_pub_pt);
     close_socket_ocall(socket_fd);
@@ -186,14 +182,15 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   unsigned char *session_secret = NULL;
   size_t session_secret_len = 0;
 
-  ret_val = compute_ecdh_shared_secret(client_ephemeral_keypair,
+  ret_val = compute_ecdh_shared_secret(client_ephemeral_privkey,
                                        server_ephemeral_pub_pt,
                                        &session_secret, &session_secret_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon shared secret computation failed");
-    EC_KEY_free(client_ephemeral_keypair);
+    //BN_clear(client_ephemeral_privkey->privkey);
+    EC_KEY_free(client_ephemeral_privkey);
     EC_POINT_free(server_ephemeral_pub_pt);
     free(session_secret);
     close_socket_ocall(socket_fd);
@@ -207,9 +204,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   // done with inputs to shared secret contribution
-  kmyth_enclave_clear(client_ephemeral_keypair,
-                      sizeof(client_ephemeral_keypair));
-  EC_KEY_free(client_ephemeral_keypair);
+  kmyth_enclave_clear(client_ephemeral_privkey,
+                      sizeof(client_ephemeral_privkey));
+  //BN_clear(client_ephemeral_privkey->privkey);
+  EC_KEY_free(client_ephemeral_privkey);
   EC_POINT_free(server_ephemeral_pub_pt);
 
   // generate session key result for ECDH key agreement (client side)

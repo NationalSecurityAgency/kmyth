@@ -71,7 +71,6 @@ struct ECDHMessageHeader {
   uint16_t msg_size;
 };
 
-
 /**
  * @brief Extracts identity information(subject name) from an input X509
  *        certificate as a DER-formatted X509_NAME byte array
@@ -96,39 +95,22 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *        private and public components) for a participant's contribution
  *        in an ECDH key agreement protocol
  *
- * @param[in]  ec_nid                     ID for the elliptic curve to use
- *                                        for generating this ephemeral
- *                                        private/public key pair.
+ * @param[in]  ec_nid                 ID for the elliptic curve to use
+ *                                    for generating a session unique
+ *                                    (ephemeral) private/public key
+ *                                    pair.
  *
- * @param[out] ephemeral_ec_key_pair_out  Pointer to ephemeral key pair
- *                                        (EC_KEY struct) generated
+ * @param[out] ephemeral_ec_priv_out  Pointer to pointer to ephemeral
+ *                                    private key (EC_KEY struct) created
  *
- * @return 0 on success, 1 on error
- */
-  int create_ecdh_ephemeral_key_pair(int ec_nid,
-                                     EC_KEY ** ephemeral_ec_key_pair_out);
-
-/**
- * @brief Creates an ephemeral 'public key' contribution (in byte array or
- *        'octet string' format0 to be exchanged with a peer as part of an
- *        ECDH key agreement protocol
- *
- * @param[in]  ephemeral_ec_key_pair_in  Pointer to ephemeral elliptic curve
- *                                       key pair to be used for generating
- *                                       the 'public key' octet string
- *
- * @param[out] ephemeral_ec_pub_out      Pointer to ephemeral 'public key'
- *                                       octet string generated
- *
- * @param[out] ephemeral_ec_pub_out_len  Pointer to length (in bytes) of
- *                                       ephemeral 'public key' octet string
- *                                       generated
+ * @param[out] ephemeral_ec_pub_out   Pointer to poiinter to ephemeral
+ *                                    public key (EC_KEY struct) created
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
-                                   unsigned char **ephemeral_ec_pub_out,
-                                   size_t *ephemeral_ec_pub_out_len);
+  int create_ecdh_ephemeral_contribution(int ec_nid,
+                                         EC_KEY ** ephemeral_ec_priv_out,
+                                         EC_KEY ** ephemeral_ec_pub_out);
 
 /**
  * @brief Reconstructs the curve point for an elliptic curve 'public key' in
@@ -219,10 +201,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * 
  *        The body of the 'Client Hello' message contains the
  *        following fields concatenated in the below order:
- *          - client_id_len
- *          - client_id_bytes
- *          - client_ephemeral_len
- *          - client_ephemeral_bytes
+ *          - size (length) of client identity bytes
+ *          - client identity bytes
+ *          - size (length) of client ephemeral public key bytes
+ *          - client ephemeral public key bytes
  * 
  *        The unsigned integer "length" values have been specified as
  *        two-byte values (uint16_t) stored in the byte array in
@@ -237,23 +219,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * @param[in]  client_sign_cert         Pointer to client's signing certificate
  *                                      (X509)
  * 
- * @param[out] client_id_bytes          Pointer to identity information for the
- *                                      client as a DER-formatted X509_NAME byte
- *                                      array
- *
- * @param[out] client_id_len            Pointer to length (in bytes) of the
- *                                      client ID information byte array
- *
  * @param[out] client_ephemeral_keypair Pointer to ephemeral key pair generated
  *                                      by the client uniquely for each session
  *                                      (EC_KEY) 
- * 
- * @param[out] client_ephemeral_bytes   Pointer to client's public ephemeral
- *                                      contribution as a DER-formatted EC_KEY
- *                                      byte array
- * 
- * @param[out] client_ephemeral_len     Pointer to length (in bytes) of client
- *                                      (enclave) public ephemeral contribution
  * 
  * @param[in]  msg_sign_key             Pointer to client's elliptic curve
  *                                      signing key (EVP_PKEY)
@@ -268,11 +236,7 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * @return 0 on success, 1 on error
  */
   int compose_client_hello_msg(X509 *client_sign_cert,
-                               unsigned char **client_id_bytes,
-                               size_t *client_id_len,
                                EC_KEY *client_ephemeral_keypair,
-                               unsigned char **client_ephemeral_bytes,
-                               size_t *client_ephemeral_len,
                                EVP_PKEY *msg_sign_key,
                                unsigned char **msg_out,
                                size_t *msg_out_len);
