@@ -66,14 +66,21 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
                         int socket_fd)
 {
   int num_bytes = -1;
+  int ret = -1;
 
   kmyth_log(LOG_DEBUG, "Sending enclave's 'Client Hello' message to remote");
-  num_bytes = write(socket_fd, client_hello, client_hello_len);
-  if (num_bytes != client_hello_len)
+  ret = send_ecdh_msg(socket_fd, client_hello, client_hello_len);
+  if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "Failed to send enclave's 'Client Hello' message.");
+    kmyth_log(LOG_ERR, "failed to send enclave's 'Client Hello' message");
     return EXIT_FAILURE;
   }
+  //num_bytes = write(socket_fd, client_hello, client_hello_len);
+  //if (num_bytes != client_hello_len)
+  //{
+  //  kmyth_log(LOG_ERR, "Failed to send enclave's 'Client Hello' message.");
+  //  return EXIT_FAILURE;
+  //}
 
   kmyth_log(LOG_DEBUG, "Receiving server-side ephemeral public key.");
   num_bytes = read(socket_fd, remote_ephemeral_public_len,
@@ -83,7 +90,7 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
   }
-  if (*remote_ephemeral_public_len > ECDH_MAX_MSG_SIZE)
+  if (*remote_ephemeral_public_len > KMYTH_ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key size.");
     return EXIT_FAILURE;
@@ -112,7 +119,7 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
     kmyth_log(LOG_ERR, "Failed to receive a message.");
     return EXIT_FAILURE;
   }
-  if (*remote_eph_pub_signature_len > ECDH_MAX_MSG_SIZE)
+  if (*remote_eph_pub_signature_len > KMYTH_ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "Received invalid public key signature size.");
     return EXIT_FAILURE;
@@ -137,30 +144,15 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
 }
 
 /*****************************************************************************
- * ecdh_send_ocall()
+ * ecdh_send_msg_ocall()
  ****************************************************************************/
-int ecdh_send_ocall(unsigned char *encrypted_msg,
-                    size_t encrypted_msg_len,
-                    int socket_fd)
+int ecdh_send_msg_ocall(unsigned char *msg,
+                        size_t msg_len,
+                        int socket_fd)
 {
-  ssize_t write_result;
-  struct ECDHMessageHeader header;
-
-  kmyth_log(LOG_DEBUG, "Sending ecdh message.");
-
-  secure_memset(&header, 0, sizeof(header));
-  header.msg_size = encrypted_msg_len;
-  write_result = write(socket_fd, &header, sizeof(header));
-  if (write_result != sizeof(header))
+  if (EXIT_SUCCESS != send_ecdh_msg(socket_fd, msg, msg_len))
   {
-    kmyth_log(LOG_ERR, "Failed to send an ECDH message header.");
-    return EXIT_FAILURE;
-  }
-
-  write_result = write(socket_fd, encrypted_msg, encrypted_msg_len);
-  if (write_result != encrypted_msg_len)
-  {
-    kmyth_log(LOG_ERR, "Failed to send an ECDH message.");
+    kmyth_log(LOG_ERR, "sending ECDH message failed");
     return EXIT_FAILURE;
   }
 
@@ -168,40 +160,17 @@ int ecdh_send_ocall(unsigned char *encrypted_msg,
 }
 
 /*****************************************************************************
- * ecdh_recv_ocall()
+ * ecdh_recv_msg_ocall()
  ****************************************************************************/
-int ecdh_recv_ocall(unsigned char **encrypted_msg,
-                    size_t *encrypted_msg_len,
-                    int socket_fd)
+int ecdh_recv_msg_ocall(unsigned char **msg,
+                        size_t *msg_len,
+                        int socket_fd)
 {
-  ssize_t read_result;
-  struct ECDHMessageHeader header;
-
-  kmyth_log(LOG_DEBUG, "Receiving ecdh message.");
-
-  secure_memset(&header, 0, sizeof(header));
-  read_result = read(socket_fd, &header, sizeof(header));
-  if (read_result != sizeof(header))
+  if (EXIT_SUCCESS != recv_ecdh_msg(socket_fd, msg, msg_len))
   {
-    kmyth_log(LOG_ERR, "Failed to read an ECDH message header.");
+    kmyth_log(LOG_ERR, "error receiving ECDH message");
     return EXIT_FAILURE;
   }
-
-  *encrypted_msg = OPENSSL_zalloc(header.msg_size);
-  if (*encrypted_msg == NULL)
-  {
-    kmyth_log(LOG_ERR, "Failed to allocate the encrypted response buffer.");
-    return EXIT_FAILURE;
-  }
-
-  read_result = read(socket_fd, *encrypted_msg, header.msg_size);
-  if (read_result != header.msg_size)
-  {
-    kmyth_log(LOG_ERR, "Failed to read an ECDH message.");
-    kmyth_clear_and_free(*encrypted_msg, header.msg_size);
-    return EXIT_FAILURE;
-  }
-  *encrypted_msg_len = read_result;
 
   return EXIT_SUCCESS;
 }

@@ -263,9 +263,9 @@ enclave {
      *                                           (server) public ephemeral
      *                                           contribution.
      *
-     * @param[in] socket_fd                           File descriptor number for
-     *                                                a socket connected to
-     *                                                the remote key server.
+     * @param[in] socket_fd                      File descriptor number for
+     *                                           a socket connected to
+     *                                           the remote key server.
      */
     int ecdh_exchange_ocall([in, count=client_hello_len]
                                unsigned char *client_hello,
@@ -290,30 +290,29 @@ enclave {
      *
      * @return 0 on success, 1 on failure
      */
-    int ecdh_send_ocall([in, count=encrypted_msg_len]
-                           unsigned char *encrypted_msg,
-                        size_t encrypted_msg_len,
-                        int socket_fd);
+    int ecdh_send_msg_ocall([in, count=encrypted_msg_len]
+                             unsigned char *encrypted_msg,
+                             size_t encrypted_msg_len,
+                             int socket_fd);
 
     /**
      * @brief Receive a message over the ECDH network connection.
      *
-     * @param[out]  encrypted_msg             Pointer used to return the address
-     *                                        of an allocated buffer containing
-     *                                        the received encrypted message.
+     * @param[out] msg         Pointer used to return the address of an
+     *                         allocated buffer containing the received
+     *                         message.
      *
-     * @param[out] encrypted_msg_len          Pointer to length (in bytes)
-     *                                        of the encrypted message.
+     * @param[out] msg_len     Pointer to length (in bytes) of the
+     *                         received message.
      *
-     * @param[in] socket_fd                   File descriptor number for
-     *                                        a network socket with an
-     *                                        active ECDH session.
+     * @param[in] socket_fd    File descriptor number for a network
+     *                         socket with an active ECDH session.
      *
      * @return 0 on success, 1 on failure
      */
-    int ecdh_recv_ocall([out] unsigned char **encrypted_msg,
-                        [out] size_t *encrypted_msg_len,
-                        int socket_fd);
+    int ecdh_recv_msg_ocall([out] unsigned char **msg,
+                            [out] size_t *msg_len,
+                            int socket_fd);
 
   };
 

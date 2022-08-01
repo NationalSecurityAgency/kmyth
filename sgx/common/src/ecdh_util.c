@@ -41,15 +41,14 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
 /*****************************************************************************
  * create_ecdh_ephemeral_contribution()
  ****************************************************************************/
-int create_ecdh_ephemeral_contribution(int ec_nid,
-                                       EC_KEY ** ephemeral_ec_priv_out,
+int create_ecdh_ephemeral_contribution(EC_KEY ** ephemeral_ec_priv_out,
                                        EC_KEY ** ephemeral_ec_pub_out)
 {
   // create new EC_KEY object for the specified built-in curve
   //   The EC_KEY object passed to 'generate_key' below must be associated
   //   with the desired EC_GROUP.
   EC_KEY *ephemeral_ec_key_pair = NULL;
-  ephemeral_ec_key_pair = EC_KEY_new_by_curve_name(ec_nid);
+  ephemeral_ec_key_pair = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
   if (ephemeral_ec_key_pair == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
@@ -66,7 +65,7 @@ int create_ecdh_ephemeral_contribution(int ec_nid,
   }
 
   // create ephemeral private key object
-  *ephemeral_ec_priv_out = EC_KEY_new_by_curve_name(ec_nid);
+  *ephemeral_ec_priv_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
   if (*ephemeral_ec_priv_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
@@ -97,7 +96,7 @@ int create_ecdh_ephemeral_contribution(int ec_nid,
   BN_clear_free((BIGNUM *) eph_priv_key);
 
   // create ephemeral public key object
-  *ephemeral_ec_pub_out = EC_KEY_new_by_curve_name(ec_nid);
+  *ephemeral_ec_pub_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
   if (*ephemeral_ec_pub_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
@@ -312,8 +311,8 @@ int compute_ecdh_session_key(unsigned char *secret,
  * compose_client_hello_msg()
  ****************************************************************************/
 int compose_client_hello_msg(X509 *client_sign_cert,
-                             EC_KEY *client_ephemeral_public,
                              EVP_PKEY *msg_sign_key,
+                             EC_KEY *client_ephemeral_public,
                              unsigned char **msg_out,
                              size_t *msg_out_len)
 {
@@ -350,60 +349,73 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   }
 
   // allocate memory for 'Client Hello' message body byte array
-  //  - Message size (two-byte unsigned integer)
   //  - Client ID size (two-byte unsigned integer)
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
   //  - Client ephemeral public key value (byte array) 
-  size_t msg_body_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
-  *msg_out_len = msg_body_len + 2;
+  *msg_out_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
 
-  *msg_out = malloc(*msg_out_len+2);
+  *msg_out = malloc(*msg_out_len);
   if (*msg_out == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
     kmyth_clear_and_free(client_id_bytes, client_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
-  // populate output message buffer
+  // populate output message buffer - start with empty buffer
   uint16_t temp_val = 0;
   unsigned char *buf = *msg_out;
-
-  // append message length bytes
-  temp_val = htobe16((uint16_t) msg_body_len);
-  memcpy(buf, &temp_val, 2);
-  buf += 2;
 
   // append client identity length bytes
   temp_val = htobe16((uint16_t) client_id_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
+  snprintf(msg, MAX_LOG_MSG_LEN, "client_id_len = %ld", client_id_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // append client identity bytes
   memcpy(buf, client_id_bytes, client_id_len);
   buf += client_id_len;
   kmyth_clear_and_free(client_id_bytes, client_id_len);
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "client_id_bytes = %02x%02x .. %02x%02x",
+           client_id_bytes[0], client_id_bytes[1],
+           client_id_bytes[client_id_len-2], client_id_bytes[client_id_len-1]);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // append client_ephemeral public key length bytes
   temp_val = htobe16((uint16_t) client_eph_pubkey_len);
   memcpy(buf, &temp_val, 2);
   buf += 2;
 
+  snprintf(msg, MAX_LOG_MSG_LEN, "client_eph_pubkey_len = %ld",
+           client_eph_pubkey_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // append client ephemeral public key bytes
   memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
   kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
 
-  kmyth_sgx_log(LOG_DEBUG, "created 'Client Hello' message body");
+  snprintf(msg, MAX_LOG_MSG_LEN, "client_eph_pubkey_bytes: %02x%02x..%02x%02x",
+           *buf, *(buf+1),
+           *(buf+client_eph_pubkey_len-2), *(buf+client_eph_pubkey_len-1));
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // append signature to tail end of message
   if (EXIT_SUCCESS != append_signature(msg_sign_key, msg_out, msg_out_len))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
+    kmyth_clear_and_free(client_id_bytes, client_id_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "signed 'Client Hello' message");
+
+  // memory clean-up
+  //kmyth_clear_and_free(client_id_bytes, client_id_len);
+  //kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
 
   return EXIT_SUCCESS;
 }                                 
@@ -419,8 +431,6 @@ int parse_client_hello_msg(EVP_PKEY *msg_sign_key,
 {
   // parse message body fields
   int buf_index = 0;
-
-  char msg[MAX_LOG_MSG_LEN] = { 0 };
 
   // get size of client identity field (client_id_len)
   uint16_t client_id_len = msg_in[buf_index] << 8;
@@ -669,17 +679,15 @@ int append_signature(EVP_PKEY * sign_key,
                      unsigned char ** msg_buf,
                      size_t * msg_buf_len)
 {
-  // remove message length (first two bytes of buffer) from what gets signed
-  unsigned char *msg_body = *msg_buf + 2;
-  size_t msg_body_len = *msg_buf_len - 2;
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
 
   // compute message signature
   unsigned char *signature_bytes = NULL;
   int signature_len = 0;
 
   if (EXIT_SUCCESS != sign_buffer(sign_key,
-                                  msg_body,
-                                  msg_body_len,
+                                  *msg_buf,
+                                  *msg_buf_len,
                                   &signature_bytes,
                                   &signature_len))
   {
@@ -712,17 +720,11 @@ int append_signature(EVP_PKEY * sign_key,
   // start by copying the orignally input message to the ouput message buffer
   memcpy(buf_out, buf_copy, buf_copy_len);
 
-  // update the overall message length
-  uint16_t msg_len_in = buf_out[0] << 8;
-  msg_len_in += buf_out[1];
-  msg_len_in += 2 + signature_len;
-  if (msg_len_in != (*msg_buf_len - 2))
-  {
-    kmyth_sgx_log(LOG_ERR, "message size field /parameter mis-match");
-    return EXIT_FAILURE;
-  }
-  temp_val = htobe16(msg_len_in);
-  memcpy(buf_out, &temp_val, 2);
+  snprintf(msg, MAX_LOG_MSG_LEN, "Message Body: %02x%02x..%02x%02x",
+           *buf_out, *(buf_out+1),
+           *(buf_out+buf_copy_len-2), *(buf_out+buf_copy_len-1));
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   buf_out += buf_copy_len;
 
   // append signature size bytes
@@ -730,9 +732,17 @@ int append_signature(EVP_PKEY * sign_key,
   memcpy(buf_out, &temp_val, 2);
   buf_out += 2;
 
+  snprintf(msg, MAX_LOG_MSG_LEN, "signature_len = %d", signature_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // finally, append signature bytes
   memcpy(buf_out, signature_bytes, signature_len);
   free(signature_bytes);
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "Signature: %02x%02x..%02x%02x",
+           *buf_out, *(buf_out+1),
+           *(buf_out+signature_len-2), *(buf_out+signature_len-1));
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   return EXIT_SUCCESS;
 }

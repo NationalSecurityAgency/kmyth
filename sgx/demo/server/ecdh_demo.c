@@ -199,42 +199,18 @@ void ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
 
 void ecdh_send_msg(ECDHPeer * ecdhconn, unsigned char *buf, size_t len)
 {
-  struct ECDHMessageHeader header;
-
-  if (len > ECDH_MAX_MSG_SIZE)
+  if (EXIT_SUCCESS != send_ecdh_msg(ecdhconn->socket_fd, buf, len))
   {
-    kmyth_log(LOG_ERR, "Invalid ECDH message length in ecdh_send_msg.");
     error(ecdhconn);
   }
-
-  secure_memset(&header, 0, sizeof(header));
-  header.msg_size = len;
-  ecdh_send_data(ecdhconn, &header, sizeof(header));
-  ecdh_send_data(ecdhconn, buf, len);
 }
 
 void ecdh_recv_msg(ECDHPeer * ecdhconn, unsigned char **buf, size_t *len)
 {
-  struct ECDHMessageHeader header;
-
-  secure_memset(&header, 0, sizeof(header));
-  ecdh_recv_data(ecdhconn, &header, sizeof(header));
-
-  if (header.msg_size > ECDH_MAX_MSG_SIZE)
+  if (EXIT_SUCCESS != recv_ecdh_msg(ecdhconn->socket_fd, buf, len))
   {
-    kmyth_log(LOG_ERR, "Received invalid ECDH message header.");
     error(ecdhconn);
   }
-
-  *len = header.msg_size;
-  *buf = calloc(*len, sizeof(unsigned char));
-  if (*buf == NULL)
-  {
-    kmyth_log(LOG_ERR, "Failed to allocate the response buffer.");
-    error(ecdhconn);
-  }
-
-  ecdh_recv_data(ecdhconn, *buf, *len);
 }
 
 void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len)
@@ -420,8 +396,7 @@ void make_ephemeral_keypair(ECDHPeer * ecdhconn)
   int ret = -1;
 
   // create local ephemeral contribution (public/private key pair)
-  ret = create_ecdh_ephemeral_contribution(KMYTH_EC_NID,
-                                           &ecdhconn->local_ephemeral_privkey,
+  ret = create_ecdh_ephemeral_contribution(&ecdhconn->local_ephemeral_privkey,
                                            &ecdhconn->local_ephemeral_pubkey);
   if (ret != EXIT_SUCCESS)
   {
@@ -447,6 +422,10 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
 
   unsigned char *msg_in = malloc(msg_in_len);
   ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
+
+  kmyth_log(LOG_DEBUG, "ClientHello: %02x%02x%02x%02x%02x%02x ... %02x%02x",
+            msg_in[0], msg_in[1], msg_in[2], msg_in[3], msg_in[4], msg_in[5],
+            msg_in[msg_in_len-2], msg_in[msg_in_len-1]);
 
   ret = parse_client_hello_msg(ecdhconn->remote_pub_sign_key,
                                msg_in,

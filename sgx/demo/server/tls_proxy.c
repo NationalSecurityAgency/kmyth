@@ -399,7 +399,7 @@ void proxy_start(TLSProxy * proxy)
   struct pollfd pfds[NUM_POLL_FDS];
   int bytes_read = 0;
   int bytes_written = 0;
-  unsigned char tls_msg_buf[ECDH_MAX_MSG_SIZE];
+  unsigned char tls_msg_buf[KMYTH_ECDH_MAX_MSG_SIZE];
   unsigned char *ecdh_msg_buf = NULL;
   size_t ecdh_msg_len = 0;
   ECDHPeer *ecdhconn = &proxy->ecdhconn;

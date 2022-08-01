@@ -405,7 +405,11 @@ test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
 
 test/enclave/ecdh_ocall.o: untrusted/src/ocall/ecdh_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"
+	@echo "CC   <=  $<"1
+
+test/enclave/sgx_socket_util.o: untrusted/src/util/sgx_socket_util.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"1
 
 test/enclave/$(Test_Enclave_Name)_u.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
 	@cd test/enclave && $(SGX_EDGER8R) --untrusted $(Test_Enclave_Name).edl \
@@ -423,6 +427,7 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
                                  test/enclave/ec_key_cert_marshal.o \
                                  test/enclave/ec_key_cert_unmarshal.o \
                                  test/enclave/ecdh_util.o \
+								 test/enclave/sgx_socket_util.o \
                                  test/enclave/ecdh_ocall.o \
                                  test/enclave/memory_ocall.o \
                                  test/enclave/log_ocall.o
@@ -433,6 +438,10 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
 
 
 ######## Demo App Objects ########
+
+demo/enclave/sgx_socket_util.o: untrusted/src/util/sgx_socket_util.c
+	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
 
 demo/enclave/log_ocall.o: untrusted/src/ocall/log_ocall.c
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
@@ -469,10 +478,11 @@ $(Demo_App_Name): demo/app/kmyth_sgx_retrieve_key_demo.o \
              demo/enclave/ec_key_cert_marshal.o \
              demo/enclave/ec_key_cert_unmarshal.o \
              demo/enclave/ecdh_util.o \
+			 demo/enclave/sgx_socket_util.o \
              demo/enclave/ecdh_ocall.o \
              demo/enclave/memory_ocall.o \
              demo/enclave/log_ocall.o 
-	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Test Server ########
@@ -485,6 +495,7 @@ $(Server_Name): demo/server/ecdh_server.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
+				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
@@ -494,6 +505,7 @@ $(Client_Name): demo/server/ecdh_client.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
+				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
@@ -503,6 +515,7 @@ $(Proxy_Name):  demo/server/tls_proxy.o \
                 demo/server/ecdh_demo.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
+				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl

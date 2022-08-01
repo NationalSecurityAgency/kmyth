@@ -70,6 +70,7 @@ extern "C"
 
 #else
 
+#include "sgx_socket_util.h"
 #include "log_ocall.h"
 #include "memory_ocall.h"
 #include "ecdh_ocall.h"

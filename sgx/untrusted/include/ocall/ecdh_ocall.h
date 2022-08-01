@@ -32,6 +32,8 @@ extern "C"
 #include <kmyth/memory_util.h>
 #include <socket_util.h>
 
+#include "sgx_socket_util.h"
+
 #include "kmyth_enclave_common.h"
 
 /**
@@ -134,20 +136,19 @@ extern "C"
 /**
  * @brief Send a message over the ECDH network connection.
  *
- * @param[in]  encrypted_msg              Pointer to the encrypted message.
+ * @param[in]  msg              Pointer to the buffer containing the
+ *                              ECDH message to be sent
  *
- * @param[in] encrypted_msg_len           Length (in bytes)
- *                                        of the encrypted message.
+ * @param[in]  msg_len          Length (in bytes) of the ECDH message
  *
- * @param[in] socket_fd                   File descriptor number for
- *                                        a network socket with an
- *                                        active ECDH session.
+ * @param[in]  socket_fd        File descriptor number for a network
+ *                              socket with an active ECDH session.
  *
  * @return 0 on success, 1 on failure
  */
-  int ecdh_send_ocall(unsigned char *encrypted_msg,
-                      size_t encrypted_msg_len,
-                      int socket_fd);
+  int ecdh_send_msg_ocall(unsigned char *msg,
+                          size_t msg_len,
+                          int socket_fd);
 
 /**
  * @brief Receive a message over the ECDH network connection.

@@ -46,8 +46,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   EC_KEY *client_ephemeral_privkey = NULL;
   EC_KEY *client_ephemeral_pubkey = NULL;
 
-  ret_val = create_ecdh_ephemeral_contribution(KMYTH_EC_NID,
-                                               &client_ephemeral_privkey,
+  ret_val = create_ecdh_ephemeral_contribution(&client_ephemeral_privkey,
                                                &client_ephemeral_pubkey);
   if (ret_val != EXIT_SUCCESS)
   {
@@ -65,8 +64,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   size_t client_hello_msg_len = 0;
 
   ret_val = compose_client_hello_msg(client_sign_cert,
-                                     client_ephemeral_pubkey,
                                      client_sign_privkey,
+                                     client_ephemeral_pubkey,
                                      &client_hello_msg,
                                      &client_hello_msg_len);
   if (ret_val != EXIT_SUCCESS)
@@ -76,13 +75,16 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                         sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_privkey);
     kmyth_enclave_clear(client_ephemeral_pubkey,
-                        sizeof(client_ephemeral_privkey));
+                        sizeof(client_ephemeral_pubkey));
     EC_KEY_free(client_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+
+  // after composing the 'Client Hello' message, client no longer
+  // needs the public component of his ephemeral key
   kmyth_enclave_clear(client_ephemeral_pubkey,
-                      sizeof(client_ephemeral_privkey));
+                      sizeof(client_ephemeral_pubkey));
   EC_KEY_free(client_ephemeral_pubkey);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
@@ -124,6 +126,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, "exchanged client/server 'Hello' messages");
 
   // recover public signature verification key from server's certificate
+  // TODO: check server identity against certificate
   EVP_PKEY *server_sign_pubkey = NULL;
 
   server_sign_pubkey = X509_get_pubkey(server_sign_cert);
@@ -279,10 +282,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   unsigned char *encrypted_response = NULL;
   size_t encrypted_response_len = 0;
 
-  ret_ocall = ecdh_send_ocall(&ret_val,
-                              encrypted_request,
-                              encrypted_request_len,
-                              socket_fd);
+  ret_ocall = ecdh_send_msg_ocall(&ret_val,
+                                  encrypted_request,
+                                  encrypted_request_len,
+                                  socket_fd);
   kmyth_enclave_clear_and_free(encrypted_request, encrypted_request_len);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
@@ -293,10 +296,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
 
-  ret_ocall = ecdh_recv_ocall(&ret_val,
-                              &encrypted_response,
-                              &encrypted_response_len,
-                              socket_fd);
+  ret_ocall = ecdh_recv_msg_ocall(&ret_val,
+                                  &encrypted_response,
+                                  &encrypted_response_len,
+                                  socket_fd);
   close_socket_ocall(socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
