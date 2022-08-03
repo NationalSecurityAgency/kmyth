@@ -38,14 +38,17 @@
 typedef struct ECDHPeer
 {
   bool isClient;
-  char *priv_sign_key_path;
-  char *pub_sign_cert_path;
+  char *local_priv_sign_key_path;
+  char *local_pub_sign_cert_path;
+  char *remote_pub_sign_cert_path;
   char *port;
   char *ip;
   int maxconn;
   int socket_fd;
   EVP_PKEY *local_priv_sign_key;
   EVP_PKEY *remote_pub_sign_key;
+  X509 *local_sign_cert;
+  X509 *remote_sign_cert;
   X509_NAME *local_id;
   X509_NAME *remote_id;
   EC_KEY *local_ephemeral_privkey;
@@ -85,7 +88,7 @@ void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *p
 void create_server_socket(ECDHPeer * ecdhconn);
 void create_client_socket(ECDHPeer * ecdhconn);
 
-void load_private_key(ECDHPeer * ecdhconn);
+void load_local_sign_key(ECDHPeer * ecdhconn);
 void load_public_key(ECDHPeer * ecdhconn);
 
 void make_ephemeral_keypair(ECDHPeer * ecdhconn);

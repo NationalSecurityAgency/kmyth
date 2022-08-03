@@ -59,10 +59,8 @@ time_t time_ocall(time_t * timer)
  ****************************************************************************/
 int ecdh_exchange_ocall(unsigned char *client_hello,
                         size_t client_hello_len,
-                        unsigned char **remote_ephemeral_public,
-                        size_t *remote_ephemeral_public_len,
-                        unsigned char **remote_eph_pub_signature,
-                        unsigned int *remote_eph_pub_signature_len,
+                        unsigned char **server_hello,
+                        size_t *server_hello_len,
                         int socket_fd)
 {
   int num_bytes = -1;
@@ -75,68 +73,12 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
     kmyth_log(LOG_ERR, "failed to send enclave's 'Client Hello' message");
     return EXIT_FAILURE;
   }
-  //num_bytes = write(socket_fd, client_hello, client_hello_len);
-  //if (num_bytes != client_hello_len)
-  //{
-  //  kmyth_log(LOG_ERR, "Failed to send enclave's 'Client Hello' message.");
-  //  return EXIT_FAILURE;
-  //}
 
-  kmyth_log(LOG_DEBUG, "Receiving server-side ephemeral public key.");
-  num_bytes = read(socket_fd, remote_ephemeral_public_len,
-                   sizeof(*remote_ephemeral_public_len));
-  if (num_bytes != sizeof(*remote_ephemeral_public_len))
+  kmyth_log(LOG_DEBUG, "Receiving TLS proxy's 'Server Hello' message");
+  ret = recv_ecdh_msg(socket_fd, server_hello, server_hello_len);
+  if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "Failed to receive a message.");
-    return EXIT_FAILURE;
-  }
-  if (*remote_ephemeral_public_len > KMYTH_ECDH_MAX_MSG_SIZE)
-  {
-    kmyth_log(LOG_ERR, "Received invalid public key size.");
-    return EXIT_FAILURE;
-  }
-
-  *remote_ephemeral_public = OPENSSL_zalloc(*remote_ephemeral_public_len);
-  if (*remote_ephemeral_public == NULL)
-  {
-    kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");
-    return EXIT_FAILURE;
-  }
-
-  num_bytes =
-    read(socket_fd, *remote_ephemeral_public, *remote_ephemeral_public_len);
-  if (num_bytes != *remote_ephemeral_public_len)
-  {
-    kmyth_log(LOG_ERR, "Failed to receive a message.");
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "Receiving ephemeral public key signature.");
-  num_bytes = read(socket_fd, remote_eph_pub_signature_len,
-                   sizeof(*remote_eph_pub_signature_len));
-  if (num_bytes != sizeof(*remote_eph_pub_signature_len))
-  {
-    kmyth_log(LOG_ERR, "Failed to receive a message.");
-    return EXIT_FAILURE;
-  }
-  if (*remote_eph_pub_signature_len > KMYTH_ECDH_MAX_MSG_SIZE)
-  {
-    kmyth_log(LOG_ERR, "Received invalid public key signature size.");
-    return EXIT_FAILURE;
-  }
-
-  *remote_eph_pub_signature = OPENSSL_zalloc(*remote_eph_pub_signature_len);
-  if (*remote_eph_pub_signature == NULL)
-  {
-    kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");
-    return EXIT_FAILURE;
-  }
-
-  num_bytes = read(socket_fd, *remote_eph_pub_signature,
-                   *remote_eph_pub_signature_len);
-  if (num_bytes != *remote_eph_pub_signature_len)
-  {
-    kmyth_log(LOG_ERR, "Failed to receive a message.");
+    kmyth_log(LOG_ERR, " 'Client Hello' message");
     return EXIT_FAILURE;
   }
 

@@ -104,16 +104,19 @@ void get_options(ECDHPeer * ecdhconn, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:u:p:i:m:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:c:u:p:i:m:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
     // Key files
     case 'r':
-      ecdhconn->priv_sign_key_path = optarg;
+      ecdhconn->local_priv_sign_key_path = optarg;
+      break;
+    case 'c':
+      ecdhconn->local_pub_sign_cert_path = optarg;
       break;
     case 'u':
-      ecdhconn->pub_sign_cert_path = optarg;
+      ecdhconn->remote_pub_sign_cert_path = optarg;
       break;
     // Network
     case 'p':
@@ -140,29 +143,34 @@ void check_options(ECDHPeer * ecdhconn)
 {
   bool err = false;
 
-  if (ecdhconn->priv_sign_key_path == NULL)
+  if (ecdhconn->local_priv_sign_key_path == NULL)
   {
-    fprintf(stderr, "Private key path argument (-r) is required.\n");
+    fprintf(stderr, "local signature key path argument (-r) is required\n");
     err = true;
   }
-  if (ecdhconn->pub_sign_cert_path == NULL)
+  if (ecdhconn->local_pub_sign_cert_path == NULL)
   {
-    fprintf(stderr, "Public key path argument (-u) is required.\n");
+    fprintf(stderr, "local cert path argument (-c) is required\n");
+    err = true;
+  }
+  if (ecdhconn->remote_pub_sign_cert_path == NULL)
+  {
+    fprintf(stderr, "remote cert path argument (-u) is required\n");
     err = true;
   }
   if (ecdhconn->port == NULL)
   {
-    fprintf(stderr, "Port number argument (-p) is required.\n");
+    fprintf(stderr, "port number argument (-p) is required\n");
     err = true;
   }
   if (ecdhconn->isClient && ecdhconn->ip == NULL)
   {
-    fprintf(stderr, "IP address argument (-i) is required in client mode.\n");
+    fprintf(stderr, "IP address argument (-i) is required in client mode\n");
     err = true;
   }
   if (err)
   {
-    kmyth_log(LOG_ERR, "Invalid command-line arguments.");
+    kmyth_log(LOG_ERR, "invalid command-line arguments");
     error(ecdhconn);
   }
 }
@@ -322,37 +330,65 @@ void create_server_socket(ECDHPeer * ecdhconn)
 
 void create_client_socket(ECDHPeer * ecdhconn)
 {
-  kmyth_log(LOG_DEBUG, "Setting up client socket");
+  kmyth_log(LOG_DEBUG, "setting up client socket");
   if (setup_client_socket(ecdhconn->ip, ecdhconn->port, &ecdhconn->socket_fd))
   {
-    kmyth_log(LOG_ERR, "Failed to setup client socket.");
+    kmyth_log(LOG_ERR, "failed to setup client socket.");
     error(ecdhconn);
   }
 }
 
-void load_private_key(ECDHPeer * ecdhconn)
+void load_local_sign_key(ECDHPeer * ecdhconn)
 {
-  // read server private EC signing key from file (.pem formatted)
-  BIO *priv_key_bio = BIO_new_file(ecdhconn->priv_sign_key_path, "r");
+  // read  elliptic curve private signing key from file (.pem formatted)
+  BIO *priv_key_bio = BIO_new_file(ecdhconn->local_priv_sign_key_path, "r");
 
   if (priv_key_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhconn->priv_sign_key_path);
+              ecdhconn->local_priv_sign_key_path);
     error(ecdhconn);
   }
 
-  ecdhconn->local_priv_sign_key = PEM_read_bio_PrivateKey(priv_key_bio, NULL, 0, NULL);
+  ecdhconn->local_priv_sign_key = PEM_read_bio_PrivateKey(priv_key_bio,
+                                                          NULL,
+                                                          0,
+                                                          NULL);
   BIO_free(priv_key_bio);
   priv_key_bio = NULL;
   if (!ecdhconn->local_priv_sign_key)
   {
-    kmyth_log(LOG_ERR, "EC Key PEM file (%s) read failed",
-              ecdhconn->priv_sign_key_path);
+    kmyth_log(LOG_ERR, "elliptic curve key PEM file (%s) read failed",
+              ecdhconn->local_priv_sign_key_path);
     error(ecdhconn);
   }
 
   kmyth_log(LOG_DEBUG, "obtained local private signing key from file");
+}
+
+void load_local_sign_cert(ECDHPeer * ecdhconn)
+{
+  // read  elliptic curve private signing key from file (.pem formatted)
+  BIO *cert_bio = BIO_new_file(ecdhconn->local_pub_sign_cert_path, "r");
+
+  if (cert_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
+              ecdhconn->local_pub_sign_cert_path);
+    error(ecdhconn);
+  }
+
+  ecdhconn->local_sign_cert = PEM_read_bio_X509(cert_bio, NULL, 0, NULL);
+  BIO_free(cert_bio);
+  cert_bio = NULL;
+  if (!ecdhconn->local_sign_cert)
+  {
+    kmyth_log(LOG_ERR, "elliptic curve X509 PEM file (%s) read failed",
+              ecdhconn->local_pub_sign_cert_path);
+    error(ecdhconn);
+  }
+
+  kmyth_log(LOG_DEBUG, "obtained local signature certificate from file");
 }
 
 void load_public_key(ECDHPeer * ecdhconn)
@@ -360,12 +396,12 @@ void load_public_key(ECDHPeer * ecdhconn)
   // read remote certificate (X509) from file (.pem formatted)
   X509 *client_cert = NULL;
 
-  BIO *pub_cert_bio = BIO_new_file(ecdhconn->pub_sign_cert_path, "r");
+  BIO *pub_cert_bio = BIO_new_file(ecdhconn->remote_pub_sign_cert_path, "r");
 
   if (pub_cert_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhconn->pub_sign_cert_path);
+              ecdhconn->remote_pub_sign_cert_path);
     error(ecdhconn);
   }
 
@@ -375,7 +411,7 @@ void load_public_key(ECDHPeer * ecdhconn)
   if (!client_cert)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
-              ecdhconn->pub_sign_cert_path);
+              ecdhconn->remote_pub_sign_cert_path);
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "obtained remote certificate from file");
@@ -410,23 +446,25 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
 {
   int ret;
 
-  kmyth_log(LOG_DEBUG, "Receiving 'Client Hello' message");
   unsigned char msg_in_len_bytes[2] = { 0 };
 
+  kmyth_log(LOG_DEBUG, "waiting for 'Client Hello' message");
   ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
+
+  // precess received message length
   uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
   msg_in_len += msg_in_len_bytes[1];
 
-  kmyth_log(LOG_DEBUG, "received 'Client Hello' message length = %d",
-            msg_in_len);
-
+  // create appropriately sized receive buffer and read message payload
   unsigned char *msg_in = malloc(msg_in_len);
   ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
 
-  kmyth_log(LOG_DEBUG, "ClientHello: %02x%02x%02x%02x%02x%02x ... %02x%02x",
-            msg_in[0], msg_in[1], msg_in[2], msg_in[3], msg_in[4], msg_in[5],
-            msg_in[msg_in_len-2], msg_in[msg_in_len-1]);
+  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
+                      "(%d bytes)",
+                      msg_in[0], msg_in[1], msg_in[msg_in_len-2],
+                      msg_in[msg_in_len-1], msg_in_len);
 
+  // parse out 'Client Hello' message fields
   ret = parse_client_hello_msg(ecdhconn->remote_pub_sign_key,
                                msg_in,
                                msg_in_len,
@@ -436,18 +474,50 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
     free(msg_in);
+    error(ecdhconn);
   }
   free(msg_in);
 }
 
 void send_server_hello_msg(ECDHPeer * ecdhconn)
 {
-  // unsigned char *local_ephemeral_bytes = NULL;
-  // size_t local_ephemeral_bytes_len = 0;
-  // unsigned char *local_ephemeral_sig = NULL;
-  // unsigned int local_ephemeral_sig_len = 0;
-  // int ret;
+  int ret = -1;
 
+  // compose 'Server Hello' message
+  unsigned char *server_hello_msg_bytes = NULL;
+  size_t server_hello_msg_len = 0;
+
+  ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
+                                 ecdhconn->local_priv_sign_key,
+                                 ecdhconn->remote_ephemeral_pubkey,
+                                 ecdhconn->local_ephemeral_pubkey,
+                                 &server_hello_msg_bytes,
+                                 &server_hello_msg_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "failed to create 'Server Hello' message");
+    error(ecdhconn);
+  }
+  kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
+                      "(%d bytes)",
+                      server_hello_msg_bytes[0], server_hello_msg_bytes[1],
+                      server_hello_msg_bytes[server_hello_msg_len-2],
+                      server_hello_msg_bytes[server_hello_msg_len-1],
+                      server_hello_msg_len);
+
+  // send newly created 'Server Hello' message
+  ret = send_ecdh_msg(ecdhconn->socket_fd,
+                      server_hello_msg_bytes,
+                      server_hello_msg_len);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
+    error(ecdhconn);
+  }
+  kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
+
+  // clean-up message buffer now that message has been sent
+  kmyth_clear_and_free(server_hello_msg_bytes, server_hello_msg_len);
 }
 
 void send_ephemeral_public(ECDHPeer * ecdhconn)
@@ -706,12 +776,16 @@ void server_main(ECDHPeer * ecdhconn)
 {
   create_server_socket(ecdhconn);
 
-  load_private_key(ecdhconn);
+  load_local_sign_key(ecdhconn);
+  load_local_sign_cert(ecdhconn);
+  //load_remote_sign_cert(ecdhconn);
   load_public_key(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);
 
   recv_client_hello_msg(ecdhconn);
+
+  send_server_hello_msg(ecdhconn);
 
   send_ephemeral_public(ecdhconn);
 
@@ -724,7 +798,7 @@ void client_main(ECDHPeer * ecdhconn)
 {
   create_client_socket(ecdhconn);
 
-  load_private_key(ecdhconn);
+  load_local_sign_key(ecdhconn);
   load_public_key(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);

@@ -78,59 +78,43 @@ extern "C"
   time_t time_ocall(time_t * timer);
 
 /**
- * @brief Supports exchanging signed 'public key' contributions between the
- *        client (enclave) and the server (separate process).
- *        With the exchange of this information, they can independently
- *        generate a common session key.
+ * @brief Supports exchanging signed 'Client Hello' and 'Server Hello'
+ *        messages between the client (enclave) and the remote peer
+ *        (TLS proxy for the server). With the exchange of this
+ *        information, the two endpoints (enclave and TLS proxy) can
+ *        independently generate a common session key that will support
+ *        securing key retrieval from a remote key server into the enclave.
  *
- * @param[in]  enclave_ephemeral_public           Pointer to enclave (client)
- *                                                public ephemeral contribution
- *                                                to be exchanged with remote
- *                                                peer (server)
+ * @param[in]  client_hello        'Client Hello' message (byte array) created
+ *                                 by the enclave and used to initiate a
+ *                                 'retrieve key' session with the remote peer
+ *                                 (TLS proxy for the server)
  *
- * @param[in]  enclave_ephemeral_public_len       Length (in bytes)
- *                                                of enclave (client) public
- *                                                ephemeral contribution
+ * @param[in]  client_hello_len    Length (in bytes) of the 'Client Hello'
+ *                                 message to be sent to remote peer
  *
- * @param[in]  enclave_eph_pub_signature          Pointer to signature over
- *                                                enclave (client) public
- *                                                ephemeral contribution.
+ * @param[out] server_hello        Pointer to 'Server Hello' message (byte
+ *                                 array) obtained from the remote peer
+ *                                 (TLS proxy for the server) - a pointer
+ *                                 to an unallocated buffer (NULL pointer)
+ *                                 should be passed to this function, which
+ *                                 will allocate memory for and then populate
+ *                                 it with the 'Server Hello' message payload
  *
- * @param[in]  enclave_eph_pub_signature_len      Length (in bytes)
- *                                                of signature for client
- *                                                (enclave) public ephemeral
- *                                                contribution.
+ * @param[out] server_hello_len    Pointer to length (in bytes) of the 'Server
+ *                                 Hello' message to be received from the
+ *                                 remote peer
  *
- * @param[out] remote_ephemeral_public            Pointer to remote (server)
- *                                                public ephemeral contribution
- *                                                to be exchanged with enclave
- *                                                (client)
- *
- * @param[out] remote_ephemeral_public_len        Pointer to length (in bytes)
- *                                                of remote (server) public
- *                                                ephemeral contribution.
- *
- * @param[out] remote_eph_pub_signature           Pointer to signature over
- *                                                remote (server) public
- *                                                ephemeral contribution.
- *
- * @param[out] remote_eph_pub_signature_len       Pointer to length (in bytes)
- *                                                of signature for remote
- *                                                (server) public ephemeral
- *                                                contribution.
- *
- * @param[in] socket_fd                           File descriptor number for
- *                                                a socket connected to
- *                                                the remote key server.
+ * @param[in] socket_fd            File descriptor number for a socket
+ *                                 connected to the remote peer (e.g., TLS
+ *                                 proxy for the key server)
  *
  * @return 0 on success, 1 on failure
  */
   int ecdh_exchange_ocall(unsigned char *client_hello,
                           size_t client_hello_len,
-                          unsigned char **remote_ephemeral_public,
-                          size_t *remote_ephemeral_public_len,
-                          unsigned char **remote_eph_pub_signature,
-                          unsigned int *remote_eph_pub_signature_len,
+                          unsigned char **server_hello,
+                          size_t *server_hello_len,
                           int socket_fd);
 
 /**

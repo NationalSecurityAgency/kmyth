@@ -80,51 +80,42 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-
-  // after composing the 'Client Hello' message, client no longer
-  // needs the public component of his ephemeral key
-  kmyth_enclave_clear(client_ephemeral_pubkey,
-                      sizeof(client_ephemeral_pubkey));
-  EC_KEY_free(client_ephemeral_pubkey);
-
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Client Hello': 0x%02x%02x%02X%02X%02x%02x...%02x%02x (%ld bytes)",
+           "composed Client Hello: 0x%02x%02x%02X%02X...%02x%02x (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
            client_hello_msg[2], client_hello_msg[3],
-           client_hello_msg[4], client_hello_msg[5],
            client_hello_msg[client_hello_msg_len - 2],
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   // exchange 'Client Hello' and 'Server Hello' messages
-  unsigned char *server_ephemeral_pub = NULL;
-  size_t server_ephemeral_pub_len = 0;
-  unsigned char *server_eph_pub_signature = NULL;
-  unsigned int server_eph_pub_signature_len = 0;
+  unsigned char *server_hello_msg = NULL;
+  size_t server_hello_msg_len = 0;
 
   ret_ocall = ecdh_exchange_ocall(&ret_val,
                                   client_hello_msg,
                                   client_hello_msg_len,
-                                  &server_ephemeral_pub,
-                                  &server_ephemeral_pub_len,
-                                  &server_eph_pub_signature,
-                                  &server_eph_pub_signature_len, socket_fd);
+                                  &server_hello_msg,
+                                  &server_hello_msg_len,
+                                  socket_fd);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "key agreement message exchange unsuccessful");
     kmyth_enclave_clear(client_ephemeral_privkey,
                         sizeof(client_ephemeral_privkey));
     EC_KEY_free(client_ephemeral_privkey);
+    kmyth_enclave_clear(client_ephemeral_pubkey,
+                        sizeof(client_ephemeral_pubkey));
+    EC_KEY_free(client_ephemeral_pubkey);
     kmyth_enclave_clear_and_free(client_hello_msg, client_hello_msg_len);
-    OPENSSL_free_ocall((void **) &server_ephemeral_pub);
-    OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    kmyth_enclave_clear_and_free(server_hello_msg, server_hello_msg_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   kmyth_enclave_clear_and_free(client_hello_msg, client_hello_msg_len);
   kmyth_sgx_log(LOG_DEBUG, "exchanged client/server 'Hello' messages");
-
+/*
   // recover public signature verification key from server's certificate
   // TODO: check server identity against certificate
   EVP_PKEY *server_sign_pubkey = NULL;
@@ -353,7 +344,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            "Received KMIP object with key: 0x%02X..%02X",
            (*retrieved_key)[0], (*retrieved_key)[*retrieved_key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
-
+*/
   return EXIT_SUCCESS;
 }
  

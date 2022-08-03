@@ -90,16 +90,19 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:u:p:I:P:C:R:U:m:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:c:u:p:I:P:C:R:U:m:h", longopts, &option_index)) != -1)
   {
     switch (options)
     {
     // Key files
     case 'r':
-      proxy->ecdhconn.priv_sign_key_path = optarg;
+      proxy->ecdhconn.local_priv_sign_key_path = optarg;
+      break;
+    case 'c':
+      proxy->ecdhconn.local_pub_sign_cert_path = optarg;
       break;
     case 'u':
-      proxy->ecdhconn.pub_sign_cert_path = optarg;
+      proxy->ecdhconn.remote_pub_sign_cert_path = optarg;
       break;
     // ECDH Connection
     case 'p':
@@ -359,7 +362,7 @@ static int setup_ecdhconn(TLSProxy * proxy)
 
   create_server_socket(ecdhconn);
 
-  load_private_key(ecdhconn);
+  load_local_sign_key(ecdhconn);
   load_public_key(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);
