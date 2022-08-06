@@ -37,9 +37,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int unmarshal_ec_der_to_pkey(uint8_t ** ec_der_bytes_in,
-                               size_t *ec_der_bytes_in_len,
-                               EVP_PKEY ** ec_pkey_out);
+  int unmarshal_ec_der_to_pkey(uint8_t *ec_der_bytes_in,
+                               size_t ec_der_bytes_in_len,
+                               EVP_PKEY **ec_pkey_out);
 
 /**
  * @brief Restores elliptic curve public certificate struct (X509) from
@@ -56,9 +56,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int unmarshal_ec_der_to_x509(uint8_t ** ec_der_bytes_in,
-                               size_t *ec_der_bytes_in_len,
-                               X509 ** ec_x509_out);
+  int unmarshal_ec_der_to_x509(uint8_t *ec_der_bytes_in,
+                               size_t ec_der_bytes_in_len,
+                               X509 **ec_x509_out);
 
 /**
  * @brief Restores public certificate 'subject name' struct (X509_NAME)
@@ -75,9 +75,9 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int unmarshal_der_to_x509_name(uint8_t ** der_bytes_in,
-                                 size_t * der_bytes_in_len,
-                                 X509_NAME ** x509_name_out);
+  int unmarshal_der_to_x509_name(uint8_t *der_bytes_in,
+                                 size_t der_bytes_in_len,
+                                 X509_NAME **x509_name_out);
 
 #ifdef __cplusplus
 }

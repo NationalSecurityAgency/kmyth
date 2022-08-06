@@ -11,9 +11,7 @@
 /*****************************************************************************
  * extract_identity_bytes_from_x509()
  ****************************************************************************/
-int extract_identity_bytes_from_x509(X509 *cert_in,
-                                     unsigned char **id_out,
-                                     size_t *id_out_len)
+int extract_identity_bytes_from_x509(X509 *cert_in, X509_NAME **identity_out)
 {
   // extract 'subject name' from input certificate
   //   Note: The returned X509_NAME is an internal pointer
@@ -25,13 +23,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
     return EXIT_FAILURE;
   }
 
-  // marshal enclave identity (DN) into binary (DER formatted) format
-  int ret = marshal_x509_name_to_der(subj_name,
-                                     id_out,
-                                     (int *) id_out_len);
-  if (ret != EXIT_SUCCESS)
+  *identity_out = X509_NAME_dup(subj_name);
+  if (identity_out == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error marshalling certificate's subject name");
+    kmyth_sgx_log(LOG_ERR, "duplication of X509_NAME struct failed");
     return EXIT_FAILURE;
   }
 
@@ -41,91 +36,78 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
 /*****************************************************************************
  * create_ecdh_ephemeral_contribution()
  ****************************************************************************/
-int create_ecdh_ephemeral_contribution(EC_KEY ** ephemeral_ec_priv_out,
-                                       EC_KEY ** ephemeral_ec_pub_out)
+int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair)
 {
-  // create new EC_KEY object for the specified built-in curve
-  //   The EC_KEY object passed to 'generate_key' below must be associated
-  //   with the desired EC_GROUP.
-  EC_KEY *ephemeral_ec_key_pair = NULL;
-  ephemeral_ec_key_pair = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (ephemeral_ec_key_pair == NULL)
+  // create empty parameters object
+  EVP_PKEY *params = EVP_PKEY_new();
+  if (params == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
+    kmyth_sgx_log(LOG_ERR, "failed to create empty parameters object")
+  }
+
+  // create parameter generation context for creating ephemeral key pair
+  EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
+  if (pctx == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to create parameter generation context");
     return EXIT_FAILURE;
   }
 
-  // generate the ephemeral EC key pair
-  if (1 != EC_KEY_generate_key(ephemeral_ec_key_pair))
+  // initialize parameter generation context
+  if (EVP_PKEY_paramgen_init(pctx) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "ephemeral key pair generation failed");
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "failed to initialize params generation context");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
-  // create ephemeral private key object
-  *ephemeral_ec_priv_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (*ephemeral_ec_priv_out == NULL)
+  // configure parameter generation context for desired curve
+  if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, KMYTH_EC_NID) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "failed to configure parameter generation context");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
-  // extract private key (BIGNUM) from key pair
-  const BIGNUM *eph_priv_key = EC_KEY_get0_private_key(ephemeral_ec_key_pair);
-  if (eph_priv_key == NULL)
+  // generate parameters
+  if ((EVP_PKEY_paramgen(pctx, &params) != 1) || (params == NULL))
   {
-    kmyth_sgx_log(LOG_ERR, "error creating ephemeral private BIGNUM");
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "parameter generation failed");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
-  // put private key extracted from key pair into ephemeral private key object
-  if (1 != EC_KEY_set_private_key(*ephemeral_ec_priv_out, eph_priv_key))
+  // clean-up parameter generation context
+  EVP_PKEY_CTX_free(pctx);
+
+  // create key generation context using parameters
+  EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new(params, NULL);
+  if (kctx == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error setting private key in EC_KEY struct");
-    BN_clear_free((BIGNUM *) eph_priv_key);
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "create key generation context failed");
+    EVP_PKEY_free(params);
     return EXIT_FAILURE;
   }
-  BN_clear_free((BIGNUM *) eph_priv_key);
+  EVP_PKEY_free(params);
 
-  // create ephemeral public key object
-  *ephemeral_ec_pub_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (*ephemeral_ec_pub_out == NULL)
+  // initialize key generation context
+  if (EVP_PKEY_keygen_init(kctx) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to create new EC_KEY object by NID");
-    return EXIT_FAILURE;
-  }
-
-  // extract public key (EC_POINT) from key pair
-  const EC_POINT *eph_pub_key = EC_KEY_get0_public_key(ephemeral_ec_key_pair);
-  if (eph_pub_key == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "error creating ephemeral public EC_POINT");
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "initialize key generation context failed");
+    EVP_PKEY_CTX_free(kctx);
     return EXIT_FAILURE;
   }
 
-  // put public key extracted from key pair into ephemeral public key object
-  if (1 != EC_KEY_set_public_key(*ephemeral_ec_pub_out, eph_pub_key))
+  // generate new key pair
+  if (EVP_PKEY_keygen(kctx, ephemeral_key_pair) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "error setting public key in EC_KEY struct");
-    BN_clear_free((BIGNUM *) eph_priv_key);
-    kmyth_clear(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
-    EC_KEY_free(ephemeral_ec_key_pair);
+    kmyth_sgx_log(LOG_ERR, "key generation failed");
+    EVP_PKEY_CTX_free(kctx);
     return EXIT_FAILURE;
   }
-  EC_POINT_free((EC_POINT *) eph_pub_key);
 
-  // clean-up generated key pair object now split into public/private keys
-  kmyth_clear_and_free(ephemeral_ec_key_pair, sizeof(ephemeral_ec_key_pair));
+  // clean-up key generation context
+  EVP_PKEY_CTX_free(kctx);
 
   return EXIT_SUCCESS;
 }
@@ -175,7 +157,78 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 /*****************************************************************************
  * compute_ecdh_shared_secret()
  ****************************************************************************/
-int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
+int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
+                               EVP_PKEY *peer_eph_pubkey,
+                               unsigned char **shared_secret,
+                               size_t *shared_secret_len)
+{
+  EVP_PKEY_CTX *ctx = NULL;
+  int retval = 0;
+  
+  // create the context for the shared secret derivation
+	ctx = EVP_PKEY_CTX_new(local_eph_keypair, NULL);
+  if (ctx == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error creating shared secret derivation context");
+    return EXIT_FAILURE;
+  }
+
+  // initialize the newly created context
+	retval = EVP_PKEY_derive_init(ctx);
+  if (retval != 1)
+  {
+    kmyth_sgx_log(LOG_ERR, "init error for shared secret derivation context");
+    return EXIT_FAILURE;
+  }
+
+  // provide peer's public key
+  if (peer_eph_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_DEBUG, "peer_eph_pubkey is NULL");
+  }
+  else
+  {
+    kmyth_sgx_log(LOG_DEBUG, "peer_eph_pubkey is not NULL");
+  }
+  retval = EVP_PKEY_derive_set_peer(ctx, peer_eph_pubkey);
+  if (retval != 1)
+  {
+    kmyth_sgx_log(LOG_ERR, "error setting peer's public key in context");
+    return EXIT_FAILURE;
+  }
+
+  // compute buffer size required for shared secret
+  retval = EVP_PKEY_derive(ctx, NULL, shared_secret_len);
+  if ((retval != 1) || (shared_secret_len <= 0))
+  {
+    kmyth_sgx_log(LOG_ERR, "error computing required buffer size");
+    return EXIT_FAILURE;
+  }
+
+  // allocate buffer to hold shared secret
+  *shared_secret = OPENSSL_malloc(*shared_secret_len);
+  if (*shared_secret == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating buffer for shared secret");
+    return EXIT_FAILURE;
+  }
+
+  // derive the 'shared secret' value
+  retval = EVP_PKEY_derive(ctx, *shared_secret, shared_secret_len);
+  if (retval != 1)
+  {
+    kmyth_sgx_log(LOG_ERR, "error deriving shared secret value");
+    return EXIT_FAILURE;
+  }
+
+  EVP_PKEY_CTX_free(ctx);
+
+  return EXIT_SUCCESS;
+}
+
+/*
+
+int compute_ecdh_shared_secret(EVP_PKEY * local_eph_priv_key,
                                EC_POINT * remote_eph_pub_point,
                                unsigned char **shared_secret,
                                size_t *shared_secret_len)
@@ -193,7 +246,9 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
   //     a byte boundary) and taking the integer portion of dividing by 8 bits
   //     in a byte (doing bits to bytes conversion) returns the necessary
   //     buffer size (so the required memory, in bytes, can be allocated).
-  const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_key);
+  EC_KEY *local_eph_priv_ec_key = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  local_eph_priv_ec_key = EVP_PKEY_get1_EC_KEY(local_eph_priv_key);
+  const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_ec_key);
   int field_size = EC_GROUP_get_degree(local_eph_priv_key_group);
 
   int required_buffer_len = (field_size + 7) / 8;
@@ -228,7 +283,7 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
   *shared_secret_len = ECDH_compute_key(*shared_secret,
                                         required_buffer_len,
                                         remote_eph_pub_point,
-                                        local_eph_priv_key,
+                                        local_eph_priv_ec_key,
                                         NULL);
 
   if (*shared_secret_len != required_buffer_len)
@@ -237,8 +292,12 @@ int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
     return EXIT_FAILURE;
   }
 
+  EC_KEY_free(local_eph_priv_ec_key);
+
   return EXIT_SUCCESS;
 }
+
+*/
 
 /*****************************************************************************
  * compute_ecdh_session_key()
@@ -312,28 +371,56 @@ int compute_ecdh_session_key(unsigned char *secret,
  ****************************************************************************/
 int compose_client_hello_msg(X509 *client_sign_cert,
                              EVP_PKEY *client_sign_key,
-                             EC_KEY *client_ephemeral_public,
+                             EVP_PKEY *client_ephemeral_public,
                              unsigned char **msg_out,
                              size_t *msg_out_len)
 {
   // extract client (enclave) ID (subject name) bytes from cert
+  X509_NAME *client_id = NULL;
+
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
+                                                       &client_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
+    if (client_id != NULL)
+    {
+      X509_NAME_free(client_id);
+    }
+    return EXIT_FAILURE;
+  }
+
+  // marshal enclave (client) identity into binary (DER formatted) format
   unsigned char *client_id_bytes = NULL;
   size_t client_id_len = 0;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
-                                                       &client_id_bytes,
-                                                       &client_id_len))
+  int ret = marshal_x509_name_to_der(client_id,
+                                     &client_id_bytes,
+                                     (int *) &client_id_len);
+  if (ret != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to extract client ID from certificate");
-    kmyth_clear_and_free(client_id_bytes, client_id_len);
+    kmyth_sgx_log(LOG_ERR, "error marshalling client ID");
+    X509_NAME_free(client_id);
+    if (client_id_bytes != NULL)
+    {
+      free(client_id_bytes);
+    }
     return EXIT_FAILURE;
   }
+  X509_NAME_free(client_id);
 
   // Convert client's ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
+  
+  EC_KEY *client_eph_pubkey = EVP_PKEY_get1_EC_KEY(client_ephemeral_public);
+  if (client_eph_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error extracting EC_KEY from EVP_PKEY struct");
+    free(client_id_bytes);
+    return EXIT_FAILURE;
+  } 
 
-  client_eph_pubkey_len = EC_KEY_key2buf(client_ephemeral_public,
+  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &client_eph_pubkey_bytes,
                                          NULL);
@@ -344,6 +431,7 @@ int compose_client_hello_msg(X509 *client_sign_cert,
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
+  EC_KEY_free(client_eph_pubkey);
 
   // allocate memory for 'Client Hello' message body byte array
   //  - Client ID size (two-byte unsigned integer)
@@ -397,13 +485,12 @@ int compose_client_hello_msg(X509 *client_sign_cert,
 /*****************************************************************************
  * parse_client_hello_msg()
  ****************************************************************************/
-int parse_client_hello_msg(EVP_PKEY *client_sign_pubkey,
+int parse_client_hello_msg(X509 *msg_sign_cert,
                            unsigned char *msg_in,
                            size_t msg_in_len,
-                           X509_NAME **client_id_out,
-                           EC_KEY **client_eph_pubkey_out)
+                           EVP_PKEY **client_eph_pubkey_out)
 {
-  // parse message body fields
+  // parse message body fields into variables
   int buf_index = 0;
 
   // get size of client identity field (client_id_len)
@@ -416,17 +503,18 @@ int parse_client_hello_msg(EVP_PKEY *client_sign_pubkey,
   memcpy(client_id_bytes, msg_in+buf_index, client_id_len);
   buf_index += client_id_len;
 
-  // get size of client ephemeral contribution field
+  // get size of client ephemeral contribution field (client_eph_pub_len)
   uint16_t client_eph_pub_len = msg_in[buf_index] << 8;
   client_eph_pub_len += msg_in[buf_index+1];
   buf_index += 2;
 
-  // get client ephemeral contribution field bytes (client_ephemeral_bytes)
+  // get client ephemeral contribution field bytes (client_eph_pub_bytes)
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
   memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
-  // at end of message body, capture this index
+  // buffer index now points just pbase end of message body
+  // capture this index so we can access message body as part of input buffer
   size_t msg_body_size = buf_index;
 
   // get size of message signature
@@ -438,6 +526,64 @@ int parse_client_hello_msg(EVP_PKEY *client_sign_pubkey,
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
   memcpy(msg_sig_bytes, msg_in+buf_index, msg_sig_len);
 
+  kmyth_sgx_log(LOG_DEBUG, "'Client Hello' message bytes parsed");
+
+  // convert client identity bytes in message to X509_NAME struct
+  X509_NAME *rcvd_client_id = NULL;
+  if (EXIT_SUCCESS != unmarshal_der_to_x509_name(client_id_bytes,
+                                                 (size_t) client_id_len,
+                                                 &rcvd_client_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
+    free(client_id_bytes);
+    free(client_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+  free(client_id_bytes);
+
+  kmyth_sgx_log(LOG_DEBUG, "have parsed received client ID as X509_NAME");
+
+  // extract expected client identity (X509_NAME struct) from pre-loaded cert
+  X509_NAME *expected_client_id = NULL;
+
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(msg_sign_cert,
+                                                       &expected_client_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to extract client ID from certificate");
+    free(client_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "extracted expected client ID from cert");
+
+  // verify that identity in 'Client Hello' message matches the client
+  // certificate pre-loaded into it's peer (TLS proxy for server)
+  if (0 != X509_NAME_cmp(rcvd_client_id, expected_client_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "'Client Hello' - unexpected client identity");
+    free(client_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "validated client ID");
+
+  // extract client's public signing key (needed to verify signature over
+  // message) from X509 certificate
+  EVP_PKEY *client_sign_pubkey = X509_get_pubkey(msg_sign_cert);
+  if (client_sign_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
+    EVP_PKEY_free(client_sign_pubkey);
+    free(client_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "verifying 'Client Hello' signature ...");
+
   // check message signature
   if (EXIT_SUCCESS != verify_buffer(client_sign_pubkey,
                                     msg_in,
@@ -446,53 +592,67 @@ int parse_client_hello_msg(EVP_PKEY *client_sign_pubkey,
                                     msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Client Hello' message invalid");
+    EVP_PKEY_free(client_sign_pubkey);
+    free(client_eph_pub_bytes);
+    free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
+  EVP_PKEY_free(client_sign_pubkey);
+  free(msg_sig_bytes);
 
-  // convert client identity bytes in message to X509_NAME struct
-  int ret = unmarshal_der_to_x509_name(&client_id_bytes,
-                                       (size_t *) &client_id_len,
-                                       client_id_out);
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
-    return EXIT_FAILURE;
-  }
-  free(client_id_bytes);
+  kmyth_sgx_log(LOG_DEBUG, "validated 'Client Hello' signature");
 
-  // check that the buffer parameter for the public key (EC_KEY struct) was
+  // check that the buffer parameter for the public key (EVP_PKEY struct) was
   // correctly passed in as a NULL pointer (memory not yet allocated)
   if (*client_eph_pubkey_out != NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "previously allocated output EC_KEY struct");
+    kmyth_sgx_log(LOG_ERR, "previously allocated output EVP_PKEY struct");
+    free(client_eph_pub_bytes);
     return EXIT_FAILURE;
   }
 
   // initialize the EC_KEY struct for the right elliptic curve
-  *client_eph_pubkey_out = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (*client_eph_pubkey_out == NULL)
+  EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  if (client_eph_ec_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error initializing output EC_KEY struct");
+    free(client_eph_pub_bytes);
     return EXIT_FAILURE;
   } 
 
   // convert DER-formatted byte array to EC_KEY struct
-  if (1 != EC_KEY_oct2key(*client_eph_pubkey_out,
+  if (1 != EC_KEY_oct2key(client_eph_ec_pubkey,
                           client_eph_pub_bytes,
                           client_eph_pub_len,
                           NULL))
   {
     kmyth_sgx_log(LOG_ERR, "unmarshal of client ephemeral public key failed");
+    free(client_eph_pub_bytes);
     return EXIT_FAILURE;
   }
   free(client_eph_pub_bytes);
 
   // check parsed, received ephemeral public key
-  if (1 != EC_KEY_check_key(*client_eph_pubkey_out))
+  if (1 != EC_KEY_check_key(client_eph_ec_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "checks on client ephemeral public key failed");
     return EXIT_FAILURE;
   }
+
+  // create empty EVP_PKEY struct if unallocated pointer passed in
+  if (*client_eph_pubkey_out == NULL)
+  {
+    *client_eph_pubkey_out = EVP_PKEY_new();
+  }
+
+  // encapsulate client ephemeral public key in EVP_PKEY struct
+  if (1 != EVP_PKEY_set1_EC_KEY(*client_eph_pubkey_out, client_eph_ec_pubkey))
+  {
+    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
+    EC_KEY_free(client_eph_ec_pubkey);
+    return EXIT_FAILURE;
+  }
+  EC_KEY_free(client_eph_ec_pubkey);
 
   return EXIT_SUCCESS;
 }                                 
@@ -502,29 +662,50 @@ int parse_client_hello_msg(EVP_PKEY *client_sign_pubkey,
  ****************************************************************************/
 int compose_server_hello_msg(X509 *server_sign_cert,
                              EVP_PKEY *server_sign_key,
-                             EC_KEY *client_eph_pubkey,
-                             EC_KEY *server_eph_pubkey,
+                             EVP_PKEY *client_eph_pubkey,
+                             EVP_PKEY *server_eph_keypair,
                              unsigned char **msg_out,
                              size_t *msg_out_len)
 {
   // extract server (TLS proxy) ID (subject name) bytes from cert
+  X509_NAME *server_id = X509_NAME_new();
+
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server_sign_cert,
+                                                       &server_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
+    if (server_id != NULL)
+    {
+      X509_NAME_free(server_id);
+    }
+    return EXIT_FAILURE;
+  }
+
+  // marshal TLS proxy (server) identity into binary (DER formatted) format
   unsigned char *server_id_bytes = NULL;
   size_t server_id_len = 0;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server_sign_cert,
-                                                       &server_id_bytes,
-                                                       &server_id_len))
+  if (EXIT_SUCCESS != marshal_x509_name_to_der(server_id,
+                                               &server_id_bytes,
+                                               (int *) &server_id_len))
   {
-    kmyth_sgx_log(LOG_ERR, "failed to extract server ID from certificate");
-    kmyth_clear_and_free(server_id_bytes, server_id_len);
+    kmyth_sgx_log(LOG_ERR, "error marshalling ID");
+    X509_NAME_free(server_id);
+    if (server_id_bytes != NULL)
+    {
+      free(server_id_bytes);
+    }
     return EXIT_FAILURE;
   }
+  X509_NAME_free(server_id);
 
   // Convert client's ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
 
-  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_pubkey,
+  EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
+  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &client_eph_pubkey_bytes,
                                          NULL);
@@ -533,14 +714,18 @@ int compose_server_hello_msg(X509 *server_sign_cert,
     kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    EC_KEY_free(client_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
+  EC_KEY_free(client_eph_ec_pubkey);
 
   // Convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
   size_t server_eph_pubkey_len = 0;
 
-  server_eph_pubkey_len = EC_KEY_key2buf(server_eph_pubkey,
+  EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_keypair);
+  server_eph_pubkey_len = EC_KEY_key2buf(server_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &server_eph_pubkey_bytes,
                                          NULL);
@@ -550,8 +735,10 @@ int compose_server_hello_msg(X509 *server_sign_cert,
     kmyth_clear_and_free(server_id_bytes, server_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+    EC_KEY_free(server_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
+  EC_KEY_free(server_eph_ec_pubkey);
 
   // allocate memory for 'Server Hello' message body byte array
   //  - Server ID size (two-byte unsigned integer)
@@ -582,7 +769,7 @@ int compose_server_hello_msg(X509 *server_sign_cert,
 
   // append server identity bytes
   memcpy(buf, server_id_bytes, server_id_len);
-  kmyth_clear_and_free(server_id_bytes, server_id_len);
+  free(server_id_bytes);
   buf += server_id_len;
 
   // append client ephemeral public key length bytes
@@ -592,7 +779,8 @@ int compose_server_hello_msg(X509 *server_sign_cert,
 
   // append client ephemeral public key bytes
   memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
-  kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+  free(client_eph_pubkey_bytes);
+  buf += client_eph_pubkey_len;
 
   // append server ephemeral public key length bytes
   temp_val = htobe16((uint16_t) server_eph_pubkey_len);
@@ -616,77 +804,223 @@ int compose_server_hello_msg(X509 *server_sign_cert,
 /*****************************************************************************
  * parse_server_hello_msg()
  ****************************************************************************/
-int parse_server_hello_msg(EVP_PKEY *msg_sign_key,
+int parse_server_hello_msg(X509 *msg_sign_cert,
                            unsigned char *msg_in,
                            size_t msg_in_len,
-                           X509_NAME **server_id_out,
-                           EC_KEY **client_eph_pub_out,
-                           EC_KEY **server_eph_pub_out)
+                           EVP_PKEY *client_eph_pub_in,
+                           EVP_PKEY **server_eph_pub_out)
 {
-  // parse message body fields
+  char msg[MAX_LOG_MSG_LEN];
+
+  // parse message body fields into variables
   int buf_index = 0;
 
   // get size of server identity field (server_id_len)
   uint16_t server_id_len = msg_in[buf_index] << 8;
   server_id_len += msg_in[buf_index+1];
   buf_index += 2;
-  
+
   // get server identity field bytes (server_id)
   uint8_t *server_id_bytes = malloc(server_id_len);
   memcpy(server_id_bytes, msg_in+buf_index, server_id_len);
   buf_index += server_id_len;
 
-  // get size of client ephemeral contribution field
+  // get size of client ephemeral contribution field (client_eph_pub_len)
   uint16_t client_eph_pub_len = msg_in[buf_index] << 8;
   client_eph_pub_len += msg_in[buf_index+1];
   buf_index += 2;
 
-  // get client ephemeral contribution field bytes (client_ephemeral_bytes)
+  // get client ephemeral contribution field bytes (client_eph_pub_bytes)
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
   memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
-  // get size of server ephemeral contribution field
+  // get size of server ephemeral contribution field (server_eph_pub_len)
   uint16_t server_eph_pub_len = msg_in[buf_index] << 8;
   server_eph_pub_len += msg_in[buf_index+1];
   buf_index += 2;
 
-  // get server ephemeral contribution field bytes (server_ephemeral_bytes)
+  // get server ephemeral contribution field bytes (server_eph_pub_bytes)
   unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
   memcpy(server_eph_pub_bytes, msg_in+buf_index, server_eph_pub_len);
   buf_index += server_eph_pub_len;
 
-  // buffer index is now pointing at first byte of signature field
+  // buffer index now points just past end of message body
+  // capture this index so we can access message body as part of input buffer
   size_t msg_body_size = buf_index;
-  size_t msg_sig_size = msg_in_len - msg_body_size;
 
-  // check message signature
-  if (EXIT_SUCCESS != verify_buffer(msg_sign_key,
-                                    msg_in,
-                                    msg_body_size,
-                                    msg_in+msg_body_size,
-                                    msg_sig_size))
+  // get size of message signature
+  uint16_t msg_sig_len = msg_in[buf_index] << 8;
+  msg_sig_len += msg_in[buf_index+1];
+  buf_index += 2;
+
+  // get message signature bytes
+  uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  memcpy(msg_sig_bytes, msg_in+buf_index, msg_sig_len);
+  buf_index += msg_sig_len;
+
+  // check that number of parsed bytes matches message length input parameter
+  if (buf_index != msg_in_len)
   {
-    kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
+    kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
+    free(server_id_bytes);
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
 
   // convert client identity bytes in message to X509_NAME struct
-  int ret = unmarshal_der_to_x509_name(&server_id_bytes,
-                                       (size_t *) &server_id_len,
-                                       server_id_out);
-  if (ret != EXIT_SUCCESS)
+  X509_NAME *rcvd_server_id = NULL;
+  if (EXIT_SUCCESS != unmarshal_der_to_x509_name(server_id_bytes,
+                                                 (size_t) server_id_len,
+                                                 &rcvd_server_id))
   {
-    kmyth_sgx_log(LOG_ERR, "error unmarshaling server identity bytes");
+    kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
+    free(server_id_bytes);
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
   free(server_id_bytes);
 
-  // convert client ephemeral public contribution to EC_KEY struct format
-  free(client_eph_pub_bytes);
+  kmyth_sgx_log(LOG_DEBUG, "have parsed received server ID as X509_NAME");
 
-  // convert server ephemeral public contribution to EC_KEY struct format
+  // extract expected client identity (X509_NAME struct) from pre-loaded cert
+  X509_NAME *expected_server_id = NULL;
+
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(msg_sign_cert,
+                                                       &expected_server_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "extracted expected server ID from cert");
+
+  // verify that identity in 'Server Hello' message matches the server
+  // certificate pre-loaded into it's peer (enclave client)
+  if (0 != X509_NAME_cmp(rcvd_server_id, expected_server_id))
+  {
+    kmyth_sgx_log(LOG_ERR, "'Server Hello' - unexpected server identity");
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "validated server ID");
+
+  // extract server's public signing key (needed to verify signature over
+  // message) from X509 certificate
+  EVP_PKEY *server_sign_pubkey = X509_get_pubkey(msg_sign_cert);
+  if (server_sign_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
+    EVP_PKEY_free(server_sign_pubkey);
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  // check message signature
+  if (EXIT_SUCCESS != verify_buffer(server_sign_pubkey,
+                                    msg_in,
+                                    msg_body_size,
+                                    msg_sig_bytes,
+                                    msg_sig_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
+    return EXIT_FAILURE;
+  }
+  free(msg_sig_bytes);
+
+  // convert received client ephemeral public bytes to EVP_PKEY struct format
+  EC_KEY *rcvd_client_eph_ec_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  if (rcvd_client_eph_ec_pub == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    return EXIT_FAILURE;
+  } 
+  if (1 != EC_KEY_oct2key(rcvd_client_eph_ec_pub,
+                          client_eph_pub_bytes,
+                          client_eph_pub_len,
+                          NULL))
+  {
+    kmyth_sgx_log(LOG_ERR, "unmarshal of client ephemeral public key failed");
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    EC_KEY_free(rcvd_client_eph_ec_pub);
+    return EXIT_FAILURE;
+  }
+  free(client_eph_pub_bytes);
+  EVP_PKEY *rcvd_client_eph_pub = EVP_PKEY_new();
+  if (1 != EVP_PKEY_set1_EC_KEY(rcvd_client_eph_pub, rcvd_client_eph_ec_pub))
+  {
+    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY in EVP_PKEY");
+    free(server_eph_pub_bytes);
+    EC_KEY_free(rcvd_client_eph_ec_pub);
+    EVP_PKEY_free(rcvd_client_eph_pub);
+    return EXIT_FAILURE;
+  }
+  EC_KEY_free(rcvd_client_eph_ec_pub);
+
+  // check received client ephemeral public matches expected value
+  if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_client_eph_pub,
+                        (const EVP_PKEY *) client_eph_pub_in))
+  {
+    kmyth_sgx_log(LOG_ERR, "client ephemeral public mismatch");
+    free(server_eph_pub_bytes);
+    EVP_PKEY_free(rcvd_client_eph_pub);
+    return EXIT_FAILURE;
+  }
+  EVP_PKEY_free(rcvd_client_eph_pub);
+
+  kmyth_sgx_log(LOG_DEBUG, "validated expected client ephemeral sent")
+
+  // convert DER-formatted byte array to EC_KEY struct
+  EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  if (1 != EC_KEY_oct2key(server_eph_ec_pubkey,
+                          server_eph_pub_bytes,
+                          server_eph_pub_len,
+                          NULL))
+  {
+    kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
+    free(server_eph_pub_bytes);
+    return EXIT_FAILURE;
+  }
   free(server_eph_pub_bytes);
+
+  // check parsed, received ephemeral public key
+  if (1 != EC_KEY_check_key(server_eph_ec_pubkey))
+  {
+    kmyth_sgx_log(LOG_ERR, "checks on received ephemeral public key failed");
+    return EXIT_FAILURE;
+  }
+
+  // create empty EVP_PKEY struct if unallocated pointer passed in
+  if (*server_eph_pub_out == NULL)
+  {
+    *server_eph_pub_out = EVP_PKEY_new();
+  }
+
+  // encapsulate server ephemeral public key in EVP_PKEY struct
+  if (1 != EVP_PKEY_set1_EC_KEY(*server_eph_pub_out, server_eph_ec_pubkey))
+  {
+    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
+    EC_KEY_free(server_eph_ec_pubkey);
+    return EXIT_FAILURE;
+  }
+  EC_KEY_free(server_eph_ec_pubkey);
+
+  kmyth_sgx_log(LOG_DEBUG, "recovered server's ephemeral public key");
 
   return EXIT_SUCCESS;
 }                                 

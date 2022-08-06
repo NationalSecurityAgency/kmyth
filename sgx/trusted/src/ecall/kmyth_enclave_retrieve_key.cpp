@@ -25,8 +25,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
 {
   // unmarshal client private signing key
   EVP_PKEY *client_sign_privkey = NULL;
-  int ret_val = unmarshal_ec_der_to_pkey(&client_private_bytes,
-                                         &client_private_bytes_len,
+  int ret_val = unmarshal_ec_der_to_pkey(client_private_bytes,
+                                         client_private_bytes_len,
                                          &client_sign_privkey);
 
   if (ret_val)
@@ -46,8 +46,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   // unmarshal client cert (contains information linkded to client identity)
   X509 *client_cert = NULL;
 
-  ret_val = unmarshal_ec_der_to_x509(&client_cert_bytes,
-                                     &client_cert_bytes_len,
+  ret_val = unmarshal_ec_der_to_x509(client_cert_bytes,
+                                     client_cert_bytes_len,
                                      &client_cert);
   if (ret_val != EXIT_SUCCESS)
   {
@@ -62,8 +62,8 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   // unmarshal server cert (containing public key for signature verification)
   X509 *server_cert = NULL;
 
-  ret_val = unmarshal_ec_der_to_x509(&server_cert_bytes,
-                                     &server_cert_bytes_len,
+  ret_val = unmarshal_ec_der_to_x509(server_cert_bytes,
+                                     server_cert_bytes_len,
                                      &server_cert);
   if (ret_val != EXIT_SUCCESS)
   {

@@ -363,7 +363,8 @@ static int setup_ecdhconn(TLSProxy * proxy)
   create_server_socket(ecdhconn);
 
   load_local_sign_key(ecdhconn);
-  load_public_key(ecdhconn);
+  load_local_sign_cert(ecdhconn);
+  load_remote_sign_cert(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);
 

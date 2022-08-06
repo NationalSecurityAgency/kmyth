@@ -29,35 +29,22 @@ void cleanup(ECDHPeer * ecdhconn)
 
   if (ecdhconn->local_priv_sign_key != NULL)
   {
-    kmyth_clear(ecdhconn->local_priv_sign_key, sizeof(ecdhconn->local_priv_sign_key));
     EVP_PKEY_free(ecdhconn->local_priv_sign_key);
   }
 
   if (ecdhconn->remote_pub_sign_key != NULL)
   {
-    kmyth_clear(ecdhconn->remote_pub_sign_key, sizeof(ecdhconn->remote_pub_sign_key));
     EVP_PKEY_free(ecdhconn->remote_pub_sign_key);
   }
 
-  if (ecdhconn->local_ephemeral_privkey != NULL)
+  if (ecdhconn->local_ephemeral_key_pair != NULL)
   {
-    kmyth_clear(ecdhconn->local_ephemeral_privkey,
-                sizeof(ecdhconn->local_ephemeral_privkey));
-    EC_KEY_free(ecdhconn->local_ephemeral_privkey);
-  }
-
-  if (ecdhconn->local_ephemeral_pubkey != NULL)
-  {
-    kmyth_clear(ecdhconn->local_ephemeral_pubkey,
-                sizeof(ecdhconn->local_ephemeral_pubkey));
-    EC_KEY_free(ecdhconn->local_ephemeral_pubkey);
+    EVP_PKEY_free(ecdhconn->local_ephemeral_key_pair);
   }
 
   if (ecdhconn->remote_ephemeral_pubkey != NULL)
   {
-    kmyth_clear(ecdhconn->remote_ephemeral_pubkey,
-                sizeof(ecdhconn->remote_ephemeral_pubkey));
-    EC_KEY_free(ecdhconn->remote_ephemeral_pubkey);
+    EVP_PKEY_free(ecdhconn->remote_ephemeral_pubkey);
   }
 
   if (ecdhconn->session_key != NULL)
@@ -391,7 +378,7 @@ void load_local_sign_cert(ECDHPeer * ecdhconn)
   kmyth_log(LOG_DEBUG, "obtained local signature certificate from file");
 }
 
-void load_public_key(ECDHPeer * ecdhconn)
+void load_remote_sign_cert(ECDHPeer * ecdhconn)
 {
   // read remote certificate (X509) from file (.pem formatted)
   X509 *client_cert = NULL;
@@ -405,26 +392,16 @@ void load_public_key(ECDHPeer * ecdhconn)
     error(ecdhconn);
   }
 
-  client_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
+  ecdhconn->remote_sign_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
   BIO_free(pub_cert_bio);
   pub_cert_bio = NULL;
-  if (!client_cert)
+  if (ecdhconn->remote_sign_cert == NULL)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
               ecdhconn->remote_pub_sign_cert_path);
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "obtained remote certificate from file");
-
-  ecdhconn->remote_pub_sign_key = X509_get_pubkey(client_cert);
-  X509_free(client_cert);
-  client_cert = NULL;
-  if (ecdhconn->remote_pub_sign_key == NULL)
-  {
-    kmyth_log(LOG_ERR, "extracting public key from remote certificate failed");
-    error(ecdhconn);
-  }
-  kmyth_log(LOG_DEBUG, "extracted public key from remote certificate");
 }
 
 void make_ephemeral_keypair(ECDHPeer * ecdhconn)
@@ -432,8 +409,7 @@ void make_ephemeral_keypair(ECDHPeer * ecdhconn)
   int ret = -1;
 
   // create local ephemeral contribution (public/private key pair)
-  ret = create_ecdh_ephemeral_contribution(&ecdhconn->local_ephemeral_privkey,
-                                           &ecdhconn->local_ephemeral_pubkey);
+  ret = create_ecdh_ephemeral_contribution(&ecdhconn->local_ephemeral_key_pair);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "creation of local ephemeral contribution failed");
@@ -465,10 +441,9 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
                       msg_in[msg_in_len-1], msg_in_len);
 
   // parse out 'Client Hello' message fields
-  ret = parse_client_hello_msg(ecdhconn->remote_pub_sign_key,
+  ret = parse_client_hello_msg(ecdhconn->remote_sign_cert,
                                msg_in,
                                msg_in_len,
-                               &(ecdhconn->remote_id),
                                &(ecdhconn->remote_ephemeral_pubkey));
   if (ret != EXIT_SUCCESS)
   {
@@ -490,7 +465,7 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
                                  ecdhconn->local_priv_sign_key,
                                  ecdhconn->remote_ephemeral_pubkey,
-                                 ecdhconn->local_ephemeral_pubkey,
+                                 ecdhconn->local_ephemeral_key_pair,
                                  &server_hello_msg_bytes,
                                  &server_hello_msg_len);
   if (ret != EXIT_SUCCESS)
@@ -524,11 +499,14 @@ void send_ephemeral_public(ECDHPeer * ecdhconn)
 {
   int ret;
 
-  // Convert public key in elliptic curve key struct (EC_KEY) to octet string
+  // Convert public key in elliptic curve key struct (EVP_PKEY) to octet string
   unsigned char *local_eph_pubkey_bytes = NULL;
   size_t local_eph_pubkey_len = 0;
 
-  local_eph_pubkey_len = EC_KEY_key2buf(ecdhconn->local_ephemeral_pubkey,
+  EC_KEY *local_eph_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  local_eph_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->local_ephemeral_key_pair);
+
+  local_eph_pubkey_len = EC_KEY_key2buf(local_eph_pub,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &local_eph_pubkey_bytes,
                                          NULL);
@@ -536,6 +514,7 @@ void send_ephemeral_public(ECDHPeer * ecdhconn)
   {
     kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
   }
+  EC_KEY_free(local_eph_pub);
 
   kmyth_log(LOG_DEBUG, "created ephemeral local 'public key' octet string");
 
@@ -575,17 +554,22 @@ void get_session_key(ECDHPeer * ecdhconn)
   size_t session_secret_len = 0;
   int ret;
 
-  EC_POINT *reph = NULL;
-  reph =  (EC_POINT *) EC_KEY_get0_public_key(ecdhconn->remote_ephemeral_pubkey);
-  if (reph == NULL)
-  {
-    kmyth_log(LOG_ERR, "error extracting public key from EC_KEY struct");
-    error(ecdhconn);
-  }
+  //EC_KEY *remote_eph_ec_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  //remote_eph_ec_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->remote_ephemeral_pubkey);
+  //EC_POINT *reph = NULL;
+  //reph =  (EC_POINT *) EC_KEY_get0_public_key(remote_eph_ec_pub);
+  //if (reph == NULL)
+  //{
+  //  kmyth_log(LOG_ERR, "error extracting public key from EC_KEY struct");
+  //  error(ecdhconn);
+  //}
+  //EC_KEY_free(remote_eph_ec_pub);
 
   // generate shared secret result for ECDH key agreement (server side)
-  ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_privkey,
-                                   reph,
+  //EC_KEY *local_eph_priv = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
+  //remote_eph_ec_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->remote_ephemeral_pubkey);
+  ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_key_pair,
+                                   ecdhconn->remote_ephemeral_pubkey,
                                    &session_secret, &session_secret_len);
   if (ret != EXIT_SUCCESS)
   {
@@ -599,7 +583,7 @@ void get_session_key(ECDHPeer * ecdhconn)
             session_secret[session_secret_len - 1], session_secret_len);
 
   // clean-up
-  EC_POINT_clear_free(reph);
+  //EC_POINT_clear_free(reph);
 
   // generate session key result for ECDH key agreement (server side)
   ret = compute_ecdh_session_key(session_secret,
@@ -778,8 +762,7 @@ void server_main(ECDHPeer * ecdhconn)
 
   load_local_sign_key(ecdhconn);
   load_local_sign_cert(ecdhconn);
-  //load_remote_sign_cert(ecdhconn);
-  load_public_key(ecdhconn);
+  load_remote_sign_cert(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);
 
@@ -787,7 +770,7 @@ void server_main(ECDHPeer * ecdhconn)
 
   send_server_hello_msg(ecdhconn);
 
-  send_ephemeral_public(ecdhconn);
+  //send_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
 
@@ -799,11 +782,12 @@ void client_main(ECDHPeer * ecdhconn)
   create_client_socket(ecdhconn);
 
   load_local_sign_key(ecdhconn);
-  load_public_key(ecdhconn);
+  load_local_sign_cert(ecdhconn);
+  load_remote_sign_cert(ecdhconn);
 
   make_ephemeral_keypair(ecdhconn);
 
-  send_ephemeral_public(ecdhconn);
+  //send_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
 

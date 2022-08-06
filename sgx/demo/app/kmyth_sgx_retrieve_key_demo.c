@@ -109,7 +109,7 @@ int main(int argc, char **argv)
   unsigned char *client_ec_sign_key_bytes = NULL;
   int client_ec_sign_key_bytes_len = -1;
 
-  if (marshal_ec_pkey_to_der(&client_ec_sign_key,
+  if (marshal_ec_pkey_to_der(client_ec_sign_key,
                              &client_ec_sign_key_bytes,
                              &client_ec_sign_key_bytes_len))
   {
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   unsigned char *client_ec_cert_bytes = NULL;
   int client_ec_cert_bytes_len = -1;
 
-  if (marshal_ec_x509_to_der(&client_ec_cert,
+  if (marshal_ec_x509_to_der(client_ec_cert,
                              &client_ec_cert_bytes,
                              &client_ec_cert_bytes_len) != EXIT_SUCCESS)
   {
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
   unsigned char *server_ec_cert_bytes = NULL;
   int server_ec_cert_bytes_len = -1;
 
-  if (marshal_ec_x509_to_der(&server_ec_cert,
+  if (marshal_ec_x509_to_der(server_ec_cert,
                              &server_ec_cert_bytes,
                              &server_ec_cert_bytes_len) != EXIT_SUCCESS)
   {

@@ -78,7 +78,7 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
   ret = recv_ecdh_msg(socket_fd, server_hello, server_hello_len);
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, " 'Client Hello' message");
+    kmyth_log(LOG_ERR, "failed to receive TLS proxy's 'Server Hello' message");
     return EXIT_FAILURE;
   }
 

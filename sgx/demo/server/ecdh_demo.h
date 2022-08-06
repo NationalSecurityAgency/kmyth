@@ -49,11 +49,8 @@ typedef struct ECDHPeer
   EVP_PKEY *remote_pub_sign_key;
   X509 *local_sign_cert;
   X509 *remote_sign_cert;
-  X509_NAME *local_id;
-  X509_NAME *remote_id;
-  EC_KEY *local_ephemeral_privkey;
-  EC_KEY *local_ephemeral_pubkey;
-  EC_KEY *remote_ephemeral_pubkey;
+  EVP_PKEY *local_ephemeral_key_pair;
+  EVP_PKEY *remote_ephemeral_pubkey;
   unsigned char *session_key;
   unsigned int session_key_len;
 } ECDHPeer;
@@ -89,7 +86,8 @@ void create_server_socket(ECDHPeer * ecdhconn);
 void create_client_socket(ECDHPeer * ecdhconn);
 
 void load_local_sign_key(ECDHPeer * ecdhconn);
-void load_public_key(ECDHPeer * ecdhconn);
+void load_local_sign_cert(ECDHPeer * ecdhconn);
+void load_remote_sign_cert(ECDHPeer * ecdhconn);
 
 void make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
