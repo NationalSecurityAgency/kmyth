@@ -115,6 +115,7 @@ int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair)
 /*****************************************************************************
  * reconstruct_ecdh_ephemeral_public_point()
  ****************************************************************************/
+/*
 int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
                                             unsigned char *ec_octet_str_in,
                                             size_t ec_octet_str_in_len,
@@ -153,6 +154,7 @@ int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
 
   return EXIT_SUCCESS;
 }
+*/
 
 /*****************************************************************************
  * compute_ecdh_shared_secret()
@@ -225,79 +227,6 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
 
   return EXIT_SUCCESS;
 }
-
-/*
-
-int compute_ecdh_shared_secret(EVP_PKEY * local_eph_priv_key,
-                               EC_POINT * remote_eph_pub_point,
-                               unsigned char **shared_secret,
-                               size_t *shared_secret_len)
-{
-  // create buffer (allocate memory) for the shared secret result
-  //
-  //   - the field size calculated below returns the number of bits required
-  //     for a field element for the elliptic curve being used (i.e., the size
-  //     of the prime p for a prime field and the value of m for a binary [2^m]
-  //     field)
-  //
-  //   - the length of the shared secret is calculated by computing the
-  //     maximum number of bytes required. Adding 7 to the bit length (to
-  //     address cases where the field size value in bits does not fall on
-  //     a byte boundary) and taking the integer portion of dividing by 8 bits
-  //     in a byte (doing bits to bytes conversion) returns the necessary
-  //     buffer size (so the required memory, in bytes, can be allocated).
-  EC_KEY *local_eph_priv_ec_key = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  local_eph_priv_ec_key = EVP_PKEY_get1_EC_KEY(local_eph_priv_key);
-  const EC_GROUP *local_eph_priv_key_group = EC_KEY_get0_group(local_eph_priv_ec_key);
-  int field_size = EC_GROUP_get_degree(local_eph_priv_key_group);
-
-  int required_buffer_len = (field_size + 7) / 8;
-  *shared_secret = OPENSSL_malloc(required_buffer_len);
-  if (*shared_secret == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "allocation of buffer for shared secret failed");
-    return EXIT_FAILURE;
-  }
-
-  // verify that the public key received from the remote peer represents a
-  // point on the same curve as the local private key
-  BN_CTX *check_ctx = BN_CTX_new();
-  BN_CTX_start(check_ctx);
-  int retval = EC_POINT_is_on_curve(local_eph_priv_key_group,
-                                    remote_eph_pub_point,
-                                    check_ctx);
-  if (retval != 1)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "peer's ephemeral public key point not on expected curve");
-    return EXIT_FAILURE;
-  }
-  BN_CTX_end(check_ctx);
-  BN_CTX_free(check_ctx);
-
-  // derive the shared secret value:
-  //   x coordinate of the ECDH key agreement result (i.e., the remote peer's
-  //                                                  public key point dotted
-  //                                                  with the local private
-  //                                                  key point)
-  *shared_secret_len = ECDH_compute_key(*shared_secret,
-                                        required_buffer_len,
-                                        remote_eph_pub_point,
-                                        local_eph_priv_ec_key,
-                                        NULL);
-
-  if (*shared_secret_len != required_buffer_len)
-  {
-    kmyth_sgx_log(LOG_ERR, "computation of ECDH shared secret value failed");
-    return EXIT_FAILURE;
-  }
-
-  EC_KEY_free(local_eph_priv_ec_key);
-
-  return EXIT_SUCCESS;
-}
-
-*/
 
 /*****************************************************************************
  * compute_ecdh_session_key()

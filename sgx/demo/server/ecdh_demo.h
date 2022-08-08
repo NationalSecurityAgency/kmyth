@@ -93,7 +93,6 @@ void make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
 void recv_client_hello_msg(ECDHPeer * ecdhconn);
 
-void send_ephemeral_public(ECDHPeer * ecdhconn);
 void send_server_hello_msg(ECDHPeer * ecdhconn);
 
 void get_session_key(ECDHPeer * ecdhconn);

@@ -369,7 +369,7 @@ static int setup_ecdhconn(TLSProxy * proxy)
   make_ephemeral_keypair(ecdhconn);
 
   recv_client_hello_msg(ecdhconn);
-  send_ephemeral_public(ecdhconn);
+  //send_ephemeral_public(ecdhconn);
 
   get_session_key(ecdhconn);
 

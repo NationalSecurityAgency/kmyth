@@ -495,6 +495,7 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   kmyth_clear_and_free(server_hello_msg_bytes, server_hello_msg_len);
 }
 
+/*
 void send_ephemeral_public(ECDHPeer * ecdhconn)
 {
   int ret;
@@ -547,6 +548,7 @@ void send_ephemeral_public(ECDHPeer * ecdhconn)
   kmyth_clear_and_free(local_eph_pubkey_bytes, local_eph_pubkey_len);
   kmyth_clear_and_free(local_eph_pubkey_sig, local_eph_pubkey_sig_len);
 }
+*/
 
 void get_session_key(ECDHPeer * ecdhconn)
 {
@@ -554,20 +556,6 @@ void get_session_key(ECDHPeer * ecdhconn)
   size_t session_secret_len = 0;
   int ret;
 
-  //EC_KEY *remote_eph_ec_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  //remote_eph_ec_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->remote_ephemeral_pubkey);
-  //EC_POINT *reph = NULL;
-  //reph =  (EC_POINT *) EC_KEY_get0_public_key(remote_eph_ec_pub);
-  //if (reph == NULL)
-  //{
-  //  kmyth_log(LOG_ERR, "error extracting public key from EC_KEY struct");
-  //  error(ecdhconn);
-  //}
-  //EC_KEY_free(remote_eph_ec_pub);
-
-  // generate shared secret result for ECDH key agreement (server side)
-  //EC_KEY *local_eph_priv = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  //remote_eph_ec_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->remote_ephemeral_pubkey);
   ret = compute_ecdh_shared_secret(ecdhconn->local_ephemeral_key_pair,
                                    ecdhconn->remote_ephemeral_pubkey,
                                    &session_secret, &session_secret_len);

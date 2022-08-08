@@ -126,31 +126,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     free(server_hello_msg);
     close_socket_ocall(socket_fd);
   }
-/*
-  // convert server's ephemeral public octet string to an EC_POINT struct
-  EC_POINT *server_ephemeral_pub_pt = NULL;
 
-  ret_val = reconstruct_ecdh_ephemeral_public_point(KMYTH_EC_NID,
-                                                    server_ephemeral_pub,
-                                                    server_ephemeral_pub_len,
-                                                    &server_ephemeral_pub_pt);
-  if (ret_val != EXIT_SUCCESS)
-  {
-    kmyth_sgx_log(LOG_ERR,
-                  "reconstruct server ephemeral 'public key' point failed");
-    //BN_clear(client_ephemeral_privkey->privkey);
-    EC_KEY_free(client_ephemeral_privkey);
-    free(server_ephemeral_pub);
-    EC_POINT_free(server_ephemeral_pub_pt);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-  kmyth_sgx_log(LOG_DEBUG,
-                "client reconstructed server's ECDH ephemeral 'public key'");
-
-  // done with server_ephemeral_pub
-  OPENSSL_free_ocall((void **) &server_ephemeral_pub);
-*/
   // generate shared secret value result for ECDH key agreement (client side)
   unsigned char *session_secret = NULL;
   size_t session_secret_len = 0;

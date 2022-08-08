@@ -72,8 +72,8 @@ struct ECDHMessageHeader {
 };
 
 /**
- * @brief Extracts identity information(subject name) from an input X509
- *        certificate as a DER-formatted X509_NAME byte array
+ * @brief Extracts identity information (subject name) from an input X509
+ *        certificate as an X509_NAME struct
  *
  * @param[in]  cert_in      Pointer to internally formatted (X509 struct)
  *                          certificate
@@ -83,8 +83,8 @@ struct ECDHMessageHeader {
  * 
  * @return 0 on success, 1 on error
  */
-int extract_identity_bytes_from_x509(X509 *cert_in,
-                                     X509_NAME **identity_out);
+int extract_identity_bytes_from_x509(X509 * cert_in,
+                                     X509_NAME ** identity_out);
 
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
@@ -100,56 +100,36 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
   int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair);
 
 /**
- * @brief Reconstructs the curve point for an elliptic curve 'public key' in
- *        octet string format
- *
- * @param[in]  ec_nid               ID for the elliptic curve to use for
- *                                  generating this ephemeral 'public key'
- *                                  point
- *
- * @param[in]  ec_octet_str_in      Input elliptic curve 'public key' in octet
- *                                  string format
- *
- * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
- *
- * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
- *                                  the elliptic curve point for the input
- *                                  elliptic curve 'public key' contribution
- *
- * @return 0 on success, 1 on error
- */
-  int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
-                                              unsigned char *ec_octet_str_in,
-                                              size_t ec_octet_str_in_len,
-                                              EC_POINT ** ec_point_out);
-
-/**
  * @brief Computes shared secret value, using ECDH, from a local private
  *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
- *        secret (e.g., 'abG') that is mutually derivable by both the local
- *        and remote party.
+ *        eohemeral key (e.g., 'abG') that is mutually derivable by both
+ *        the local and remote party. The shared secret result is derived
+ *        from this shared ephemeral key.
  *
- * @param[in]  local_eph_priv_key   Pointer to ephemeral 'private key' for
- *                                  the 'local' party participating in the
- *                                  ECDH exchange (as an EVP_PKEY struct).
+ * @param[in]  local_eph_keypair    Pointer to elliptic curve ephemeral
+ *                                  private/public 'key pair' (as an EVP_PKEY
+ *                                  struct) for the 'local' party participating
+ *                                  in the ECDH exchange (need local private
+ *                                  key for shared secret computation)
  *
- * @param[in]  remote_eph_pub_point Elliptic curve 'public key' point
- *                                  representing remote peer's contribution
- *                                  to the ECDH shared secret computation
+ * @param[in]  remote_eph_pubkey    Pointer to elliptic curve ephemeral
+ *                                  'public key' (as an EVP_PKEY struct) for
+ *                                  the 'remote' party participating in the
+ *                                  ECDH exchange
  *
  * @param[out] shared_secret        computed X component of the remote peer's
  *                                  'public key' point dotted with the local
  *                                  'private key' point
  *
  * @param[out] shared_secret_len    Pointer to the length (in bytes) of the
- *                                  shared secret result.
+ *                                  shared secret result
  *
  * @return 0 on success, 1 on error
  */
-  int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
-                                 EVP_PKEY *peer_eph_pubkey,
-                                 unsigned char **shared_secret,
-                                 size_t *shared_secret_len);
+  int compute_ecdh_shared_secret(EVP_PKEY * local_eph_keypair,
+                                 EVP_PKEY * peer_eph_pubkey,
+                                 unsigned char ** shared_secret,
+                                 size_t * shared_secret_len);
 
 //  int compute_ecdh_shared_secret(EVP_PKEY * local_eph_priv_key,
 //                                 EC_POINT * remote_eph_pub_point,
@@ -173,10 +153,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int compute_ecdh_session_key(unsigned char *secret,
+  int compute_ecdh_session_key(unsigned char * secret,
                                size_t secret_len,
-                               unsigned char **session_key,
-                               unsigned int *session_key_len);
+                               unsigned char ** session_key,
+                               unsigned int * session_key_len);
 
 /**
  * @brief Assembles the 'Client Hello' message, which initiates the ECDH
@@ -229,11 +209,11 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int compose_client_hello_msg(X509 *client_sign_cert,
-                               EVP_PKEY *client_sign_key,
-                               EVP_PKEY *client_eph_keypair,
-                               unsigned char **msg_out,
-                               size_t *msg_out_len);
+  int compose_client_hello_msg(X509 * client_sign_cert,
+                               EVP_PKEY * client_sign_key,
+                               EVP_PKEY * client_eph_keypair,
+                               unsigned char ** msg_out,
+                               size_t * msg_out_len);
 
 /**
  * @brief Validates and then parses the 'Client Hello' message, which
@@ -280,10 +260,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int parse_client_hello_msg(X509 *msg_sign_cert,
-                             unsigned char *msg_in,
+  int parse_client_hello_msg(X509 * msg_sign_cert,
+                             unsigned char * msg_in,
                              size_t msg_in_len,
-                             EVP_PKEY **client_eph_pubkey_out);
+                             EVP_PKEY ** client_eph_pubkey_out);
 
 /**
  * @brief Assembles the 'Server Hello' message, the server response to
@@ -334,12 +314,12 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int compose_server_hello_msg(X509 *server_sign_cert,
-                               EVP_PKEY *server_sign_key,
-                               EVP_PKEY *client_eph_pubkey,
-                               EVP_PKEY *server_eph_keypair,
-                               unsigned char **msg_out,
-                               size_t *msg_out_len);
+  int compose_server_hello_msg(X509 * server_sign_cert,
+                               EVP_PKEY * server_sign_key,
+                               EVP_PKEY * client_eph_pubkey,
+                               EVP_PKEY * server_eph_keypair,
+                               unsigned char ** msg_out,
+                               size_t * msg_out_len);
 
 /**
  * @brief Validates and then parses the 'Server Hello' message, the
@@ -389,11 +369,11 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int parse_server_hello_msg(X509 *msg_sign_cert,
-                             unsigned char *msg_in,
+  int parse_server_hello_msg(X509 * msg_sign_cert,
+                             unsigned char * msg_in,
                              size_t msg_in_len,
-                             EVP_PKEY *client_eph_pub_in,
-                             EVP_PKEY **server_eph_pub_out);
+                             EVP_PKEY * client_eph_pub_in,
+                             EVP_PKEY ** server_eph_pub_out);
 
 /**
  * @brief Computes an elliptic curve signature over the input byte array
@@ -419,9 +399,9 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int append_signature(EVP_PKEY *sign_key,
-                       unsigned char **buf,
-                       size_t *buf_len);
+  int append_signature(EVP_PKEY * sign_key,
+                       unsigned char ** buf,
+                       size_t * buf_len);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed
@@ -447,8 +427,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  * @return 0 on success, 1 on error
  */
   int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                  unsigned char *buf_in, size_t buf_in_len,
-                  unsigned char **sig_out, unsigned int *sig_out_len);
+                  unsigned char * buf_in,
+                  size_t buf_in_len,
+                  unsigned char ** sig_out,
+                  unsigned int * sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
@@ -474,8 +456,10 @@ int extract_identity_bytes_from_x509(X509 *cert_in,
  *         1 on error (signature verification failed)
  */
   int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                    unsigned char *buf_in, size_t buf_in_len,
-                    unsigned char *sig_in, unsigned int sig_in_len);
+                    unsigned char * buf_in,
+                    size_t buf_in_len,
+                    unsigned char * sig_in,
+                    unsigned int sig_in_len);
 
 #ifdef __cplusplus
 }
