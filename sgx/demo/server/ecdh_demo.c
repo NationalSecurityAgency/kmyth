@@ -495,61 +495,6 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   kmyth_clear_and_free(server_hello_msg_bytes, server_hello_msg_len);
 }
 
-/*
-void send_ephemeral_public(ECDHPeer * ecdhconn)
-{
-  int ret;
-
-  // Convert public key in elliptic curve key struct (EVP_PKEY) to octet string
-  unsigned char *local_eph_pubkey_bytes = NULL;
-  size_t local_eph_pubkey_len = 0;
-
-  EC_KEY *local_eph_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  local_eph_pub = EVP_PKEY_get1_EC_KEY(ecdhconn->local_ephemeral_key_pair);
-
-  local_eph_pubkey_len = EC_KEY_key2buf(local_eph_pub,
-                                         POINT_CONVERSION_UNCOMPRESSED,
-                                         &local_eph_pubkey_bytes,
-                                         NULL);
-  if ((local_eph_pubkey_bytes == NULL) || (local_eph_pubkey_len == 0))
-  {
-    kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
-  }
-  EC_KEY_free(local_eph_pub);
-
-  kmyth_log(LOG_DEBUG, "created ephemeral local 'public key' octet string");
-
-  // sign local ephemeral contribution
-  unsigned char *local_eph_pubkey_sig = NULL;
-  unsigned int local_eph_pubkey_sig_len = 0;
-
-  ret = sign_buffer(ecdhconn->local_priv_sign_key,
-                    local_eph_pubkey_bytes,
-                    local_eph_pubkey_len,
-                    &local_eph_pubkey_sig,
-                    &local_eph_pubkey_sig_len);
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "server EC ephemeral 'public key' signature failed");
-    kmyth_clear_and_free(local_eph_pubkey_bytes, local_eph_pubkey_len);
-    error(ecdhconn);
-  }
-  kmyth_log(LOG_DEBUG, "signed local ephemeral ECDH 'public key'");
-
-  kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
-  ecdh_send_data(ecdhconn, &local_eph_pubkey_len, sizeof(local_eph_pubkey_len));
-  ecdh_send_data(ecdhconn, local_eph_pubkey_bytes, local_eph_pubkey_len);
-  kmyth_log(LOG_DEBUG, "Sending ephemeral public key signature.");
-  ecdh_send_data(ecdhconn,
-                 &local_eph_pubkey_sig_len,
-                 sizeof(local_eph_pubkey_sig_len));
-  ecdh_send_data(ecdhconn, local_eph_pubkey_sig, local_eph_pubkey_sig_len);
-
-  kmyth_clear_and_free(local_eph_pubkey_bytes, local_eph_pubkey_len);
-  kmyth_clear_and_free(local_eph_pubkey_sig, local_eph_pubkey_sig_len);
-}
-*/
-
 void get_session_key(ECDHPeer * ecdhconn)
 {
   unsigned char *session_secret = NULL;
