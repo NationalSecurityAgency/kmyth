@@ -23,6 +23,7 @@ extern "C"
 #include <openssl/evp.h>
 #include <openssl/ecdsa.h>
 #include <openssl/bn.h>
+#include <openssl/kdf.h>
 #include <openssl/err.h>
 
 #include "kmyth_enclave_common.h"
@@ -43,7 +44,7 @@ extern "C"
  * @brief Specify the cryptographic hash algorithm to be used by the
  *        ECDH-based Kmyth 'retrieve key from server' protocol 
  */
-#define KMYTH_ECDH_HASH_ALG EVP_sha512()
+#define KMYTH_ECDH_MD EVP_sha512()
 
 /**
  * @brief OpenSSL's compute_ecdh_key() call supports optionally passing
@@ -137,26 +138,57 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
 //                                 size_t *shared_secret_len);
 
 /**
- * @brief Computes session key from a shared secret value input.
+ * @brief Computes session key from a shared secret value (and other) inputs
  *
- * @param[in]  secret           Secret value that will be hashed to produce
- *                              a session key result of the desired length.
+ * @param[in]  secret_in_bytes     Secret value that will be used as the HKDF
+ *                              'input key' bytes
  *
- * @param[in]  secret_len       Length (in bytes) of the input secret value
+ * @param[in]  secret_in_len       Length (in bytes) of the input secret value
+ * 
+ * @param[in]  msg1_in_bytes       Byte buffer containing the 'Client Hello'
+ *                              message bytes (length of client ID, client ID,
+ *                              length of client enphemeral public key, client
+ *                              ephemeral public key, length of signature,
+ *                              signature)
+ * 
+ * @param[in]  msg1_in_len         Length (in bytes) of the input 'Client Hello'
+ *                              message
+ * 
+ * @param[in]  msg2_in_bytes       Byte buffer containing the 'Server Hello'
+ *                              message bytes (length of server ID, server ID,
+ *                              length of client ephemeral public key, client
+ *                              ephemeral public key, length of server
+ *                              ephemeral public key, server ephemeral public
+ *                              key, length of signature, signature)
+ * 
+ * @param[in]  msg2_in_len         Length (in bytes) of the input 'Server Hello'
+ *                              message
  *
- * @param[out] session_key      Message digest resulting from the hash of the
+ * @param[out] key1_out_bytes   Pointer to HKDF output key bytes result (64 bytes,
+ *                              512 bits) that will be used as the
+ *                              concatenation resulting from the hash of the
  *                              input secret value. This result will be used
  *                              as a session key value.
  *
- * @param[out] session_key_len  Pointer to the length (in bytes) of the
+ * @param[out] key1_out_len         Pointer to the length (in bytes) of the
  *                              session key result.
+ * 
+ * @param[out] key2_out_bytes
+ * 
+ * @param[out] key2_out_len
  *
  * @return 0 on success, 1 on error
  */
-  int compute_ecdh_session_key(unsigned char * secret,
-                               size_t secret_len,
-                               unsigned char ** session_key,
-                               unsigned int * session_key_len);
+  int compute_ecdh_session_key(unsigned char * secret_in_bytes,
+                               size_t secret_in_len,
+                               unsigned char * msg1_in_bytes,
+                               size_t msg1_in_len,
+                               unsigned char * msg2_in_bytes,
+                               size_t msg2_in_len,
+                               unsigned char ** key1_out_bytes,
+                               size_t * key1_out_len,
+                               unsigned char ** key2_out_bytes,
+                               size_t * key2_out_len);
 
 /**
  * @brief Assembles the 'Client Hello' message, which initiates the ECDH

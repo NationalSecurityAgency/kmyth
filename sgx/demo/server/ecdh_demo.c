@@ -47,9 +47,24 @@ void cleanup(ECDHPeer * ecdhconn)
     EVP_PKEY_free(ecdhconn->remote_ephemeral_pubkey);
   }
 
-  if (ecdhconn->session_key != NULL)
+  if (ecdhconn->client_hello_msg != NULL)
   {
-    kmyth_clear_and_free(ecdhconn->session_key, ecdhconn->session_key_len);
+    kmyth_clear_and_free(ecdhconn->client_hello_msg, ecdhconn->client_hello_msg_len);
+  }
+
+  if (ecdhconn->server_hello_msg != NULL)
+  {
+    kmyth_clear_and_free(ecdhconn->server_hello_msg, ecdhconn->server_hello_msg_len);
+  }
+
+  if (ecdhconn->session_key1 != NULL)
+  {
+    kmyth_clear_and_free(ecdhconn->session_key1, ecdhconn->session_key1_len);
+  }
+
+  if (ecdhconn->session_key2 != NULL)
+  {
+    kmyth_clear_and_free(ecdhconn->session_key2, ecdhconn->session_key2_len);
   }
 
   init(ecdhconn);
@@ -214,7 +229,7 @@ void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t pla
   unsigned char *ciphertext = NULL;
   size_t ciphertext_len = 0;
 
-  ret = aes_gcm_encrypt(ecdhconn->session_key, ecdhconn->session_key_len,
+  ret = aes_gcm_encrypt(ecdhconn->session_key2, ecdhconn->session_key2_len,
                         plaintext, plaintext_len,
                         &ciphertext, &ciphertext_len);
   if (ret)
@@ -236,7 +251,7 @@ void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *p
 
   ecdh_recv_msg(ecdhconn, &ciphertext, &ciphertext_len);
 
-  ret = aes_gcm_decrypt(ecdhconn->session_key, ecdhconn->session_key_len,
+  ret = aes_gcm_decrypt(ecdhconn->session_key1, ecdhconn->session_key1_len,
                         ciphertext, ciphertext_len,
                         plaintext, plaintext_len);
   if (ret)
@@ -434,6 +449,8 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
   // create appropriately sized receive buffer and read message payload
   unsigned char *msg_in = malloc(msg_in_len);
   ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
+  ecdhconn->client_hello_msg = msg_in;
+  ecdhconn->client_hello_msg_len = (size_t) msg_in_len;
 
   kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
                       "(%d bytes)",
@@ -459,15 +476,12 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   int ret = -1;
 
   // compose 'Server Hello' message
-  unsigned char *server_hello_msg_bytes = NULL;
-  size_t server_hello_msg_len = 0;
-
   ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
                                  ecdhconn->local_priv_sign_key,
                                  ecdhconn->remote_ephemeral_pubkey,
                                  ecdhconn->local_ephemeral_key_pair,
-                                 &server_hello_msg_bytes,
-                                 &server_hello_msg_len);
+                                 &(ecdhconn->server_hello_msg),
+                                 &(ecdhconn->server_hello_msg_len));
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to create 'Server Hello' message");
@@ -475,24 +489,22 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   }
   kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
                       "(%d bytes)",
-                      server_hello_msg_bytes[0], server_hello_msg_bytes[1],
-                      server_hello_msg_bytes[server_hello_msg_len-2],
-                      server_hello_msg_bytes[server_hello_msg_len-1],
-                      server_hello_msg_len);
+                      ecdhconn->server_hello_msg[0],
+                      ecdhconn->server_hello_msg[1],
+                      ecdhconn->server_hello_msg[ecdhconn->server_hello_msg_len-2],
+                      ecdhconn->server_hello_msg[ecdhconn->server_hello_msg_len-1],
+                      ecdhconn->server_hello_msg_len);
 
   // send newly created 'Server Hello' message
   ret = send_ecdh_msg(ecdhconn->socket_fd,
-                      server_hello_msg_bytes,
-                      server_hello_msg_len);
+                      ecdhconn->server_hello_msg,
+                      ecdhconn->server_hello_msg_len);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
-
-  // clean-up message buffer now that message has been sent
-  kmyth_clear_and_free(server_hello_msg_bytes, server_hello_msg_len);
 }
 
 void get_session_key(ECDHPeer * ecdhconn)
@@ -521,20 +533,34 @@ void get_session_key(ECDHPeer * ecdhconn)
   // generate session key result for ECDH key agreement (server side)
   ret = compute_ecdh_session_key(session_secret,
                                  session_secret_len,
-                                 &ecdhconn->session_key, &ecdhconn->session_key_len);
+                                 ecdhconn->client_hello_msg,
+                                 ecdhconn->client_hello_msg_len,
+                                 ecdhconn->server_hello_msg,
+                                 ecdhconn->server_hello_msg_len,
+                                 &(ecdhconn->session_key1),
+                                 &(ecdhconn->session_key1_len),
+                                 &(ecdhconn->session_key2),
+                                 &(ecdhconn->session_key2_len));
   kmyth_clear_and_free(session_secret, session_secret_len);
   session_secret = NULL;
   if (ret != EXIT_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "server computation of 'session key' result failed");
+    kmyth_log(LOG_ERR, "server computation of 'session key' results failed");
     error(ecdhconn);
   }
-  kmyth_log(LOG_DEBUG, "shared session key = 0x%02X%02X...%02X%02X (%d bytes)",
-            ecdhconn->session_key[0],
-            ecdhconn->session_key[1],
-            ecdhconn->session_key[ecdhconn->session_key_len - 2],
-            ecdhconn->session_key[ecdhconn->session_key_len - 1],
-            ecdhconn->session_key_len);
+  kmyth_log(LOG_DEBUG, "shared session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
+            ecdhconn->session_key1[0],
+            ecdhconn->session_key1[1],
+            ecdhconn->session_key1[ecdhconn->session_key1_len - 2],
+            ecdhconn->session_key1[ecdhconn->session_key1_len - 1],
+            ecdhconn->session_key1_len);
+
+  kmyth_log(LOG_DEBUG, "shared session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
+            ecdhconn->session_key2[0],
+            ecdhconn->session_key2[1],
+            ecdhconn->session_key2[ecdhconn->session_key2_len - 2],
+            ecdhconn->session_key2[ecdhconn->session_key2_len - 1],
+            ecdhconn->session_key2_len);
 }
 
 int request_key(ECDHPeer *ecdhconn,

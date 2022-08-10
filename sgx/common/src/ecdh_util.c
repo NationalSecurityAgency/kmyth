@@ -113,50 +113,6 @@ int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair)
 }
 
 /*****************************************************************************
- * reconstruct_ecdh_ephemeral_public_point()
- ****************************************************************************/
-/*
-int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
-                                            unsigned char *ec_octet_str_in,
-                                            size_t ec_octet_str_in_len,
-                                            EC_POINT ** ec_point_out)
-{
-  // need 'group' parameter to create new EC_POINT on this elliptic curve
-  EC_GROUP *group = EC_GROUP_new_by_curve_name(ec_nid);
-
-  if (group == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "EC_GROUP creation for built-in curve NID failed");
-    return EXIT_FAILURE;
-  }
-
-  *ec_point_out = EC_POINT_new(group);
-  if (*ec_point_out == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "init of empty EC_POINT for specified group failed");
-    return EXIT_FAILURE;
-  }
-
-  // convert input octet string to an EC_POINT struct 
-  if (1 != EC_POINT_oct2point(group,
-                              *ec_point_out,
-                              ec_octet_str_in,
-                              ec_octet_str_in_len,
-                              NULL))
-  {
-    EC_GROUP_free(group);
-    kmyth_sgx_log(LOG_ERR, "octet string to EC_POINT conversion failed");
-    return EXIT_FAILURE;
-  }
-
-  // clean-up
-  EC_GROUP_free(group);
-
-  return EXIT_SUCCESS;
-}
-*/
-
-/*****************************************************************************
  * compute_ecdh_shared_secret()
  ****************************************************************************/
 int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
@@ -184,14 +140,6 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   }
 
   // provide peer's public key
-  if (peer_eph_pubkey == NULL)
-  {
-    kmyth_sgx_log(LOG_DEBUG, "peer_eph_pubkey is NULL");
-  }
-  else
-  {
-    kmyth_sgx_log(LOG_DEBUG, "peer_eph_pubkey is not NULL");
-  }
   retval = EVP_PKEY_derive_set_peer(ctx, peer_eph_pubkey);
   if (retval != 1)
   {
@@ -231,66 +179,97 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
 /*****************************************************************************
  * compute_ecdh_session_key()
  ****************************************************************************/
-int compute_ecdh_session_key(unsigned char *secret,
-                             size_t secret_len,
-                             unsigned char **session_key,
-                             unsigned int *session_key_len)
+int compute_ecdh_session_key(unsigned char * secret_in_bytes,
+                             size_t secret_in_len,
+                             unsigned char * msg1_in_bytes,
+                             size_t msg1_in_len,
+                             unsigned char * msg2_in_bytes,
+                             size_t msg2_in_len,
+                             unsigned char ** key1_out_bytes,
+                             size_t * key1_out_len,
+                             unsigned char ** key2_out_bytes,
+                             size_t * key2_out_len)
 {
-  // specify hash algorithm to employ as a KDF
-  const EVP_MD *kdf = EVP_shake256();
+  char msg[MAX_LOG_MSG_LEN] = { 0 };
 
-  if (NULL == kdf)
+  EVP_PKEY_CTX *pctx;
+
+  pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+
+  // initialize HKDF context
+  if (EVP_PKEY_derive_init(pctx) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to locate the specifed hash function");
+    kmyth_sgx_log(LOG_ERR, "failed to initialize HKDF context");
     return EXIT_FAILURE;
   }
 
-  // create message digest (EVP_MD) context
-  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-
-  if (NULL == ctx)
+  // set message digest for HKDF
+  if (EVP_PKEY_CTX_set_hkdf_md(pctx, KMYTH_ECDH_MD) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to create the message digest context");
+    kmyth_sgx_log(LOG_ERR, "failed to set HKDF message digest");
     return EXIT_FAILURE;
   }
 
-  // initialize the context
-  int result = EVP_DigestInit_ex(ctx, kdf, NULL);
-
-  if (0 == result)
+  // set 'salt' value for HKDF
+  if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, "kmyth", 5) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to initialize the message digest context.");
-    EVP_MD_CTX_free(ctx);
+    kmyth_sgx_log(LOG_ERR, "failed to set HKDF 'salt' value");
     return EXIT_FAILURE;
   }
 
-  // apply shared secret input
-  result = EVP_DigestUpdate(ctx, secret, secret_len);
-  if (0 == result)
+  // set input key value for HKDF
+  if (EVP_PKEY_CTX_set1_hkdf_key(pctx, secret_in_bytes, secret_in_len) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to update the message digest context");
-    EVP_MD_CTX_free(ctx);
+    kmyth_sgx_log(LOG_ERR, "failed to set HKDF input key bytes");
     return EXIT_FAILURE;
   }
 
-  *session_key = calloc(EVP_MAX_MD_SIZE, sizeof(unsigned char));
-  if (NULL == *session_key)
+  // set additional information input for HKDF
+  if (EVP_PKEY_CTX_add1_hkdf_info(pctx, "label", 5) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to allocate the session key buffer");
-    EVP_MD_CTX_free(ctx);
+    kmyth_sgx_log(LOG_ERR, "failed to set HKDF additional information input");
     return EXIT_FAILURE;
   }
-  *session_key_len = EVP_MAX_MD_SIZE * sizeof(unsigned char);
 
-  result = EVP_DigestFinal_ex(ctx, *session_key, session_key_len);
-  if (0 == result)
+  // derive key bits
+  unsigned char kdf_out[EVP_MAX_MD_SIZE];
+  size_t kdf_out_len = sizeof(kdf_out);
+
+  if (EVP_PKEY_derive(pctx, kdf_out, &kdf_out_len) != 1)
   {
-    kmyth_sgx_log(LOG_ERR, "failed to finalize the message digest context");
-    EVP_MD_CTX_free(ctx);
-    return 1;
+    kmyth_sgx_log(LOG_ERR, "HKDF extract and expand operation failed");
+    return EXIT_FAILURE;
   }
 
-  EVP_MD_CTX_free(ctx);
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "KDF Output: 0x%02X%02X...%02X%02X (%ld bytes)",
+           kdf_out[0], kdf_out[1],
+           kdf_out[kdf_out_len - 2],
+           kdf_out[kdf_out_len - 1],
+           kdf_out_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  EVP_PKEY_CTX_free(pctx);
+
+  // assign first half of key bytes generated to first output session key
+  *key1_out_len = kdf_out_len / 2;
+  *key1_out_bytes = calloc(*key1_out_len, sizeof(unsigned char));
+  if (NULL == *key1_out_bytes)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to allocate buffer for session key #1");
+    return EXIT_FAILURE;
+  }
+  memcpy(*key1_out_bytes, kdf_out, *key1_out_len);
+
+  // assign second half of key bytes generated to second output session key
+  *key2_out_len = *key1_out_len;
+  *key2_out_bytes = calloc(*key2_out_len, sizeof(unsigned char));
+  if (NULL == *key2_out_bytes)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to allocate buffer for session key #2");
+    return EXIT_FAILURE;
+  }
+  memcpy(*key2_out_bytes, kdf_out+*key1_out_len, *key2_out_len);
 
   return EXIT_SUCCESS;
 }
@@ -1032,7 +1011,7 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
   }
 
   // configure signing context
-  if (EVP_SignInit(mdctx, KMYTH_ECDH_HASH_ALG) != 1)
+  if (EVP_SignInit(mdctx, KMYTH_ECDH_MD) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "config of message digest signature context failed");
     EVP_MD_CTX_free(mdctx);
@@ -1096,8 +1075,8 @@ int verify_buffer(EVP_PKEY * ec_verify_pkey,
   }
 
   // 'initialize' (e.g., load public key)
-  if (EVP_DigestVerifyInit(mdctx, NULL, KMYTH_ECDH_HASH_ALG,
-                           NULL, ec_verify_pkey) != 1)
+  if (EVP_DigestVerifyInit(mdctx, NULL, KMYTH_ECDH_MD, NULL,
+                                        ec_verify_pkey) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "initialization of message digest context failed");
     EVP_MD_CTX_free(mdctx);

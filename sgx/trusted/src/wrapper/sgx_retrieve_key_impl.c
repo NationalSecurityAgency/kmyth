@@ -71,7 +71,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "composed Client Hello: 0x%02x%02x%02X%02X...%02x%02x (%ld bytes)",
+           "composed Client Hello: 0x%02X%02X%02X%02X...%02X%02X (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
            client_hello_msg[2], client_hello_msg[3],
            client_hello_msg[client_hello_msg_len - 2],
@@ -98,11 +98,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  free(client_hello_msg);
   kmyth_sgx_log(LOG_DEBUG, "exchanged client/server 'Hello' messages");
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "received Server Hello: 0x%02x%02x%02X%02X...%02x%02x (%ld bytes)",
+           "received Server Hello: 0x%02X%02X%02X%02X...%02X%02X (%ld bytes)",
            server_hello_msg[0], server_hello_msg[1],
            server_hello_msg[2], server_hello_msg[3],
            server_hello_msg[server_hello_msg_len - 2],
@@ -123,6 +122,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     kmyth_sgx_log(LOG_ERR, "'Server Hello' message parse/validate error");
     EVP_PKEY_free(client_ephemeral_key_pair);
     EVP_PKEY_free(server_ephemeral_pubkey);
+    free(client_hello_msg);
     free(server_hello_msg);
     close_socket_ocall(socket_fd);
   }
@@ -138,38 +138,69 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon shared secret computation failed");
+    EVP_PKEY_free(client_ephemeral_key_pair);
+    EVP_PKEY_free(server_ephemeral_pubkey);
+    free(client_hello_msg);
+    free(server_hello_msg);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side shared secret = 0x%02x%02x...%02x%02x (%lu bytes)",
+           "client-side shared secret = 0x%02X%02X...%02X%02X (%lu bytes)",
            session_secret[0], session_secret[1],
            session_secret[session_secret_len - 2],
            session_secret[session_secret_len - 1], session_secret_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
+  // clean-up
+  EVP_PKEY_free(client_ephemeral_key_pair);
+  EVP_PKEY_free(server_ephemeral_pubkey);
+
   // generate session key result for ECDH key agreement (client side)
-  unsigned char *session_key = NULL;
-  unsigned int session_key_len = 0;
+  unsigned char *session_key1 = NULL;
+  size_t session_key1_len = 0;
+  unsigned char *session_key2 = NULL;
+  size_t session_key2_len = 0;
 
   ret_val = compute_ecdh_session_key(session_secret,
                                      session_secret_len,
-                                     &session_key, &session_key_len);
-  kmyth_enclave_clear_and_free(session_secret, session_secret_len);
+                                     client_hello_msg,
+                                     client_hello_msg_len,
+                                     server_hello_msg,
+                                     server_hello_msg_len,
+                                     &session_key1,
+                                     &session_key1_len,
+                                     &session_key2,
+                                     &session_key2_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR,
                   "mutually agreed upon session key computation failed");
-    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    free(client_hello_msg);
+    free(server_hello_msg);
+    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side session key = 0x%02x%02x...%02x%02x (%d bytes)",
-           session_key[0], session_key[1],
-           session_key[session_key_len - 2],
-           session_key[session_key_len - 1], session_key_len);
+           "client-side session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
+           session_key1[0], session_key1[1],
+           session_key1[session_key1_len - 2],
+           session_key1[session_key1_len - 1], session_key1_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
+
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "client-side session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
+           session_key2[0], session_key2[1],
+           session_key2[session_key2_len - 2],
+           session_key2[session_key2_len - 1], session_key2_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // clean-up
+  free(client_hello_msg);
+  free(server_hello_msg);
+  kmyth_enclave_clear_and_free(session_secret, session_secret_len);
 
   // create encrypted key request message
   KMIP kmip_context = { 0 };
@@ -185,7 +216,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR, "Failed to build the KMIP Get request.");
     kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -193,7 +225,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   unsigned char *encrypted_request = NULL;
   size_t encrypted_request_len = 0;
 
-  ret_val = aes_gcm_encrypt(session_key, session_key_len,
+  ret_val = aes_gcm_encrypt(session_key1, session_key1_len,
                             key_request, key_request_len,
                             &encrypted_request, &encrypted_request_len);
   kmyth_enclave_clear_and_free(key_request, key_request_len);
@@ -201,7 +233,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR, "Failed to encrypt the KMIP key request.");
     kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -219,7 +252,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR, "Failed to send the KMIP key request.");
     kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -233,7 +267,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   {
     kmyth_sgx_log(LOG_ERR, "Failed to send the KMIP key request.");
     kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key, session_key_len);
+    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     return EXIT_FAILURE;
   }
 
@@ -241,11 +276,12 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   unsigned char *response = NULL;
   size_t response_len = 0;
 
-  ret_val = aes_gcm_decrypt(session_key, session_key_len,
+  ret_val = aes_gcm_decrypt(session_key2, session_key2_len,
                             encrypted_response, encrypted_response_len,
                             &response, &response_len);
   OPENSSL_free_ocall((void **) &encrypted_response);
-  kmyth_enclave_clear_and_free(session_key, session_key_len);
+  kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+  kmyth_enclave_clear_and_free(session_key2, session_key2_len);
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR, "Failed to decrypt the KMIP key response.");

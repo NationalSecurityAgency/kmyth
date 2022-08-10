@@ -51,8 +51,14 @@ typedef struct ECDHPeer
   X509 *remote_sign_cert;
   EVP_PKEY *local_ephemeral_key_pair;
   EVP_PKEY *remote_ephemeral_pubkey;
-  unsigned char *session_key;
-  unsigned int session_key_len;
+  unsigned char *client_hello_msg;
+  size_t client_hello_msg_len;
+  unsigned char *server_hello_msg;
+  size_t server_hello_msg_len;
+  unsigned char *session_key1;
+  size_t session_key1_len;
+  unsigned char *session_key2;
+  size_t session_key2_len;
 } ECDHPeer;
 
 static const struct option longopts[] = {
