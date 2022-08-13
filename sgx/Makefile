@@ -98,6 +98,7 @@ Common_App_Include_Paths += -Icommon/include
 Common_App_Include_Paths += -I$(SGX_SDK)/include
 Common_App_Include_Paths += -I../include/network
 Common_App_Include_Paths += -I../include/cipher
+Common_App_Include_Paths += -I../include/protocol
 
 
 Test_App_Include_Paths := -Itest/enclave
@@ -107,7 +108,6 @@ Test_App_Include_Paths += $(Common_App_Include_Paths)
 
 Demo_App_Include_Paths += -Idemo/enclave
 Demo_App_Include_Paths += -Idemo/server/include
-Demo_App_Include_Paths += -I../include/protocol
 Demo_App_Include_Paths += $(Common_App_Include_Paths)
 
 Common_App_C_Flags += $(SGX_COMMON_CFLAGS)

@@ -457,7 +457,7 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
                       msg_in[0], msg_in[1], msg_in[msg_in_len-2],
                       msg_in[msg_in_len-1], msg_in_len);
 
-  // parse out 'Client Hello' message fields
+  // validate 'Client Hello' message and parse out message fields
   ret = parse_client_hello_msg(ecdhconn->remote_sign_cert,
                                msg_in,
                                msg_in_len,
@@ -505,6 +505,86 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
     error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
+}
+
+void recv_key_request_msg(ECDHPeer * ecdhconn)
+{
+  int ret;
+
+  unsigned char msg_in_len_bytes[2] = { 0 };
+
+  kmyth_log(LOG_DEBUG, "waiting for 'Key Request' message");
+  ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
+
+  // process received message length
+  uint16_t ct_in_len = msg_in_len_bytes[0] << 8;
+  ct_in_len += msg_in_len_bytes[1];
+
+  // create appropriately sized receive buffer and read encrypted payload
+  unsigned char *ct_in = malloc(ct_in_len);
+  ecdh_recv_data(ecdhconn, ct_in, ct_in_len);
+  //ecdhconn->client_hello_msg = msg_in;
+  //ecdhconn->client_hello_msg_len = (size_t) msg_in_len;
+
+  kmyth_log(LOG_DEBUG, "received 'Key Request' CT: %02x%02x ... %02x%02x "
+                       "(%d bytes)",
+                       ct_in[0], ct_in[1], ct_in[ct_in_len-2],
+                       ct_in[ct_in_len-1], ct_in_len);
+
+  // create message buffer and populate with decrypted message
+  unsigned char *msg_in = malloc(ct_in_len);
+  size_t msg_in_len = 0;
+
+  if (EXIT_SUCCESS != aes_gcm_decrypt(ecdhconn->session_key1,
+                                      ecdhconn->session_key1_len,
+                                      ct_in,
+                                      ct_in_len,
+                                      &msg_in,
+                                      &msg_in_len))
+  {
+    kmyth_log(LOG_ERR, "decryption of 'Key Request' message failed");
+    error(ecdhconn);
+  }
+
+  kmyth_log(LOG_DEBUG, "received 'Key Request' PT: %02x%02x ... %02x%02x "
+                       "(%d bytes)",
+                       msg_in[0], msg_in[1], msg_in[msg_in_len-2],
+                       msg_in[msg_in_len-1], msg_in_len);
+
+  // validate 'Key Request' message and parse out message fields
+  unsigned char *kmip_key_req = NULL;
+  size_t kmip_key_req_len = 0;
+
+  if (EXIT_SUCCESS != parse_key_request_msg(ecdhconn->remote_sign_cert,
+                                            msg_in,
+                                            msg_in_len,
+                                            ecdhconn->remote_ephemeral_pubkey,
+                                            &kmip_key_req,
+                                            &kmip_key_req_len))
+  {
+    kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
+    error(ecdhconn);
+  }
+  kmyth_log(LOG_DEBUG, "KMIP 'Get Key' Request: 0x%02X%02X...%02X%02X",
+                       kmip_key_req[0], kmip_key_req[1],
+                       kmip_key_req[kmip_key_req_len-2],
+                       kmip_key_req[kmip_key_req_len-1]);
+
+/*
+  // parse out 'Client Hello' message fields
+  ret = parse_client_hello_msg(ecdhconn->remote_sign_cert,
+                               msg_in,
+                               msg_in_len,
+                               &(ecdhconn->remote_ephemeral_pubkey));
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
+    free(msg_in);
+    error(ecdhconn);
+  }
+*/
+
+  free(msg_in);
 }
 
 void get_session_key(ECDHPeer * ecdhconn)
@@ -686,6 +766,10 @@ void send_operational_key(ECDHPeer * ecdhconn)
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
             static_key[OP_KEY_SIZE - 1]);
 
+  sleep(5);
+
+  kmyth_log(LOG_DEBUG, "After sleep");
+
   ret = handle_key_request(ecdhconn, static_key, OP_KEY_SIZE);
   if (ret)
   {
@@ -729,11 +813,11 @@ void server_main(ECDHPeer * ecdhconn)
 
   send_server_hello_msg(ecdhconn);
 
-  //send_ephemeral_public(ecdhconn);
-
   get_session_key(ecdhconn);
 
-  send_operational_key(ecdhconn);
+  recv_key_request_msg(ecdhconn);
+
+  //send_operational_key(ecdhconn);
 }
 
 void client_main(ECDHPeer * ecdhconn)

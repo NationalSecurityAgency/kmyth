@@ -114,7 +114,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   EVP_PKEY_free(client_sign_privkey);
   X509_free(client_cert);
   X509_free(server_cert);
-
+/*
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
   snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
@@ -140,6 +140,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
     free(retrieve_key_result_id);
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "Key ID matched");
 
   // free memory for 'retrieve key' wrapper function results
   // Note: probably should instead return a pointer to these buffers so they
@@ -149,6 +150,6 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   kmyth_enclave_clear(retrieve_key_result_id, retrieve_key_result_id_len);
   free(retrieve_key_result);
   free(retrieve_key_result_id);
-
+*/
   return EXIT_SUCCESS;
 }

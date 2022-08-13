@@ -53,6 +53,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  kmyth_sgx_log(LOG_DEBUG, "created client-side ephemeral key pair");
 
   // compose 'Client Hello' message (client to server key agreement 'request')
   unsigned char *client_hello_msg = NULL;
@@ -71,9 +72,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "composed Client Hello: 0x%02X%02X%02X%02X...%02X%02X (%ld bytes)",
+           "composed Client Hello: 0x%02X%02X...%02X%02X (%ld bytes)",
            client_hello_msg[0], client_hello_msg[1],
-           client_hello_msg[2], client_hello_msg[3],
            client_hello_msg[client_hello_msg_len - 2],
            client_hello_msg[client_hello_msg_len - 1],
            client_hello_msg_len);
@@ -94,16 +94,14 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     kmyth_sgx_log(LOG_ERR, "key agreement message exchange unsuccessful");
     EVP_PKEY_free(client_ephemeral_key_pair);
     free(client_hello_msg);
-    free(server_hello_msg);
+    free_ocall((void **) &server_hello_msg);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "exchanged client/server 'Hello' messages");
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "received Server Hello: 0x%02X%02X%02X%02X...%02X%02X (%ld bytes)",
+           "received Server Hello: 0x%02X%02X...%02X%02X (%ld bytes)",
            server_hello_msg[0], server_hello_msg[1],
-           server_hello_msg[2], server_hello_msg[3],
            server_hello_msg[server_hello_msg_len - 2],
            server_hello_msg[server_hello_msg_len - 1],
            server_hello_msg_len);
@@ -123,7 +121,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     EVP_PKEY_free(client_ephemeral_key_pair);
     EVP_PKEY_free(server_ephemeral_pubkey);
     free(client_hello_msg);
-    free(server_hello_msg);
+    free_ocall((void **) &server_hello_msg);
     close_socket_ocall(socket_fd);
   }
 
@@ -136,17 +134,16 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                                        &session_secret, &session_secret_len);
   if (ret_val)
   {
-    kmyth_sgx_log(LOG_ERR,
-                  "mutually agreed upon shared secret computation failed");
+    kmyth_sgx_log(LOG_ERR, "shared secret computation failed");
     EVP_PKEY_free(client_ephemeral_key_pair);
     EVP_PKEY_free(server_ephemeral_pubkey);
     free(client_hello_msg);
-    free(server_hello_msg);
+    free_ocall((void **) &server_hello_msg);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side shared secret = 0x%02X%02X...%02X%02X (%lu bytes)",
+           "shared secret = 0x%02X%02X...%02X%02X (%ld bytes)",
            session_secret[0], session_secret[1],
            session_secret[session_secret_len - 2],
            session_secret[session_secret_len - 1], session_secret_len);
@@ -154,7 +151,6 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // clean-up
   EVP_PKEY_free(client_ephemeral_key_pair);
-  EVP_PKEY_free(server_ephemeral_pubkey);
 
   // generate session key result for ECDH key agreement (client side)
   unsigned char *session_key1 = NULL;
@@ -174,90 +170,83 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                                      &session_key2_len);
   if (ret_val)
   {
-    kmyth_sgx_log(LOG_ERR,
-                  "mutually agreed upon session key computation failed");
+    kmyth_sgx_log(LOG_ERR, "session key computation failed");
     free(client_hello_msg);
-    free(server_hello_msg);
+    free_ocall((void **) &server_hello_msg);
+    EVP_PKEY_free(server_ephemeral_pubkey);
     kmyth_enclave_clear_and_free(session_key1, session_key1_len);
     kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
+           "session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
            session_key1[0], session_key1[1],
            session_key1[session_key1_len - 2],
            session_key1[session_key1_len - 1], session_key1_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "client-side session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
+           "session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
            session_key2[0], session_key2[1],
            session_key2[session_key2_len - 2],
            session_key2[session_key2_len - 1], session_key2_len);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
-  // clean-up
+  // clean-up memory for session key generation inputs
   free(client_hello_msg);
-  free(server_hello_msg);
+  free_ocall((void **) &server_hello_msg);
   kmyth_enclave_clear_and_free(session_secret, session_secret_len);
 
-  // create encrypted key request message
-  KMIP kmip_context = { 0 };
-  kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
+  // compose 'Key Request' message (client to server request to retrieve key)
+  unsigned char *key_request_msg = NULL;
+  size_t key_request_msg_len = 0;
 
-  unsigned char *key_request = NULL;
-  size_t key_request_len = 0;
-
-  ret_val = build_kmip_get_request(&kmip_context,
-                                   req_key_id, req_key_id_len,
-                                   &key_request, &key_request_len);
-  if (ret_val)
+  ret_val = compose_key_request_msg(client_sign_privkey,
+                                    session_key1,
+                                    session_key1_len,
+                                    req_key_id,
+                                    req_key_id_len,
+                                    server_ephemeral_pubkey,
+                                    &key_request_msg,
+                                    &key_request_msg_len);
+  if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "Failed to build the KMIP Get request.");
-    kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
-    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
+    kmyth_sgx_log(LOG_ERR, "error creating 'Key Request' message");
+    EVP_PKEY_free(server_ephemeral_pubkey);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "composed Key Request: 0x%02X%02X...%02X%02X (%ld bytes)",
+           key_request_msg[0], key_request_msg[1],
+           key_request_msg[key_request_msg_len - 2],
+           key_request_msg[key_request_msg_len - 1],
+           key_request_msg_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
-  unsigned char *encrypted_request = NULL;
-  size_t encrypted_request_len = 0;
+  // cleanup
+  EVP_PKEY_free(server_ephemeral_pubkey);
+  kmyth_enclave_clear_and_free(session_key1, session_key1_len);
 
-  ret_val = aes_gcm_encrypt(session_key1, session_key1_len,
-                            key_request, key_request_len,
-                            &encrypted_request, &encrypted_request_len);
-  kmyth_enclave_clear_and_free(key_request, key_request_len);
-  if (ret_val)
-  {
-    kmyth_sgx_log(LOG_ERR, "Failed to encrypt the KMIP key request.");
-    kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
-    kmyth_enclave_clear_and_free(session_key2, session_key2_len);
-    close_socket_ocall(socket_fd);
-    return EXIT_FAILURE;
-  }
-
-  // send request and get response from key server
-  unsigned char *encrypted_response = NULL;
-  size_t encrypted_response_len = 0;
-
+  // send 'Key Request' message to TLS proxy (server)
   ret_ocall = ecdh_send_msg_ocall(&ret_val,
-                                  encrypted_request,
-                                  encrypted_request_len,
+                                  key_request_msg,
+                                  key_request_msg_len,
                                   socket_fd);
-  kmyth_enclave_clear_and_free(encrypted_request, encrypted_request_len);
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "Failed to send the KMIP key request.");
-    kmip_destroy(&kmip_context);
-    kmyth_enclave_clear_and_free(session_key1, session_key1_len);
+    kmyth_sgx_log(LOG_ERR, "Failed to send the 'Key Request' message");
+    free(key_request_msg);
     kmyth_enclave_clear_and_free(session_key2, session_key2_len);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
 
+  // clean-up
+  free(key_request_msg);
+
+/*
   ret_ocall = ecdh_recv_msg_ocall(&ret_val,
                                   &encrypted_response,
                                   &encrypted_response_len,
@@ -317,7 +306,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            "Received KMIP object with key: 0x%02X..%02X",
            (*retrieved_key)[0], (*retrieved_key)[*retrieved_key_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
-
+*/
   return EXIT_SUCCESS;
 }
  

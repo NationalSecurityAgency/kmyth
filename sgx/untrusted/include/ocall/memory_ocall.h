@@ -20,7 +20,17 @@ extern "C"
  * @brief Supports freeing a memory block that was allocated in untrusted
  *        memory from within enclave.
  *
- * @param[in] mem_block_ptr     Pointer to memory buffer to be freed
+ * @param[in] mem_block_ptr   Pointer to memory buffer to be freed
+ *
+ * @return                    None
+ */
+  void free_ocall(void **mem_block_ptr);
+
+/**
+ * @brief Supports freeing an OpenSSL memory block that was allocated in
+ *        untrusted memory from within enclave.
+ *
+ * @param[in] mem_block_ptr    Pointer to memory buffer to be freed
  *
  * @return                     None
  */

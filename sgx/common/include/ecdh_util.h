@@ -26,6 +26,10 @@ extern "C"
 #include <openssl/kdf.h>
 #include <openssl/err.h>
 
+#include <kmip/kmip.h>
+
+#include "kmip_util.h"
+#include "aes_gcm.h"
 #include "kmyth_enclave_common.h"
 
 /**
@@ -140,28 +144,28 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
 /**
  * @brief Computes session key from a shared secret value (and other) inputs
  *
- * @param[in]  secret_in_bytes     Secret value that will be used as the HKDF
+ * @param[in]  secret_in_bytes  Secret value that will be used as the HKDF
  *                              'input key' bytes
  *
- * @param[in]  secret_in_len       Length (in bytes) of the input secret value
+ * @param[in]  secret_in_len    Length (in bytes) of the input secret value
  * 
- * @param[in]  msg1_in_bytes       Byte buffer containing the 'Client Hello'
+ * @param[in]  msg1_in_bytes    Byte buffer containing the 'Client Hello'
  *                              message bytes (length of client ID, client ID,
  *                              length of client enphemeral public key, client
  *                              ephemeral public key, length of signature,
  *                              signature)
  * 
- * @param[in]  msg1_in_len         Length (in bytes) of the input 'Client Hello'
+ * @param[in]  msg1_in_len      Length (in bytes) of the input 'Client Hello'
  *                              message
  * 
- * @param[in]  msg2_in_bytes       Byte buffer containing the 'Server Hello'
+ * @param[in]  msg2_in_bytes    Byte buffer containing the 'Server Hello'
  *                              message bytes (length of server ID, server ID,
  *                              length of client ephemeral public key, client
  *                              ephemeral public key, length of server
  *                              ephemeral public key, server ephemeral public
  *                              key, length of signature, signature)
  * 
- * @param[in]  msg2_in_len         Length (in bytes) of the input 'Server Hello'
+ * @param[in]  msg2_in_len      Length (in bytes) of the input 'Server Hello'
  *                              message
  *
  * @param[out] key1_out_bytes   Pointer to HKDF output key bytes result (64 bytes,
@@ -170,7 +174,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *                              input secret value. This result will be used
  *                              as a session key value.
  *
- * @param[out] key1_out_len         Pointer to the length (in bytes) of the
+ * @param[out] key1_out_len     Pointer to the length (in bytes) of the
  *                              session key result.
  * 
  * @param[out] key2_out_bytes
@@ -406,6 +410,109 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
                              size_t msg_in_len,
                              EVP_PKEY * client_eph_pub_in,
                              EVP_PKEY ** server_eph_pub_out);
+
+/**
+ * @brief Assembles the 'Key Request' message, a signed, encrypted
+ *        request used by the enclave client to specify the key to
+ *        be retrieved from the key server. This message includes a
+ *        Key Management Interoperability Protocol (KMIP) request to
+ *        be forwarded to a key server implementing KMIP protocols.
+ * 
+ *        The body of the 'Key Request' message contains the
+ *        following fields concatenated in the below order:
+ *          - length (in bytes) of the KMIP key request
+ *          - KMIP key request bytes
+ *          - length (in bytes) of the server public ephemeral
+ *          - server public ephemeral bytes
+ * 
+ *        The unsigned integer "length" values have been specified as
+ *        two-byte values (uint16_t) stored in the byte array in
+ *        big-endian (network) byte order. This is done to make these
+ *        parameters a well-defined, machine-indepenedent size so that
+ *        they can be deterministically parsed by the message recipient.
+ * 
+ *        An elliptic curve signature (using the client's signing key)
+ *        is computed over the message body and appended to the tail end
+ *        of the message (as a length/value pair).
+ * 
+ * @param[in]  client_sign_key      Pointer to client's elliptic curve
+ *                                  signing key (EVP_PKEY)
+ * 
+ * @param[in]  msg_enc_key_bytes
+ * 
+ * @param[in]  msg_enc_key_len
+ * 
+ * @param[in]  req_key_id_bytes
+ * 
+ * @param[in]  req_key_id_len
+ * 
+ * @param[in]  server_eph_pubkey    Pointer to public key from the client's
+ *                                  public epehemeral contribution (EVP_PKEY)
+ *                                  received in the 'Client Hello' message
+ * 
+ * @param[out] msg_out              Pointer to byte buffer containing the
+ *                                  'Key Request' message to be exchanged
+ *                                  with a peer (e.g., key server)
+ *
+ * @param[out] msg_out_len          Pointer to 'Key Request' message length
+ *                                  (in bytes)
+ *
+ * @return 0 on success, 1 on error
+ */
+  int compose_key_request_msg(EVP_PKEY * client_sign_key,
+                              unsigned char * msg_enc_key_bytes,
+                              size_t msg_enc_key_len,
+                              unsigned char * req_key_id_bytes,
+                              size_t req_key_id_len,
+                              EVP_PKEY * server_eph_pubkey,
+                              unsigned char ** msg_out,
+                              size_t * msg_out_len);
+
+/**
+ * @brief Validates and parses the 'Key Request' message
+ * 
+ *        A received 'Key Request' message contains the
+ *        following fields concatenated in the below order:
+ *          - KMIP key request size (two-byte, big-endian unsigned integer)
+ *          - KMIP key request (byte array)
+ *          - server ephemeral size (two-byte, big-endian unsigned integer)
+ *          - server_ephemeral_bytes (DER-formatted EC_KEY byte array)
+ *          - message signature size (two-byte, big-endian unsigned integer)
+ *          - message signature (byte array)
+ * 
+ *        The elliptic curve signature (over the body of the message) is first
+ *        verified (using the public key provided as an input parameter)
+ * 
+ * @param[in]  msg_sign_cert         Pointer to X509 formatted public cert
+ *                                   to be used in validating both the
+ *                                   server identity information contained
+ *                                   within and the signature computed over
+ *                                   the received "Server Hello' message
+ * 
+ * @param[in]  msg_in                Byte buffer containing a 'Server Hello'
+ *                                   message received from a remote peer
+ *                                   (TLS proxy for server)
+ *
+ * @param[in]  msg_in_len            'Server Hello' message length (in bytes)
+ * 
+ * @param[out] kmip_key_req_out      Pointer to the client's public epehemeral
+ *                                   contribution (EC_KEY struct) - used to
+ *                                   validate the value received as part of the
+ *                                   'Server Hello' response
+ *
+ * @param[out] kmip_key_req_out_len  Pointer to pointer to the parsed and
+ *                                   unmarshalled contents of the server's
+ *                                   public epehemeral contribution (EC_KEY
+ *                                   struct)
+ *
+ * @return 0 on success, 1 on error
+ */
+  int parse_key_request_msg(X509 * msg_sign_cert,
+                            unsigned char * msg_in,
+                            size_t msg_in_len,
+                            EVP_PKEY * server_eph_pub_in,
+                            unsigned char ** kmip_key_req_out,
+                            size_t * kmip_key_req_out_len);
 
 /**
  * @brief Computes an elliptic curve signature over the input byte array
