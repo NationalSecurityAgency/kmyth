@@ -517,72 +517,37 @@ void recv_key_request_msg(ECDHPeer * ecdhconn)
   ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
 
   // process received message length
-  uint16_t ct_in_len = msg_in_len_bytes[0] << 8;
-  ct_in_len += msg_in_len_bytes[1];
+  uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
+  msg_in_len += msg_in_len_bytes[1];
 
   // create appropriately sized receive buffer and read encrypted payload
-  unsigned char *ct_in = malloc(ct_in_len);
-  ecdh_recv_data(ecdhconn, ct_in, ct_in_len);
-  //ecdhconn->client_hello_msg = msg_in;
-  //ecdhconn->client_hello_msg_len = (size_t) msg_in_len;
+  unsigned char *msg_in = malloc(msg_in_len);
+  ecdh_recv_data(ecdhconn, msg_in, (size_t) msg_in_len);
 
-  kmyth_log(LOG_DEBUG, "received 'Key Request' CT: %02x%02x ... %02x%02x "
-                       "(%d bytes)",
-                       ct_in[0], ct_in[1], ct_in[ct_in_len-2],
-                       ct_in[ct_in_len-1], ct_in_len);
-
-  // create message buffer and populate with decrypted message
-  unsigned char *msg_in = malloc(ct_in_len);
-  size_t msg_in_len = 0;
-
-  if (EXIT_SUCCESS != aes_gcm_decrypt(ecdhconn->session_key1,
-                                      ecdhconn->session_key1_len,
-                                      ct_in,
-                                      ct_in_len,
-                                      &msg_in,
-                                      &msg_in_len))
-  {
-    kmyth_log(LOG_ERR, "decryption of 'Key Request' message failed");
-    error(ecdhconn);
-  }
-
-  kmyth_log(LOG_DEBUG, "received 'Key Request' PT: %02x%02x ... %02x%02x "
-                       "(%d bytes)",
+  kmyth_log(LOG_DEBUG, "received 'Key Request' (CT): %02X%02X ... %02X%02X"
+                       " (%d bytes)",
                        msg_in[0], msg_in[1], msg_in[msg_in_len-2],
                        msg_in[msg_in_len-1], msg_in_len);
 
-  // validate 'Key Request' message and parse out message fields
-  unsigned char *kmip_key_req = NULL;
-  size_t kmip_key_req_len = 0;
-
+  // decrypt, validate message, and parse out 'Key Request' fields
   if (EXIT_SUCCESS != parse_key_request_msg(ecdhconn->remote_sign_cert,
+                                            ecdhconn->session_key1,
+                                            ecdhconn->session_key1_len,
                                             msg_in,
                                             msg_in_len,
-                                            ecdhconn->remote_ephemeral_pubkey,
-                                            &kmip_key_req,
-                                            &kmip_key_req_len))
+                                            ecdhconn->local_ephemeral_key_pair,
+                                            &(ecdhconn->kmip_key_request),
+                                            &(ecdhconn->kmip_key_request_len)))
   {
     kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
     error(ecdhconn);
   }
-  kmyth_log(LOG_DEBUG, "KMIP 'Get Key' Request: 0x%02X%02X...%02X%02X",
-                       kmip_key_req[0], kmip_key_req[1],
-                       kmip_key_req[kmip_key_req_len-2],
-                       kmip_key_req[kmip_key_req_len-1]);
-
-/*
-  // parse out 'Client Hello' message fields
-  ret = parse_client_hello_msg(ecdhconn->remote_sign_cert,
-                               msg_in,
-                               msg_in_len,
-                               &(ecdhconn->remote_ephemeral_pubkey));
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
-    free(msg_in);
-    error(ecdhconn);
-  }
-*/
+  kmyth_log(LOG_DEBUG, "KMIP Get Key Request: 0x%02X%02X...%02X%02X"
+            " (%ld bytes)", (ecdhconn->kmip_key_request)[0],
+            (ecdhconn->kmip_key_request)[1],
+            (ecdhconn->kmip_key_request)[ecdhconn->kmip_key_request_len - 2],
+            (ecdhconn->kmip_key_request)[ecdhconn->kmip_key_request_len - 1],
+            ecdhconn->kmip_key_request_len);
 
   free(msg_in);
 }
@@ -607,10 +572,8 @@ void get_session_key(ECDHPeer * ecdhconn)
             session_secret[session_secret_len - 2],
             session_secret[session_secret_len - 1], session_secret_len);
 
-  // clean-up
-  //EC_POINT_clear_free(reph);
-
-  // generate session key result for ECDH key agreement (server side)
+  // generate two session key results for ECDH key agreement (server side)
+  // by passing 'shared secret' through a HMAC key derivation function (HKDF)
   ret = compute_ecdh_session_key(session_secret,
                                  session_secret_len,
                                  ecdhconn->client_hello_msg,
@@ -693,12 +656,12 @@ int request_key(ECDHPeer *ecdhconn,
   return EXIT_SUCCESS;
 }
 
-int handle_key_request(ECDHPeer *ecdhconn,
-                      unsigned char *key, size_t key_len)
+int handle_key_request(ECDHPeer *ecdhconn)
 {
+  kmyth_log(LOG_DEBUG, "handle_key_request()");
+
   int ret;
-  unsigned char *request = NULL;
-  size_t request_len = 0;
+
   unsigned char *key_id = NULL;
   size_t key_id_len = 0;
   unsigned char *response = NULL;
@@ -707,23 +670,18 @@ int handle_key_request(ECDHPeer *ecdhconn,
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
 
-  /* Receive and parse request. */
-  ecdh_recv_decrypt(ecdhconn, &request, &request_len);
-
-  if (request_len > kmip_context.max_message_size)
+  if (ecdhconn->kmip_key_request_len > kmip_context.max_message_size)
   {
     kmyth_log(LOG_ERR, "KMIP request exceeds max message size.");
-    kmyth_clear_and_free(request, request_len);
     kmip_destroy(&kmip_context);
     return EXIT_FAILURE;
   }
 
   // Assuming we received a Get request.
   ret = parse_kmip_get_request(&kmip_context,
-                               request, request_len,
+                               ecdhconn->kmip_key_request,
+                               ecdhconn->kmip_key_request_len,
                                &key_id, &key_id_len);
-  kmyth_clear_and_free(request, request_len);
-  request = NULL;
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to parse the KMIP Get request.");
@@ -733,10 +691,17 @@ int handle_key_request(ECDHPeer *ecdhconn,
   kmyth_log(LOG_DEBUG, "Received a KMIP Get request for key ID: %.*s",
             key_id_len, key_id);
 
+  unsigned char static_key[OP_KEY_SIZE] = {
+    0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
+    0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
+  };
+  kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
+            static_key[OP_KEY_SIZE - 1]);
+
   /* Build and send response. */
   ret = build_kmip_get_response(&kmip_context,
                                 key_id, key_id_len,
-                                key, key_len,
+                                static_key, sizeof(static_key),
                                 &response, &response_len);
   kmyth_clear_and_free(key_id, key_id_len);
   key_id = NULL;
@@ -746,6 +711,13 @@ int handle_key_request(ECDHPeer *ecdhconn,
     kmyth_log(LOG_ERR, "Failed to build the KMIP Get response.");
     return EXIT_FAILURE;
   }
+
+  kmyth_log(LOG_DEBUG, "KMIP Get Key Response: 0x%02X%02X ... %02X%02X"
+                       " (%ld bytes)",
+                       response[0], response[1],
+                       response[response_len-2],
+                       response[response_len-1],
+                       response_len);
 
   ecdh_encrypt_send(ecdhconn, response, response_len);
   kmyth_clear_and_free(response, response_len);
@@ -770,7 +742,7 @@ void send_operational_key(ECDHPeer * ecdhconn)
 
   kmyth_log(LOG_DEBUG, "After sleep");
 
-  ret = handle_key_request(ecdhconn, static_key, OP_KEY_SIZE);
+  ret = handle_key_request(ecdhconn);
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to send the operational key.");
@@ -817,7 +789,9 @@ void server_main(ECDHPeer * ecdhconn)
 
   recv_key_request_msg(ecdhconn);
 
-  //send_operational_key(ecdhconn);
+  kmyth_log(LOG_DEBUG, "test");
+
+  handle_key_request(ecdhconn);
 }
 
 void client_main(ECDHPeer * ecdhconn)

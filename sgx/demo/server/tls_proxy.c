@@ -370,6 +370,8 @@ static int setup_ecdhconn(TLSProxy * proxy)
 
   recv_client_hello_msg(ecdhconn);
 
+  send_server_hello_msg(ecdhconn);
+
   get_session_key(ecdhconn);
 
   return 0;
@@ -467,6 +469,13 @@ int main(int argc, char **argv)
 {
   TLSProxy proxy;
 
+  // setup default logging parameters
+  set_app_name("     proxy       ");
+  set_app_version("");
+  set_applog_path("../sgx/sgx_retrievekey_demo.log");
+  set_applog_severity_threshold(DEMO_LOG_LEVEL);
+  set_applog_output_mode(0);
+
   proxy_init(&proxy);
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
@@ -474,6 +483,7 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
+  kmyth_log(LOG_DEBUG, "calling proxy_main");
   proxy_main(&proxy);
 
   proxy_cleanup(&proxy);

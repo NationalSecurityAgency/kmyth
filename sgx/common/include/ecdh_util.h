@@ -508,6 +508,8 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  * @return 0 on success, 1 on error
  */
   int parse_key_request_msg(X509 * msg_sign_cert,
+                            unsigned char * msg_enc_key_bytes,
+                            size_t msg_enc_key_len,
                             unsigned char * msg_in,
                             size_t msg_in_len,
                             EVP_PKEY * server_eph_pub_in,

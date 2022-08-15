@@ -1040,11 +1040,12 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
     return EXIT_FAILURE;
   }
 
+  // encrypt signed 'Key Request' message using the specified key
   if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key_bytes, msg_enc_key_len,
                                       msg_buf, msg_buf_len,
                                       msg_out, msg_out_len))
   {
-    kmyth_sgx_log(LOG_ERR, "Failed to encrypt the KMIP key request.");
+    kmyth_sgx_log(LOG_ERR, "failed to encrypt the 'Key Request' message");
     free(msg_buf);
     return EXIT_FAILURE;
   }
@@ -1057,6 +1058,8 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
  * parse_key_request_msg()
  ****************************************************************************/
 int parse_key_request_msg(X509 * msg_sign_cert,
+                          unsigned char * msg_enc_key_bytes,
+                          size_t msg_enc_key_len,
                           unsigned char * msg_in,
                           size_t msg_in_len,
                           EVP_PKEY * server_eph_pub_in,
@@ -1065,48 +1068,80 @@ int parse_key_request_msg(X509 * msg_sign_cert,
 {
   char msg[MAX_LOG_MSG_LEN];
 
+  // decrypt message using input message encryption key
+  unsigned char *msg_buf = NULL;
+  size_t msg_buf_len = 0;
+
+  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_enc_key_bytes, msg_enc_key_len,
+                                      msg_in, msg_in_len,
+                                      &msg_buf, &msg_buf_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to decrypt the 'Key Request' message");
+    free(msg_buf);
+    return EXIT_FAILURE;
+  }
+
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "'Key Request' message (PT): 0x%02X%02X ,,, %02X%02X (%ld bytes)",
+           msg_buf[0], msg_buf[1], msg_buf[msg_buf_len-1],
+           msg_buf[msg_buf_len-2], msg_buf_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // parse message body fields into variables
   int buf_index = 0;
 
   // get size (in bytes) of KMIP 'get key' request field
-  uint16_t kmip_key_req_len = msg_in[buf_index] << 8;
-  kmip_key_req_len += msg_in[buf_index+1];
+  uint16_t kmip_key_req_len = msg_buf[buf_index] << 8;
+  kmip_key_req_len += msg_buf[buf_index+1];
   buf_index += 2;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "KMIP Request size = %d bytes)", kmip_key_req_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // get KMIP 'get key' request bytes
-  uint8_t *kmip_key_req_bytes = malloc(kmip_key_req_len);
-  memcpy(kmip_key_req_bytes, msg_in+buf_index, kmip_key_req_len);
-  buf_index += kmip_key_req_len;
+  *kmip_key_req_out_len = (size_t) kmip_key_req_len;
+  *kmip_key_req_out = malloc(*kmip_key_req_out_len);
+  memcpy(*kmip_key_req_out, msg_buf+buf_index, *kmip_key_req_out_len);
+  buf_index += *kmip_key_req_out_len;
 
   // get size of server-side ephemeral public key field
-  uint16_t server_eph_pub_len = msg_in[buf_index] << 8;
-  server_eph_pub_len += msg_in[buf_index+1];
+  uint16_t server_eph_pub_len = msg_buf[buf_index] << 8;
+  server_eph_pub_len += msg_buf[buf_index+1];
   buf_index += 2;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "server-side ephemeral size = %d bytes)",
+                                 server_eph_pub_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // get server-side ephemeral public key field bytes
   unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
-  memcpy(server_eph_pub_bytes, msg_in+buf_index, server_eph_pub_len);
+  memcpy(server_eph_pub_bytes, msg_buf+buf_index, server_eph_pub_len);
   buf_index += server_eph_pub_len;
 
   // buffer index now points just past end of message body
   // capture this index so we can access message body as part of input buffer
   size_t msg_body_size = buf_index;
 
+  snprintf(msg, MAX_LOG_MSG_LEN, "message body size = %ld bytes)", msg_body_size);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
   // get size of message signature
-  uint16_t msg_sig_len = msg_in[buf_index] << 8;
-  msg_sig_len += msg_in[buf_index+1];
+  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
+  msg_sig_len += msg_buf[buf_index+1];
   buf_index += 2;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "signature size = %d bytes)", msg_sig_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
-  memcpy(msg_sig_bytes, msg_in+buf_index, msg_sig_len);
+  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
   // check that number of parsed bytes matches message length input parameter
-  if (buf_index != msg_in_len)
+  if (buf_index != msg_buf_len)
   {
     kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
-    free(kmip_key_req_bytes);
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
@@ -1118,7 +1153,6 @@ int parse_key_request_msg(X509 * msg_sign_cert,
   if (msg_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
-    free(kmip_key_req_bytes);
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
@@ -1126,7 +1160,7 @@ int parse_key_request_msg(X509 * msg_sign_cert,
 
   // check message signature
   if (EXIT_SUCCESS != verify_buffer(msg_sign_pubkey,
-                                    msg_in,
+                                    msg_buf,
                                     msg_body_size,
                                     msg_sig_bytes,
                                     msg_sig_len))
@@ -1145,7 +1179,6 @@ int parse_key_request_msg(X509 * msg_sign_cert,
   if (rcvd_server_eph_ec_pub == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
-    free(kmip_key_req_bytes);
     free(server_eph_pub_bytes);
     return EXIT_FAILURE;
   } 
@@ -1155,7 +1188,6 @@ int parse_key_request_msg(X509 * msg_sign_cert,
                           NULL))
   {
     kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
-    free(kmip_key_req_bytes);
     free(server_eph_pub_bytes);
     EC_KEY_free(rcvd_server_eph_ec_pub);
     return EXIT_FAILURE;
@@ -1171,8 +1203,9 @@ int parse_key_request_msg(X509 * msg_sign_cert,
     return EXIT_FAILURE;
   }
   EC_KEY_free(rcvd_server_eph_ec_pub);
-/*
-  // check received client ephemeral public matches expected value
+
+  // check received server ephemeral public matches expected value
+  // (Note: EVP_PKEY_cmp() compares public parameters and components)
   if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_server_eph_pub,
                         (const EVP_PKEY *) server_eph_pub_in))
   {
@@ -1181,7 +1214,7 @@ int parse_key_request_msg(X509 * msg_sign_cert,
     return EXIT_FAILURE;
   }
   EVP_PKEY_free(rcvd_server_eph_pub);
-*/
+
   kmyth_sgx_log(LOG_DEBUG,
                 "parsed/validated server ephemeral in 'Key Request'");
 

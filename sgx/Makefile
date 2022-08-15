@@ -353,10 +353,12 @@ demo-test-keys-certs: demo/data/client_priv_test.pem \
 demo: demo-all demo-test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "\n"
-	@echo "================================================================="
-	@echo "DEMONSTRATION LOG:  Enclave (client) =>     <= TLS Proxy (server)"
-	@echo "=================================================================\n"
+	@echo "==================================================================================================="
+	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
+	@echo "===================================================================================================\n"
 	@$(CURDIR)/$(Server_Name) -r demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 &
+	@sleep 1
+	@$(CURDIR)/$(Proxy_Name) -I 127.0.0.1 -P 1234 -r demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@echo "\nRUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"

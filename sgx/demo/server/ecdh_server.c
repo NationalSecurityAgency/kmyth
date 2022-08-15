@@ -14,8 +14,8 @@ int main(int argc, char **argv)
   ECDHPeer ecdhconn;
 
   // setup default logging parameters
-  set_app_name("   <=  kmyth/server-TLSproxy");
-  set_app_version("0.0.0");
+  set_app_name("          server ");
+  set_app_version("");
   set_applog_path("../sgx/sgx_retrievekey_demo.log");
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
   set_applog_output_mode(0);

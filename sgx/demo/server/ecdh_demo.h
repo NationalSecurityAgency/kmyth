@@ -55,6 +55,8 @@ typedef struct ECDHPeer
   size_t client_hello_msg_len;
   unsigned char *server_hello_msg;
   size_t server_hello_msg_len;
+  unsigned char *kmip_key_request;
+  size_t kmip_key_request_len;
   unsigned char *session_key1;
   size_t session_key1_len;
   unsigned char *session_key2;
