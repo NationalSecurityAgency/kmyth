@@ -17,8 +17,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
+#include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -33,6 +35,9 @@
 #include "socket_util.h"
 
 #define UNSET_FD -1
+
+#define KEY_ID "7"
+#define KEY_ID_LEN 1
 #define OP_KEY_SIZE 16
 
 typedef struct ECDHPeer
@@ -63,35 +68,18 @@ typedef struct ECDHPeer
   size_t session_key2_len;
 } ECDHPeer;
 
-static const struct option longopts[] = {
-  // Key files
-  {"priv", required_argument, 0, 'r'},
-  {"pub", required_argument, 0, 'u'},
-  // Network info
-  {"port", required_argument, 0, 'p'},
-  {"ip", required_argument, 0, 'i'},
-  // Test options
-  {"maxconn", required_argument, 0, 'm'},
-  // Misc
-  {"help", no_argument, 0, 'h'},
-  {0, 0, 0, 0}
-};
-
-static void usage(const char *prog);
-
 void init(ECDHPeer * ecdhconn);
 void cleanup(ECDHPeer * ecdhconn);
 
-void error(ECDHPeer * ecdhconn);
+void ecdh_error(ECDHPeer * ecdhconn);
 
-void get_options(ECDHPeer * ecdhconn, int argc, char **argv);
-void check_options(ECDHPeer * ecdhconn);
+void check_ecdh_options(ECDHPeer * ecdhconn);
 
 void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
 void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
 
-void create_server_socket(ECDHPeer * ecdhconn);
-void create_client_socket(ECDHPeer * ecdhconn);
+void create_ecdh_server_socket(ECDHPeer * ecdhconn);
+void create_ecdh_client_socket(ECDHPeer * ecdhconn);
 
 void load_local_sign_key(ECDHPeer * ecdhconn);
 void load_local_sign_cert(ECDHPeer * ecdhconn);
@@ -107,8 +95,5 @@ void get_session_key(ECDHPeer * ecdhconn);
 
 void send_operational_key(ECDHPeer * ecdhconn);
 void get_operational_key(ECDHPeer * ecdhconn);
-
-void server_main(ECDHPeer * ecdhconn);
-void client_main(ECDHPeer * ecdhconn);
 
 #endif

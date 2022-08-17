@@ -1,12 +1,10 @@
 /**
- * @file ecdh_demo.c
+ * @file demo_ecdh_util.c
  * @brief Shared code for the ECDHE client/server applications.
  */
 
-#include "ecdh_demo.h"
+#include "demo_ecdh_util.h"
 
-#define KEY_ID "7"
-#define KEY_ID_LEN 1
 
 void init(ECDHPeer * ecdhconn)
 {
@@ -70,78 +68,13 @@ void cleanup(ECDHPeer * ecdhconn)
   init(ecdhconn);
 }
 
-void error(ECDHPeer * ecdhconn)
+void ecdh_error(ECDHPeer * ecdhconn)
 {
   cleanup(ecdhconn);
   exit(EXIT_FAILURE);
 }
 
-static void usage(const char *prog)
-{
-  fprintf(stdout,
-          "\nusage: %s [options]\n\n"
-          "options are:\n\n"
-          "Key File Information --\n"
-          "  -r or --private  Path to the file containing the local private key.\n"
-          "  -u or --public   Path to the file containing the remote public key.\n"
-          "Network Information --\n"
-          "  -p or --port     The port number to use.\n"
-          "  -i or --ip       The IP address or hostname of the server (only used by the client).\n"
-          "Test Options --\n"
-          "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
-          "Misc --\n"
-          "  -h or --help     Help (displays this usage).\n\n", prog);
-}
-
-void get_options(ECDHPeer * ecdhconn, int argc, char **argv)
-{
-  // Exit early if there are no arguments.
-  if (1 == argc)
-  {
-    usage(argv[0]);
-    exit(EXIT_SUCCESS);
-  }
-
-  int options;
-  int option_index = 0;
-
-  while ((options =
-          getopt_long(argc, argv, "r:c:u:p:i:m:h", longopts, &option_index)) != -1)
-  {
-    switch (options)
-    {
-    // Key files
-    case 'r':
-      ecdhconn->local_priv_sign_key_path = optarg;
-      break;
-    case 'c':
-      ecdhconn->local_pub_sign_cert_path = optarg;
-      break;
-    case 'u':
-      ecdhconn->remote_pub_sign_cert_path = optarg;
-      break;
-    // Network
-    case 'p':
-      ecdhconn->port = optarg;
-      break;
-    case 'i':
-      ecdhconn->ip = optarg;
-      break;
-    // Test
-    case 'm':
-      ecdhconn->maxconn = atoi(optarg);
-      break;
-    // Misc
-    case 'h':
-      usage(argv[0]);
-      exit(EXIT_SUCCESS);
-    default:
-      error(ecdhconn);
-    }
-  }
-}
-
-void check_options(ECDHPeer * ecdhconn)
+void check_ecdh_options(ECDHPeer * ecdhconn)
 {
   bool err = false;
 
@@ -173,9 +106,10 @@ void check_options(ECDHPeer * ecdhconn)
   if (err)
   {
     kmyth_log(LOG_ERR, "invalid command-line arguments");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
+
 
 void ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len)
 {
@@ -185,7 +119,7 @@ void ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len)
   if (bytes_sent != len)
   {
     kmyth_log(LOG_ERR, "Failed to send a message.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -197,13 +131,13 @@ void ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
   if (bytes_read == 0)
   {
     kmyth_log(LOG_ERR, "ECDH connection is closed.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   else if (bytes_read != len)
   {
     /* With these protocols, we should always receive exactly (len) bytes. */
     kmyth_log(LOG_ERR, "Failed to receive a message.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -211,7 +145,7 @@ void ecdh_send_msg(ECDHPeer * ecdhconn, unsigned char *buf, size_t len)
 {
   if (EXIT_SUCCESS != send_ecdh_msg(ecdhconn->socket_fd, buf, len))
   {
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -219,7 +153,7 @@ void ecdh_recv_msg(ECDHPeer * ecdhconn, unsigned char **buf, size_t *len)
 {
   if (EXIT_SUCCESS != recv_ecdh_msg(ecdhconn->socket_fd, buf, len))
   {
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -235,7 +169,7 @@ void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t pla
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to encrypt a message.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   ecdh_send_msg(ecdhconn, ciphertext, ciphertext_len);
@@ -257,7 +191,7 @@ void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *p
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to decrypt a message.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   kmyth_clear_and_free(ciphertext, ciphertext_len);
@@ -268,57 +202,67 @@ void cleanup_defunct() {
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-void create_server_socket(ECDHPeer * ecdhconn)
+void create_ecdh_server_socket(ECDHPeer * ecdhconn)
 {
   int listen_fd = UNSET_FD;
   int numconn = 0;
   int ret;
 
-  kmyth_log(LOG_DEBUG, "Setting up server socket");
+  kmyth_log(LOG_DEBUG, "setting up server socket on port %s", ecdhconn->port);
   if (setup_server_socket(ecdhconn->port, &listen_fd))
   {
-    kmyth_log(LOG_ERR, "Failed to set up server socket.");
-    error(ecdhconn);
+    kmyth_log(LOG_ERR, "failed to set up server socket");
+    ecdh_error(ecdhconn);
   }
 
   if (listen(listen_fd, 1))
   {
-    kmyth_log(LOG_ERR, "Socket listen failed.");
+    kmyth_log(LOG_ERR, "socket listen failed");
     perror("listen");
     close(listen_fd);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   if (ecdhconn->maxconn > 0) {
-    kmyth_log(LOG_DEBUG, "Server will quit after receiving %d connections.", ecdhconn->maxconn);
+    kmyth_log(LOG_DEBUG, "server will quit after receiving %d connections",
+                         ecdhconn->maxconn);
   }
 
   /* Register handler to automatically reap defunct child processes. */
   signal(SIGCHLD, cleanup_defunct);
 
-  while (true) {
+  while (true)
+  {
+    kmyth_log(LOG_DEBUG, "ECDH 'server' waiting for client connection");
     ecdhconn->socket_fd = accept(listen_fd, NULL, NULL);
     if (ecdhconn->socket_fd == -1)
     {
-      kmyth_log(LOG_ERR, "Socket accept failed.");
+      kmyth_log(LOG_ERR, "socket accept failed");
       close(listen_fd);
-      error(ecdhconn);
+      ecdh_error(ecdhconn);
     }
+    kmyth_log(LOG_DEBUG, "accepted ECDH 'client' connection");
 
     ret = fork();
-    if (ret == -1) {
-      kmyth_log(LOG_ERR, "Server fork failed.");
+    if (ret == -1)
+    {
+      kmyth_log(LOG_ERR, "server fork failed");
       close(listen_fd);
-      error(ecdhconn);
-    } else if (ret == 0) {
+      ecdh_error(ecdhconn);
+    }
+    else if (ret == 0)
+    {
       /* child */
       close(listen_fd);
       return;
-    } else {
+    }
+    else
+    {
       /* parent */
       close(ecdhconn->socket_fd);
       numconn++;
-      if (ecdhconn->maxconn > 0 && numconn >= ecdhconn->maxconn) {
+      if (ecdhconn->maxconn > 0 && numconn >= ecdhconn->maxconn)
+      {
         break;
       }
     }
@@ -330,13 +274,13 @@ void create_server_socket(ECDHPeer * ecdhconn)
   exit(EXIT_SUCCESS);
 }
 
-void create_client_socket(ECDHPeer * ecdhconn)
+void create_ecdh_client_socket(ECDHPeer * ecdhconn)
 {
   kmyth_log(LOG_DEBUG, "setting up client socket");
   if (setup_client_socket(ecdhconn->ip, ecdhconn->port, &ecdhconn->socket_fd))
   {
     kmyth_log(LOG_ERR, "failed to setup client socket.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -349,7 +293,7 @@ void load_local_sign_key(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
               ecdhconn->local_priv_sign_key_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   ecdhconn->local_priv_sign_key = PEM_read_bio_PrivateKey(priv_key_bio,
@@ -362,7 +306,7 @@ void load_local_sign_key(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "elliptic curve key PEM file (%s) read failed",
               ecdhconn->local_priv_sign_key_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   kmyth_log(LOG_DEBUG, "obtained local private signing key from file");
@@ -377,7 +321,7 @@ void load_local_sign_cert(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
               ecdhconn->local_pub_sign_cert_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   ecdhconn->local_sign_cert = PEM_read_bio_X509(cert_bio, NULL, 0, NULL);
@@ -387,7 +331,7 @@ void load_local_sign_cert(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "elliptic curve X509 PEM file (%s) read failed",
               ecdhconn->local_pub_sign_cert_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   kmyth_log(LOG_DEBUG, "obtained local signature certificate from file");
@@ -404,7 +348,7 @@ void load_remote_sign_cert(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
               ecdhconn->remote_pub_sign_cert_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   ecdhconn->remote_sign_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
@@ -414,7 +358,7 @@ void load_remote_sign_cert(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
               ecdhconn->remote_pub_sign_cert_path);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "obtained remote certificate from file");
 }
@@ -428,7 +372,7 @@ void make_ephemeral_keypair(ECDHPeer * ecdhconn)
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "creation of local ephemeral contribution failed");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "created local ephemeral EC key pair");
 }
@@ -466,7 +410,7 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn)
   {
     kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
     free(msg_in);
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   free(msg_in);
 }
@@ -485,7 +429,7 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to create 'Server Hello' message");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
                       "(%d bytes)",
@@ -502,7 +446,7 @@ void send_server_hello_msg(ECDHPeer * ecdhconn)
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
 }
@@ -540,7 +484,7 @@ void recv_key_request_msg(ECDHPeer * ecdhconn)
                                             &(ecdhconn->kmip_key_request_len)))
   {
     kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "KMIP Get Key Request: 0x%02X%02X...%02X%02X"
             " (%ld bytes)", (ecdhconn->kmip_key_request)[0],
@@ -564,7 +508,7 @@ void get_session_key(ECDHPeer * ecdhconn)
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "shared secret = 0x%02X%02X...%02X%02X (%d bytes)",
             session_secret[0],
@@ -589,7 +533,7 @@ void get_session_key(ECDHPeer * ecdhconn)
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session key' results failed");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "shared session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
             ecdhconn->session_key1[0],
@@ -746,7 +690,7 @@ void send_operational_key(ECDHPeer * ecdhconn)
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to send the operational key.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 }
 
@@ -762,51 +706,11 @@ void get_operational_key(ECDHPeer * ecdhconn)
   if (ret)
   {
     kmyth_log(LOG_ERR, "Failed to retrieve the operational key.");
-    error(ecdhconn);
+    ecdh_error(ecdhconn);
   }
 
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", op_key[0],
             op_key[op_key_len - 1]);
 
   kmyth_clear_and_free(op_key, op_key_len);
-}
-
-void server_main(ECDHPeer * ecdhconn)
-{
-  create_server_socket(ecdhconn);
-
-  load_local_sign_key(ecdhconn);
-  load_local_sign_cert(ecdhconn);
-  load_remote_sign_cert(ecdhconn);
-
-  make_ephemeral_keypair(ecdhconn);
-
-  recv_client_hello_msg(ecdhconn);
-
-  send_server_hello_msg(ecdhconn);
-
-  get_session_key(ecdhconn);
-
-  recv_key_request_msg(ecdhconn);
-
-  kmyth_log(LOG_DEBUG, "test");
-
-  handle_key_request(ecdhconn);
-}
-
-void client_main(ECDHPeer * ecdhconn)
-{
-  create_client_socket(ecdhconn);
-
-  load_local_sign_key(ecdhconn);
-  load_local_sign_cert(ecdhconn);
-  load_remote_sign_cert(ecdhconn);
-
-  make_ephemeral_keypair(ecdhconn);
-
-  //send_ephemeral_public(ecdhconn);
-
-  get_session_key(ecdhconn);
-
-  get_operational_key(ecdhconn);
 }

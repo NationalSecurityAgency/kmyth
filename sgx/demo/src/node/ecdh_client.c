@@ -3,7 +3,7 @@
  * @brief A test client application for the ECDHE protocol.
  */
 
-#include "ecdh_demo.h"
+#include "ecdh_client.h"
 
 #ifndef DEMO_LOG_LEVEL
 #define DEMO_LOG_LEVEL LOG_DEBUG
@@ -18,10 +18,10 @@ int main(int argc, char **argv)
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
-  get_options(&ecdhconn, argc, argv);
-  check_options(&ecdhconn);
+  //get_options(&ecdhconn, argc, argv);
+  //check_options(&ecdhconn);
 
-  client_main(&ecdhconn);
+  //client_main(&ecdhconn);
 
   cleanup(&ecdhconn);
 

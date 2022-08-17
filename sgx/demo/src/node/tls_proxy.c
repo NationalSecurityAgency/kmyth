@@ -3,18 +3,6 @@
  * @brief Code for the ECDHE/TLS proxy application.
  */
 
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-#include <openssl/conf.h>
-#include <openssl/err.h>
-#include <openssl/opensslconf.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
-#include <poll.h>
-
-#include "ecdh_demo.h"
 #include "tls_proxy.h"
 
 #ifndef DEMO_LOG_LEVEL
@@ -29,23 +17,18 @@ void proxy_init(TLSProxy * proxy)
   init(&proxy->ecdhconn);
 }
 
-static void tls_cleanup(TLSConnection *tlsconn)
-{
-  if (tlsconn->conn != NULL)
-  {
-    BIO_free_all(tlsconn->conn);
-  }
-
-  if (tlsconn->ctx != NULL)
-  {
-    SSL_CTX_free(tlsconn->ctx);
-  }
-}
-
 void proxy_cleanup(TLSProxy * proxy)
 {
   cleanup(&proxy->ecdhconn);
-  tls_cleanup(&proxy->tlsconn);
+  if (proxy->tlsconn.conn != NULL)
+  {
+    BIO_free_all(proxy->tlsconn.conn);
+  }
+
+  if (proxy->tlsconn.ctx != NULL)
+  {
+    SSL_CTX_free(proxy->tlsconn.ctx);
+  }
 
   proxy_init(proxy);
 }
@@ -64,13 +47,14 @@ static void proxy_usage(const char *prog)
     "ECDH Connection Information --\n"
     "  -p or --local-port      The port number to listen on for ECDH connections.\n"
     "  -r or --private         Local private key PEM file used for ECDH connections.\n"
-    "  -u or --public          Remote public key PEM file used to validate ECDH connections.\n"
+    "  -u or --public          Remote public cert PEM file used to validate ECDH connections.\n"
     "TLS Connection Information --\n"
-    "  -I or --remote-ip       The IP address or hostname of the remote server.\n"
-    "  -P or --remote-port     The port number to use when connecting to the remote server.\n"
-    "  -C or --ca-path         Optional certificate file used to verify the remote server (if not specified, the default system CA chain will be used instead).\n"
-    "  -R or --client-key      Local private key PEM file used for TLS connections.\n"
-    "  -U or --client-cert     Local certificate PEM file used for TLS connections.\n"
+    "  -I or --remote-ip       The IP address or hostname of the remote server\n"
+    "  -P or --remote-port     The port number to use when connecting to the remote server\n"
+    "  -C or --ca-path         Optional certificate file used to verify the remote server\n"
+    "                          (if not specified, the default system CA chain will be used instead)\n"
+    "  -R or --client-key      Local (client) private key (for TLS connection) PEM file name\n"
+    "  -U or --server-cert     Remote (server) certificate (for TLS connection) PEM file name\n"
     "Test Options --\n"
     "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
     "Misc --\n"
@@ -90,7 +74,8 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:c:u:p:I:P:C:R:U:m:h", longopts, &option_index)) != -1)
+          getopt_long(argc, argv, "r:c:u:p:I:P:C:R:U:m:h",
+                      proxy_longopts, &option_index)) != -1)
   {
     switch (options)
     {
@@ -116,13 +101,13 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       proxy->tlsconn.port = optarg;
       break;
     case 'C':
-      proxy->tlsconn.ca_path = optarg;
+      proxy->tlsconn.ca_cert_path = optarg;
       break;
     case 'R':
-      proxy->tlsconn.client_key_path = optarg;
+      proxy->tlsconn.local_key_path = optarg;
       break;
     case 'U':
-      proxy->tlsconn.client_cert_path = optarg;
+      proxy->tlsconn.remote_cert_path = optarg;
       break;
     // Test
     case 'm':
@@ -140,7 +125,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 
 void proxy_check_options(TLSProxy * proxy)
 {
-  check_options(&proxy->ecdhconn);
+  check_ecdh_options(&proxy->ecdhconn);
 
   bool err = false;
 
@@ -161,20 +146,7 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-static void log_openssl_error(unsigned long err, const char* const label)
-{
-  const char* const str = ERR_reason_error_string(err);
-  if (str)
-  {
-    kmyth_log(LOG_ERR, "%s: %s", label, str);
-  }
-  else
-  {
-    kmyth_log(LOG_ERR, "%s failed: %lu (0x%lx)", label, err, err);
-  }
-}
-
-static int tls_config_ctx(TLSConnection * tlsconn)
+static int tls_config_ctx(TLSPeer * tlsconn)
 {
   int ret;
   unsigned long ssl_err;
@@ -210,8 +182,9 @@ static int tls_config_ctx(TLSConnection * tlsconn)
   SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
 
   /* Enable custom or default certificate authorities. */
-  if (tlsconn->ca_path) {
-    ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_path, NULL);
+  if (tlsconn->ca_cert_path)
+  {
+    ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_cert_path, NULL);
     ssl_err = ERR_get_error();
     if (1 != ret)
     {
@@ -231,9 +204,9 @@ static int tls_config_ctx(TLSConnection * tlsconn)
   }
 
   /* Set client key - required by some servers. */
-  if (tlsconn->client_key_path)
+  if (tlsconn->local_key_path)
   {
-    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->client_key_path, SSL_FILETYPE_PEM);
+    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->local_key_path, SSL_FILETYPE_PEM);
     ssl_err = ERR_get_error();
     if (1 != ret)
     {
@@ -243,9 +216,9 @@ static int tls_config_ctx(TLSConnection * tlsconn)
   }
 
   /* Set client cert - required by some servers. */
-  if (tlsconn->client_cert_path)
+  if (tlsconn->remote_cert_path)
   {
-    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->client_cert_path, SSL_FILETYPE_PEM);
+    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->remote_cert_path, SSL_FILETYPE_PEM);
     ssl_err = ERR_get_error();
     if (1 != ret)
     {
@@ -257,7 +230,7 @@ static int tls_config_ctx(TLSConnection * tlsconn)
   return 0;
 }
 
-static int tls_config_conn(TLSConnection * tlsconn)
+static int tls_config_conn(TLSPeer * tlsconn)
 {
   int ret;
   unsigned long ssl_err;
@@ -316,7 +289,7 @@ static int tls_config_conn(TLSConnection * tlsconn)
   return 0;
 }
 
-static void tls_get_verify_error(TLSConnection * tlsconn)
+static void tls_get_verify_error(TLSPeer * tlsconn)
 {
   int ret;
   unsigned long ssl_err;
@@ -338,7 +311,7 @@ static void tls_get_verify_error(TLSConnection * tlsconn)
   }
 }
 
-static int tls_connect(TLSConnection * tlsconn)
+static int tls_connect(TLSPeer * tlsconn)
 {
   int ret;
   unsigned long ssl_err;
@@ -360,7 +333,7 @@ static int setup_ecdhconn(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
 
-  create_server_socket(ecdhconn);
+  create_ecdh_server_socket(ecdhconn);
 
   load_local_sign_key(ecdhconn);
   load_local_sign_cert(ecdhconn);
@@ -379,7 +352,7 @@ static int setup_ecdhconn(TLSProxy * proxy)
 
 static int setup_tlsconn(TLSProxy * proxy)
 {
-  TLSConnection *tlsconn = &proxy->tlsconn;
+  TLSPeer *tlsconn = &proxy->tlsconn;
 
   if (tls_config_ctx(tlsconn))
   {
@@ -401,6 +374,7 @@ static int setup_tlsconn(TLSProxy * proxy)
 
 void proxy_start(TLSProxy * proxy)
 {
+  kmyth_log(LOG_DEBUG, "starting proxy ...");
   struct pollfd pfds[NUM_POLL_FDS];
   int bytes_read = 0;
   int bytes_written = 0;
@@ -483,7 +457,6 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  kmyth_log(LOG_DEBUG, "calling proxy_main");
   proxy_main(&proxy);
 
   proxy_cleanup(&proxy);
