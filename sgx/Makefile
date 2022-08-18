@@ -363,9 +363,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "==================================================================================================="
 	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
 	@echo "===================================================================================================\n"
-	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -p 7001 &
+	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -C demo/data/ca_cert_test.pem -p 7001 &
 	@sleep 1
-	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -I 127.0.0.1 -P 7001 &
+	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -C demo/data/ca_cert_test.pem -I 127.0.0.1 -P 7001 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@echo "\nRUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
@@ -732,7 +732,7 @@ demo/data/server_cert_test.pem: demo/data/gen_test_keys_certs.bash
 demo-clean:
 	@rm -f demo/enclave/*_u.h demo/enclave/*_t.h demo/enclave/*_u.c demo/enclave/*_t.c
 	@rm -f demo/enclave/*.o demo/enclave/*.so
-	@rm -f demo/data/*.pem
+	@rm -f demo/data/*.pem demo/data/*.csr demo/data/*.srl
 	@rm -rf demo/obj
 	@rm -rf demo/bin
 	@rm -f *.log

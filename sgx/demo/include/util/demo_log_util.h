@@ -21,7 +21,7 @@
 #include <kmyth/kmyth_log.h>
 
 
-void log_openssl_error(unsigned long err, const char* const label);
+void log_openssl_error(const char* const label);
 
 #endif
 

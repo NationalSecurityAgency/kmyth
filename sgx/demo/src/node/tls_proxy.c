@@ -149,30 +149,26 @@ void proxy_check_options(TLSProxy * proxy)
 static int tls_config_ctx(TLSPeer * tlsconn)
 {
   int ret;
-  unsigned long ssl_err;
 
   const SSL_METHOD* method = TLS_client_method();
-  ssl_err = ERR_get_error();
   if (NULL == method)
   {
-    log_openssl_error(ssl_err, "TLS_client_method");
+    log_openssl_error("TLS_client_method()");
     return -1;
   }
 
   tlsconn->ctx = SSL_CTX_new(method);
-  ssl_err = ERR_get_error();
   if (tlsconn->ctx == NULL)
   {
-    log_openssl_error(ssl_err, "SSL_CTX_new");
+    log_openssl_error("SSL_CTX_new()");
     return -1;
   }
 
   /* Disable deprecated TLS versions. */
   ret = SSL_CTX_set_min_proto_version(tlsconn->ctx, TLS1_2_VERSION);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
-    log_openssl_error(ssl_err, "SSL_CTX_set_min_proto_version");
+    log_openssl_error("SSL_CTX_set_min_proto_version()");
     return -1;
   }
 
@@ -185,20 +181,18 @@ static int tls_config_ctx(TLSPeer * tlsconn)
   if (tlsconn->ca_cert_path)
   {
     ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_cert_path, NULL);
-    ssl_err = ERR_get_error();
     if (1 != ret)
     {
-      log_openssl_error(ssl_err, "SSL_CTX_load_verify_locations");
+      log_openssl_error("SSL_CTX_load_verify_locations()");
       return -1;
     }
   }
   else
   {
     ret = SSL_CTX_set_default_verify_paths(tlsconn->ctx);
-    ssl_err = ERR_get_error();
     if (1 != ret)
     {
-      log_openssl_error(ssl_err, "SSL_CTX_set_default_verify_paths");
+      log_openssl_error("SSL_CTX_set_default_verify_paths()");
       return -1;
     }
   }
@@ -207,10 +201,9 @@ static int tls_config_ctx(TLSPeer * tlsconn)
   if (tlsconn->local_key_path)
   {
     ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->local_key_path, SSL_FILETYPE_PEM);
-    ssl_err = ERR_get_error();
     if (1 != ret)
     {
-      log_openssl_error(ssl_err, "SSL_CTX_use_PrivateKey_file");
+      log_openssl_error("SSL_CTX_use_PrivateKey_file()");
       return -1;
     }
   }
@@ -219,10 +212,9 @@ static int tls_config_ctx(TLSPeer * tlsconn)
   if (tlsconn->remote_cert_path)
   {
     ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->remote_cert_path, SSL_FILETYPE_PEM);
-    ssl_err = ERR_get_error();
     if (1 != ret)
     {
-      log_openssl_error(ssl_err, "SSL_CTX_use_certificate_file");
+      log_openssl_error("SSL_CTX_use_certificate_file()");
       return -1;
     }
   }
@@ -237,52 +229,46 @@ static int tls_config_conn(TLSPeer * tlsconn)
   SSL *ssl = NULL;
 
   tlsconn->conn = BIO_new_ssl_connect(tlsconn->ctx);
-  ssl_err = ERR_get_error();
   if (tlsconn->conn == NULL)
   {
-    log_openssl_error(ssl_err, "BIO_new_ssl_connect");
+    log_openssl_error("BIO_new_ssl_connect()");
     return -1;
   }
 
   ret = BIO_set_conn_hostname(tlsconn->conn, tlsconn->host);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
-    log_openssl_error(ssl_err, "BIO_set_conn_hostname");
+    log_openssl_error("BIO_set_conn_hostname()");
     return -1;
   }
 
   ret = BIO_set_conn_port(tlsconn->conn, tlsconn->port);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
-    log_openssl_error(ssl_err, "BIO_set_conn_port");
+    log_openssl_error("BIO_set_conn_port()");
     return -1;
   }
 
   BIO_get_ssl(tlsconn->conn, &ssl);  // internal pointer, not a new allocation
-  ssl_err = ERR_get_error();
   if (ssl == NULL)
   {
-    log_openssl_error(ssl_err, "BIO_get_ssl");
+    log_openssl_error("BIO_get_ssl()");
     return -1;
   }
 
   /* Set hostname for Server Name Indication. */
   ret = SSL_set_tlsext_host_name(ssl, tlsconn->host);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
-    log_openssl_error(ssl_err, "SSL_set_tlsext_host_name");
+    log_openssl_error("SSL_set_tlsext_host_name()");
     return -1;
   }
 
   /* Set hostname for certificate verification. */
   ret = SSL_set1_host(ssl, tlsconn->host);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
-    log_openssl_error(ssl_err, "SSL_set1_host");
+    log_openssl_error("SSL_set1_host()");
     return -1;
   }
 
@@ -296,10 +282,9 @@ static void tls_get_verify_error(TLSPeer * tlsconn)
   SSL *ssl = NULL;
 
   BIO_get_ssl(tlsconn->conn, &ssl);  // internal pointer, not a new allocation
-  ssl_err = ERR_get_error();
   if (ssl == NULL)
   {
-    log_openssl_error(ssl_err, "BIO_get_ssl");
+    log_openssl_error("BIO_get_ssl()");
     return;
   }
 
@@ -317,11 +302,10 @@ static int tls_connect(TLSPeer * tlsconn)
   unsigned long ssl_err;
 
   ret = BIO_do_connect(tlsconn->conn);
-  ssl_err = ERR_get_error();
   if (1 != ret)
   {
     /* Both connection failures and certificate verification failures are caught here. */
-    log_openssl_error(ssl_err, "BIO_do_connect");
+    log_openssl_error("BIO_do_connect()");
     tls_get_verify_error(tlsconn);
     return -1;
   }

@@ -7,8 +7,9 @@
 #include "demo_log_util.h"
 
 
-void log_openssl_error(unsigned long err, const char* const label)
+void log_openssl_error(const char* const label)
 {
+  unsigned long err = ERR_get_error();
   const char* const str = ERR_reason_error_string(err);
   if (str)
   {

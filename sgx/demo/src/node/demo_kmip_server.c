@@ -141,6 +141,7 @@ void server_check_options(DemoServer * server)
 int main(int argc, char **argv)
 {
   DemoServer server;
+  int ret = -1;
 
   // setup default logging parameters
   set_app_name("          server ");
@@ -166,16 +167,17 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  //SSL_CTX_set_security_level(ctx, 0);
+  SSL_CTX_set_ecdh_auto(ctx, 1);
 
   // set server's private key from file (.pem formatted)
-  if (SSL_CTX_use_PrivateKey_file(ctx,
-                                  server.tlsconn.local_key_path,
-                                  SSL_FILETYPE_PEM) != 1)
+  ret = SSL_CTX_use_PrivateKey_file(ctx,
+                                    server.tlsconn.local_key_path,
+                                    SSL_FILETYPE_PEM);
+  if (ret != 1)
   {
     kmyth_log(LOG_ERR, "PEM key file (%s) read failed",
                        server.tlsconn.local_key_path);
-    perror("");
+    log_openssl_error("SSL_CTX_use_PrivateKey_file()");
     return EXIT_FAILURE;
   }
 
@@ -183,23 +185,25 @@ int main(int argc, char **argv)
                         server.tlsconn.local_key_path);
 
   // set server's public certificate (X509) from file (.pem formatted)
-  if (SSL_CTX_use_certificate_file(ctx,
-                                   server.tlsconn.remote_cert_path,
-                                   SSL_FILETYPE_PEM) != 1)
+  ret = SSL_CTX_use_certificate_file(ctx,
+                                     server.tlsconn.remote_cert_path,
+                                     SSL_FILETYPE_PEM);
+  if (ret != 1)
   {
     kmyth_log(LOG_ERR, "PEM key file (%s) read failed",
                        server.tlsconn.remote_cert_path);
-    perror("");
+    log_openssl_error("SSL_CTX_use_certificate_file()");
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "loaded remote public certificate (%s)",
                        server.tlsconn.remote_cert_path);
 
   // create and setup socket
-  int p = atoi(server.tlsconn.port);
   struct sockaddr_in addr;
+  uint addr_len = sizeof(addr);
 
   addr.sin_family = AF_INET;
+  int p = atoi(server.tlsconn.port);
   addr.sin_port = htons(p);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -209,7 +213,7 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "unable to create socket");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "created socket ...");
+  kmyth_log(LOG_DEBUG, "created socket (handle = %d)", s);
 
   int temp = bind(s, (struct sockaddr *) &addr, sizeof(addr));
   kmyth_log(LOG_DEBUG, "temp = %d", temp);
@@ -219,7 +223,7 @@ int main(int argc, char **argv)
     perror("bind error:");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "bind to socket ...");
+  kmyth_log(LOG_DEBUG, "bind socket succeeded");
 
   if (listen(s, 1) < 0)
   {
@@ -230,48 +234,53 @@ int main(int argc, char **argv)
   kmyth_log(LOG_DEBUG, "listening on port %d",
                         atoi(server.tlsconn.port));
 
-  while (1)
+  SSL *ssl;
+  const char reply[] = "test\n";
+
+  kmyth_log(LOG_DEBUG, "waiting to accept client connection");
+
+  int client = accept(s, (struct sockaddr *) &addr, &addr_len);
+  if (client < 0)
   {
-    struct sockaddr_in addr;
-    uint len = sizeof(addr);
-    SSL *ssl;
-    const char reply[] = "test\n";
+    kmyth_log(LOG_ERR, "unable to accept incoming client connection");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "creating socket (fd = %d) with client", client);
 
-    kmyth_log(LOG_DEBUG, "waiting to accept client connection");
+  ssl = SSL_new(ctx);
+  SSL_set_fd(ssl, client);
 
-    int client = accept(s, (struct sockaddr *) &addr, &len);
-    if (client < 0)
-    {
-      kmyth_log(LOG_ERR, "unable to accept client connection");
-      return EXIT_FAILURE;
-    }
-    kmyth_log(LOG_DEBUG, "client (accept() retval) = %d", client);
+  kmyth_log(LOG_DEBUG, "after SSL_new() and SSL_set_fd()");
 
-    ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, client);
-
-    kmyth_log(LOG_DEBUG, "after SSL_new() and SSL_set_fd()");
-
-    if (SSL_accept(ssl) <= 0)
-    {
-      kmyth_log(LOG_ERR, "failed to accept client connection");
-      ERR_print_errors_fp(stderr);
-    }
-    else
-    {
-      kmyth_log(LOG_DEBUG, "writing reply to client ...");
-      SSL_write(ssl, reply, strlen(reply));
-    }
-
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    close(client);
+  int retval = SSL_accept(ssl);
+  if (retval <= 0)
+  {
+    kmyth_log(LOG_ERR, "failed to accept client connection (%d)", retval);
+    SSL_get_error(ssl, retval);
+    kmyth_log(LOG_ERR, "SSL_get_error() returned %d", retval);
+    ERR_print_errors_fp(stderr);
+  }
+  else
+  {
+    kmyth_log(LOG_DEBUG, "writing reply to client ...");
+    SSL_write(ssl, reply, strlen(reply));
   }
 
+  close(client);
+  kmyth_log(LOG_DEBUG, "closed client connection socket");
+
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
+  kmyth_log(LOG_DEBUG, "cleaned up SSL object");
+
   close(s);
+  kmyth_log(LOG_DEBUG, "closed server socket");
+
   SSL_CTX_free(ctx);
   EVP_cleanup();
   server_cleanup(&server);
+
+  kmyth_log(LOG_DEBUG, "exiting ...");
 
   return EXIT_SUCCESS;
 }
