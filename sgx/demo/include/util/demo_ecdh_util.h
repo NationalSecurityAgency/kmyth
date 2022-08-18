@@ -91,6 +91,8 @@ void recv_client_hello_msg(ECDHPeer * ecdhconn);
 
 void send_server_hello_msg(ECDHPeer * ecdhconn);
 
+void recv_key_request_msg(ECDHPeer * ecdhconn);
+
 void get_session_key(ECDHPeer * ecdhconn);
 
 void send_operational_key(ECDHPeer * ecdhconn);

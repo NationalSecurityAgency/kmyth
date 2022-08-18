@@ -331,6 +331,8 @@ static int setup_ecdhconn(TLSProxy * proxy)
 
   get_session_key(ecdhconn);
 
+  recv_key_request_msg(ecdhconn);
+
   return 0;
 }
 
