@@ -363,9 +363,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "==================================================================================================="
 	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
 	@echo "===================================================================================================\n"
-	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/proxy_cert_test.pem -p 7001 &
+	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -p 7001 &
 	@sleep 1
-	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/server_cert_test.pem -I 127.0.0.1 -P 7001 &
+	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -I 127.0.0.1 -P 7001 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@echo "\nRUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
@@ -391,6 +391,10 @@ test/enclave/ecdh_util.o: common/src/ecdh_util.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+test/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
+	@$(CC) $(Test_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
 ######## Demo Common Objects ########
 
 demo/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c
@@ -402,6 +406,10 @@ demo/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c
 	@echo "CC   <=  $<"
 
 demo/enclave/ecdh_util.o: common/src/ecdh_util.c
+	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+demo/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -440,6 +448,7 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
                                  test/enclave/ec_key_cert_marshal.o \
                                  test/enclave/ec_key_cert_unmarshal.o \
                                  test/enclave/ecdh_util.o \
+								 test/enclave/retrieve_key_protocol.o \
 								 test/enclave/sgx_socket_util.o \
                                  test/enclave/ecdh_ocall.o \
                                  test/enclave/memory_ocall.o \
@@ -491,6 +500,7 @@ $(Demo_App_Name): demo/obj/kmyth_sgx_retrieve_key_demo.o \
                   demo/enclave/ec_key_cert_marshal.o \
                   demo/enclave/ec_key_cert_unmarshal.o \
                   demo/enclave/ecdh_util.o \
+				  demo/enclave/retrieve_key_protocol.o \
 			      demo/enclave/sgx_socket_util.o \
                   demo/enclave/ecdh_ocall.o \
                   demo/enclave/memory_ocall.o \
@@ -515,6 +525,7 @@ $(Server_Name): demo/obj/demo_kmip_server.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
 				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
+				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
@@ -526,6 +537,7 @@ $(Client_Name): demo/obj/ecdh_client.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
 				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
+				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
@@ -538,6 +550,7 @@ $(Proxy_Name):  demo/obj/tls_proxy.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
 				demo/enclave/sgx_socket_util.o \
                 demo/enclave/ecdh_util.o \
+				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl
 	@echo "LINK =>  $@"
@@ -600,6 +613,7 @@ test/enclave/$(Test_Enclave_Lib): test/enclave/$(Test_Enclave_Name)_t.o \
                         test/enclave/ec_key_cert_marshal.o \
                         test/enclave/ec_key_cert_unmarshal.o \
                         test/enclave/ecdh_util.o \
+						test/enclave/retrieve_key_protocol.o \
                         test/enclave/kmyth_enclave_memory_util.o \
                         test/enclave/sgx_retrieve_key_impl.o \
                         test/enclave/kmyth_enclave_seal.o \
@@ -689,6 +703,7 @@ demo/enclave/$(Demo_Enclave_Lib): demo/enclave/$(Demo_Enclave_Name)_t.o \
                         demo/enclave/ec_key_cert_marshal.o \
                         demo/enclave/ec_key_cert_unmarshal.o \
                         demo/enclave/ecdh_util.o \
+						demo/enclave/retrieve_key_protocol.o \
                         demo/enclave/kmyth_enclave_seal.o \
                         demo/enclave/kmyth_enclave_unseal.o \
                         demo/enclave/kmyth_enclave_retrieve_key.o \

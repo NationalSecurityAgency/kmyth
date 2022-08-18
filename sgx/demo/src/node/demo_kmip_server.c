@@ -156,6 +156,7 @@ int main(int argc, char **argv)
   // some OpenSSL setup
   SSL_load_error_strings();
   OpenSSL_add_ssl_algorithms();
+  OpenSSL_add_all_ciphers();
 
   // create TLS context
   SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
@@ -164,6 +165,8 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "Unable to create SSL context");
     return EXIT_FAILURE;
   }
+
+  //SSL_CTX_set_security_level(ctx, 0);
 
   // set server's private key from file (.pem formatted)
   if (SSL_CTX_use_PrivateKey_file(ctx,

@@ -63,6 +63,7 @@ extern "C"
 #include "ec_key_cert_marshal.h"
 #include "ec_key_cert_unmarshal.h"
 #include "ecdh_util.h"
+#include "retrieve_key_protocol.h"
 
 #ifdef _KMYTH_LOCALE_TRUSTED_
 
