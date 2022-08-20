@@ -18,17 +18,23 @@ void server_init(DemoServer * server)
 
 void server_cleanup(DemoServer * server)
 {
-  if (server->tlsconn.conn != NULL)
-  {
-    BIO_free_all(server->tlsconn.conn);
-  }
+  //if (server->tlsconn.conn != NULL)
+  //{
+  //  BIO_free_all(server->tlsconn.conn);
+  //}
+
+  //kmyth_log(LOG_DEBUG, "after BIO_free_all()");
 
   if (server->tlsconn.ctx != NULL)
   {
     SSL_CTX_free(server->tlsconn.ctx);
   }
 
+  kmyth_log(LOG_DEBUG, "after SSL_CTX_free()");
+
   server_init(server);
+
+  kmyth_log(LOG_DEBUG, "after server_init()");
 }
 
 
@@ -83,9 +89,9 @@ static void server_get_options(DemoServer * server, int argc, char **argv)
                            server->tlsconn.local_key_path);
       break;
     case 'c':
-      server->tlsconn.remote_cert_path = optarg;
-      kmyth_log(LOG_DEBUG, "server->tlsconn.remote_cert_path = %s",
-                           server->tlsconn.remote_cert_path);
+      server->tlsconn.local_cert_path = optarg;
+      kmyth_log(LOG_DEBUG, "server->tlsconn.local_cert_path = %s",
+                           server->tlsconn.local_cert_path);
       break;
     case 'C':
       server->tlsconn.ca_cert_path = optarg;
@@ -124,7 +130,7 @@ void server_check_options(DemoServer * server)
     fprintf(stderr, "file path for server's private key required\n");
     err = true;
   }
-  if (server->tlsconn.remote_cert_path == NULL)
+  if (server->tlsconn.local_cert_path == NULL)
   {
     fprintf(stderr, "file path for server-s certificate required\n");
     err = true;
@@ -144,7 +150,7 @@ int main(int argc, char **argv)
   int ret = -1;
 
   // setup default logging parameters
-  set_app_name("          server ");
+  set_app_name("             server ");
   set_app_version("");
   set_applog_path("../sgx/sgx_retrievekey_demo.log");
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
@@ -160,8 +166,8 @@ int main(int argc, char **argv)
   OpenSSL_add_all_ciphers();
 
   // create TLS context
-  SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
-  if (!ctx)
+  server.tlsconn.ctx = SSL_CTX_new(TLS_server_method());
+  if (!server.tlsconn.ctx)
   {
     kmyth_log(LOG_ERR, "Unable to create SSL context");
     return EXIT_FAILURE;
@@ -170,7 +176,7 @@ int main(int argc, char **argv)
   SSL_CTX_set_ecdh_auto(ctx, 1);
 
   // set server's private key from file (.pem formatted)
-  ret = SSL_CTX_use_PrivateKey_file(ctx,
+  ret = SSL_CTX_use_PrivateKey_file(server.tlsconn.ctx,
                                     server.tlsconn.local_key_path,
                                     SSL_FILETYPE_PEM);
   if (ret != 1)
@@ -185,18 +191,18 @@ int main(int argc, char **argv)
                         server.tlsconn.local_key_path);
 
   // set server's public certificate (X509) from file (.pem formatted)
-  ret = SSL_CTX_use_certificate_file(ctx,
-                                     server.tlsconn.remote_cert_path,
+  ret = SSL_CTX_use_certificate_file(server.tlsconn.ctx,
+                                     server.tlsconn.local_cert_path,
                                      SSL_FILETYPE_PEM);
   if (ret != 1)
   {
     kmyth_log(LOG_ERR, "PEM key file (%s) read failed",
-                       server.tlsconn.remote_cert_path);
+                       server.tlsconn.local_cert_path);
     log_openssl_error("SSL_CTX_use_certificate_file()");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "loaded remote public certificate (%s)",
-                       server.tlsconn.remote_cert_path);
+  kmyth_log(LOG_DEBUG, "loaded local (server) public certificate (%s)",
+                       server.tlsconn.local_cert_path);
 
   // create and setup socket
   struct sockaddr_in addr;
@@ -247,10 +253,8 @@ int main(int argc, char **argv)
   }
   kmyth_log(LOG_DEBUG, "creating socket (fd = %d) with client", client);
 
-  ssl = SSL_new(ctx);
+  ssl = SSL_new(server.tlsconn.ctx);
   SSL_set_fd(ssl, client);
-
-  kmyth_log(LOG_DEBUG, "after SSL_new() and SSL_set_fd()");
 
   int retval = SSL_accept(ssl);
   if (retval <= 0)
@@ -262,23 +266,60 @@ int main(int argc, char **argv)
   }
   else
   {
-    kmyth_log(LOG_DEBUG, "writing reply to client ...");
-    SSL_write(ssl, reply, strlen(reply));
-  }
+    // get size (in bytes) of KMIP 'get key' request field to be received
+    unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE];
+    SSL_read(ssl, buf, 2);
+    uint16_t kmip_key_req_len = buf[0] << 8;
+    kmip_key_req_len += buf[1];
 
-  close(client);
-  kmyth_log(LOG_DEBUG, "closed client connection socket");
+    kmyth_log(LOG_DEBUG, "received KMIP Request size = %d bytes)",
+                         kmip_key_req_len);
+
+    // get KMIP 'get key' request bytes
+    SSL_read(ssl, buf, (size_t) kmip_key_req_len);
+
+    kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
+                         buf[0], buf[1],
+                         buf[kmip_key_req_len-2], buf[kmip_key_req_len-1],
+                         kmip_key_req_len);
+    
+    KMIP kmip_ctx = { 0 };
+    kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
+
+    unsigned char *req_id_bytes = NULL;
+    size_t req_id_len = 0;
+    unsigned char *req_key_bytes = NULL;
+    size_t req_key_len = 0;
+
+    parse_kmip_get_request(&kmip_ctx,
+                           buf,
+                           kmip_key_req_len,
+                           &req_id_bytes,
+                           &req_id_len);
+
+    kmyth_log(LOG_DEBUG, "req_id_len = %d", req_id_len);
+    char *id_str = malloc(req_id_len + 1);
+    memcpy(id_str, req_id_bytes, req_id_len);
+    *(id_str+1) = '\0';
+    kmyth_log(LOG_DEBUG, "KMIP key request ID = %s", id_str);
+
+    //kmyth_log(LOG_DEBUG, "writing reply to client ...");
+    //SSL_write(ssl, reply, strlen(reply));
+  }
 
   SSL_shutdown(ssl);
   SSL_free(ssl);
   kmyth_log(LOG_DEBUG, "cleaned up SSL object");
 
+  close(client);
+  kmyth_log(LOG_DEBUG, "closed client connection socket");
+
   close(s);
   kmyth_log(LOG_DEBUG, "closed server socket");
 
-  SSL_CTX_free(ctx);
-  EVP_cleanup();
   server_cleanup(&server);
+
+  EVP_cleanup();
 
   kmyth_log(LOG_DEBUG, "exiting ...");
 

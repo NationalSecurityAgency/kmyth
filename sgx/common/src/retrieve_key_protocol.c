@@ -44,11 +44,11 @@ int append_signature(EVP_PKEY * sign_key,
   unsigned char *signature_bytes = NULL;
   int signature_len = 0;
 
-  if (EXIT_SUCCESS != sign_buffer(sign_key,
-                                  *msg_buf,
-                                  *msg_buf_len,
-                                  &signature_bytes,
-                                  &signature_len))
+  if (EXIT_SUCCESS != ec_sign_buffer(sign_key,
+                                     *msg_buf,
+                                     *msg_buf_len,
+                                     &signature_bytes,
+                                     &signature_len))
   {
     kmyth_sgx_log(LOG_ERR, "error signing buffer");
     free(signature_bytes);
@@ -307,11 +307,11 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
   }
 
   // check message signature
-  if (EXIT_SUCCESS != verify_buffer(client_sign_pubkey,
-                                    msg_in,
-                                    msg_body_size,
-                                    msg_sig_bytes,
-                                    msg_sig_len))
+  if (EXIT_SUCCESS != ec_verify_buffer(client_sign_pubkey,
+                                       msg_in,
+                                       msg_body_size,
+                                       msg_sig_bytes,
+                                       msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Client Hello' message invalid");
     EVP_PKEY_free(client_sign_pubkey);
@@ -652,11 +652,11 @@ int parse_server_hello_msg(X509 *msg_sign_cert,
   }
 
   // check message signature
-  if (EXIT_SUCCESS != verify_buffer(server_sign_pubkey,
-                                    msg_in,
-                                    msg_body_size,
-                                    msg_sig_bytes,
-                                    msg_sig_len))
+  if (EXIT_SUCCESS != ec_verify_buffer(server_sign_pubkey,
+                                       msg_in,
+                                       msg_body_size,
+                                       msg_sig_bytes,
+                                       msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
     return EXIT_FAILURE;
@@ -979,11 +979,11 @@ int parse_key_request_msg(X509 * msg_sign_cert,
   }
 
   // check message signature
-  if (EXIT_SUCCESS != verify_buffer(msg_sign_pubkey,
-                                    msg_buf,
-                                    msg_body_size,
-                                    msg_sig_bytes,
-                                    msg_sig_len))
+  if (EXIT_SUCCESS != ec_verify_buffer(msg_sign_pubkey,
+                                       msg_buf,
+                                       msg_body_size,
+                                       msg_sig_bytes,
+                                       msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
     return EXIT_FAILURE;

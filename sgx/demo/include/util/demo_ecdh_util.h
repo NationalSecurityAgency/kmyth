@@ -68,32 +68,30 @@ typedef struct ECDHPeer
   size_t session_key2_len;
 } ECDHPeer;
 
-void init(ECDHPeer * ecdhconn);
-void cleanup(ECDHPeer * ecdhconn);
+void ecdh_init(ECDHPeer * ecdhconn, bool clientMode);
+void ecdh_cleanup(ECDHPeer * ecdhconn);
 
 void ecdh_error(ECDHPeer * ecdhconn);
 
-void check_ecdh_options(ECDHPeer * ecdhconn);
+void ecdh_check_options(ECDHPeer * ecdhconn);
 
 void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
 void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
 
-void create_ecdh_server_socket(ECDHPeer * ecdhconn);
-void create_ecdh_client_socket(ECDHPeer * ecdhconn);
+void ecdh_create_server_socket(ECDHPeer * ecdhconn);
+void ecdh_create_client_socket(ECDHPeer * ecdhconn);
 
-void load_local_sign_key(ECDHPeer * ecdhconn);
-void load_local_sign_cert(ECDHPeer * ecdhconn);
-void load_remote_sign_cert(ECDHPeer * ecdhconn);
+void ecdh_load_local_sign_key(ECDHPeer * ecdhconn);
+void ecdh_load_local_sign_cert(ECDHPeer * ecdhconn);
+void ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn);
 
-void make_ephemeral_keypair(ECDHPeer * ecdhconn);
+void ecdh_make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
-void recv_client_hello_msg(ECDHPeer * ecdhconn);
+void ecdh_get_session_key(ECDHPeer * ecdhconn);
 
-void send_server_hello_msg(ECDHPeer * ecdhconn);
-
-void recv_key_request_msg(ECDHPeer * ecdhconn);
-
-void get_session_key(ECDHPeer * ecdhconn);
+void ecdh_recv_client_hello_msg(ECDHPeer * ecdhconn);
+void ecdh_send_server_hello_msg(ECDHPeer * ecdhconn);
+void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn);
 
 void send_operational_key(ECDHPeer * ecdhconn);
 void get_operational_key(ECDHPeer * ecdhconn);

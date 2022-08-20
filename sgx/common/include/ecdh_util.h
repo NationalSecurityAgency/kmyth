@@ -63,20 +63,6 @@ extern "C"
 #define KMYTH_ECDH_KDF NULL
 
 /**
- * @brief Maximum size of a kmyth ECDH message. This is the same
- *        value as the maximum fragment length in a TLS record.
- */
-#define KMYTH_ECDH_MAX_MSG_SIZE 16384
-
-/**
- * @brief Custom message header prepended to encrypted messages
- *        sent over an ECDH connection. (Similar to TLS record headers.)
- */
-struct ECDHMessageHeader {
-  uint16_t msg_size;
-};
-
-/**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
  *        private and public components) for a participant's contribution
  *        in an ECDH key agreement protocol. The elliptic curve defined
@@ -202,11 +188,11 @@ struct ECDHMessageHeader {
  *
  * @return 0 on success, 1 on error
  */
-  int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                  unsigned char * buf_in,
-                  size_t buf_in_len,
-                  unsigned char ** sig_out,
-                  unsigned int * sig_out_len);
+  int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
+                     unsigned char * buf_in,
+                     size_t buf_in_len,
+                     unsigned char ** sig_out,
+                     unsigned int * sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
@@ -231,11 +217,11 @@ struct ECDHMessageHeader {
  * @return 0 on success (signature verification passed),
  *         1 on error (signature verification failed)
  */
-  int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                    unsigned char * buf_in,
-                    size_t buf_in_len,
-                    unsigned char * sig_in,
-                    unsigned int sig_in_len);
+  int ec_verify_buffer(EVP_PKEY * ec_verify_pkey,
+                       unsigned char * buf_in,
+                       size_t buf_in_len,
+                       unsigned char * sig_in,
+                       unsigned int sig_in_len);
 
 #ifdef __cplusplus
 }

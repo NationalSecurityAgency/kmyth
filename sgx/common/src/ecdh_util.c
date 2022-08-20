@@ -251,11 +251,11 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
 }
 
 /*****************************************************************************
- * sign_buffer()
+ * ec_sign_buffer()
  ****************************************************************************/
-int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                unsigned char *buf_in, size_t buf_in_len,
-                unsigned char **sig_out, unsigned int *sig_out_len)
+int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
+                   unsigned char *buf_in, size_t buf_in_len,
+                   unsigned char **sig_out, unsigned int *sig_out_len)
 {
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -315,11 +315,11 @@ int sign_buffer(EVP_PKEY * ec_sign_pkey,
 }
 
 /*****************************************************************************
- * verify_buffer()
+ * ec_verify_buffer()
  ****************************************************************************/
-int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                  unsigned char *buf_in, size_t buf_in_len,
-                  unsigned char *sig_in, unsigned int sig_in_len)
+int ec_verify_buffer(EVP_PKEY * ec_verify_pkey,
+                     unsigned char *buf_in, size_t buf_in_len,
+                     unsigned char *sig_in, unsigned int sig_in_len)
 {
   // create message digest context
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();

@@ -10,6 +10,8 @@
 
 #include <poll.h>
 
+#include "retrieve_key_protocol.h"
+
 #include "demo_ecdh_util.h"
 #include "demo_tls_util.h"
 #include "demo_log_util.h"

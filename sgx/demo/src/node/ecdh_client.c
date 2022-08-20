@@ -13,8 +13,7 @@ int main(int argc, char **argv)
 {
   ECDHPeer ecdhconn;
 
-  init(&ecdhconn);
-  ecdhconn.isClient = true;
+  ecdh_init(&ecdhconn, true);
 
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
 
@@ -23,7 +22,7 @@ int main(int argc, char **argv)
 
   //client_main(&ecdhconn);
 
-  cleanup(&ecdhconn);
+  ecdh_cleanup(&ecdhconn);
 
   return EXIT_SUCCESS;
 }

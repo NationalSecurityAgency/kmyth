@@ -36,6 +36,37 @@ extern "C"
 
 
 /**
+ * @brief Maximum size of a kmyth 'retrieve key' protocol ECDH message.
+ *        This is the same value as the maximum fragment length in a
+ *        TLS record.
+ */
+#define KMYTH_ECDH_MAX_MSG_SIZE 16384
+
+/**
+ * @brief Maximum size of a kmyth 'retrieve key' protocol TLS message.
+ *        This is the same value as the maximum fragment length in a
+ *        TLS record.
+ */
+#define KMYTH_TLS_MAX_MSG_SIZE 16384
+
+/**
+ * @brief Custom message header prepended to 'retrieve key' protocol messages
+ *        sent over an ECDH connection. (Similar to TLS record headers.)
+ */
+struct ECDHMessageHeader {
+  uint16_t msg_size;
+};
+
+/**
+ * @brief Custom message header prepended to 'retrieve key' protocol messages
+ *        sent over a TLS connection. (Similar to TLS record headers.)
+ */
+struct TLSMessageHeader {
+  uint16_t msg_size;
+};
+
+
+/**
  * @brief Extracts identity information (subject name) from an input X509
  *        certificate as an X509_NAME struct
  *

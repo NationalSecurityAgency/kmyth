@@ -14,12 +14,13 @@
 void proxy_init(TLSProxy * proxy)
 {
   secure_memset(proxy, 0, sizeof(TLSProxy));
-  init(&proxy->ecdhconn);
+  ecdh_init(&proxy->ecdhconn, false);
+  tls_init(&proxy->tlsconn, true);
 }
 
 void proxy_cleanup(TLSProxy * proxy)
 {
-  cleanup(&proxy->ecdhconn);
+  ecdh_cleanup(&proxy->ecdhconn);
   if (proxy->tlsconn.conn != NULL)
   {
     BIO_free_all(proxy->tlsconn.conn);
@@ -54,7 +55,7 @@ static void proxy_usage(const char *prog)
     "  -C or --ca-path         Optional certificate file used to verify the remote server\n"
     "                          (if not specified, the default system CA chain will be used instead)\n"
     "  -R or --client-key      Local (client) private key (for TLS connection) PEM file name\n"
-    "  -U or --server-cert     Remote (server) certificate (for TLS connection) PEM file name\n"
+    "  -U or --client-cert     Local (client) certificate (for TLS connection) PEM file name\n"
     "Test Options --\n"
     "  -m or --maxconn  The number of connections the server will accept before exiting (unlimited by default, or if the value is not a positive integer).\n"
     "Misc --\n"
@@ -107,7 +108,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       proxy->tlsconn.local_key_path = optarg;
       break;
     case 'U':
-      proxy->tlsconn.remote_cert_path = optarg;
+      proxy->tlsconn.local_cert_path = optarg;
       break;
     // Test
     case 'm':
@@ -125,7 +126,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 
 void proxy_check_options(TLSProxy * proxy)
 {
-  check_ecdh_options(&proxy->ecdhconn);
+  ecdh_check_options(&proxy->ecdhconn);
 
   bool err = false;
 
@@ -146,197 +147,103 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-static int tls_config_ctx(TLSPeer * tlsconn)
-{
-  int ret;
+//static int tls_config_ctx(TLSPeer * tlsconn)
+//{
+//  int ret;
+//
+//  const SSL_METHOD* method = TLS_client_method();
+//  if (NULL == method)
+//  {
+//    log_openssl_error("TLS_client_method()");
+//    return -1;
+//  }
+//
+//  tlsconn->ctx = SSL_CTX_new(method);
+//  if (tlsconn->ctx == NULL)
+//  {
+//    log_openssl_error("SSL_CTX_new()");
+//    return -1;
+//  }
+//
+//  /* Disable deprecated TLS versions. */
+//  ret = SSL_CTX_set_min_proto_version(tlsconn->ctx, TLS1_2_VERSION);
+//  if (1 != ret)
+//  {
+//    log_openssl_error("SSL_CTX_set_min_proto_version()");
+//    return -1;
+//  }
+//
+//  /* Enable certificate verification. */
+//  // Can set a callback function here for advanced debugging.
+//  SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
+//  SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
+//
+//  /* Enable custom or default certificate authorities. */
+//  if (tlsconn->ca_cert_path)
+//  {
+//    ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_cert_path, NULL);
+//    if (1 != ret)
+//    {
+//      log_openssl_error("SSL_CTX_load_verify_locations()");
+//      return -1;
+//    }
+//  }
+//  else
+//  {
+//    ret = SSL_CTX_set_default_verify_paths(tlsconn->ctx);
+//    if (1 != ret)
+//    {
+//      log_openssl_error("SSL_CTX_set_default_verify_paths()");
+//      return -1;
+//    }
+//  }
+//
+//  /* Set client key - required by some servers. */
+//  if (tlsconn->local_key_path)
+//  {
+//    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->local_key_path, SSL_FILETYPE_PEM);
+//    if (1 != ret)
+//    {
+//      log_openssl_error("SSL_CTX_use_PrivateKey_file()");
+//      return -1;
+//    }
+//  }
+//
+//  /* Set client cert - required by some servers. */
+//  if (tlsconn->remote_cert_path)
+//  {
+//    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->remote_cert_path, SSL_FILETYPE_PEM);
+//    if (1 != ret)
+//    {
+//      log_openssl_error("SSL_CTX_use_certificate_file()");
+//      return -1;
+//    }
+//  }
+//
+//  return 0;
+//}
 
-  const SSL_METHOD* method = TLS_client_method();
-  if (NULL == method)
-  {
-    log_openssl_error("TLS_client_method()");
-    return -1;
-  }
-
-  tlsconn->ctx = SSL_CTX_new(method);
-  if (tlsconn->ctx == NULL)
-  {
-    log_openssl_error("SSL_CTX_new()");
-    return -1;
-  }
-
-  /* Disable deprecated TLS versions. */
-  ret = SSL_CTX_set_min_proto_version(tlsconn->ctx, TLS1_2_VERSION);
-  if (1 != ret)
-  {
-    log_openssl_error("SSL_CTX_set_min_proto_version()");
-    return -1;
-  }
-
-  /* Enable certificate verification. */
-  // Can set a callback function here for advanced debugging.
-  SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
-  SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
-
-  /* Enable custom or default certificate authorities. */
-  if (tlsconn->ca_cert_path)
-  {
-    ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_cert_path, NULL);
-    if (1 != ret)
-    {
-      log_openssl_error("SSL_CTX_load_verify_locations()");
-      return -1;
-    }
-  }
-  else
-  {
-    ret = SSL_CTX_set_default_verify_paths(tlsconn->ctx);
-    if (1 != ret)
-    {
-      log_openssl_error("SSL_CTX_set_default_verify_paths()");
-      return -1;
-    }
-  }
-
-  /* Set client key - required by some servers. */
-  if (tlsconn->local_key_path)
-  {
-    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->local_key_path, SSL_FILETYPE_PEM);
-    if (1 != ret)
-    {
-      log_openssl_error("SSL_CTX_use_PrivateKey_file()");
-      return -1;
-    }
-  }
-
-  /* Set client cert - required by some servers. */
-  if (tlsconn->remote_cert_path)
-  {
-    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->remote_cert_path, SSL_FILETYPE_PEM);
-    if (1 != ret)
-    {
-      log_openssl_error("SSL_CTX_use_certificate_file()");
-      return -1;
-    }
-  }
-
-  return 0;
-}
-
-static int tls_config_conn(TLSPeer * tlsconn)
-{
-  int ret;
-  unsigned long ssl_err;
-  SSL *ssl = NULL;
-
-  tlsconn->conn = BIO_new_ssl_connect(tlsconn->ctx);
-  if (tlsconn->conn == NULL)
-  {
-    log_openssl_error("BIO_new_ssl_connect()");
-    return -1;
-  }
-
-  ret = BIO_set_conn_hostname(tlsconn->conn, tlsconn->host);
-  if (1 != ret)
-  {
-    log_openssl_error("BIO_set_conn_hostname()");
-    return -1;
-  }
-
-  ret = BIO_set_conn_port(tlsconn->conn, tlsconn->port);
-  if (1 != ret)
-  {
-    log_openssl_error("BIO_set_conn_port()");
-    return -1;
-  }
-
-  BIO_get_ssl(tlsconn->conn, &ssl);  // internal pointer, not a new allocation
-  if (ssl == NULL)
-  {
-    log_openssl_error("BIO_get_ssl()");
-    return -1;
-  }
-
-  /* Set hostname for Server Name Indication. */
-  ret = SSL_set_tlsext_host_name(ssl, tlsconn->host);
-  if (1 != ret)
-  {
-    log_openssl_error("SSL_set_tlsext_host_name()");
-    return -1;
-  }
-
-  /* Set hostname for certificate verification. */
-  ret = SSL_set1_host(ssl, tlsconn->host);
-  if (1 != ret)
-  {
-    log_openssl_error("SSL_set1_host()");
-    return -1;
-  }
-
-  return 0;
-}
-
-static void tls_get_verify_error(TLSPeer * tlsconn)
-{
-  int ret;
-  unsigned long ssl_err;
-  SSL *ssl = NULL;
-
-  BIO_get_ssl(tlsconn->conn, &ssl);  // internal pointer, not a new allocation
-  if (ssl == NULL)
-  {
-    log_openssl_error("BIO_get_ssl()");
-    return;
-  }
-
-  ret = SSL_get_verify_result(ssl);
-  if (X509_V_OK != ret)
-  {
-    kmyth_log(LOG_ERR, "SSL_get_verify_result: %s",
-              X509_verify_cert_error_string(ret));
-  }
-}
-
-static int tls_connect(TLSPeer * tlsconn)
-{
-  int ret;
-  unsigned long ssl_err;
-
-  ret = BIO_do_connect(tlsconn->conn);
-  if (1 != ret)
-  {
-    /* Both connection failures and certificate verification failures are caught here. */
-    log_openssl_error("BIO_do_connect()");
-    tls_get_verify_error(tlsconn);
-    return -1;
-  }
-
-  return 0;
-}
-
-static int setup_ecdhconn(TLSProxy * proxy)
+static int setup_proxy_ecdh_connection(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
 
-  create_ecdh_server_socket(ecdhconn);
+  // setup proxy 'server' socket to support a client connection
+  ecdh_create_server_socket(ecdhconn);
 
-  load_local_sign_key(ecdhconn);
-  load_local_sign_cert(ecdhconn);
-  load_remote_sign_cert(ecdhconn);
-
-  make_ephemeral_keypair(ecdhconn);
-
-  recv_client_hello_msg(ecdhconn);
-
-  send_server_hello_msg(ecdhconn);
-
-  get_session_key(ecdhconn);
-
-  recv_key_request_msg(ecdhconn);
-
-  return 0;
+  // load keys/certificates needed to compose/sign/validate protocol messages
+  //   - proxy (server) private key
+  //     - used to sign messages originating server-side
+  //   - proxy (server) certificate
+  //     - contains proxy identity information (X509 subject name)
+  //   - client certificate
+  //     - contains client's identity information (X509 subject name)
+  //     - contains public key needed to verfiy messages received from client
+  ecdh_load_local_sign_key(ecdhconn);
+  ecdh_load_local_sign_cert(ecdhconn);
+  ecdh_load_remote_sign_cert(ecdhconn);
 }
 
-static int setup_tlsconn(TLSProxy * proxy)
+static int setup_proxy_tls_connection(TLSProxy * proxy)
 {
   TLSPeer *tlsconn = &proxy->tlsconn;
 
@@ -350,17 +257,48 @@ static int setup_tlsconn(TLSProxy * proxy)
     proxy_error(proxy);
   }
 
-  if (tls_connect(tlsconn))
+  return 0;
+}
+
+static void get_client_key_request(TLSProxy * proxy)
+{
+  ECDHPeer *ecdhconn = &proxy->ecdhconn;
+
+  // create proxy's session-unique (ephemeral) public/private key pair
+  // (proxy contribution to ECDH key agreement)
+  ecdh_make_ephemeral_keypair(ecdhconn);
+
+  // exhange 'Client Hello'/'Server Hello' messages with the client
+  ecdh_recv_client_hello_msg(ecdhconn);
+  ecdh_send_server_hello_msg(ecdhconn);
+
+  // compute two session keys derived from ECDH computed 'shared secret'
+  ecdh_get_session_key(ecdhconn);
+
+  // receive key request message from client (encrypted with session key #1)
+  ecdh_recv_key_request_msg(ecdhconn);
+
+  kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
+            ecdhconn->kmip_key_request[0],
+            ecdhconn->kmip_key_request[1],
+            ecdhconn->kmip_key_request[ecdhconn->kmip_key_request_len-2],
+            ecdhconn->kmip_key_request[ecdhconn->kmip_key_request_len-1],
+            ecdhconn->kmip_key_request_len);
+}
+
+static void get_kmip_response(TLSProxy * proxy)
+{
+  if (tls_client_connect(&proxy->tlsconn))
   {
     proxy_error(proxy);
   }
 
-  return 0;
 }
 
 void proxy_start(TLSProxy * proxy)
 {
-  kmyth_log(LOG_DEBUG, "starting proxy ...");
+  kmyth_log(LOG_DEBUG, "starting ECDH/TLS proxy ...");
+
   struct pollfd pfds[NUM_POLL_FDS];
   int bytes_read = 0;
   int bytes_written = 0;
@@ -387,19 +325,34 @@ void proxy_start(TLSProxy * proxy)
 
     if (pfds[0].revents & POLLIN)
     {
-      ecdh_recv_decrypt(ecdhconn, &ecdh_msg_buf, &ecdh_msg_len);
-      kmyth_log(LOG_DEBUG, "Received %zu bytes on ECDH connection", ecdh_msg_len);
-      bytes_written = BIO_write(tls_bio, ecdh_msg_buf, ecdh_msg_len);
-      if (bytes_written != ecdh_msg_len)
+      kmyth_log(LOG_DEBUG, "ECDH receive event");
+      get_client_key_request(proxy);
+      get_kmip_response(proxy);
+      //ecdh_recv_decrypt(ecdhconn, &ecdh_msg_buf, &ecdh_msg_len);
+      //kmyth_log(LOG_DEBUG, "Received %zu bytes on ECDH connection", ecdh_msg_len);
+      struct TLSMessageHeader hdr;
+      hdr.msg_size = htobe16((uint16_t) proxy->ecdhconn.kmip_key_request_len);
+      bytes_written = BIO_write(tls_bio, (void *) &hdr, sizeof(hdr));
+      if (bytes_written != sizeof(hdr))
       {
         kmyth_log(LOG_ERR, "TLS write error");
         proxy_error(proxy);
       }
-      kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
+      bytes_written = BIO_write(tls_bio,
+                                (void *) proxy->ecdhconn.kmip_key_request,
+                                proxy->ecdhconn.kmip_key_request_len);
+      if (bytes_written != proxy->ecdhconn.kmip_key_request_len)
+      {
+        kmyth_log(LOG_ERR, "TLS write error");
+        proxy_error(proxy);
+      }
+
+      //kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
     }
 
     if (pfds[1].revents & POLLIN)
     {
+      kmyth_log(LOG_DEBUG, "TLS receive event");
       bytes_read = BIO_read(proxy->tlsconn.conn, tls_msg_buf, sizeof(tls_msg_buf));
       if (bytes_read == 0)
       {
@@ -412,11 +365,11 @@ void proxy_start(TLSProxy * proxy)
         proxy_error(proxy);
       }
       kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
-      ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
+      //ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
     }
   }
 }
-
+/*
 void proxy_main(TLSProxy * proxy)
 {
   // The ECDH setup must come first because it forks a new process to handle each new connection.
@@ -424,13 +377,13 @@ void proxy_main(TLSProxy * proxy)
   setup_tlsconn(proxy);
   proxy_start(proxy);
 }
-
+*/
 int main(int argc, char **argv)
 {
   TLSProxy proxy;
 
   // setup default logging parameters
-  set_app_name("     proxy       ");
+  set_app_name("       proxy        ");
   set_app_version("");
   set_applog_path("../sgx/sgx_retrievekey_demo.log");
   set_applog_severity_threshold(DEMO_LOG_LEVEL);
@@ -438,12 +391,21 @@ int main(int argc, char **argv)
 
   proxy_init(&proxy);
 
-  set_applog_severity_threshold(DEMO_LOG_LEVEL);
-
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  proxy_main(&proxy);
+  setup_proxy_ecdh_connection(&proxy);
+  setup_proxy_tls_connection(&proxy);
+
+  proxy_start(&proxy);
+
+  get_client_key_request(&proxy);
+
+  get_kmip_response(&proxy);
+
+  //proxy_start(&proxy);
+
+  //proxy_main(&proxy);
 
   proxy_cleanup(&proxy);
 

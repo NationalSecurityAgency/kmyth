@@ -27,6 +27,7 @@
 #include <openssl/x509v3.h>
 
 #include <kmyth/kmyth_log.h>
+#include <kmyth/memory_util.h>
 
 #include "socket_util.h"
 
@@ -41,12 +42,18 @@ typedef struct TLSPeer
   char *port;
   char *ca_cert_path;
   char *local_key_path;
-  char *remote_cert_path;
+  char *local_cert_path;
   SSL_CTX *ctx;
   BIO *conn;
 } TLSPeer;
 
 
-static int tls_config_ctx(TLSPeer * tlsconn);
+void tls_init(TLSPeer * tlsconn, bool clientMode);
+
+void tls_get_verify_error(TLSPeer * tlsconn);
+
+int tls_config_ctx(TLSPeer * tlsconn);
+int tls_config_conn(TLSPeer * tlsconn);
+int tls_client_connect(TLSPeer * tlsconn);
 
 #endif
