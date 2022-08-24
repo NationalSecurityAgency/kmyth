@@ -21,9 +21,9 @@ void proxy_init(TLSProxy * proxy)
 void proxy_cleanup(TLSProxy * proxy)
 {
   ecdh_cleanup(&proxy->ecdhconn);
-  if (proxy->tlsconn.conn != NULL)
+  if (proxy->tlsconn.bio != NULL)
   {
-    BIO_free_all(proxy->tlsconn.conn);
+    BIO_free_all(proxy->tlsconn.bio);
   }
 
   if (proxy->tlsconn.ctx != NULL)
@@ -252,7 +252,7 @@ static int setup_proxy_tls_connection(TLSProxy * proxy)
     proxy_error(proxy);
   }
 
-  if (tls_config_conn(tlsconn))
+  if (tls_config_client_connect(tlsconn))
   {
     proxy_error(proxy);
   }
@@ -306,7 +306,7 @@ void proxy_start(TLSProxy * proxy)
   unsigned char *ecdh_msg_buf = NULL;
   size_t ecdh_msg_len = 0;
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
-  BIO *tls_bio = proxy->tlsconn.conn;
+  BIO *tls_bio = proxy->tlsconn.bio;
 
   secure_memset(pfds, 0, sizeof(pfds));
   secure_memset(tls_msg_buf, 0, sizeof(tls_msg_buf));
@@ -353,7 +353,7 @@ void proxy_start(TLSProxy * proxy)
     if (pfds[1].revents & POLLIN)
     {
       kmyth_log(LOG_DEBUG, "TLS receive event");
-      bytes_read = BIO_read(proxy->tlsconn.conn, tls_msg_buf, sizeof(tls_msg_buf));
+      bytes_read = BIO_read(proxy->tlsconn.bio, tls_msg_buf, sizeof(tls_msg_buf));
       if (bytes_read == 0)
       {
         kmyth_log(LOG_INFO, "TLS connection is closed");

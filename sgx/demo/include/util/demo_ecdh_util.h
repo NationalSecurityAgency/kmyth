@@ -36,9 +36,9 @@
 
 #define UNSET_FD -1
 
-#define KEY_ID "7"
-#define KEY_ID_LEN 1
-#define OP_KEY_SIZE 16
+#define DEMO_KEY_ID "7"
+#define DEMO_KEY_ID_LEN 1
+#define DEMO_OP_KEY_SIZE 16
 
 typedef struct ECDHPeer
 {

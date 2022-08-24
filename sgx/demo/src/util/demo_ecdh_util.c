@@ -635,12 +635,12 @@ int ecdh_handle_key_request(ECDHPeer *ecdhconn)
   kmyth_log(LOG_DEBUG, "Received a KMIP Get request for key ID: %.*s",
             key_id_len, key_id);
 
-  unsigned char static_key[OP_KEY_SIZE] = {
+  unsigned char static_key[DEMO_OP_KEY_SIZE] = {
     0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
     0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
   };
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
-            static_key[OP_KEY_SIZE - 1]);
+            static_key[DEMO_OP_KEY_SIZE - 1]);
 
   /* Build and send response. */
   ret = build_kmip_get_response(&kmip_context,
@@ -675,12 +675,12 @@ void send_operational_key(ECDHPeer * ecdhconn)
 {
   int ret;
 
-  unsigned char static_key[OP_KEY_SIZE] = {
+  unsigned char static_key[DEMO_OP_KEY_SIZE] = {
     0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
     0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
   };
   kmyth_log(LOG_DEBUG, "Loaded operational key: 0x%02X..%02X", static_key[0],
-            static_key[OP_KEY_SIZE - 1]);
+            static_key[DEMO_OP_KEY_SIZE - 1]);
 
   sleep(5);
 
@@ -701,7 +701,7 @@ void get_operational_key(ECDHPeer * ecdhconn)
   int ret;
 
   ret = request_key(ecdhconn,
-                    (unsigned char *) KEY_ID, KEY_ID_LEN,
+                    (unsigned char *) DEMO_KEY_ID, DEMO_KEY_ID_LEN,
                     &op_key, &op_key_len);
   if (ret)
   {

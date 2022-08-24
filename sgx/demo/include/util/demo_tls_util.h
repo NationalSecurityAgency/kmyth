@@ -44,7 +44,7 @@ typedef struct TLSPeer
   char *local_key_path;
   char *local_cert_path;
   SSL_CTX *ctx;
-  BIO *conn;
+  BIO *bio;
 } TLSPeer;
 
 
@@ -53,7 +53,9 @@ void tls_init(TLSPeer * tlsconn, bool clientMode);
 void tls_get_verify_error(TLSPeer * tlsconn);
 
 int tls_config_ctx(TLSPeer * tlsconn);
-int tls_config_conn(TLSPeer * tlsconn);
+int tls_config_client_connect(TLSPeer * tlsconn);
+int tls_config_server_accept(TLSPeer * tlsconn);
 int tls_client_connect(TLSPeer * tlsconn);
+int tls_server_accept(TLSPeer * tlsconn);
 
 #endif
