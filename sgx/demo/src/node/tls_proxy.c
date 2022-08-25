@@ -347,6 +347,19 @@ void proxy_start(TLSProxy * proxy)
         proxy_error(proxy);
       }
 
+      bytes_read = BIO_read(tls_bio, tls_msg_buf, sizeof(tls_msg_buf));
+      if (bytes_read == 0)
+      {
+        kmyth_log(LOG_INFO, "TLS connection is closed");
+        break;
+      }
+      else if (bytes_read < 0)
+      {
+        kmyth_log(LOG_ERR, "TLS read error");
+        proxy_error(proxy);
+      }
+      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
+      //ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
       //kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
     }
 

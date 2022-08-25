@@ -1,15 +1,17 @@
 /**
  * @file demo_kmip_server.c
+ * 
  * @brief A very simplified KMIP server application used only to demonstrate
  *        the kmyth use of a TLS proxy to retrieve a key from a KMIP server.
  */
-
 
 #include "demo_kmip_server.h"
 
 #ifndef DEMO_LOG_LEVEL
 #define DEMO_LOG_LEVEL LOG_DEBUG
 #endif
+
+static unsigned char demo_op_key_val[DEMO_OP_KEY_VAL_LEN] = DEMO_OP_KEY_VAL;
 
 void demo_kmip_server_init(DemoServer * server)
 {
@@ -36,7 +38,6 @@ void demo_kmip_server_cleanup(DemoServer * server)
 
   kmyth_log(LOG_DEBUG, "after server_init()");
 }
-
 
 void demo_kmip_server_error(DemoServer * server)
 {
@@ -188,94 +189,25 @@ void demo_kmip_server_setup(DemoServer *server)
   kmyth_log(LOG_DEBUG, "prepared server to 'accept' client TLS connections");
 }
 
-//int configure_demo_kmip_server_context(DemoServer *server)
-//{
-//  // set server's private key from file (.pem formatted)
-//  if (1 != SSL_CTX_use_PrivateKey_file(server->tlsconn.ctx,
-//                                       server->tlsconn.local_key_path,
-//                                       SSL_FILETYPE_PEM))
-//  {
-//    kmyth_log(LOG_ERR, "PEM key file (%s) read failed",
-//                       server->tlsconn.local_key_path);
-//    log_openssl_error("SSL_CTX_use_PrivateKey_file()");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "loaded demo server's private key (%s)",
-//                        server->tlsconn.local_key_path);
-//
-//  // set server's public certificate (X509) from file (.pem formatted)
-//  if (1 != SSL_CTX_use_certificate_file(server->tlsconn.ctx,
-//                                        server->tlsconn.local_cert_path,
-//                                        SSL_FILETYPE_PEM))
-//  {
-//    kmyth_log(LOG_ERR, "PEM key file (%s) read failed",
-//                       server->tlsconn.local_cert_path);
-//    log_openssl_error("SSL_CTX_use_certificate_file()");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "loaded local (server) public certificate (%s)",
-//                       server->tlsconn.local_cert_path);
-//
-//  return EXIT_SUCCESS;
-//}
-//
-//int create_demo_kmip_server_socket(DemoServer *server)
-//{
-//  struct sockaddr_in addr;
-//  uint addr_len = sizeof(addr);
-//
-//  addr.sin_family = AF_INET;
-//  int p = atoi(server->tlsconn.port);
-//  addr.sin_port = htons(p);
-//  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-//
-//  int s = socket(AF_INET, SOCK_STREAM, 0);
-//  if (s < 0)
-//  {
-//    kmyth_log(LOG_ERR, "unable to create socket");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "created socket (handle = %d)", s);
-//
-//  int temp = bind(s, (struct sockaddr *) &addr, sizeof(addr));
-//  kmyth_log(LOG_DEBUG, "temp = %d", temp);
-//  if (temp < 0)
-//  {
-//    kmyth_log(LOG_ERR, "unable to bind socket");
-//    perror("bind error:");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "bind socket succeeded");
-//
-//  if (listen(s, 1) < 0)
-//  {
-//    kmyth_log(LOG_ERR, "listen on port %d failed",
-//                        atoi(server->tlsconn.port));
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "listening on port %d",
-//                        atoi(server->tlsconn.port));
-//}
-
 int receive_kmip_get_key_request(DemoServer *server,
                                   unsigned char **kmip_key_req_bytes,
                                   size_t *kmip_key_req_len)
 {
+  // handle incoming TLS connection with client
   kmyth_log(LOG_DEBUG, "waiting to accept TLS connection with client");
-
   if (EXIT_SUCCESS != tls_server_accept(&server->tlsconn))
   {
     kmyth_log(LOG_ERR, "error accepting TLS connection");
     return EXIT_FAILURE;
   }
-
-  kmyth_log(LOG_DEBUG, "waiting to complete TLS handshake with client");
+  kmyth_log(LOG_DEBUG, "incoming TLS client connection accepted");
 
   if (BIO_do_handshake(server->tlsconn.bio) <= 0)
   {
     kmyth_log(LOG_ERR, "error completing TLS handshake");
     return EXIT_FAILURE;
   }
+  kmyth_log(LOG_DEBUG, "completed TLS client/server handshake");
 
   // get size (in bytes) of KMIP 'get key' request field to be received
   unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE] = { 0 };
@@ -289,24 +221,24 @@ int receive_kmip_get_key_request(DemoServer *server,
   *kmip_key_req_len = buf[0] << 8;
   *kmip_key_req_len += buf[1];
 
-  kmyth_log(LOG_DEBUG, "received KMIP Request size = %d bytes)",
-                       *kmip_key_req_len);
+  // allocate buffer to hold received KMIP 'get key' request bytes
+  *kmip_key_req_bytes = malloc(*kmip_key_req_len);
 
   // get KMIP 'get key' request bytes
-  bytes_read = BIO_read(server->tlsconn.bio, buf, (size_t) *kmip_key_req_len);
+  bytes_read = BIO_read(server->tlsconn.bio,
+                        *kmip_key_req_bytes,
+                        (size_t) *kmip_key_req_len);
   if (bytes_read != *kmip_key_req_len)
   {
     kmyth_log(LOG_ERR, "error reading 'get key' request bytes");
     return EXIT_FAILURE;
   }
-
   kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
-                       buf[0], buf[1],
-                       buf[*kmip_key_req_len-2], buf[*kmip_key_req_len-1],
+                       (*kmip_key_req_bytes)[0], (*kmip_key_req_bytes)[1],
+                       (*kmip_key_req_bytes)[*kmip_key_req_len-2],
+                       (*kmip_key_req_bytes)[*kmip_key_req_len-1],
                        *kmip_key_req_len);
     
-  memcpy(*kmip_key_req_bytes, buf, *kmip_key_req_len);
-
   return EXIT_SUCCESS;
 }
 
@@ -315,44 +247,97 @@ int validate_kmip_get_key_request(unsigned char *kmip_key_req_bytes,
                                   unsigned char ** kmip_key_req_id_bytes,
                                   size_t *kmip_key_req_id_len)
 {
-    KMIP kmip_ctx = { 0 };
-    kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
+  KMIP kmip_ctx = { 0 };
+  kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
 
-    if (EXIT_SUCCESS != parse_kmip_get_request(&kmip_ctx,
-                                               kmip_key_req_bytes,
-                                               kmip_key_req_len,
-                                               kmip_key_req_id_bytes,
-                                               kmip_key_req_id_len))
-    {
-      kmyth_log(LOG_ERR, "KMIP 'get key' request parsing failed");
-      return EXIT_FAILURE;
-    }
+  if (EXIT_SUCCESS != parse_kmip_get_request(&kmip_ctx,
+                                             kmip_key_req_bytes,
+                                             kmip_key_req_len,
+                                             kmip_key_req_id_bytes,
+                                             kmip_key_req_id_len))
+  {
+    kmyth_log(LOG_ERR, "KMIP 'get key' request parsing failed");
+    return EXIT_FAILURE;
+  }
 
-    char *id_str = malloc(*kmip_key_req_id_len + 1);
-    memcpy(id_str, *kmip_key_req_id_bytes, *kmip_key_req_id_len);
-    *(id_str+*kmip_key_req_id_len) = '\0';
-    kmyth_log(LOG_DEBUG, "KMIP key request ID = %s (%d-byte string)",
-                           id_str, *kmip_key_req_id_len);
+  char *id_str = malloc(*kmip_key_req_id_len + 1);
+  memcpy(id_str, *kmip_key_req_id_bytes, *kmip_key_req_id_len);
+  *(id_str+*kmip_key_req_id_len) = '\0';
+  kmyth_log(LOG_DEBUG, "KMIP key request ID = %s (%d-byte string)",
+                         id_str, *kmip_key_req_id_len);
 
-    if (*kmip_key_req_id_len != strlen(DEMO_KEY_ID))
-    {
-      kmyth_log(LOG_ERR, "unexpected KMIP ID string length");
-      return EXIT_FAILURE;
-    }
+  if (*kmip_key_req_id_len != strlen(DEMO_KEY_ID))
+  {
+    kmyth_log(LOG_ERR, "unexpected KMIP ID string length");
+    return EXIT_FAILURE;
+  }
 
-    if (strncmp(id_str, DEMO_KEY_ID, *kmip_key_req_id_len) != 0)
-    {
-      kmyth_log(LOG_ERR, "unexpected KMIP ID value ('%s' instead of '%s')",
-                         id_str, DEMO_KEY_ID);
-      return EXIT_FAILURE;
-    }
+  if (strncmp(id_str, DEMO_KEY_ID, *kmip_key_req_id_len) != 0)
+  {
+    kmyth_log(LOG_ERR, "unexpected KMIP ID value ('%s' instead of '%s')",
+                       id_str, DEMO_KEY_ID);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "received validated request for expected key ID");
 
   return EXIT_SUCCESS;
 }
 
+int compose_kmip_get_key_response(unsigned char *key_id,
+                                  size_t key_id_len,
+                                  unsigned char **response_bytes,
+                                  size_t *response_len)
+{
+  KMIP kmip_ctx = { 0 };
+  kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
+
+  if (EXIT_SUCCESS != build_kmip_get_response(&kmip_ctx,
+                                              demo_op_key_val,
+                                              DEMO_OP_KEY_VAL_LEN,
+                                              key_id,
+                                              key_id_len,
+                                              response_bytes,
+                                              response_len))
+  {
+    kmyth_log(LOG_ERR, "error building KMIP 'get key' response");
+    return EXIT_FAILURE;
+  }
+
+  unsigned char *tmp_buf = *response_bytes;
+
+  kmyth_log(LOG_DEBUG, "KMIP Response = 0x%02X%02X ... %02X%02X (%d bytes)",
+                       tmp_buf[0], tmp_buf[1],
+                       tmp_buf[*response_len-2],
+                       tmp_buf[*response_len-1],
+                       *response_len);
+
+  return EXIT_SUCCESS;
+}
+
+int send_kmip_get_key_response(DemoServer *server,
+                               unsigned char *kmip_key_resp_bytes,
+                               size_t kmip_key_resp_len)
+{
+  int bytes_written = BIO_write(server->tlsconn.bio,
+                                kmip_key_resp_bytes,
+                                kmip_key_resp_len);
+  if (bytes_written != kmip_key_resp_len)
+  {
+    kmyth_log(LOG_ERR, "error sending 'get key' response");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "returned KMIP 'get key' response (%d bytes)",
+                       bytes_written);
+
+  return EXIT_SUCCESS;
+}
+
+
 int main(int argc, char **argv)
 {
-  DemoServer server;
+  DemoServer demo_server;
 
   // setup default logging parameters
   set_app_name("             server ");
@@ -362,84 +347,56 @@ int main(int argc, char **argv)
   set_applog_output_mode(0);
 
   // process command-line options
-  demo_kmip_server_get_options(&server, argc, argv);
-  demo_kmip_server_check_options(&server);
+  demo_kmip_server_get_options(&demo_server, argc, argv);
+  demo_kmip_server_check_options(&demo_server);
 
   // some initializtion for demo KMIP server
-  demo_kmip_server_setup(&server);
+  demo_kmip_server_setup(&demo_server);
 
   // receive KMIP 'get key' request via client connection
   unsigned char *kmip_req_bytes = NULL;
   size_t kmip_req_len = 0;
 
-  if (EXIT_SUCCESS != receive_kmip_get_key_request(&server,
+  if (EXIT_SUCCESS != receive_kmip_get_key_request(&demo_server,
                                                    &kmip_req_bytes,
                                                    &kmip_req_len))
   {
     kmyth_log(LOG_ERR, "error receiving KMIP 'get key' request");
+    return EXIT_FAILURE;
   }
-
-  // configure TLS context
-  //if (EXIT_SUCCESS != configure_demo_kmip_server_context(&server))
-  //{
-  //  kmyth_log(LOG_ERR, "configuration of demo server TLS context failed");
-  //  demo_kmip_server_error(&server);
-  //  return EXIT_FAILURE;
-  //}
-
-  // create and setup demo KMIP server socket
-  //if (EXIT_SUCCESS != create_demo_kmip_server_socket(&server))
-  //{
-  //  kmyth_log(LOG_ERR, "socket setup failed for demo KMIP server");
-  //  demo_kmip_server_error(&server);
-  //  return EXIT_FAILURE;
-  //}
-
-  //int client = accept(s, (struct sockaddr *) &addr, &addr_len);
-  //if (client < 0)
-  //{
-  //  kmyth_log(LOG_ERR, "unable to accept incoming client connection");
-  //  return EXIT_FAILURE;
-  //}
-  //kmyth_log(LOG_DEBUG, "creating socket (fd = %d) with client", client);
-
-  //SSL *ssl = SSL_new(server.tlsconn.ctx);
-  //SSL_set_fd(ssl, client);
-
-  //if (SSL_accept(ssl) <= 0)
-  //{
-  //  kmyth_log(LOG_ERR, "failed to accept client connection");
-  //  log_openssl_error("SSL_accept()")
-  //}
-  //else
-  //{
-  //  size_t kmip_key_req_len = 0;
-
-  //  if (EXIT_SUCCESS != receive_kmip_get_key_request(&buf, &kmip_key_req_len))
-  //  {
-  //    kmyth_log(LOG_ERR, "error receiving KMIP key request");
-  //  }
+  kmyth_log(LOG_DEBUG, "done receive_kmip_get_key_request()");
 
   unsigned char *req_id_bytes = NULL;
   size_t req_id_len = 0;
 
+  kmyth_log(LOG_DEBUG, "calling validate_kmip_get_key_request()");
+
   validate_kmip_get_key_request(kmip_req_bytes, kmip_req_len,
                                 &req_id_bytes, &req_id_len);
+  
+  unsigned char *kmip_resp_bytes = NULL;
+  size_t kmip_resp_len = 0;
 
-    //kmyth_log(LOG_DEBUG, "writing reply to client ...");
-    //SSL_write(ssl, reply, strlen(reply));
+  if (EXIT_SUCCESS != compose_kmip_get_key_response(req_id_bytes,
+                                                    req_id_len,
+                                                    &kmip_resp_bytes,
+                                                    &kmip_resp_len))
+  {
+    kmyth_log(LOG_ERR, "failed to compose KMIP 'get key' response");
+    return EXIT_FAILURE;
+  }
 
-  //SSL_shutdown(ssl);
-  //SSL_free(ssl);
-  //kmyth_log(LOG_DEBUG, "cleaned up SSL object");
+  if (EXIT_SUCCESS != send_kmip_get_key_response(&demo_server,
+                                                 kmip_resp_bytes,
+                                                 kmip_resp_len))
+  {
+    kmyth_log(LOG_ERR, "error returning KMIP 'get key' response");
+    return EXIT_FAILURE;
+  }
 
-  //close(client);
-  //kmyth_log(LOG_DEBUG, "closed client connection socket");
+  sleep(2);
 
-  //close(s);
-  //kmyth_log(LOG_DEBUG, "closed server socket");
-
-  demo_kmip_server_cleanup(&server);
+  demo_kmip_server_cleanup(&demo_server);
 
   EVP_cleanup();
 

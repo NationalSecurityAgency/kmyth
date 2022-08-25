@@ -244,6 +244,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
+  sleep(5);
   demo_log(LOG_DEBUG, "retrieve key demo complete");
 
   return EXIT_SUCCESS;

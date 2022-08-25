@@ -131,6 +131,7 @@ void ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
   if (bytes_read == 0)
   {
     kmyth_log(LOG_ERR, "ECDH connection is closed.");
+    sleep(1);
     ecdh_error(ecdhconn);
   }
   else if (bytes_read != len)
