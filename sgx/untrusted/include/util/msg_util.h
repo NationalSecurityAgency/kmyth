@@ -1,12 +1,12 @@
 /**
- * @file sgx_socket_util.h
+ * @file msg_util.h
  *
  * @brief Provides headers for UNIX socket-based functionality to
  *        support network communication (e.g., protocol message exchange)
  */
 
-#ifndef _SGX_SOCKET_UTIL_H_
-#define _SGX_SOCKET_UTIL_H_
+#ifndef _KMYTH_MSG_UTIL_H_
+#define _KMYTH_MSG_UTIL_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -30,4 +30,4 @@ int send_ecdh_msg(int socket_fd, unsigned char *buf, size_t len);
 }
 #endif
 
-#endif
+#endif  // _KMYTH_MSG_UTIL_H_

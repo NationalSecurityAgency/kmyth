@@ -6,8 +6,8 @@
  *        modular fashion
  */
 
-#ifndef _ECDH_UTIL_H_
-#define _ECDH_UTIL_H_
+#ifndef _KMYTH_ECDH_UTIL_H_
+#define _KMYTH_ECDH_UTIL_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -45,22 +45,25 @@ extern "C"
 #define KMYTH_EC_NID NID_secp521r1
 
 /**
+ * @brief Specify the size (in bytes) required for the ECDH 'shared
+ *        secret' key agreement result
+ */
+#define KMYTH_ECDH_SHARED_SECRET_SIZE 66
+
+/**
  * @brief Specify the cryptographic hash algorithm to be used by the
  *        ECDH-based Kmyth 'retrieve key from server' protocol 
  */
 #define KMYTH_ECDH_MD EVP_sha512()
 
 /**
- * @brief OpenSSL's compute_ecdh_key() call supports optionally passing
- *        a function pointer for a KDF to apply to the derived shared
- *        secret value. If the intent is to use the shared secret value
- *        directly, NULL should be passed for this parameter. This macro
- *        provides a centralized way to configure this behavior. For now
- *        this is set to NULL and the compute_ecdh_session_key() function
- *        was added to hash the ECDH mutually computed secret as a 'KDF'
- *        and create a 'session key'
+ * @brief Specify the size (in bytes) of the desired key derivation
+ *        function (KDF) output. Also specify the size for each of
+ *        the two 'session keys' to be created (note that this must
+ *        be <= half of the KDF output size) 
  */
-#define KMYTH_ECDH_KDF NULL
+#define KMYTH_ECDH_KDF_OUTPUT_SIZE 64
+#define KMYTH_ECDH_SESSION_KEY_SIZE 32
 
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
@@ -73,7 +76,7 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair);
+  int create_ecdh_ephemeral_keypair(EVP_PKEY ** ephemeral_key_pair);
 
 /**
  * @brief Computes shared secret value, using ECDH, from a local private
@@ -227,4 +230,4 @@ extern "C"
 }
 #endif
 
-#endif
+#endif  // _KMYTH_ECDH_UTIL_H_

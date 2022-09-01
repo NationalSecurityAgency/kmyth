@@ -82,17 +82,18 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
     {
     // Key files
     case 'r':
-      proxy->ecdhconn.local_priv_sign_key_path = optarg;
+      proxy->ecdhopts.local_sign_key_path = optarg;
       break;
     case 'c':
-      proxy->ecdhconn.local_pub_sign_cert_path = optarg;
+      proxy->ecdhopts.local_sign_cert_path = optarg;
       break;
     case 'u':
-      proxy->ecdhconn.remote_pub_sign_cert_path = optarg;
+      proxy->ecdhopts.remote_sign_cert_path = optarg;
       break;
     // ECDH Connection
     case 'p':
       proxy->ecdhconn.port = optarg;
+      proxy->ecdhopts.port = optarg;
       break;
     // TLS Connection
     case 'I':
@@ -112,7 +113,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       break;
     // Test
     case 'm':
-      proxy->ecdhconn.maxconn = atoi(optarg);
+      proxy->ecdhconn.max_conn = atoi(optarg);
       break;
     // Misc
     case 'h':
@@ -126,7 +127,8 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 
 void proxy_check_options(TLSProxy * proxy)
 {
-  ecdh_check_options(&proxy->ecdhconn);
+  ecdh_check_options(&proxy->ecdhopts);
+
 
   bool err = false;
 
@@ -147,85 +149,10 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-//static int tls_config_ctx(TLSPeer * tlsconn)
-//{
-//  int ret;
-//
-//  const SSL_METHOD* method = TLS_client_method();
-//  if (NULL == method)
-//  {
-//    log_openssl_error("TLS_client_method()");
-//    return -1;
-//  }
-//
-//  tlsconn->ctx = SSL_CTX_new(method);
-//  if (tlsconn->ctx == NULL)
-//  {
-//    log_openssl_error("SSL_CTX_new()");
-//    return -1;
-//  }
-//
-//  /* Disable deprecated TLS versions. */
-//  ret = SSL_CTX_set_min_proto_version(tlsconn->ctx, TLS1_2_VERSION);
-//  if (1 != ret)
-//  {
-//    log_openssl_error("SSL_CTX_set_min_proto_version()");
-//    return -1;
-//  }
-//
-//  /* Enable certificate verification. */
-//  // Can set a callback function here for advanced debugging.
-//  SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
-//  SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
-//
-//  /* Enable custom or default certificate authorities. */
-//  if (tlsconn->ca_cert_path)
-//  {
-//    ret = SSL_CTX_load_verify_locations(tlsconn->ctx, tlsconn->ca_cert_path, NULL);
-//    if (1 != ret)
-//    {
-//      log_openssl_error("SSL_CTX_load_verify_locations()");
-//      return -1;
-//    }
-//  }
-//  else
-//  {
-//    ret = SSL_CTX_set_default_verify_paths(tlsconn->ctx);
-//    if (1 != ret)
-//    {
-//      log_openssl_error("SSL_CTX_set_default_verify_paths()");
-//      return -1;
-//    }
-//  }
-//
-//  /* Set client key - required by some servers. */
-//  if (tlsconn->local_key_path)
-//  {
-//    ret = SSL_CTX_use_PrivateKey_file(tlsconn->ctx, tlsconn->local_key_path, SSL_FILETYPE_PEM);
-//    if (1 != ret)
-//    {
-//      log_openssl_error("SSL_CTX_use_PrivateKey_file()");
-//      return -1;
-//    }
-//  }
-//
-//  /* Set client cert - required by some servers. */
-//  if (tlsconn->remote_cert_path)
-//  {
-//    ret = SSL_CTX_use_certificate_file(tlsconn->ctx, tlsconn->remote_cert_path, SSL_FILETYPE_PEM);
-//    if (1 != ret)
-//    {
-//      log_openssl_error("SSL_CTX_use_certificate_file()");
-//      return -1;
-//    }
-//  }
-//
-//  return 0;
-//}
-
 static int setup_proxy_ecdh_connection(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
+  ECDHNode *ecdhopts = &proxy->ecdhopts;
 
   // setup proxy 'server' socket to support a client connection
   ecdh_create_server_socket(ecdhconn);
@@ -238,9 +165,9 @@ static int setup_proxy_ecdh_connection(TLSProxy * proxy)
   //   - client certificate
   //     - contains client's identity information (X509 subject name)
   //     - contains public key needed to verfiy messages received from client
-  ecdh_load_local_sign_key(ecdhconn);
-  ecdh_load_local_sign_cert(ecdhconn);
-  ecdh_load_remote_sign_cert(ecdhconn);
+  ecdh_load_local_sign_key(ecdhconn, ecdhopts);
+  ecdh_load_local_sign_cert(ecdhconn, ecdhopts);
+  ecdh_load_remote_sign_cert(ecdhconn, ecdhopts);
 }
 
 static int setup_proxy_tls_connection(TLSProxy * proxy)
@@ -260,40 +187,200 @@ static int setup_proxy_tls_connection(TLSProxy * proxy)
   return 0;
 }
 
-static void get_client_key_request(TLSProxy * proxy)
+int receive_client_hello_msg(ECDHPeer * ecdhconn)
+{
+  struct ECDHMessage *msg = &ecdhconn->client_hello;
+
+  if (EXIT_SUCCESS != ecdh_recv_msg(ecdhconn, msg))
+  {
+    kmyth_log(LOG_ERR, "error receiving 'Client Hello' message");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
+                      "(%d bytes)",
+                      msg->body[0], msg->body[1],
+                      msg->body[msg->hdr.msg_size - 2],
+                      msg->body[msg->hdr.msg_size - 1],
+                      msg->hdr.msg_size);
+
+  // validate 'Client Hello' message and parse out message fields
+  if (EXIT_SUCCESS != parse_client_hello_msg(ecdhconn->remote_sign_cert,
+                                             msg->body,
+                                             msg->hdr.msg_size,
+                                             &(ecdhconn->remote_eph_pubkey)))
+  {
+    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "'Client Hello' message validated and parsed");
+
+  return EXIT_SUCCESS;
+}
+
+int send_server_hello_msg(ECDHPeer * ecdhconn)
+{
+  int ret = -1;
+
+  ECDHMessage *msg = &(ecdhconn->server_hello);
+
+  // compose 'Server Hello' message
+  ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
+                                 ecdhconn->local_sign_key,
+                                 ecdhconn->remote_eph_pubkey,
+                                 ecdhconn->local_eph_keypair,
+                                 &(msg->body),
+                                 (size_t *) &(msg->hdr.msg_size));
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "failed to construct 'Server Hello' message payload");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
+                      "(%d bytes)",
+                      msg->body[0],
+                      msg->body[1],
+                      msg->body[msg->hdr.msg_size-2],
+                      msg->body[msg->hdr.msg_size-1],
+                      msg->hdr.msg_size);
+
+  // send newly created 'Server Hello' message
+  ret = send_ecdh_msg(ecdhconn->socket_fd,
+                      msg->body,
+                      msg->hdr.msg_size);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
+
+  return EXIT_SUCCESS;
+}
+
+
+int get_client_key_request(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
+  int ret = -1;
 
   // create proxy's session-unique (ephemeral) public/private key pair
   // (proxy contribution to ECDH key agreement)
-  ecdh_make_ephemeral_keypair(ecdhconn);
+  ret = create_ecdh_ephemeral_keypair(&ecdhconn->local_eph_keypair);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "proxy failed to create ECDH ephemeral key pair");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "proxy created ECDH ephemeral key pair");
 
-  // exhange 'Client Hello'/'Server Hello' messages with the client
-  ecdh_recv_client_hello_msg(ecdhconn);
-  ecdh_send_server_hello_msg(ecdhconn);
+  // exchange 'Client Hello'/'Server Hello' messages with the client
 
-  // compute two session keys derived from ECDH computed 'shared secret'
+  if (EXIT_SUCCESS != receive_client_hello_msg(ecdhconn))
+  {
+    kmyth_log(LOG_ERR, "proxy failed to receive 'Client Hello' message");
+    return EXIT_FAILURE;
+  }
+  if (EXIT_SUCCESS != send_server_hello_msg(ecdhconn))
+  {
+    kmyth_log(LOG_ERR, "proxy failed to send 'Server Hello' message");
+    return EXIT_FAILURE;
+  }
+
+  // compute two session keys derived from the ECDH computed 'shared secret'
   ecdh_get_session_key(ecdhconn);
 
   // receive key request message from client (encrypted with session key #1)
   ecdh_recv_key_request_msg(ecdhconn);
 
   kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
-            ecdhconn->kmip_key_request[0],
-            ecdhconn->kmip_key_request[1],
-            ecdhconn->kmip_key_request[ecdhconn->kmip_key_request_len-2],
-            ecdhconn->kmip_key_request[ecdhconn->kmip_key_request_len-1],
-            ecdhconn->kmip_key_request_len);
+            ecdhconn->kmip_request.buffer[0],
+            ecdhconn->kmip_request.buffer[1],
+            ecdhconn->kmip_request.buffer[ecdhconn->kmip_request.size-2],
+            ecdhconn->kmip_request.buffer[ecdhconn->kmip_request.size-1],
+            ecdhconn->kmip_request.size);
 }
 
-static void get_kmip_response(TLSProxy * proxy)
+int get_kmip_response(TLSProxy * proxy)
 {
   if (tls_client_connect(&proxy->tlsconn))
   {
-    proxy_error(proxy);
+    kmyth_log(LOG_ERR, "TLS connection failed");
+    return EXIT_FAILURE;
   }
 
+  // send length of KMIP 'get key' request to server
+  struct TLSMessageHeader tls_hdr;
+
+  tls_hdr.msg_size = htobe16((uint16_t) proxy->ecdhconn.kmip_request.size);
+  int num_bytes = BIO_write(proxy->tlsconn.bio,
+                            (void *) &tls_hdr,
+                            sizeof(tls_hdr));
+  if (num_bytes != sizeof(tls_hdr))
+  {
+    kmyth_log(LOG_ERR, "TLS write error");
+    return EXIT_FAILURE;
+  }
+
+  // send KMIP 'get key' request bytes to server
+  num_bytes = BIO_write(proxy->tlsconn.bio,
+                        (void *) proxy->ecdhconn.kmip_request.buffer,
+                        proxy->ecdhconn.kmip_request.size);
+  if (num_bytes != proxy->ecdhconn.kmip_request.size)
+  {
+    kmyth_log(LOG_ERR, "TLS write error");
+    return EXIT_FAILURE;
+  }
+
+  // blocking read to get KMIP 'get key' response size from server
+  kmyth_log(LOG_DEBUG, "getting KMIP response from server");
+
+  unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE];
+
+  num_bytes = BIO_read(proxy->tlsconn.bio, buf, sizeof(tls_hdr));
+  if (num_bytes != sizeof(tls_hdr))
+  {
+    kmyth_log(LOG_ERR, "error reading size of 'get key' response");
+    return EXIT_FAILURE;
+  }
+  proxy->ecdhconn.kmip_response.size = buf[0] << 8;
+  proxy->ecdhconn.kmip_response.size += buf[1];
+
+  // allocate buffer to hold received KMIP 'get key' request bytes
+  proxy->ecdhconn.kmip_response.buffer = malloc(proxy->ecdhconn.kmip_response.size);
+
+  num_bytes = BIO_read(proxy->tlsconn.bio,
+                       proxy->ecdhconn.kmip_response.buffer,
+                       proxy->ecdhconn.kmip_response.size);
+  if (num_bytes == 0)
+  {
+    kmyth_log(LOG_INFO, "TLS connection is closed");
+    return EXIT_FAILURE;
+  }
+  else if (num_bytes < 0)
+  {
+    kmyth_log(LOG_ERR, "TLS read error");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", num_bytes);
+
+  // allocate buffer for received KMIP response
+  proxy->ecdhconn.kmip_response.buffer = malloc(num_bytes);
+  if (proxy->ecdhconn.kmip_response.buffer == NULL)
+  {
+    kmyth_log(LOG_ERR, "error allocating buffer for KMIP 'get key' response");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
+
+static void send_key_response_message(TLSProxy * proxy)
+{
+  kmyth_log(LOG_DEBUG, "send_key_response_message()");
+}
+
 
 void proxy_start(TLSProxy * proxy)
 {
@@ -328,37 +415,39 @@ void proxy_start(TLSProxy * proxy)
       kmyth_log(LOG_DEBUG, "ECDH receive event");
       get_client_key_request(proxy);
       get_kmip_response(proxy);
+      send_key_response_message(proxy);
+
       //ecdh_recv_decrypt(ecdhconn, &ecdh_msg_buf, &ecdh_msg_len);
       //kmyth_log(LOG_DEBUG, "Received %zu bytes on ECDH connection", ecdh_msg_len);
-      struct TLSMessageHeader hdr;
-      hdr.msg_size = htobe16((uint16_t) proxy->ecdhconn.kmip_key_request_len);
-      bytes_written = BIO_write(tls_bio, (void *) &hdr, sizeof(hdr));
-      if (bytes_written != sizeof(hdr))
-      {
-        kmyth_log(LOG_ERR, "TLS write error");
-        proxy_error(proxy);
-      }
-      bytes_written = BIO_write(tls_bio,
-                                (void *) proxy->ecdhconn.kmip_key_request,
-                                proxy->ecdhconn.kmip_key_request_len);
-      if (bytes_written != proxy->ecdhconn.kmip_key_request_len)
-      {
-        kmyth_log(LOG_ERR, "TLS write error");
-        proxy_error(proxy);
-      }
+      //struct TLSMessageHeader hdr;
+      //hdr.msg_size = htobe16((uint16_t) proxy->ecdhconn.kmip_key_request_len);
+      //bytes_written = BIO_write(tls_bio, (void *) &hdr, sizeof(hdr));
+      //if (bytes_written != sizeof(hdr))
+      //{
+      //  kmyth_log(LOG_ERR, "TLS write error");
+      //  proxy_error(proxy);
+      //}
+      //bytes_written = BIO_write(tls_bio,
+      //                          (void *) proxy->ecdhconn.kmip_key_request,
+      //                          proxy->ecdhconn.kmip_key_request_len);
+      //if (bytes_written != proxy->ecdhconn.kmip_key_request_len)
+      //{
+      //  kmyth_log(LOG_ERR, "TLS write error");
+      //  proxy_error(proxy);
+      //}
 
-      bytes_read = BIO_read(tls_bio, tls_msg_buf, sizeof(tls_msg_buf));
-      if (bytes_read == 0)
-      {
-        kmyth_log(LOG_INFO, "TLS connection is closed");
-        break;
-      }
-      else if (bytes_read < 0)
-      {
-        kmyth_log(LOG_ERR, "TLS read error");
-        proxy_error(proxy);
-      }
-      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
+      //bytes_read = BIO_read(tls_bio, tls_msg_buf, sizeof(tls_msg_buf));
+      //if (bytes_read == 0)
+      //{
+      //  kmyth_log(LOG_INFO, "TLS connection is closed");
+      //  break;
+      //}
+      //else if (bytes_read < 0)
+      //{
+      //  kmyth_log(LOG_ERR, "TLS read error");
+      //  proxy_error(proxy);
+      //}
+      //kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", bytes_read);
       //ecdh_encrypt_send(ecdhconn, tls_msg_buf, bytes_read);
       //kmyth_clear_and_free(ecdh_msg_buf, ecdh_msg_len);
     }
@@ -412,9 +501,9 @@ int main(int argc, char **argv)
 
   proxy_start(&proxy);
 
-  get_client_key_request(&proxy);
+  //get_client_key_request(&proxy);
 
-  get_kmip_response(&proxy);
+  //get_kmip_response(&proxy);
 
   //proxy_start(&proxy);
 

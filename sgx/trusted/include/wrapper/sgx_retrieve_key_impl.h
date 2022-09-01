@@ -61,8 +61,10 @@ extern "C"
  *
  * @param[in]  server_host_len        Length (in bytes) of server_host string.
  *
- * @param[in]  server_port            TCP port number used to
- *                                    connect to the key server.
+ * @param[in]  server_port            TCP port number string used to specify
+ *                                    TCP port to connect to the key server.
+ * 
+ * @param[in]  server_port_len        Length (in bytes) of server_port string.
  *
  * @param[in] req_key_id              ID string used to specify the key to be
  *                                    retrieved (not null-terminated).
@@ -88,10 +90,9 @@ extern "C"
                            X509 * client_sign_cert,
                            X509 * server_sign_cert,
                            const char *server_host, int server_host_len,
-                           int server_port, unsigned char *req_key_id,
-                           size_t req_key_id_len,
-                           unsigned char **retrieved_key_id,
-                           size_t *retrieved_key_id_len,
+                           const char *server_port, int server_port_len,
+                           unsigned char *req_key_id, size_t req_key_id_len,
+                           uint8_t **retrieved_key_id, size_t *retrieved_key_id_len,
                            uint8_t **retrieved_key, size_t *retrieved_key_len);
 
 #ifdef __cplusplus

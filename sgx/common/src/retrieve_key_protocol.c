@@ -13,10 +13,12 @@
  ****************************************************************************/
 int extract_identity_bytes_from_x509(X509 *cert_in, X509_NAME **identity_out)
 {
+  kmyth_sgx_log(LOG_DEBUG, "Hello");
   // extract 'subject name' from input certificate
   //   Note: The returned X509_NAME is an internal pointer
   //         that should NOT be freed.
   X509_NAME *subj_name = X509_get_subject_name(cert_in);
+  kmyth_sgx_log(LOG_DEBUG, "Hello again");
   if (subj_name == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "extraction of certificate's subject name failed");
@@ -97,16 +99,12 @@ int append_signature(EVP_PKEY * sign_key,
 /*****************************************************************************
  * compose_client_hello_msg()
  ****************************************************************************/
-int compose_client_hello_msg(X509 *client_sign_cert,
-                             EVP_PKEY *client_sign_key,
-                             EVP_PKEY *client_ephemeral_public,
-                             unsigned char **msg_out,
-                             size_t *msg_out_len)
+int compose_client_hello_msg(ECDHPeer *client)
 {
   // extract client (enclave) ID (subject name) bytes from cert
   X509_NAME *client_id = NULL;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client->local_sign_cert,
                                                        &client_id))
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
@@ -140,14 +138,14 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
   
-  EC_KEY *client_eph_pubkey = EVP_PKEY_get1_EC_KEY(client_ephemeral_public);
+  EC_KEY *client_eph_pubkey = EVP_PKEY_get1_EC_KEY(client->local_eph_keypair);
   if (client_eph_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting EC_KEY from EVP_PKEY struct");
     free(client_id_bytes);
     return EXIT_FAILURE;
   } 
-
+  
   client_eph_pubkey_len = EC_KEY_key2buf(client_eph_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &client_eph_pubkey_bytes,
@@ -165,11 +163,12 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   //  - Client ID size (two-byte unsigned integer)
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
-  //  - Client ephemeral public key value (byte array) 
-  *msg_out_len = 2 + client_id_len + 2 + client_eph_pubkey_len;
+  //  - Client ephemeral public key value (byte array)
+  ECDHMessage *msg_ptr = &(client->client_hello);
+  size_t  msg_body_size  = 2 + client_id_len + 2 + client_eph_pubkey_len;
 
-  *msg_out = malloc(*msg_out_len);
-  if (*msg_out == NULL)
+  msg_ptr->body = calloc(msg_body_size, 1);
+  if (msg_ptr->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
     kmyth_clear_and_free(client_id_bytes, client_id_len);
@@ -181,33 +180,49 @@ int compose_client_hello_msg(X509 *client_sign_cert,
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
-  unsigned char *buf = *msg_out;
+  int index = 0;
 
   // insert client identity length bytes
   temp_val = htobe16((uint16_t) client_id_len);
-  memcpy(buf, &temp_val, 2);
-  buf += 2;
+  memcpy(msg_ptr->body, &temp_val, 2);
+  index += 2;
 
   // append client identity bytes
-  memcpy(buf, client_id_bytes, client_id_len);
-  buf += client_id_len;
+  memcpy(msg_ptr->body+index, client_id_bytes, client_id_len);
+  index += client_id_len;
   kmyth_clear_and_free(client_id_bytes, client_id_len);
 
   // append client_ephemeral public key length bytes
   temp_val = htobe16((uint16_t) client_eph_pubkey_len);
-  memcpy(buf, &temp_val, 2);
-  buf += 2;
+  memcpy(msg_ptr->body+index, &temp_val, 2);
+  index += 2;
 
   // append client ephemeral public key bytes
-  memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
+  memcpy(msg_ptr->body+index,
+         client_eph_pubkey_bytes,
+         client_eph_pubkey_len);
   kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
 
+  // set unsigned message size to message body size
+  client->client_hello.hdr.msg_size = msg_body_size;
+
   // append signature to tail end of message
-  if (EXIT_SUCCESS != append_signature(client_sign_key, msg_out, msg_out_len))
+  unsigned char *signature_ptr = msg_ptr->body + msg_body_size;
+  size_t signature_len = 0;
+  if (EXIT_SUCCESS != append_signature(client->local_sign_key,
+                                       &(msg_ptr->body),
+                                       (size_t *) &(msg_ptr->hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
   }
+
+  char lmsg[MAX_LOG_MSG_LEN+1] = { 0 };
+
+  snprintf(lmsg, MAX_LOG_MSG_LEN, "chello = 0x%02x%02x%02x%02x ...",
+           msg_ptr->body[0], msg_ptr->body[1],
+           msg_ptr->body[2], msg_ptr->body[3]);
+  kmyth_sgx_log(LOG_DEBUG, lmsg);
 
   return EXIT_SUCCESS;
 }                                 
@@ -828,12 +843,13 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
     return EXIT_FAILURE;
   }
 
-  // initialize:
+  // initialize variables used to construct message body:
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
   unsigned char *buf_ptr = msg_buf;
 
+  // insert kmip key request size  
   temp_val = htobe16((uint16_t) kmip_key_request_len);
   memcpy(buf_ptr, &temp_val, 2);
   buf_ptr += 2;
@@ -1037,6 +1053,65 @@ int parse_key_request_msg(X509 * msg_sign_cert,
 
   kmyth_sgx_log(LOG_DEBUG,
                 "parsed/validated server ephemeral in 'Key Request'");
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * compose_key_response_msg()
+ ****************************************************************************/
+int compose_key_response_msg(EVP_PKEY * msg_sign_key,
+                             unsigned char * msg_enc_key_bytes,
+                             size_t msg_enc_key_len,
+                             unsigned char * kmip_response_bytes,
+                             size_t kmip_response_len,
+                             unsigned char ** msg_out,
+                             size_t * msg_out_len)
+{
+  // allocate memory for 'Key Response' message body byte array
+  //  - KMIP 'get key' response size (two-byte unsigned integer)
+  //  - KMIP 'get key' response bytes (byte array)
+  size_t msg_buf_len = 2 + kmip_response_len;
+
+  unsigned char *msg_buf = calloc(msg_buf_len, sizeof(unsigned char));
+  if (msg_buf == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
+    return EXIT_FAILURE;
+  }
+
+  // initialize variables used to compose message body:
+  //   - 2-byte unsigned integer to facilitate length value format conversions
+  //   - index to newly allocated, empty message buffer
+  uint16_t temp_val = 0;
+  unsigned char *buf_ptr = msg_buf;
+
+  // insert KMIP 'get key' response size
+  temp_val = htobe16((uint16_t) kmip_response_len);
+  memcpy(buf_ptr, &temp_val, 2);
+  buf_ptr += 2;
+
+  // insert KMIP 'get key' response bytes
+  memcpy(buf_ptr, kmip_response_bytes, kmip_response_len);
+
+  // append signature
+  if (EXIT_SUCCESS != append_signature(msg_sign_key, &msg_buf, &msg_buf_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "error appending message signature");
+    free(msg_buf);
+    return EXIT_FAILURE;
+  }
+
+  // encrypt signed 'Key Response' message using the specified key
+  if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key_bytes, msg_enc_key_len,
+                                      msg_buf, msg_buf_len,
+                                      msg_out, msg_out_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to encrypt the 'Key Response' message");
+    free(msg_buf);
+    return EXIT_FAILURE;
+  }
+  free(msg_buf);
 
   return EXIT_SUCCESS;
 }

@@ -10,9 +10,9 @@
 
 
 /*****************************************************************************
- * create_ecdh_ephemeral_contribution()
+ * create_ecdh_ephemeral_keypair()
  ****************************************************************************/
-int create_ecdh_ephemeral_contribution(EVP_PKEY ** ephemeral_key_pair)
+int create_ecdh_ephemeral_keypair(EVP_PKEY ** ephemeral_key_pair)
 {
   // create empty parameters object
   EVP_PKEY *params = EVP_PKEY_new();
@@ -208,7 +208,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   }
 
   // derive key bits
-  unsigned char kdf_out[EVP_MAX_MD_SIZE];
+  unsigned char kdf_out[KMYTH_ECDH_KDF_OUTPUT_SIZE];
   size_t kdf_out_len = sizeof(kdf_out);
 
   if (EVP_PKEY_derive(pctx, kdf_out, &kdf_out_len) != 1)
@@ -228,7 +228,13 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   EVP_PKEY_CTX_free(pctx);
 
   // assign first half of key bytes generated to first output session key
-  *key1_out_len = kdf_out_len / 2;
+  *key1_out_len = KMYTH_ECDH_SESSION_KEY_SIZE;
+  if ((2 * (*key1_out_len)) > kdf_out_len)
+  {
+    kmyth_sgx_log(LOG_ERR, "KDF configuration error");
+    return EXIT_FAILURE;
+  }
+
   *key1_out_bytes = calloc(*key1_out_len, sizeof(unsigned char));
   if (NULL == *key1_out_bytes)
   {

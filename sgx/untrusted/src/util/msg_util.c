@@ -1,11 +1,11 @@
 /**
- * @file sgx_socket_util.c
+ * @file  msg_util.c
  *
  * @brief Provides UNIX socket-based implementation of functionality to
  *        support network communication (e.g., protocol message exchange)
  */
 
-#include "sgx_socket_util.h"
+#include "msg_util.h"
 
 /*****************************************************************************
  * recv_ecdh_msg()

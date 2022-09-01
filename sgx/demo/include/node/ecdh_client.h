@@ -8,6 +8,6 @@
 #ifndef KMYTH_ECDH_CLIENT_H
 #define KMYTH_ECDH_CLIENT_H
 
-#include "demo_ecdh_util.h"
+#include "demo_util.h"
 
 #endif // KMYTH_ECDH_CLIENT.H

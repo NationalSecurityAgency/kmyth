@@ -1,12 +1,12 @@
 /**
- * @file ecdh_ocall.h
+ * @file protocol_ocall.h
  *
  * @brief Provides headers for functionality to support peer interaction
- *        for ECDH key agreement
+ *        for kmyth protocols
  */
 
-#ifndef _KMYTH_ECDH_OCALL_H_
-#define _KMYTH_ECDH_OCALL_H_
+#ifndef _KMYTH_PROTOCOL_OCALL_H_
+#define _KMYTH_PROTOCOL_OCALL_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -32,20 +32,19 @@ extern "C"
 #include <kmyth/memory_util.h>
 #include <socket_util.h>
 
-#include "sgx_socket_util.h"
+#include "msg_util.h"
 
 #include "kmyth_enclave_common.h"
 
 /**
  * @brief Creates a socket connected to the external key server.
  *
- * @param[in]  server_host                String IP address or hostname used to
- *                                        connect to the key server.
+ * @param[in]  server_host                Hostname or IP address string
+ *                                        representing host to connect
+ *                                        to (e.g., key server).
  *
- * @param[in]  server_host_len            Length (in bytes) of server_host string.
- *
- * @param[in]  server_port                TCP port number used to
- *                                        connect to the key server.
+ * @param[in]  server_port                TCP port number string used to specify
+ *                                        TCP port used to connect to key server.
  *
  * @param[out] socket_fd                  Pointer to the file descriptor
  *                                        number for a socket connected to
@@ -53,8 +52,11 @@ extern "C"
  *
  * @return 0 on success, 1 on failure
  */
-  int setup_socket_ocall(const char *server_host, int server_host_len,
-                         int server_port, int *socket_fd);
+  int setup_socket_ocall(const char *server_host,
+                         int server_host_len,
+                         const char *server_port,
+                         int server_port_len,
+                         int *socket_fd);
 
 /**
  * @brief Closes a socket connected to the external key server.

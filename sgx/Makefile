@@ -424,11 +424,11 @@ test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-test/enclave/ecdh_ocall.o: untrusted/src/ocall/ecdh_ocall.c
+test/enclave/protocol_ocall.o: untrusted/src/ocall/protocol_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"1
 
-test/enclave/sgx_socket_util.o: untrusted/src/util/sgx_socket_util.c
+test/enclave/msg_util.o: untrusted/src/util/msg_util.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"1
 
@@ -449,8 +449,8 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
                                  test/enclave/ec_key_cert_unmarshal.o \
                                  test/enclave/ecdh_util.o \
 								 test/enclave/retrieve_key_protocol.o \
-								 test/enclave/sgx_socket_util.o \
-                                 test/enclave/ecdh_ocall.o \
+								 test/enclave/msg_util.o \
+                                 test/enclave/protocol_ocall.o \
                                  test/enclave/memory_ocall.o \
                                  test/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Test_App_Cpp_Flags) $(Test_App_Link_Flags) \
@@ -461,7 +461,7 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
 
 ######## Demo App Objects ########
 
-demo/enclave/sgx_socket_util.o: untrusted/src/util/sgx_socket_util.c
+demo/enclave/msg_util.o: untrusted/src/util/msg_util.c
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -473,7 +473,7 @@ demo/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/ecdh_ocall.o: untrusted/src/ocall/ecdh_ocall.c
+demo/enclave/protocol_ocall.o: untrusted/src/ocall/protocol_ocall.c
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -501,8 +501,8 @@ $(Demo_App_Name): demo/obj/kmyth_sgx_retrieve_key_demo.o \
                   demo/enclave/ec_key_cert_unmarshal.o \
                   demo/enclave/ecdh_util.o \
 				  demo/enclave/retrieve_key_protocol.o \
-			      demo/enclave/sgx_socket_util.o \
-                  demo/enclave/ecdh_ocall.o \
+			      demo/enclave/msg_util.o \
+                  demo/enclave/protocol_ocall.o \
                   demo/enclave/memory_ocall.o \
                   demo/enclave/log_ocall.o 
 	$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
@@ -519,11 +519,11 @@ demo/obj/%.o: demo/src/util/%.c
 	@echo "CC   <=  $<"
 
 $(Server_Name): demo/obj/demo_kmip_server.o \
+                demo/obj/demo_util.o \
 				demo/obj/demo_tls_util.o \
-				demo/obj/demo_log_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/sgx_socket_util.o \
+				demo/enclave/msg_util.o \
                 demo/enclave/ecdh_util.o \
 				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
@@ -531,11 +531,10 @@ $(Server_Name): demo/obj/demo_kmip_server.o \
 	@echo "LINK =>  $@"
 
 $(Client_Name): demo/obj/ecdh_client.o \
-                demo/obj/demo_ecdh_util.o \
-				demo/obj/demo_log_util.o \
+                demo/obj/demo_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/sgx_socket_util.o \
+				demo/enclave/msg_util.o \
                 demo/enclave/ecdh_util.o \
 				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
@@ -543,12 +542,11 @@ $(Client_Name): demo/obj/ecdh_client.o \
 	@echo "LINK =>  $@"
 
 $(Proxy_Name):  demo/obj/tls_proxy.o \
-                demo/obj/demo_ecdh_util.o \
+                demo/obj/demo_util.o \
                 demo/obj/demo_tls_util.o \
-				demo/obj/demo_log_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/sgx_socket_util.o \
+				demo/enclave/msg_util.o \
                 demo/enclave/ecdh_util.o \
 				demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o

@@ -20,13 +20,6 @@ void demo_kmip_server_init(DemoServer * server)
 
 void demo_kmip_server_cleanup(DemoServer * server)
 {
-  //if (server->tlsconn.conn != NULL)
-  //{
-  //  BIO_free_all(server->tlsconn.conn);
-  //}
-
-  //kmyth_log(LOG_DEBUG, "after BIO_free_all()");
-
   if (server->tlsconn.ctx != NULL)
   {
     SSL_CTX_free(server->tlsconn.ctx);
@@ -190,18 +183,10 @@ void demo_kmip_server_setup(DemoServer *server)
 }
 
 int receive_kmip_get_key_request(DemoServer *server,
-                                  unsigned char **kmip_key_req_bytes,
-                                  size_t *kmip_key_req_len)
+                                 unsigned char **kmip_key_req_bytes,
+                                 size_t *kmip_key_req_len)
 {
-  // handle incoming TLS connection with client
-  kmyth_log(LOG_DEBUG, "waiting to accept TLS connection with client");
-  if (EXIT_SUCCESS != tls_server_accept(&server->tlsconn))
-  {
-    kmyth_log(LOG_ERR, "error accepting TLS connection");
-    return EXIT_FAILURE;
-  }
-  kmyth_log(LOG_DEBUG, "incoming TLS client connection accepted");
-
+  kmyth_log(LOG_DEBUG, "waiting to negotiate TLS connection with client");
   if (BIO_do_handshake(server->tlsconn.bio) <= 0)
   {
     kmyth_log(LOG_ERR, "error completing TLS handshake");
@@ -242,13 +227,20 @@ int receive_kmip_get_key_request(DemoServer *server,
   return EXIT_SUCCESS;
 }
 
-int validate_kmip_get_key_request(unsigned char *kmip_key_req_bytes,
+int validate_kmip_get_key_request(unsigned char * kmip_key_req_bytes,
                                   size_t kmip_key_req_len,
                                   unsigned char ** kmip_key_req_id_bytes,
-                                  size_t *kmip_key_req_id_len)
+                                  size_t * kmip_key_req_id_len)
 {
   KMIP kmip_ctx = { 0 };
   kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
+
+  if (kmip_key_req_len > kmip_ctx.max_message_size)
+  {
+    kmyth_log(LOG_ERR, "KMIP request exceeds max message size");
+    kmip_destroy(&kmip_ctx);
+    return EXIT_FAILURE;
+  }
 
   if (EXIT_SUCCESS != parse_kmip_get_request(&kmip_ctx,
                                              kmip_key_req_bytes,
@@ -257,6 +249,7 @@ int validate_kmip_get_key_request(unsigned char *kmip_key_req_bytes,
                                              kmip_key_req_id_len))
   {
     kmyth_log(LOG_ERR, "KMIP 'get key' request parsing failed");
+    kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
 
@@ -266,20 +259,24 @@ int validate_kmip_get_key_request(unsigned char *kmip_key_req_bytes,
   kmyth_log(LOG_DEBUG, "KMIP key request ID = %s (%d-byte string)",
                          id_str, *kmip_key_req_id_len);
 
-  if (*kmip_key_req_id_len != strlen(DEMO_KEY_ID))
+if (*kmip_key_req_id_len != strlen(DEMO_OP_KEY_ID_STR))
   {
     kmyth_log(LOG_ERR, "unexpected KMIP ID string length");
+    kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
 
-  if (strncmp(id_str, DEMO_KEY_ID, *kmip_key_req_id_len) != 0)
+  if (strncmp(id_str, DEMO_OP_KEY_ID_STR, *kmip_key_req_id_len) != 0)
   {
     kmyth_log(LOG_ERR, "unexpected KMIP ID value ('%s' instead of '%s')",
-                       id_str, DEMO_KEY_ID);
+                       id_str, DEMO_OP_KEY_ID_STR);
+    kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "received validated request for expected key ID");
+
+  kmip_destroy(&kmip_ctx);
 
   return EXIT_SUCCESS;
 }
@@ -301,6 +298,14 @@ int compose_kmip_get_key_response(unsigned char *key_id,
                                               response_len))
   {
     kmyth_log(LOG_ERR, "error building KMIP 'get key' response");
+    kmip_destroy(&kmip_ctx);
+    return EXIT_FAILURE;
+  }
+
+  if (*response_len > kmip_ctx.max_message_size)
+  {
+    kmyth_log(LOG_ERR, "KMIP response exceeds max message size");
+    kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
 
@@ -312,6 +317,8 @@ int compose_kmip_get_key_response(unsigned char *key_id,
                        tmp_buf[*response_len-1],
                        *response_len);
 
+  kmip_destroy(&kmip_ctx);
+
   return EXIT_SUCCESS;
 }
 
@@ -319,9 +326,23 @@ int send_kmip_get_key_response(DemoServer *server,
                                unsigned char *kmip_key_resp_bytes,
                                size_t kmip_key_resp_len)
 {
+  struct TLSMessageHeader tls_hdr;
+
+  // first send length of KMIP 'get key' response
+  tls_hdr.msg_size = htobe16((uint16_t) kmip_key_resp_len);
   int bytes_written = BIO_write(server->tlsconn.bio,
-                                kmip_key_resp_bytes,
-                                kmip_key_resp_len);
+                            (void *) &tls_hdr,
+                            sizeof(tls_hdr));
+  if (bytes_written != sizeof(tls_hdr))
+  {
+    kmyth_log(LOG_ERR, "TLS write error");
+    return EXIT_FAILURE;
+  }
+
+  // then send the KMIP 'get key' response bytes
+  bytes_written = BIO_write(server->tlsconn.bio,
+                            kmip_key_resp_bytes,
+                            kmip_key_resp_len);
   if (bytes_written != kmip_key_resp_len)
   {
     kmyth_log(LOG_ERR, "error sending 'get key' response");

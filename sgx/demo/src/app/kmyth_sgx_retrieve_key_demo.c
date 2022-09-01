@@ -50,8 +50,8 @@
 #define SERVER_PUBLIC_CERT_FILE "demo/data/proxy_cert_test.pem"
 
 /* These parameters are hard-coded for now. */
-#define SERVER_IP "localhost"
-#define SERVER_PORT 7000
+#define SERVER_HOST "localhost"
+#define SERVER_PORT "7000"
 #define KEY_ID "7"
 #define KEY_ID_LEN 1
 
@@ -214,9 +214,10 @@ int main(int argc, char **argv)
   demo_log(LOG_DEBUG, "invoking 'retrieve key' ECALL ...");
   int retval = -1;
 
-  const char *server_host = SERVER_IP;
+  const char *server_host = SERVER_HOST;
   int server_host_len = strlen(server_host) + 1;
-  int server_port = SERVER_PORT;
+  const char *server_port = SERVER_PORT;
+  int server_port_len = strlen(server_port) + 1;
 
   sgx_ret = kmyth_enclave_retrieve_key_from_server(eid,
                                                    &retval,
@@ -229,6 +230,7 @@ int main(int argc, char **argv)
                                                    server_host,
                                                    server_host_len,
                                                    server_port,
+                                                   server_port_len,
                                                    (unsigned char *) KEY_ID,
                                                    KEY_ID_LEN);
 
@@ -244,7 +246,6 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  sleep(5);
   demo_log(LOG_DEBUG, "retrieve key demo complete");
 
   return EXIT_SUCCESS;

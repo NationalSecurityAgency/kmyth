@@ -31,7 +31,8 @@
 
 #include "socket_util.h"
 
-#include "demo_log_util.h"
+#include "demo_util.h"
+
 
 #define UNSET_FD -1
 
@@ -46,7 +47,6 @@ typedef struct TLSPeer
   SSL_CTX *ctx;
   BIO *bio;
 } TLSPeer;
-
 
 void tls_init(TLSPeer * tlsconn, bool clientMode);
 
