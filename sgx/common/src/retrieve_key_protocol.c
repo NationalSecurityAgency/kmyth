@@ -99,7 +99,7 @@ int append_signature(EVP_PKEY * sign_key,
 /*****************************************************************************
  * compose_client_hello_msg()
  ****************************************************************************/
-int compose_client_hello_msg(ECDHPeer *client)
+int compose_client_hello_msg(ECDHPeer * client)
 {
   // extract client (enclave) ID (subject name) bytes from cert
   X509_NAME *client_id = NULL;
@@ -230,32 +230,36 @@ int compose_client_hello_msg(ECDHPeer *client)
 /*****************************************************************************
  * parse_client_hello_msg()
  ****************************************************************************/
-int parse_client_hello_msg(X509 *msg_sign_cert,
-                           unsigned char *msg_in,
-                           size_t msg_in_len,
-                           EVP_PKEY **client_eph_pubkey_out)
+int parse_client_hello_msg(unsigned char *msg_buf,
+                           size_t msg_buf_len,
+                           ECDHPeer * server)
 {
+  // assign server's 'Client Hello' message pointer to input buffer
+  server->client_hello.body = msg_buf;
+  server->client_hello.hdr.msg_size = msg_buf_len;
+
   // parse message body fields into variables
   int buf_index = 0;
+  ECDHMessage *chello = &(server->client_hello);
 
   // get size of client identity field (client_id_len)
-  uint16_t client_id_len = msg_in[buf_index] << 8;
-  client_id_len += msg_in[buf_index+1];
+  uint16_t client_id_len = msg_buf[buf_index] << 8;
+  client_id_len += msg_buf[buf_index+1];
   buf_index += 2;
   
   // get client identity field bytes (client_id)
   uint8_t *client_id_bytes = malloc(client_id_len);
-  memcpy(client_id_bytes, msg_in+buf_index, client_id_len);
+  memcpy(client_id_bytes, msg_buf+buf_index, client_id_len);
   buf_index += client_id_len;
 
   // get size of client ephemeral contribution field (client_eph_pub_len)
-  uint16_t client_eph_pub_len = msg_in[buf_index] << 8;
-  client_eph_pub_len += msg_in[buf_index+1];
+  uint16_t client_eph_pub_len = msg_buf[buf_index] << 8;
+  client_eph_pub_len += msg_buf[buf_index+1];
   buf_index += 2;
 
   // get client ephemeral contribution field bytes (client_eph_pub_bytes)
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
-  memcpy(client_eph_pub_bytes, msg_in+buf_index, client_eph_pub_len);
+  memcpy(client_eph_pub_bytes, msg_buf+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
   // buffer index now points just pbase end of message body
@@ -263,19 +267,18 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
   size_t msg_body_size = buf_index;
 
   // get size of message signature
-  uint16_t msg_sig_len = msg_in[buf_index] << 8;
-  msg_sig_len += msg_in[buf_index+1];
+  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
+  msg_sig_len += msg_buf[buf_index+1];
   buf_index += 2;
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
-  memcpy(msg_sig_bytes, msg_in+buf_index, msg_sig_len);
+  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
 
   // convert client identity bytes in message to X509_NAME struct
-  X509_NAME *rcvd_client_id = NULL;
   if (EXIT_SUCCESS != unmarshal_der_to_x509_name(client_id_bytes,
                                                  (size_t) client_id_len,
-                                                 &rcvd_client_id))
+                                                 &(server->remote_id)))
   {
     kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
     free(client_id_bytes);
@@ -288,7 +291,7 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
   // extract expected client identity (X509_NAME struct) from pre-loaded cert
   X509_NAME *expected_client_id = NULL;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(msg_sign_cert,
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server->remote_sign_cert,
                                                        &expected_client_id))
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract client ID from certificate");
@@ -299,7 +302,7 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
 
   // verify that identity in 'Client Hello' message matches the client
   // certificate pre-loaded into it's peer (TLS proxy for server)
-  if (0 != X509_NAME_cmp(rcvd_client_id, expected_client_id))
+  if (0 != X509_NAME_cmp(server->remote_id, expected_client_id))
   {
     kmyth_sgx_log(LOG_ERR, "'Client Hello' - unexpected client identity");
     free(client_eph_pub_bytes);
@@ -311,7 +314,7 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
 
   // extract client's public signing key (needed to verify signature over
   // message) from X509 certificate
-  EVP_PKEY *client_sign_pubkey = X509_get_pubkey(msg_sign_cert);
+  EVP_PKEY *client_sign_pubkey = X509_get_pubkey(server->remote_sign_cert);
   if (client_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
@@ -323,7 +326,7 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
 
   // check message signature
   if (EXIT_SUCCESS != ec_verify_buffer(client_sign_pubkey,
-                                       msg_in,
+                                       msg_buf,
                                        msg_body_size,
                                        msg_sig_bytes,
                                        msg_sig_len))
@@ -339,16 +342,18 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
 
   kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Client Hello'");
 
-  // check that the buffer parameter for the public key (EVP_PKEY struct) was
-  // correctly passed in as a NULL pointer (memory not yet allocated)
-  if (*client_eph_pubkey_out != NULL)
+  // check that the buffer parameter for the public key (EVP_PKEY struct)
+  // was not yet allocated. If it was (e.g., from a previous session), 
+  // reset it to a NULL pointer before creating an empty EVP_PKEY struct.
+  if (server->remote_eph_pubkey != NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "previously allocated output EVP_PKEY struct");
-    free(client_eph_pub_bytes);
-    return EXIT_FAILURE;
+    kmyth_sgx_log(LOG_ERR, "resetting previously allocated EVP_PKEY struct");
+    free(server->remote_eph_pubkey);
+    server->remote_eph_pubkey = NULL;
   }
+  server->remote_eph_pubkey = EVP_PKEY_new();
 
-  // initialize the EC_KEY struct for the right elliptic curve
+  // initialize an EC_KEY struct for the right elliptic curve
   EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
   if (client_eph_ec_pubkey == NULL)
   {
@@ -376,14 +381,9 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
     return EXIT_FAILURE;
   }
 
-  // create empty EVP_PKEY struct if unallocated pointer passed in
-  if (*client_eph_pubkey_out == NULL)
-  {
-    *client_eph_pubkey_out = EVP_PKEY_new();
-  }
-
   // encapsulate client ephemeral public key in EVP_PKEY struct
-  if (1 != EVP_PKEY_set1_EC_KEY(*client_eph_pubkey_out, client_eph_ec_pubkey))
+  if (1 != EVP_PKEY_set1_EC_KEY(server->remote_eph_pubkey,
+                                client_eph_ec_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
     EC_KEY_free(client_eph_ec_pubkey);
@@ -393,7 +393,7 @@ int parse_client_hello_msg(X509 *msg_sign_cert,
 
   kmyth_sgx_log(LOG_DEBUG,
                 "parsed/validated client ephemeral in 'Client Hello'");
-
+  
   return EXIT_SUCCESS;
 }                                 
 
@@ -1068,6 +1068,8 @@ int compose_key_response_msg(EVP_PKEY * msg_sign_key,
                              unsigned char ** msg_out,
                              size_t * msg_out_len)
 {
+  char lmsg[MAX_LOG_MSG_LEN];
+
   // allocate memory for 'Key Response' message body byte array
   //  - KMIP 'get key' response size (two-byte unsigned integer)
   //  - KMIP 'get key' response bytes (byte array)
@@ -1091,6 +1093,9 @@ int compose_key_response_msg(EVP_PKEY * msg_sign_key,
   memcpy(buf_ptr, &temp_val, 2);
   buf_ptr += 2;
 
+  snprintf(lmsg, MAX_LOG_MSG_LEN, "kmip_response_bytes[0] = 0x%02x", kmip_response_bytes[0]);
+  kmyth_sgx_log(LOG_DEBUG, lmsg);
+
   // insert KMIP 'get key' response bytes
   memcpy(buf_ptr, kmip_response_bytes, kmip_response_len);
 
@@ -1112,6 +1117,115 @@ int compose_key_response_msg(EVP_PKEY * msg_sign_key,
     return EXIT_FAILURE;
   }
   free(msg_buf);
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * parse_key_response_msg()
+ ****************************************************************************/
+int parse_key_response_msg(X509 * msg_sign_cert,
+                           unsigned char * msg_enc_key_bytes,
+                           size_t msg_enc_key_len,
+                           unsigned char * msg_in,
+                           size_t msg_in_len,
+                           unsigned char ** kmip_resp_bytes_out,
+                           size_t * kmip_resp_len_out)
+{
+  char msg[MAX_LOG_MSG_LEN];
+
+  // decrypt message using input message encryption key
+  unsigned char *msg_buf = NULL;
+  size_t msg_buf_len = 0;
+
+  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_enc_key_bytes, msg_enc_key_len,
+                                      msg_in, msg_in_len,
+                                      &msg_buf, &msg_buf_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to decrypt the 'Key Response' message");
+    free(msg_buf);
+    return EXIT_FAILURE;
+  }
+
+  snprintf(msg, MAX_LOG_MSG_LEN,
+           "'Key Response' message (PT): 0x%02X%02X ,,, %02X%02X (%ld bytes)",
+           msg_buf[0], msg_buf[1], msg_buf[msg_buf_len-1],
+           msg_buf[msg_buf_len-2], msg_buf_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // parse message body fields into variables
+  int buf_index = 0;
+
+  // get size (in bytes) of KMIP 'get key' request field
+  uint16_t kmip_key_resp_len = msg_buf[buf_index] << 8;
+  kmip_key_resp_len += msg_buf[buf_index+1];
+  buf_index += 2;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "KMIP Response size = %d bytes)", kmip_key_resp_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // get KMIP 'get key' response bytes
+  *kmip_resp_len_out = (size_t) kmip_key_resp_len;
+  *kmip_resp_bytes_out = malloc(*kmip_resp_len_out);
+  memcpy(*kmip_resp_bytes_out, msg_buf+buf_index, *kmip_resp_len_out);
+  buf_index += *kmip_resp_len_out;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "*kmip_resp_bytes_out[0] = 0x%02x)", **kmip_resp_bytes_out);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // buffer index now points just past end of message body
+  // capture this index so we can access message body as part of input buffer
+  size_t msg_body_size = buf_index;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "message body size = %ld bytes)", msg_body_size);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // get size of message signature
+  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
+  msg_sig_len += msg_buf[buf_index+1];
+  buf_index += 2;
+
+  snprintf(msg, MAX_LOG_MSG_LEN, "signature size = %d bytes)", msg_sig_len);
+  kmyth_sgx_log(LOG_DEBUG, msg);
+
+  // get message signature bytes
+  uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
+  buf_index += msg_sig_len;
+
+  // check that number of parsed bytes matches message length input parameter
+  if (buf_index != msg_buf_len)
+  {
+    kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  // extract server's public signing key (needed to verify signature over
+  // message) from X509 certificate
+  EVP_PKEY *msg_sign_pubkey = X509_get_pubkey(msg_sign_cert);
+  if (msg_sign_pubkey == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
+    free(msg_sig_bytes);
+    return EXIT_FAILURE;
+  }
+
+  // check message signature
+  if (EXIT_SUCCESS != ec_verify_buffer(msg_sign_pubkey,
+                                       msg_buf,
+                                       msg_body_size,
+                                       msg_sig_bytes,
+                                       msg_sig_len))
+  {
+    kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Key Request'");
+
+  // done with signature, clean-up memory
+  free(msg_sig_bytes);
 
   return EXIT_SUCCESS;
 }

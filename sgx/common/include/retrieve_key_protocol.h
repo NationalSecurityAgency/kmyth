@@ -80,20 +80,22 @@ typedef struct ECDHPeer
   bool isClient;
   char *host;
   char *port;
-  int max_conn;
+  int session_limit;
   int socket_fd;
   EVP_PKEY *local_sign_key;
   X509 *local_sign_cert;
   X509 *remote_sign_cert;
   EVP_PKEY *local_eph_keypair;
   EVP_PKEY *remote_eph_pubkey;
+  X509_NAME *local_id;
+  X509_NAME *remote_id;
   ECDHMessage client_hello;
   ECDHMessage server_hello;
   ByteBuffer session_secret;
   ByteBuffer request_session_key;
   ByteBuffer response_session_key;
-  ByteBuffer kmip_request;
   ECDHMessage key_request;
+  ByteBuffer kmip_request;
   ByteBuffer kmip_response;
   ECDHMessage key_response;
 } ECDHPeer;
@@ -119,22 +121,22 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        using the provided signing key. The input buffer is then modified
  *        to append the signature bytes to the end of the original bytes.
  * 
- * @param[out] sign_key      Pointer to an EVP_PKEY struct containing the
- *                           private elliptic curve key to use when computing
- *                           the signature.
+ * @param[out] sign_key   Pointer to an EVP_PKEY struct containing the
+ *                        private elliptic curve key to use when computing
+ *                        the signature.
  *
- * @param[in/out] buf        Pointer to byte array containing the bytes to be
- *                           signed. On return from this function, memory is
- *                           re-allocated to make room for the signature bytes,
- *                           and this parameter contains the original bytes
- *                           passed in plus the computed signature bytes
- *                           (appended to the tail end).
+ * @param[inout] buf      Pointer to byte array containing the bytes to be
+ *                        signed. On return from this function, memory is
+ *                        re-allocated to make room for the signature bytes,
+ *                        and this parameter contains the original bytes
+ *                        passed in plus the computed signature bytes
+ *                        (appended to the tail end).
  *
- * @param[in/out] buf_len    Pointer to length (in bytes) of the byte buffer -
- *                           on entry the value should reflect the size of the
- *                           data to be signed and on exit the value will be
- *                           the combined size of the original data plus
- *                           computed signature bytes
+ * @param[inout] buf_len  Pointer to length (in bytes) of the byte buffer -
+ *                        on entry the value should reflect the size of the
+ *                        data to be signed and on exit the value will be
+ *                        the combined size of the original data plus
+ *                        computed signature bytes
  *
  * @return 0 on success, 1 on error
  */
@@ -143,7 +145,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
                        size_t * buf_len);
 
 /**
- * @brief Assembles the 'Client Hello' message, which initiates the ECDH
+ * @brief Builds the 'Client Hello' message, which initiates the ECDH
  *        key agreement portion of the kmyth 'retrieve key from server'
  *        protocol.
  * 
@@ -174,8 +176,13 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        A two-byte (big-endian) unsigned integer message length field is
  *        prepended to the front of the message
  * 
- * @param[inout] client    Pointer to struct containing client state
- * 
+ * @param[inout] client   Pointer to ECDHPeer struct containing configuration
+ *                        and state information for the ECDH client-side node
+ *                        initiating the 'retrieve key from server' protocol
+ *                        protocol with a 'Client Hello' message. The composed
+ *                        message resulting from this function is stored as
+ *                        part of this struct.
+ *
  * @return 0 on success, 1 on error
  */
   int compose_client_hello_msg(ECDHPeer * client);
@@ -208,27 +215,24 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  * 
  *        Finally, some sanity checks are performed on thethe received
  *        ephemeral public key (using EC_KEY_check_key())
- *
- * @param[in]  msg_sign_cert          Pointer to certificate for the signer
- *                                    of the 'Client Hello' message (cert for
- *                                    enclave client)
  * 
- * @param[in]  msg_in                 Byte buffer containing a 'Client Hello'
- *                                    message received from a peer (client)
- *
- * @param[in]  msg_in_len             'Client Hello' message length (in bytes)
+ * @param[in]  msg_buf     Buffer containing received 'Client Hello' message
+ *                         bytes. This is the input to be validated and parsed.
  * 
- * @param[out] client_eph_pubkey_out  Pointer to pointer to the parsed and
- *                                    unmarshalled contents of the
- *                                    client's public epehemeral contribution
- *                                    (EC_KEY struct)
+ * @param[in]  msg_buf_len Length, in bytes, of the input buffer containing
+ *                         the input 'Client Hello' message bytes.
+ *
+ * @param[inout] server    Pointer to ECDHPeer struct containing configuration
+ *                         and state information for the ECDH server-side node
+ *                         that received a 'Client Hello' message. The
+ *                         validated and parsed 'Client Hello' result will be
+ *                         stored as part of this struct.
  *
  * @return 0 on success, 1 on error
  */
-  int parse_client_hello_msg(X509 * msg_sign_cert,
-                             unsigned char * msg_in,
-                             size_t msg_in_len,
-                             EVP_PKEY ** client_eph_pubkey_out);
+  int parse_client_hello_msg(unsigned char * msg_buf,
+                             size_t msg_buf_len,
+                             ECDHPeer * server);
 
 /**
  * @brief Assembles the 'Server Hello' message, the server response to

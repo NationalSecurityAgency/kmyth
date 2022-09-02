@@ -254,9 +254,10 @@ void ecdh_create_server_socket(ECDHPeer * ecdhconn)
     ecdh_error(ecdhconn);
   }
 
-  if (ecdhconn->max_conn > 0) {
-    kmyth_log(LOG_DEBUG, "server will quit after receiving %d connections",
-                         ecdhconn->max_conn);
+  if (ecdhconn->session_limit > 0) 
+  {
+    kmyth_log(LOG_DEBUG, "connection will support %d sessions",
+                         ecdhconn->session_limit);
   }
 
   /* Register handler to automatically reap defunct child processes. */
@@ -292,7 +293,7 @@ void ecdh_create_server_socket(ECDHPeer * ecdhconn)
       /* parent */
       close(ecdhconn->socket_fd);
       numconn++;
-      if (ecdhconn->max_conn > 0 && numconn >= ecdhconn->max_conn)
+      if (ecdhconn->session_limit > 0 && numconn >= ecdhconn->session_limit)
       {
         break;
       }
@@ -402,44 +403,6 @@ int ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
   return EXIT_SUCCESS;
 }
 
-//void ecdh_recv_client_hello_msg(ECDHPeer * ecdhconn)
-//{
-//  int ret;
-//
-//  unsigned char msg_in_len_bytes[2] = { 0 };
-//
-//  kmyth_log(LOG_DEBUG, "waiting for 'Client Hello' message");
-//  ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
-//
-//  // process received message length
-//  uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
-//  msg_in_len += msg_in_len_bytes[1];
-//
-//  // create appropriately sized receive buffer and read message payload
-//  unsigned char *msg_in = malloc(msg_in_len);
-//  ecdh_recv_data(ecdhconn, msg_in, msg_in_len);
-//  ecdhconn->client_hello_msg = msg_in;
-//  ecdhconn->client_hello_msg_len = (size_t) msg_in_len;
-//
-//  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
-//                      "(%d bytes)",
-//                      msg_in[0], msg_in[1], msg_in[msg_in_len-2],
-//                      msg_in[msg_in_len-1], msg_in_len);
-//
-//  // validate 'Client Hello' message and parse out message fields
-//  ret = parse_client_hello_msg(ecdhconn->remote_sign_cert,
-//                               msg_in,
-//                               msg_in_len,
-//                               &(ecdhconn->remote_ephemeral_pubkey));
-//  if (ret != EXIT_SUCCESS)
-//  {
-//    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
-//    free(msg_in);
-//    ecdh_error(ecdhconn);
-//  }
-//  free(msg_in);
-//}
-
 void ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
 {
   int ret = -1;
@@ -521,58 +484,58 @@ void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn)
   free(msg_in);
 }
 
-void ecdh_get_session_key(ECDHPeer * ecdhconn)
+int ecdh_get_session_key(ECDHPeer * ecdhconn)
 {
-  unsigned char *session_secret = NULL;
-  size_t session_secret_len = 0;
-  int ret;
+  int ret = -1;
+
+  ByteBuffer *secret = &(ecdhconn->session_secret);
 
   ret = compute_ecdh_shared_secret(ecdhconn->local_eph_keypair,
                                    ecdhconn->remote_eph_pubkey,
-                                   &session_secret,
-                                   &session_secret_len);
+                                   &(secret->buffer),
+                                   &(secret->size));
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session secret' result failed");
-    ecdh_error(ecdhconn);
+    return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "shared secret = 0x%02X%02X...%02X%02X (%d bytes)",
-            session_secret[0],
-            session_secret[1],
-            session_secret[session_secret_len - 2],
-            session_secret[session_secret_len - 1], session_secret_len);
+  kmyth_log(LOG_DEBUG, "session secret: 0x%02X%02X...%02X%02X (%d bytes)",
+            secret->buffer[0], secret->buffer[1],
+            secret->buffer[secret->size - 2], secret->buffer[secret->size - 1],
+            secret->size);
 
   // generate two session key results for ECDH key agreement (server side)
   // by passing 'shared secret' through a HMAC key derivation function (HKDF)
-  ret = compute_ecdh_session_key(session_secret,
-                                 session_secret_len,
+  ByteBuffer *req_skey = &(ecdhconn->request_session_key);
+  ByteBuffer *resp_skey = &(ecdhconn->response_session_key);
+
+  ret = compute_ecdh_session_key(secret->buffer,
+                                 secret->size,
                                  ecdhconn->client_hello.body,
                                  ecdhconn->client_hello.hdr.msg_size,
                                  ecdhconn->server_hello.body,
                                  ecdhconn->server_hello.hdr.msg_size,
-                                 &(ecdhconn->request_session_key.buffer),
-                                 &(ecdhconn->request_session_key.size),
-                                 &(ecdhconn->response_session_key.buffer),
-                                 &(ecdhconn->response_session_key.size));
-  kmyth_clear_and_free(session_secret, session_secret_len);
-  session_secret = NULL;
+                                 &(req_skey->buffer),
+                                 &(req_skey->size),
+                                 &(resp_skey->buffer),
+                                 &(resp_skey->size));
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "server computation of 'session key' results failed");
-    ecdh_error(ecdhconn);
+    return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "shared session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
-            ecdhconn->request_session_key.buffer[0],
-            ecdhconn->request_session_key.buffer[1],
-            ecdhconn->request_session_key.buffer[ecdhconn->request_session_key.size - 2],
-            ecdhconn->request_session_key.buffer[ecdhconn->request_session_key.size - 1],
-            ecdhconn->request_session_key.size);
+            req_skey->buffer[0], req_skey->buffer[1],
+            req_skey->buffer[req_skey->size - 2],
+            req_skey->buffer[req_skey->size - 1],
+            req_skey->size);
 
   kmyth_log(LOG_DEBUG, "shared session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
-            ecdhconn->response_session_key.buffer[0],
-            ecdhconn->response_session_key.buffer[1],
-            ecdhconn->response_session_key.buffer[ecdhconn->response_session_key.size - 2],
-            ecdhconn->response_session_key.buffer[ecdhconn->response_session_key.size - 1],
-            ecdhconn->response_session_key.size);
+            req_skey->buffer[0], req_skey->buffer[1],
+            req_skey->buffer[req_skey->size - 2],
+            req_skey->buffer[req_skey->size - 1],
+            req_skey->size);
+
+  return EXIT_SUCCESS;
 }
 

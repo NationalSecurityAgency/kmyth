@@ -290,10 +290,10 @@ int compose_kmip_get_key_response(unsigned char *key_id,
   kmip_init(&kmip_ctx, NULL, 0, KMIP_2_0);
 
   if (EXIT_SUCCESS != build_kmip_get_response(&kmip_ctx,
-                                              demo_op_key_val,
-                                              DEMO_OP_KEY_VAL_LEN,
                                               key_id,
                                               key_id_len,
+                                              demo_op_key_val,
+                                              DEMO_OP_KEY_VAL_LEN,
                                               response_bytes,
                                               response_len))
   {
@@ -308,6 +308,18 @@ int compose_kmip_get_key_response(unsigned char *key_id,
     kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
+
+  unsigned char *tmp_id = NULL;
+  size_t tmp_id_len = 0;
+  unsigned char *tmp_key = NULL;
+  size_t tmp_key_len = 0;
+
+  parse_kmip_get_response(&kmip_ctx,
+                          *response_bytes, *response_len,
+                          &tmp_id, &tmp_id_len,
+                          &tmp_key, &tmp_key_len);
+
+  kmyth_log(LOG_DEBUG, "tmp_id = %s (%ld)", tmp_id, tmp_id_len);
 
   unsigned char *tmp_buf = *response_bytes;
 
@@ -414,8 +426,6 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "error returning KMIP 'get key' response");
     return EXIT_FAILURE;
   }
-
-  sleep(2);
 
   demo_kmip_server_cleanup(&demo_server);
 

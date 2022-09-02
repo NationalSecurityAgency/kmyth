@@ -365,9 +365,10 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "===================================================================================================\n"
 	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -C demo/data/ca_cert_test.pem -p 7001 &
 	@sleep 1
-	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -C demo/data/ca_cert_test.pem -I 127.0.0.1 -P 7001 &
+	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -m 1 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -C demo/data/ca_cert_test.pem -I 127.0.0.1 -P 7001 -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
+	@sleep 1
 	@echo "\nRUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
 

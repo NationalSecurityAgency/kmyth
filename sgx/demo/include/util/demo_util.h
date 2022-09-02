@@ -84,39 +84,6 @@ typedef struct ECDHNode
 
 #define UNSET_FD -1
 
-//#define DEMO_KEY_ID "7"
-//#define DEMO_KEY_ID_LEN 1
-//#define DEMO_OP_KEY_SIZE 32
-//
-//typedef struct ECDHPeer
-//{
-//  bool isClient;
-//  char *local_priv_sign_key_path;
-//  char *local_pub_sign_cert_path;
-//  char *remote_pub_sign_cert_path;
-//  char *port;
-//  char *ip;
-//  int maxconn;
-//  int socket_fd;
-//  EVP_PKEY *local_priv_sign_key;
-//  EVP_PKEY *remote_pub_sign_key;
-//  X509 *local_sign_cert;
-//  X509 *remote_sign_cert;
-//  EVP_PKEY *local_ephemeral_keypair;
-//  EVP_PKEY *remote_ephemeral_pubkey;
-//  ECDHMessage client_hello;
-//  unsigned char *server_hello_msg;
-//  size_t server_hello_msg_len;
-//  unsigned char *kmip_request;
-//  size_t kmip_request_len;
-//  unsigned char *kmip_response;
-//  size_t kmip_response_len;
-//  unsigned char *session_key1;
-//  size_t session_key1_len;
-//  unsigned char *session_key2;
-//  size_t session_key2_len;
-//} ECDHPeer;
-
 void log_openssl_error(const char* const label);
 
 void ecdh_init(ECDHPeer * ecdhconn, bool clientMode);
@@ -141,7 +108,7 @@ int ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn, ECDHNode * ecdhopts);
 
 void ecdh_make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
-void ecdh_get_session_key(ECDHPeer * ecdhconn);
+int ecdh_get_session_key(ECDHPeer * ecdhconn);
 
 void ecdh_recv_client_hello_msg(ECDHPeer * ecdhconn);
 void ecdh_send_server_hello_msg(ECDHPeer * ecdhconn);
