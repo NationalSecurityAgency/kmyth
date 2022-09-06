@@ -111,7 +111,6 @@ void ecdh_make_ephemeral_keypair(ECDHPeer * ecdhconn);
 int ecdh_get_session_key(ECDHPeer * ecdhconn);
 
 void ecdh_recv_client_hello_msg(ECDHPeer * ecdhconn);
-void ecdh_send_server_hello_msg(ECDHPeer * ecdhconn);
 void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn);
 
 void send_operational_key(ECDHPeer * ecdhconn);
@@ -119,5 +118,11 @@ void get_operational_key(ECDHPeer * ecdhconn);
 
 int ecdh_send_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_in);
 int ecdh_recv_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_out);
+
+
+int demo_recv_ecdh_msg(int socket_fd, ECDHMessage * msg);
+int demo_send_ecdh_msg(int socket_fd, ECDHMessage * msg);
+
+int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn);
 
 #endif    // _KMYTH_DEMO_UTIL_H_

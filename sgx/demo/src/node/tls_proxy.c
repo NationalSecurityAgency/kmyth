@@ -218,45 +218,45 @@ int receive_client_hello_msg(ECDHPeer * ecdhconn)
   return EXIT_SUCCESS;
 }
 
-int send_server_hello_msg(ECDHPeer * ecdhconn)
-{
-  int ret = -1;
-
-  ECDHMessage *msg = &(ecdhconn->server_hello);
-
-  // compose 'Server Hello' message
-  ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
-                                 ecdhconn->local_sign_key,
-                                 ecdhconn->remote_eph_pubkey,
-                                 ecdhconn->local_eph_keypair,
-                                 &(msg->body),
-                                 (size_t *) &(msg->hdr.msg_size));
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "failed to construct 'Server Hello' message payload");
-    return EXIT_FAILURE;
-  }
-  kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
-                      "(%d bytes)",
-                      msg->body[0],
-                      msg->body[1],
-                      msg->body[msg->hdr.msg_size-2],
-                      msg->body[msg->hdr.msg_size-1],
-                      msg->hdr.msg_size);
-
-  // send newly created 'Server Hello' message
-  ret = send_ecdh_msg(ecdhconn->socket_fd,
-                      msg->body,
-                      msg->hdr.msg_size);
-  if (ret != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
-    return EXIT_FAILURE;
-  }
-  kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
-
-  return EXIT_SUCCESS;
-}
+//int send_server_hello_msg(ECDHPeer * ecdhconn)
+//{
+//  int ret = -1;
+//
+//  ECDHMessage *msg = &(ecdhconn->server_hello);
+//
+//  // compose 'Server Hello' message
+//  ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
+//                                 ecdhconn->local_sign_key,
+//                                 ecdhconn->remote_eph_pubkey,
+//                                 ecdhconn->local_eph_keypair,
+//                                 &(msg->body),
+//                                 (size_t *) &(msg->hdr.msg_size));
+//  if (ret != EXIT_SUCCESS)
+//  {
+//    kmyth_log(LOG_ERR, "failed to construct 'Server Hello' message payload");
+//    return EXIT_FAILURE;
+//  }
+//  kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
+//                      "(%d bytes)",
+//                      msg->body[0],
+//                      msg->body[1],
+//                      msg->body[msg->hdr.msg_size-2],
+//                      msg->body[msg->hdr.msg_size-1],
+//                      msg->hdr.msg_size);
+//
+//  // send newly created 'Server Hello' message
+//  ret = send_ecdh_msg(ecdhconn->socket_fd,
+//                      msg->body,
+//                      msg->hdr.msg_size);
+//  if (ret != EXIT_SUCCESS)
+//  {
+//    kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
+//    return EXIT_FAILURE;
+//  }
+//  kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
+//
+//  return EXIT_SUCCESS;
+//}
 
 int setup_ecdh_session(TLSProxy * proxy)
 {
@@ -280,7 +280,7 @@ int setup_ecdh_session(TLSProxy * proxy)
     kmyth_log(LOG_ERR, "proxy failed to receive 'Client Hello' message");
     return EXIT_FAILURE;
   }
-  ret = send_server_hello_msg(ecdhconn);
+  ret = demo_ecdh_send_server_hello_msg(ecdhconn);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "proxy failed to send 'Server Hello' message");
