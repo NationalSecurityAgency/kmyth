@@ -5,6 +5,7 @@
  */
 
 #include "formatting_tools.h"
+#include "tpm2_interface.h"
 
 #include <string.h>
 
@@ -329,29 +330,34 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
 
   size_t strlength = strlen(str);
 
-  if (strlength != (size_t) POLICY_DIGEST_HEXSTRING_SIZE)
+  if (strlength != (size_t) (2 * KMYTH_DIGEST_SIZE) )
   {
     return 1;
   }
-  // initializes buffer with all 0 hex values
-  size_t digest_size = (8 * sizeof(digest)) + 2; // sizeof(digest) j
-  unsigned long ul;
 
-  unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( 2*digest_size + 1 );
+  if (digest == NULL || digest->buffer == NULL )
+  {
+    return 1;
+  }
+
+  // initializes buffer with all 0 hex values
+  unsigned long ul;
+  unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
   if( expectedPolicyBuffer == NULL ) return 1;
-  expectedPolicyBuffer[0] = 0x00; // patch - compiler won't do above assignment
 
   // iterates through each pair of hex values and fills the
   //  buffer with values indicated in the string
-  for (size_t i = 0; i < strlength; i += 2)
+  for (size_t i = 0; i < KMYTH_DIGEST_SIZE; i++ )
   {
-    strncpy(substr, &str[i], 2);
+    strncpy(substr, &str[i<<1], 2);
     ul = strtoul(substr, NULL, 16);
-    expectedPolicyBuffer[i / 2] = ul;
+    expectedPolicyBuffer[i] = ul;
   }
 
   // converts the byte array into a TPM2B_DIGEST struct
-  memcpy(digest, expectedPolicyBuffer, sizeof(*expectedPolicyBuffer));
+  memcpy(digest->buffer, expectedPolicyBuffer, KMYTH_DIGEST_SIZE);
+  digest->size = KMYTH_DIGEST_SIZE;
+  free( expectedPolicyBuffer );
   return 0;
 }
 
@@ -360,31 +366,20 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
 //############################################################################
 int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
 {
-  // total number of hex values in the TPM2B digest
-  size_t digest_size = (8 * sizeof(digest)) + 2;
-
-  char * hex_buf;
-
-  hex_buf = (char *) malloc( digest_size+1 );
-  if( hex_buf == NULL ) return 1;
-
-  memcpy(hex_buf, digest, digest_size);
-
-  // points at the beginning of the address
+  // points at the beginning, end of the address space
+  // expected that this is safe to execute since the string_buf will be 2x+1 as long
+  // as the TPM2B_DIGEST size.
   char *ptr = string_buf;
+  char *string_buf_end = &string_buf[(digest->size * 2) + 1];
 
-  // each hex number in the digest is 4 bits. digest_size is multiplied by 2
-  // since they will each be represented as byte chars. +1 for the null terminator
-  char *string_buf_end = &string_buf[(digest_size * 2) + 1];
-
-  for (size_t i = 0; i < digest_size; i++)
+  for (size_t i = 0; i < digest->size; i++)
   {
     if (ptr + 2 < string_buf_end)
     {
       // each iteration, sprintf fills string_buf with 2 hex characters
       // followed by '\0'. sprintf returns 2, incrementing the pointer by 2.
       // '\0' is overwritten unless it's the last iteration
-      ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) hex_buf[i]);
+      ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) digest->buffer[i]);
     }
   }
 

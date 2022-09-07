@@ -158,10 +158,12 @@ int tpm2_kmyth_seal(uint8_t * input,
   // to be used to calculate a second policy for policyOR authorization
   if (bool_trial_only == 1)
   {
-    // size of string is 128 chars for the size of the TPM2B_DIGEST buffer + 4
+    // size of string is 2x chars for the size of the TPM2B_DIGEST buffer + 4
     // for TPM2B struct which encodes size in memory + 1 byte for null termination.
     // prints to the console and finishes the program without sealing
-    size_t string_size = (16 * sizeof(objAuthPolicy)) + 5;
+    // By using TPM2B_DIGEST size we're reserving a little bit more than needed but
+    // then the output_string can be reserved based on compile-time values.
+    size_t string_size = (2 * sizeof(TPM2B_DIGEST)) + 1;
     char output_string[string_size];
 
     convert_digest_to_string(&objAuthPolicy, output_string);

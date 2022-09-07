@@ -308,12 +308,4 @@
  */
 #define KMYTH_GETKEY_RX_BUFFER_SIZE 256
 
-/**
- * 
- * Length of hexadecimal string of the policy digest read within TPM 2.0.
- * (in characters).
- *
- */
-#define POLICY_DIGEST_HEXSTRING_SIZE 132
-
 #endif // DEFINES_H
