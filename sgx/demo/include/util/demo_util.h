@@ -120,9 +120,10 @@ int ecdh_send_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_in);
 int ecdh_recv_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_out);
 
 
-int demo_recv_ecdh_msg(int socket_fd, ECDHMessage * msg);
-int demo_send_ecdh_msg(int socket_fd, ECDHMessage * msg);
+int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg);
+int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg);
 
-int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn);
+int demo_ecdh_recv_client_hello_msg(ECDHPeer * server);
+int demo_ecdh_send_server_hello_msg(ECDHPeer * server);
 
 #endif    // _KMYTH_DEMO_UTIL_H_

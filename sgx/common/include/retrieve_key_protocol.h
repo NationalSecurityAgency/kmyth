@@ -87,8 +87,6 @@ typedef struct ECDHPeer
   X509 *remote_sign_cert;
   EVP_PKEY *local_eph_keypair;
   EVP_PKEY *remote_eph_pubkey;
-  //X509_NAME *local_id;
-  //X509_NAME *remote_id;
   ECDHMessage client_hello;
   ECDHMessage server_hello;
   ByteBuffer session_secret;
@@ -216,23 +214,14 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        Finally, some sanity checks are performed on thethe received
  *        ephemeral public key (using EC_KEY_check_key())
  * 
- * @param[in]  msg_buf     Buffer containing received 'Client Hello' message
- *                         bytes. This is the input to be validated and parsed.
- * 
- * @param[in]  msg_buf_len Length, in bytes, of the input buffer containing
- *                         the input 'Client Hello' message bytes.
- *
- * @param[inout] server    Pointer to ECDHPeer struct containing configuration
- *                         and state information for the ECDH server-side node
- *                         that received a 'Client Hello' message. The
- *                         validated and parsed 'Client Hello' result will be
- *                         stored as part of this struct.
+ * @param[inout] server  Pointer to ECDHPeer struct containing configuration
+ *                       and state information for the ECDH server-side node
+ *                       that received a 'Client Hello' message that it needs
+ *                       to validate and parse.
  *
  * @return 0 on success, 1 on error
  */
-  int parse_client_hello_msg(unsigned char * msg_buf,
-                             size_t msg_buf_len,
-                             ECDHPeer * server);
+  int parse_client_hello_msg(ECDHPeer * server);
 
 /**
  * @brief Assembles the 'Server Hello' message, the server response to
@@ -261,10 +250,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  * 
  * @param[inout] server    Pointer to ECDHPeer struct containing configuration
  *                         and state information for the ECDH server-side node
- *                         that needs to compose a 'Server Hello' message. The
- *                         resultant protocol message will be stored as part
- *                         of this struct, so that it can later be sent to a
- *                         client-side peer.
+ *                         that needs to compose a 'Server Hello' message.
  *
  * @return 0 on success, 1 on error
  */
@@ -294,35 +280,14 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        and the contents of the message fields are placed in the
  *        appropriate output parameters.
  * 
- * @param[in]  msg_sign_cert       Pointer to X509 formatted public cert
- *                                 to be used in validating both the
- *                                 server identity information contained
- *                                 within and the signature computed over
- *                                 the received "Server Hello' message
- * 
- * @param[in]  msg_in              Byte buffer containing a 'Server Hello'
- *                                 message received from a remote peer
- *                                 (TLS proxy for server)
- *
- * @param[in]  msg_in_len          'Server Hello' message length (in bytes)
- * 
- * @param[in]  client_eph_pub_in   Pointer to the client's public epehemeral
- *                                 contribution (EC_KEY struct) - used to
- *                                 validate the value received as part of the
- *                                 'Server Hello' response
- *
- * @param[out] server_eph_pub_out  Pointer to pointer to the parsed and
- *                                 unmarshalled contents of the server's
- *                                 public epehemeral contribution (EC_KEY
- *                                 struct)
+ * @param[inout] client   Pointer to ECDHPeer struct containing configuration
+ *                        and state information for the ECDH client-side node
+ *                        that received a 'Server Hello' message that it needs
+ *                        to validate and parse.
  *
  * @return 0 on success, 1 on error
  */
-  int parse_server_hello_msg(X509 * msg_sign_cert,
-                             unsigned char * msg_in,
-                             size_t msg_in_len,
-                             EVP_PKEY * client_eph_pub_in,
-                             EVP_PKEY ** server_eph_pub_out);
+  int parse_server_hello_msg(ECDHPeer * client);
 
 /**
  * @brief Assembles the 'Key Request' message, a signed, encrypted

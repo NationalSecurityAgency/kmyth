@@ -118,11 +118,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, lmsg);
 
   // parse out and validate received 'Server Hello' message fields
-  ret_val = parse_server_hello_msg(enclave_client.remote_sign_cert,
-                                   shello->body,
-                                   shello->hdr.msg_size,
-                                   enclave_client.local_eph_keypair,
-                                   &(enclave_client.remote_eph_pubkey));
+  ret_val = parse_server_hello_msg(&enclave_client);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "'Server Hello' message parse/validate error");

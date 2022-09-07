@@ -149,7 +149,7 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-static int setup_proxy_ecdh_connection(TLSProxy * proxy)
+int config_proxy_ecdh_connection(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
   ECDHNode *ecdhopts = &proxy->ecdhopts;
@@ -168,9 +168,11 @@ static int setup_proxy_ecdh_connection(TLSProxy * proxy)
   ecdh_load_local_sign_key(ecdhconn, ecdhopts);
   ecdh_load_local_sign_cert(ecdhconn, ecdhopts);
   ecdh_load_remote_sign_cert(ecdhconn, ecdhopts);
+
+  return EXIT_SUCCESS;
 }
 
-static int setup_proxy_tls_connection(TLSProxy * proxy)
+int config_proxy_tls_connection(TLSProxy * proxy)
 {
   TLSPeer *tlsconn = &proxy->tlsconn;
 
@@ -186,77 +188,6 @@ static int setup_proxy_tls_connection(TLSProxy * proxy)
 
   return 0;
 }
-
-int receive_client_hello_msg(ECDHPeer * ecdhconn)
-{
-  struct ECDHMessage *msg = &ecdhconn->client_hello;
-
-  if (EXIT_SUCCESS != ecdh_recv_msg(ecdhconn, msg))
-  {
-    kmyth_log(LOG_ERR, "error receiving 'Client Hello' message");
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
-                      "(%d bytes)",
-                      msg->body[0], msg->body[1],
-                      msg->body[msg->hdr.msg_size - 2],
-                      msg->body[msg->hdr.msg_size - 1],
-                      msg->hdr.msg_size);
-
-  // validate 'Client Hello' message and parse out message fields
-  if (EXIT_SUCCESS != parse_client_hello_msg(msg->body,
-                                             msg->hdr.msg_size,
-                                             ecdhconn))
-  {
-    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "'Client Hello' message validated and parsed");
-
-  return EXIT_SUCCESS;
-}
-
-//int send_server_hello_msg(ECDHPeer * ecdhconn)
-//{
-//  int ret = -1;
-//
-//  ECDHMessage *msg = &(ecdhconn->server_hello);
-//
-//  // compose 'Server Hello' message
-//  ret = compose_server_hello_msg(ecdhconn->local_sign_cert,
-//                                 ecdhconn->local_sign_key,
-//                                 ecdhconn->remote_eph_pubkey,
-//                                 ecdhconn->local_eph_keypair,
-//                                 &(msg->body),
-//                                 (size_t *) &(msg->hdr.msg_size));
-//  if (ret != EXIT_SUCCESS)
-//  {
-//    kmyth_log(LOG_ERR, "failed to construct 'Server Hello' message payload");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
-//                      "(%d bytes)",
-//                      msg->body[0],
-//                      msg->body[1],
-//                      msg->body[msg->hdr.msg_size-2],
-//                      msg->body[msg->hdr.msg_size-1],
-//                      msg->hdr.msg_size);
-//
-//  // send newly created 'Server Hello' message
-//  ret = send_ecdh_msg(ecdhconn->socket_fd,
-//                      msg->body,
-//                      msg->hdr.msg_size);
-//  if (ret != EXIT_SUCCESS)
-//  {
-//    kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
-//    return EXIT_FAILURE;
-//  }
-//  kmyth_log(LOG_DEBUG, "sent 'Server Hello' message");
-//
-//  return EXIT_SUCCESS;
-//}
 
 int setup_ecdh_session(TLSProxy * proxy)
 {
@@ -274,7 +205,7 @@ int setup_ecdh_session(TLSProxy * proxy)
   kmyth_log(LOG_DEBUG, "proxy created ECDH ephemeral key pair");
 
   // exchange 'Client Hello'/'Server Hello' messages with the client
-  ret = receive_client_hello_msg(ecdhconn);
+  ret = demo_ecdh_recv_client_hello_msg(ecdhconn);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "proxy failed to receive 'Client Hello' message");
@@ -455,30 +386,33 @@ void proxy_run(TLSProxy * proxy)
 
     if (pfds[0].revents & POLLIN)
     {
-      // process 'retrieve key' request received from client
-      kmyth_log(LOG_DEBUG, "ECDH receive event ... client 'Key Request'");
+      kmyth_log(LOG_DEBUG, "ECDH receive event initiates session setup");
 
+      // execute session setup (e.g., key agreement) protocol phase
       if (EXIT_SUCCESS != setup_ecdh_session(proxy))
       {
         kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
       }
 
+      // obtain key retrieval request from client-side of ECDH session
       if (EXIT_SUCCESS != get_client_key_request(proxy))
       {
         kmyth_log(LOG_DEBUG, "failed to receive 'Key Request' message");
       }
 
+      // pass KMIP request to / receive KMIP response from key server over TLS
       if (EXIT_SUCCESS != get_kmip_response(proxy))
       {
         kmyth_log(LOG_DEBUG, "failed to retrieve KMIP 'get key' response");
       }
 
+      // return 'retrieve key' response to the client that submitted request
       if (EXIT_SUCCESS != send_key_response_message(proxy))
       {
         kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
       }
 
-      // done with this session, decrement session count
+      // done with this session, cleanup and then decrement session count
       ecdhconn->session_limit--;
     }
 
@@ -532,8 +466,8 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  setup_proxy_ecdh_connection(&proxy);
-  setup_proxy_tls_connection(&proxy);
+  config_proxy_ecdh_connection(&proxy);
+  config_proxy_tls_connection(&proxy);
 
   proxy_run(&proxy);
 

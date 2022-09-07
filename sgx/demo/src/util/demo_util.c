@@ -144,9 +144,9 @@ int ecdh_check_options(ECDHNode * ecdhopts)
 }
 
 /*****************************************************************************
- * demo_recv_ecdh_msg()
+ * demo_ecdh_recv_msg()
  ****************************************************************************/
-int demo_recv_ecdh_msg(int socket_fd, ECDHMessage * msg)
+int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg)
 {
   // read message header (and do some sanity checks)
   uint8_t *hdr_buf = calloc(sizeof(msg->hdr), sizeof(uint8_t));
@@ -194,9 +194,9 @@ int demo_recv_ecdh_msg(int socket_fd, ECDHMessage * msg)
 }
 
 /*****************************************************************************
- * demo_send_ecdh_msg()
+ * demo_ecdh_send_msg()
  ****************************************************************************/
-int demo_send_ecdh_msg(int socket_fd, ECDHMessage * msg)
+int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg)
 {
   // validate message length
   if ((msg->hdr.msg_size > KMYTH_ECDH_MAX_MSG_SIZE) ||
@@ -226,7 +226,6 @@ int demo_send_ecdh_msg(int socket_fd, ECDHMessage * msg)
   return EXIT_SUCCESS;
 }
 
-
 int ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len)
 {
   ssize_t bytes_sent = write(ecdhconn->socket_fd, buf, len);
@@ -255,20 +254,6 @@ int ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
   {
     // should always receive exactly (len) bytes
     kmyth_log(LOG_ERR, "failed to receive ECDH data");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-int demo_ecdh_send_msg(ECDHPeer * ecdhconn, ECDHMessage * msg)
-{
-  ssize_t bytes_sent = write(ecdhconn->socket_fd,
-                             msg->body,
-                             msg->hdr.msg_size);
-  if (bytes_sent != msg->hdr.msg_size)
-  {
-    kmyth_log(LOG_ERR, "failed to send ECDH message");
     return EXIT_FAILURE;
   }
 
@@ -487,6 +472,35 @@ int ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
   return EXIT_SUCCESS;
 }
 
+int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
+{
+  struct ECDHMessage *msg = &server->client_hello;
+
+  if (EXIT_SUCCESS != ecdh_recv_msg(server, msg))
+  {
+    kmyth_log(LOG_ERR, "error receiving 'Client Hello' message");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
+                      "(%d bytes)",
+                      msg->body[0], msg->body[1],
+                      msg->body[msg->hdr.msg_size - 2],
+                      msg->body[msg->hdr.msg_size - 1],
+                      msg->hdr.msg_size);
+
+  // validate 'Client Hello' message and parse out message fields
+  if (EXIT_SUCCESS != parse_client_hello_msg(server))
+  {
+    kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "'Client Hello' message validated and parsed");
+
+  return EXIT_SUCCESS;
+}
+
 int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
 {
   int ret = -1;
@@ -509,7 +523,7 @@ int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
                       svr_hello->hdr.msg_size);
 
   // send newly created 'Server Hello' message
-  ret = demo_send_ecdh_msg(ecdhconn->socket_fd, svr_hello);
+  ret = demo_ecdh_send_msg(ecdhconn->socket_fd, svr_hello);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
