@@ -25,17 +25,12 @@ void demo_kmip_server_cleanup(DemoServer * server)
     SSL_CTX_free(server->tlsconn.ctx);
   }
 
-  kmyth_log(LOG_DEBUG, "after SSL_CTX_free()");
-
   demo_kmip_server_init(server);
-
-  kmyth_log(LOG_DEBUG, "after server_init()");
 }
 
 void demo_kmip_server_error(DemoServer * server)
 {
   demo_kmip_server_cleanup(server);
-  exit(EXIT_FAILURE);
 }
 
 static void demo_kmip_server_usage(const char *prog)
@@ -218,9 +213,8 @@ int receive_kmip_get_key_request(DemoServer *server,
     kmyth_log(LOG_ERR, "error reading 'get key' request bytes");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
-                       (*kmip_key_req_bytes)[0], (*kmip_key_req_bytes)[1],
-                       (*kmip_key_req_bytes)[*kmip_key_req_len-2],
+  kmyth_log(LOG_DEBUG, "received KMIP Request: 0x%02X ... %02X (%d bytes)",
+                       (*kmip_key_req_bytes)[0],
                        (*kmip_key_req_bytes)[*kmip_key_req_len-1],
                        *kmip_key_req_len);
     
@@ -256,12 +250,12 @@ int validate_kmip_get_key_request(unsigned char * kmip_key_req_bytes,
   char *id_str = malloc(*kmip_key_req_id_len + 1);
   memcpy(id_str, *kmip_key_req_id_bytes, *kmip_key_req_id_len);
   *(id_str+*kmip_key_req_id_len) = '\0';
-  kmyth_log(LOG_DEBUG, "KMIP key request ID = %s (%d-byte string)",
-                         id_str, *kmip_key_req_id_len);
 
 if (*kmip_key_req_id_len != strlen(DEMO_OP_KEY_ID_STR))
   {
-    kmyth_log(LOG_ERR, "unexpected KMIP ID string length");
+    kmyth_log(LOG_ERR, "unexpected KMIP ID string length (%d instead of %d)",
+                       *kmip_key_req_id_len, strlen(DEMO_OP_KEY_ID_STR));
+    free(id_str);
     kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
@@ -270,11 +264,13 @@ if (*kmip_key_req_id_len != strlen(DEMO_OP_KEY_ID_STR))
   {
     kmyth_log(LOG_ERR, "unexpected KMIP ID value ('%s' instead of '%s')",
                        id_str, DEMO_OP_KEY_ID_STR);
+    free(id_str);
     kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
 
-  kmyth_log(LOG_DEBUG, "received validated request for expected key ID");
+  kmyth_log(LOG_DEBUG, "validated KMIP request for key ID = %s", id_str);
+  free(id_str);
 
   kmip_destroy(&kmip_ctx);
 
@@ -319,15 +315,10 @@ int compose_kmip_get_key_response(unsigned char *key_id,
                           &tmp_id, &tmp_id_len,
                           &tmp_key, &tmp_key_len);
 
-  kmyth_log(LOG_DEBUG, "tmp_id = %s (%ld)", tmp_id, tmp_id_len);
-
   unsigned char *tmp_buf = *response_bytes;
 
-  kmyth_log(LOG_DEBUG, "KMIP Response = 0x%02X%02X ... %02X%02X (%d bytes)",
-                       tmp_buf[0], tmp_buf[1],
-                       tmp_buf[*response_len-2],
-                       tmp_buf[*response_len-1],
-                       *response_len);
+  kmyth_log(LOG_DEBUG, "created KMIP Response = 0x%02X ... %02X (%d bytes)",
+                       tmp_buf[0], tmp_buf[*response_len-1], *response_len);
 
   kmip_destroy(&kmip_ctx);
 
@@ -395,18 +386,35 @@ int main(int argc, char **argv)
                                                    &kmip_req_len))
   {
     kmyth_log(LOG_ERR, "error receiving KMIP 'get key' request");
+    if (kmip_req_bytes != NULL)
+    {
+      free(kmip_req_bytes);
+    }
+    demo_kmip_server_error(&demo_server);
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "done receive_kmip_get_key_request()");
 
+  // validate and parse out key ID of 'get key' request just received
   unsigned char *req_id_bytes = NULL;
   size_t req_id_len = 0;
 
-  kmyth_log(LOG_DEBUG, "calling validate_kmip_get_key_request()");
-
-  validate_kmip_get_key_request(kmip_req_bytes, kmip_req_len,
-                                &req_id_bytes, &req_id_len);
+  if (EXIT_SUCCESS != validate_kmip_get_key_request(kmip_req_bytes,
+                                                    kmip_req_len,
+                                                    &req_id_bytes,
+                                                    &req_id_len))
+  {
+    kmyth_log(LOG_ERR, "failed to validate KMIP 'get key' request");
+    free(kmip_req_bytes);
+    if (req_id_bytes != NULL)
+    {
+      free(req_id_bytes);
+    }
+    demo_kmip_server_error(&demo_server);
+    return EXIT_FAILURE;
+  }
+  free(kmip_req_bytes);
   
+  // create KMIP 'get key' response to be returned to client
   unsigned char *kmip_resp_bytes = NULL;
   size_t kmip_resp_len = 0;
 
@@ -416,22 +424,31 @@ int main(int argc, char **argv)
                                                     &kmip_resp_len))
   {
     kmyth_log(LOG_ERR, "failed to compose KMIP 'get key' response");
+    free(req_id_bytes);
+    if (kmip_resp_bytes != NULL)
+    {
+      kmyth_clear_and_free(kmip_resp_bytes, kmip_resp_len);
+    }
+    demo_kmip_server_error(&demo_server);
     return EXIT_FAILURE;
   }
+  free(req_id_bytes);
 
+  // send KMIP 'get key' response just created
   if (EXIT_SUCCESS != send_kmip_get_key_response(&demo_server,
                                                  kmip_resp_bytes,
                                                  kmip_resp_len))
   {
     kmyth_log(LOG_ERR, "error returning KMIP 'get key' response");
+    kmyth_clear_and_free(kmip_resp_bytes, kmip_resp_len);
+    demo_kmip_server_error(&demo_server);
     return EXIT_FAILURE;
   }
+  kmyth_clear_and_free(kmip_resp_bytes, kmip_resp_len);
 
   demo_kmip_server_cleanup(&demo_server);
 
-  EVP_cleanup();
-
-  kmyth_log(LOG_DEBUG, "exiting ...");
+  kmyth_log(LOG_DEBUG, "normal termination ...");
 
   return EXIT_SUCCESS;
 }
