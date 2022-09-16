@@ -73,7 +73,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // create public and private components of the client's ephemeral
   // contribution to the session key
-  ret_val = create_ecdh_ephemeral_keypair(&(enclave_client.local_eph_keypair));
+  EVP_PKEY * enclave_eph_keypair = NULL;
+  ret_val = create_ecdh_ephemeral_keypair(&(enclave_eph_keypair));
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral creation failed");
@@ -82,7 +83,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, "created client-side ephemeral key pair");
 
   // compose 'Client Hello' message (client to server key agreement 'request')
-  ret_val = compose_client_hello_msg(&enclave_client);
+  ret_val = compose_client_hello_msg(client_sign_privkey,
+                                     client_sign_cert,
+                                     enclave_eph_keypair,
+                                     chello);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
@@ -95,6 +99,9 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
            chello->body[chello->hdr.msg_size-1],
            chello->hdr.msg_size);
   kmyth_sgx_log(LOG_DEBUG, lmsg);
+
+  // TEMPORARY
+  enclave_client.local_eph_keypair = enclave_eph_keypair;
 
   // exchange 'Client Hello' and 'Server Hello' messages
   ret_ocall = ecdh_exchange_ocall(&ret_val,

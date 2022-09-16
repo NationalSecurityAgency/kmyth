@@ -149,13 +149,36 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-int config_proxy_ecdh_connection(TLSProxy * proxy)
+int create_proxy_ecdh_server_connection(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
   ECDHNode *ecdhopts = &proxy->ecdhopts;
 
-  // setup proxy 'server' socket to support a client connection
-  ecdh_create_server_socket(ecdhconn);
+  proxy->ecdh_server_socket_fd = UNSET_FD;
+
+  if (ecdhconn->session_limit > 0) 
+  {
+    kmyth_log(LOG_DEBUG, "configured to support %d ECDH sessions",
+                         ecdhconn->session_limit);
+  }
+  else if (ecdhconn->session_limit == 0)
+  {
+    kmyth_log(LOG_DEBUG, "configured to support unlimited ECDH sessions");
+  }
+  else
+  {
+    kmyth_log(LOG_ERR, "invalid ECDH session limit");
+  }
+
+  kmyth_log(LOG_DEBUG, "setting up server socket on port %s", ecdhconn->port);
+  if (setup_server_socket(ecdhconn->port, &(proxy->ecdh_server_socket_fd)))
+  {
+    kmyth_log(LOG_ERR, "failed to setup server socket on port %s",
+                       ecdhconn->port);
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "proxy->ecdh_server_socket_fd = %d",
+                       proxy->ecdh_server_socket_fd);
 
   // load keys/certificates needed to compose/sign/validate protocol messages
   //   - proxy (server) private key
@@ -169,10 +192,17 @@ int config_proxy_ecdh_connection(TLSProxy * proxy)
   ecdh_load_local_sign_cert(ecdhconn, ecdhopts);
   ecdh_load_remote_sign_cert(ecdhconn, ecdhopts);
 
+  if (listen(proxy->ecdh_server_socket_fd, 1))
+  {
+    kmyth_log(LOG_ERR, "server socket listen (for client connection) failed");
+    close(proxy->ecdh_server_socket_fd);
+    return EXIT_FAILURE;
+  }
+
   return EXIT_SUCCESS;
 }
 
-int config_proxy_tls_connection(TLSProxy * proxy)
+int create_proxy_tls_client_connection(TLSProxy * proxy)
 {
   TLSPeer *tlsconn = &proxy->tlsconn;
 
@@ -353,10 +383,72 @@ int send_key_response_message(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-void proxy_run(TLSProxy * proxy)
-{
-  kmyth_log(LOG_DEBUG, "starting ECDH/TLS proxy ...");
+void cleanup_defunct() {
+  /* Clean up all defunct child processes. */
+  while (waitpid(-1, NULL, WNOHANG) > 0);
+}
 
+int manage_ecdh_client_connections(TLSProxy * proxy)
+{
+  ECDHPeer *ecdhconn = &proxy->ecdhconn;
+
+  int session_count = 0;
+
+  // Register handler to automatically reap defunct child processes
+  signal(SIGCHLD, cleanup_defunct);
+
+  while (true)
+  {
+    kmyth_log(LOG_DEBUG, "ECDH 'server' waiting for client connection");
+    kmyth_log(LOG_DEBUG, "proxy->ecdh_server_socket_fd = %d",
+                         proxy->ecdh_server_socket_fd);
+    ecdhconn->socket_fd = accept(proxy->ecdh_server_socket_fd, NULL, NULL);
+    if (ecdhconn->socket_fd == -1)
+    {
+      kmyth_log(LOG_ERR, "socket accept failed");
+      close(proxy->ecdh_server_socket_fd);
+      return EXIT_FAILURE;
+    }
+    session_count++;
+    kmyth_log(LOG_DEBUG, "accepted ECDH 'client' connection (session #%d)",
+                         session_count);
+
+    int ret = fork();
+    if (ret == -1)
+    {
+      kmyth_log(LOG_ERR, "server fork failed");
+      close(proxy->ecdh_server_socket_fd);
+      return EXIT_FAILURE;
+    }
+    else if (ret == 0)
+    {
+      /* child */
+      close(proxy->ecdh_server_socket_fd);
+      return EXIT_SUCCESS;
+    }
+    else
+    {
+      /* parent */
+      close(ecdhconn->socket_fd);
+      if ((ecdhconn->session_limit != 0) &&
+          (session_count >= ecdhconn->session_limit))
+      {
+        break;
+      }
+    }
+  }
+
+  kmyth_log(LOG_DEBUG, "server reached ECDH session limit");
+
+  close(proxy->ecdh_server_socket_fd);
+  while (wait(NULL) > 0);
+
+  return EXIT_SUCCESS;
+}
+
+
+int proxy_handle_session(TLSProxy * proxy)
+{
   struct pollfd pfds[NUM_POLL_FDS];
 
   int bytes_read = 0;
@@ -378,67 +470,67 @@ void proxy_run(TLSProxy * proxy)
   pfds[1].fd = BIO_get_fd(tls_bio, NULL);
   pfds[1].events = POLLIN;
 
-  kmyth_log(LOG_DEBUG, "Starting proxy loop");
-  while (ecdhconn->session_limit > 0)
+  /* Wait to receive data with no timeout. */
+  poll(pfds, NUM_POLL_FDS, -1);
+
+  if (pfds[0].revents & POLLIN)
   {
-    /* Wait to receive data with no timeout. */
-    poll(pfds, NUM_POLL_FDS, -1);
+    kmyth_log(LOG_DEBUG, "ECDH receive event initiates session setup");
 
-    if (pfds[0].revents & POLLIN)
+    // execute session setup (e.g., key agreement) protocol phase
+    if (EXIT_SUCCESS == setup_ecdh_session(proxy))
     {
-      kmyth_log(LOG_DEBUG, "ECDH receive event initiates session setup");
-
-      // execute session setup (e.g., key agreement) protocol phase
-      if (EXIT_SUCCESS != setup_ecdh_session(proxy))
-      {
-        kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
-      }
-
       // obtain key retrieval request from client-side of ECDH session
-      if (EXIT_SUCCESS != get_client_key_request(proxy))
+      if (EXIT_SUCCESS == get_client_key_request(proxy))
       {
-        kmyth_log(LOG_DEBUG, "failed to receive 'Key Request' message");
-      }
-
-      // pass KMIP request to / receive KMIP response from key server over TLS
-      if (EXIT_SUCCESS != get_kmip_response(proxy))
-      {
-        kmyth_log(LOG_DEBUG, "failed to retrieve KMIP 'get key' response");
-      }
-
-      // return 'retrieve key' response to the client that submitted request
-      if (EXIT_SUCCESS != send_key_response_message(proxy))
-      {
-        kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
-      }
-
-      // done with this session, cleanup and then decrement session count
-      ecdhconn->session_limit--;
-    }
-
-    if (pfds[1].revents & POLLIN)
-    {
-      kmyth_log(LOG_DEBUG, "unexpected TLS event initiated by server");
-      bytes_read = BIO_read(proxy->tlsconn.bio,
-                            tls_msg_buf,
-                            sizeof(tls_msg_buf));
-      if (bytes_read == 0)
-      {
-        kmyth_log(LOG_INFO, "TLS connection is closed");
-      }
-      else if (bytes_read < 0)
-      {
-        kmyth_log(LOG_ERR, "TLS read error");
+        // pass KMIP request to / receive KMIP response from key server over TLS
+        if (EXIT_SUCCESS == get_kmip_response(proxy))
+        {
+          // return 'retrieve key' response to the client that submitted request
+          if (EXIT_SUCCESS != send_key_response_message(proxy))
+          {
+            kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
+          }
+        }
+        else
+        {
+          kmyth_log(LOG_DEBUG, "failed to retrieve KMIP 'get key' response");
+        }
       }
       else
       {
-        kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection ... %s",
-                             bytes_read, "ignored");
+        kmyth_log(LOG_DEBUG, "failed to receive 'Key Request' message");
       }
     }
+    else
+    {
+      kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
+    }
+
+    // done with this session, cleanup and then decrement session count
+    ecdhconn->session_limit--;
   }
 
-  kmyth_log(LOG_DEBUG, "proxy reached max number of connections ... stopping");
+  if (pfds[1].revents & POLLIN)
+  {
+    kmyth_log(LOG_DEBUG, "unexpected TLS event initiated by server");
+    bytes_read = BIO_read(proxy->tlsconn.bio,
+                          tls_msg_buf,
+                          sizeof(tls_msg_buf));
+    if (bytes_read == 0)
+    {
+      kmyth_log(LOG_INFO, "TLS connection is closed");
+    }
+    else if (bytes_read < 0)
+    {
+      kmyth_log(LOG_ERR, "TLS read error");
+    }
+    else
+    {
+      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection ... %s",
+                           bytes_read, "ignored");
+    }
+  }
 }
 
 /*
@@ -466,10 +558,11 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  config_proxy_ecdh_connection(&proxy);
-  config_proxy_tls_connection(&proxy);
+  create_proxy_tls_client_connection(&proxy);
+  create_proxy_ecdh_server_connection(&proxy);
+  manage_ecdh_client_connections(&proxy);
 
-  proxy_run(&proxy);
+  proxy_handle_session(&proxy);
 
   proxy_cleanup(&proxy);
 

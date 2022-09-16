@@ -174,16 +174,20 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        A two-byte (big-endian) unsigned integer message length field is
  *        prepended to the front of the message
  * 
- * @param[inout] client   Pointer to ECDHPeer struct containing configuration
- *                        and state information for the ECDH client-side node
- *                        initiating the 'retrieve key from server' protocol
- *                        protocol with a 'Client Hello' message. The composed
- *                        message resulting from this function is stored as
- *                        part of this struct.
- *
+ * @param[in]  client_sign_key
+ * 
+ * @param[in]  client_sign_cert
+ * 
+ * @param[in]  client_eph_keypair
+ * 
+ * @param[out] msg_out
+ * 
  * @return 0 on success, 1 on error
  */
-  int compose_client_hello_msg(ECDHPeer * client);
+  int compose_client_hello_msg(EVP_PKEY * client_sign_key,
+                               X509 * client_sign_cert,
+                               EVP_PKEY * client_eph_keypair,
+                               ECDHMessage * msg_out);
 
 /**
  * @brief Validates and then parses the 'Client Hello' message, which
