@@ -129,7 +129,6 @@ void proxy_check_options(TLSProxy * proxy)
 {
   demo_ecdh_check_options(&proxy->ecdhopts);
 
-
   bool err = false;
 
   if (proxy->tlsconn.host == NULL)
@@ -147,6 +146,25 @@ void proxy_check_options(TLSProxy * proxy)
     kmyth_log(LOG_ERR, "Invalid command-line arguments.");
     proxy_error(proxy);
   }
+}
+
+int proxy_create_tls_client(TLSProxy * proxy)
+{
+  TLSPeer *tlsconn = &proxy->tlsconn;
+
+  if (tls_config_ctx(tlsconn))
+  {
+    kmyth_log(LOG_ERR, "failed to configure TLS context");
+    return EXIT_FAILURE;
+  }
+
+  if (tls_config_client_connect(tlsconn))
+  {
+    kmyth_log(LOG_ERR, "failed to configure TLS client connection");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
 
 int proxy_create_ecdh_server(TLSProxy * proxy)
@@ -203,25 +221,6 @@ int proxy_create_ecdh_server(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int proxy_create_tls_client(TLSProxy * proxy)
-{
-  TLSPeer *tlsconn = &proxy->tlsconn;
-
-  if (tls_config_ctx(tlsconn))
-  {
-    kmyth_log(LOG_ERR, "failed to configure TLS context");
-    return EXIT_FAILURE;
-  }
-
-  if (tls_config_client_connect(tlsconn))
-  {
-    kmyth_log(LOG_ERR, "failed to configure TLS client connection");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
 int proxy_setup_ecdh_session(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
@@ -262,12 +261,12 @@ int proxy_setup_ecdh_session(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int get_client_key_request(TLSProxy * proxy)
+int proxy_get_client_key_request(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
   int ret = -1;
 
-  // receive key request message from client (encrypted with session key #1)
+  // receive key request message from ECDH client
   ecdh_recv_key_request_msg(ecdhconn);
 
   kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
@@ -280,7 +279,7 @@ int get_client_key_request(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int get_kmip_response(TLSProxy * proxy)
+int proxy_get_kmip_response(TLSProxy * proxy)
 {
   if (tls_client_connect(&proxy->tlsconn))
   {
@@ -351,32 +350,34 @@ int get_kmip_response(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int send_key_response_message(TLSProxy * proxy)
+int proxy_send_key_response_message(TLSProxy * proxy)
 {
-  if (EXIT_SUCCESS != compose_key_response_msg(proxy->ecdhconn.local_sign_key,
-                                               proxy->ecdhconn.response_session_key.buffer,
-                                               proxy->ecdhconn.response_session_key.size,
-                                               proxy->ecdhconn.kmip_response.buffer,
-                                               proxy->ecdhconn.kmip_response.size,
-                                               &(proxy->ecdhconn.key_response.body),
-                                               (size_t *) &(proxy->ecdhconn.key_response.hdr.msg_size)))
+  ECDHPeer *p = &(proxy->ecdhconn);
+
+  if (EXIT_SUCCESS != compose_key_response_msg(p->local_sign_key,
+                                               p->response_session_key.buffer,
+                                               p->response_session_key.size,
+                                               p->kmip_response.buffer,
+                                               p->kmip_response.size,
+                                               &(p->key_response.body),
+                                    (size_t *) &(p->key_response.hdr.msg_size)))
   {
     kmyth_log(LOG_ERR, "failed to compose 'Key Response' message");
     return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "composed 'Key Response': %02x%02x ... %02x%02x "
-                      "(%d bytes)",
-                      proxy->ecdhconn.key_response.body[0],
-                      proxy->ecdhconn.key_response.body[1],
-                      proxy->ecdhconn.key_response.body[proxy->ecdhconn.key_response.hdr.msg_size - 2],
-                      proxy->ecdhconn.key_response.body[proxy->ecdhconn.key_response.hdr.msg_size - 1],
-                      proxy->ecdhconn.key_response.hdr.msg_size);
+                       "(%d bytes)",
+                       p->key_response.body[0],
+                       p->key_response.body[1],
+                       p->key_response.body[p->key_response.hdr.msg_size - 2],
+                       p->key_response.body[p->key_response.hdr.msg_size - 1],
+                       p->key_response.hdr.msg_size);
 
   // send newly created 'Key Response' message
-  if (EXIT_SUCCESS != send_ecdh_msg(proxy->ecdhconn.socket_fd,
-                                    proxy->ecdhconn.key_response.body,
-                                    proxy->ecdhconn.key_response.hdr.msg_size))
+  if (EXIT_SUCCESS != send_ecdh_msg(p->socket_fd,
+                                    p->key_response.body,
+                                    p->key_response.hdr.msg_size))
   {
     kmyth_log(LOG_ERR, "failed to send 'Key Response' message");
     return EXIT_FAILURE;
@@ -391,7 +392,7 @@ void cleanup_defunct() {
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-int proxy_handle_session(TLSProxy * proxy)
+void proxy_handle_session(TLSProxy * proxy)
 {
   struct pollfd pfds[NUM_POLL_FDS];
 
@@ -429,13 +430,13 @@ int proxy_handle_session(TLSProxy * proxy)
     if (EXIT_SUCCESS == proxy_setup_ecdh_session(proxy))
     {
       // obtain key retrieval request from client-side of ECDH session
-      if (EXIT_SUCCESS == get_client_key_request(proxy))
+      if (EXIT_SUCCESS == proxy_get_client_key_request(proxy))
       {
         // pass KMIP request to / receive KMIP response from key server over TLS
-        if (EXIT_SUCCESS == get_kmip_response(proxy))
+        if (EXIT_SUCCESS == proxy_get_kmip_response(proxy))
         {
           // return 'retrieve key' response to the client that submitted request
-          if (EXIT_SUCCESS != send_key_response_message(proxy))
+          if (EXIT_SUCCESS != proxy_send_key_response_message(proxy))
           {
             kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
           }
@@ -481,7 +482,7 @@ int proxy_handle_session(TLSProxy * proxy)
   }
 }
 
-int manage_ecdh_client_connections(TLSProxy * proxy)
+int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
 
@@ -515,28 +516,28 @@ int manage_ecdh_client_connections(TLSProxy * proxy)
     }
     else if (ret == 0)
     {
-      /* child */
+      // forked child process handles accepted connection from ECDH client
       close(proxy->ecdh_server_socket_fd);
       return EXIT_SUCCESS;
     }
     else
     {
-      /* parent */
+      // parent process loops to accept more connections or exits
+      // if session limit has been reached
       close(ecdhconn->socket_fd);
       if ((ecdhconn->session_limit != 0) &&
           (session_count >= ecdhconn->session_limit))
       {
-        break;
+        kmyth_log(LOG_DEBUG, "server reached ECDH session limit");
+      
+        close(proxy->ecdh_server_socket_fd);
+        while (wait(NULL) > 0);
+        proxy_cleanup(proxy);
+      
+        exit(EXIT_SUCCESS);
       }
     }
   }
-
-  kmyth_log(LOG_DEBUG, "server reached ECDH session limit");
-
-  close(proxy->ecdh_server_socket_fd);
-  while (wait(NULL) > 0);
-
-  return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
@@ -555,15 +556,33 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  proxy_create_tls_client(&proxy);
-  proxy_create_ecdh_server(&proxy);
-  manage_ecdh_client_connections(&proxy);
+  // setup proxy's TLS client interface
+  if (EXIT_SUCCESS != proxy_create_tls_client(&proxy))
+  {
+    kmyth_log(LOG_ERR, "failed to setup proxy's TLS client interface");
+    proxy_error(&proxy);
+  }
 
+  // setup proxy's ECDH server interface
+  if (EXIT_SUCCESS != proxy_create_ecdh_server(&proxy))
+  {
+    kmyth_log(LOG_ERR, "failed to setup proxy's ECDH server interface");
+    proxy_error(&proxy);
+  }
+
+  // accept connections from ECDH client(s)
+  if (EXIT_SUCCESS != proxy_manage_ecdh_client_connections(&proxy))
+  {
+    kmyth_log(LOG_ERR, "error managing connections from ECDH client");
+    proxy_error(&proxy);
+  }
+
+  // handle ECDH client connection - facilitate 'retrieve key' protocol
   proxy_handle_session(&proxy);
 
   proxy_cleanup(&proxy);
 
-  kmyth_log(LOG_DEBUG, "exiting ...");
+  kmyth_log(LOG_DEBUG, "normal termination ...");
 
   return EXIT_SUCCESS;
 }

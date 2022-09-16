@@ -32,9 +32,33 @@
 #include "socket_util.h"
 
 #include "demo_misc_util.h"
+#include "ecdh_util.h"
 
 
 #define UNSET_FD -1
+
+/**
+ * @brief Maximum size of a kmyth 'retrieve key' protocol TLS message.
+ *        This is the same value as the maximum fragment length in a
+ *        TLS record.
+ */
+#define KMYTH_TLS_MAX_MSG_SIZE KMYTH_ECDH_MAX_MSG_SIZE
+
+/**
+ * @brief Custom message header prepended to 'retrieve key' protocol messages
+ *        sent over a TLS connection. (Similar to TLS record headers.)
+ */
+typedef struct TLSMessageHeader {
+  uint16_t msg_size;
+} TLSMessageHeader;
+
+/**
+ * @brief Struct encapasulating a TLS message header/body.
+ */
+typedef struct TLSMessage {
+  TLSMessageHeader hdr;
+  uint8_t *body;
+} TLSMessage;
 
 typedef struct TLSPeer
 {

@@ -278,3 +278,87 @@ int tls_server_accept(TLSPeer * tlsconn)
 
   return 0;
 }
+
+/*****************************************************************************
+ * demo_tls_recv_msg()
+ ****************************************************************************/
+int demo_tls_recv_msg(int socket_fd, TLSMessage * msg)
+{
+  // read message header (and do some sanity checks)
+  uint8_t *hdr_buf = calloc(sizeof(msg->hdr), sizeof(uint8_t));
+  ssize_t bytes_read = read(socket_fd, hdr_buf, sizeof(msg->hdr));
+  if (bytes_read == 0)
+  {
+    kmyth_log(LOG_ERR, "TLS connection is closed");
+    return EXIT_FAILURE;
+  }
+  else if (bytes_read != sizeof(msg->hdr))
+  {
+    kmyth_log(LOG_ERR, "read invalid number of TLS message header bytes");
+    return EXIT_FAILURE;
+  }
+  msg->hdr.msg_size = hdr_buf[0] << 8;
+  msg->hdr.msg_size += hdr_buf[1];
+  free(hdr_buf);
+  if (msg->hdr.msg_size > KMYTH_TLS_MAX_MSG_SIZE)
+  {
+    kmyth_log(LOG_ERR, "length in TLS message header exceeds limit");
+    return EXIT_FAILURE;
+  }
+
+  // allocate memory for ECDH message receive buffer
+  msg->body = calloc(msg->hdr.msg_size, sizeof(unsigned char));
+  if (msg->body == NULL)
+  {
+    kmyth_log(LOG_ERR, "failed to allocate received message buffer");
+    return EXIT_FAILURE;
+  }
+
+  // receive message bytes
+  bytes_read = read(socket_fd, msg->body, msg->hdr.msg_size);
+  if (bytes_read == 0)
+  {
+    kmyth_log(LOG_ERR, "TLS connection is closed");
+    return EXIT_FAILURE;
+  }
+  else if (bytes_read != msg->hdr.msg_size)
+  {
+    kmyth_log(LOG_ERR, "read incorrect number of TLS message bytes");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * demo_tls_send_msg()
+ ****************************************************************************/
+int demo_tls_send_msg(int socket_fd, TLSMessage * msg)
+{
+  // validate message length
+  if ((msg->hdr.msg_size > KMYTH_TLS_MAX_MSG_SIZE) ||
+      (msg->hdr.msg_size == 0))
+  {
+    kmyth_log(LOG_ERR, "invalid TLS message size");
+    return EXIT_FAILURE;
+  }
+
+  // send message header (two-byte, unsigned, big-endian message size value)
+  uint16_t hdr_buf = htons(msg->hdr.msg_size);
+  ssize_t bytes_sent = write(socket_fd, &hdr_buf, sizeof(msg->hdr.msg_size));
+  if (bytes_sent != sizeof(msg->hdr))
+  {
+    kmyth_log(LOG_ERR, "sending TLS message header failed");
+    return EXIT_FAILURE;
+  }
+
+  // send message payload (body)
+  bytes_sent = write(socket_fd, msg->body, msg->hdr.msg_size);
+  if (bytes_sent != msg->hdr.msg_size)
+  {
+    kmyth_log(LOG_ERR, "sending TLS message payload failed");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}

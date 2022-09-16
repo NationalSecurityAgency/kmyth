@@ -36,42 +36,6 @@
 #include "kmip_util.h"
 #include "socket_util.h"
 
-/**
- * @brief Maximum size of a kmyth 'retrieve key' protocol ECDH message.
- *        This is the same value as the maximum fragment length in a
- *        TLS record.
- */
-#define KMYTH_ECDH_MAX_MSG_SIZE 16384
-
-/**
- * @brief Maximum size of a kmyth 'retrieve key' protocol TLS message.
- *        This is the same value as the maximum fragment length in a
- *        TLS record.
- */
-#define KMYTH_TLS_MAX_MSG_SIZE KMYTH_ECDH_MAX_MSG_SIZE
-
-/**
- * @brief Custom message header prepended to 'retrieve key' protocol messages
- *        sent over an ECDH connection. (Similar to TLS record headers.)
- */
-//typedef struct ECDHMessage {
-//  ECDHMessageHeader hdr;
-//  uint8_t *buffer;
-//} ECDHMessage;
-
-/**
- * @brief Custom message header prepended to 'retrieve key' protocol messages
- *        sent over a TLS connection. (Similar to TLS record headers.)
- */
-typedef struct TLSMessage {
-  uint16_t size;
-  uint8_t *buffer;
-} TLSMessage;
-
-typedef struct TLSMessageHeader {
-  uint16_t msg_size;
-} TLSMessageHeader;
-
 typedef struct ECDHNode
 {
   bool isClient;

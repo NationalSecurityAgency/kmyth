@@ -137,7 +137,6 @@ int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg)
   // read message header (and do some sanity checks)
   uint8_t *hdr_buf = calloc(sizeof(msg->hdr), sizeof(uint8_t));
   ssize_t bytes_read = read(socket_fd, hdr_buf, sizeof(msg->hdr));
-  kmyth_log(LOG_DEBUG, "bytes_read = %d", bytes_read);
   if (bytes_read == 0)
   {
     kmyth_log(LOG_ERR, "ECDH connection is closed");
@@ -148,18 +147,14 @@ int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg)
     kmyth_log(LOG_ERR, "read invalid number of ECDH message header bytes");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "hdr_buf[0] = 0x%02X, hdr_buf[1] = 0x%02X",
-                       hdr_buf[0], hdr_buf[1]);
   msg->hdr.msg_size = hdr_buf[0] << 8;
   msg->hdr.msg_size += hdr_buf[1];
-  //msg->hdr.msg_size = ntohs(hdr_buf);
   free(hdr_buf);
   if (msg->hdr.msg_size > KMYTH_ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "length in ECDH message header exceeds limit");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "msg->hdr.msg_size = %d", msg->hdr.msg_size);
 
   // allocate memory for ECDH message receive buffer
   msg->body = calloc(msg->hdr.msg_size, sizeof(unsigned char));
