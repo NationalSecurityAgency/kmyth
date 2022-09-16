@@ -289,7 +289,6 @@ $(Enclave_Signing_Key):
 ######## Demo Server Build Settings ########
 
 Server_Name := demo/bin/demo-kmip-server
-Client_Name := demo/bin/ecdh-client
 Proxy_Name  := demo/bin/tls-proxy
 
 .PHONY: pre test-pre test-all test-run demo-pre demo-all demo-test-keys-certs demo
@@ -332,7 +331,7 @@ test-all: test-pre $(Test_App_Name) test/enclave/$(Test_Signed_Enclave_Name)
 endif
 
 ifeq ($(Build_Mode), HW_RELEASE)
-demo-all: demo-pre $(Demo_Enclave_Lib) $(Demo_App_Name) $(Server_Name) $(Client_Name) $(Proxy_Name)
+demo-all: demo-pre $(Demo_Enclave_Lib) $(Demo_App_Name) $(Server_Name) $(Proxy_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Demo_Enclave_Lib) first with your signing key before"
 	@echo "you run the $(Demo_App_Name) to launch and access the enclave."
@@ -520,19 +519,9 @@ demo/obj/%.o: demo/src/util/%.c
 	@echo "CC   <=  $<"
 
 $(Server_Name): demo/obj/demo_kmip_server.o \
-                demo/obj/demo_util.o \
+                demo/obj/demo_ecdh_util.o \
 				demo/obj/demo_tls_util.o \
-                demo/enclave/ec_key_cert_marshal.o \
-				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/msg_util.o \
-                demo/enclave/ecdh_util.o \
-				demo/enclave/retrieve_key_protocol.o \
-                demo/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
-	@echo "LINK =>  $@"
-
-$(Client_Name): demo/obj/ecdh_client.o \
-                demo/obj/demo_util.o \
+				demo/obj/demo_misc_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
 				demo/enclave/msg_util.o \
@@ -543,8 +532,9 @@ $(Client_Name): demo/obj/ecdh_client.o \
 	@echo "LINK =>  $@"
 
 $(Proxy_Name):  demo/obj/tls_proxy.o \
-                demo/obj/demo_util.o \
+                demo/obj/demo_ecdh_util.o \
                 demo/obj/demo_tls_util.o \
+				demo/obj/demo_misc_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
 				demo/enclave/ec_key_cert_unmarshal.o \
 				demo/enclave/msg_util.o \
@@ -624,8 +614,6 @@ test/enclave/$(Test_Enclave_Lib): test/enclave/$(Test_Enclave_Name)_t.o \
 	@$(CXX) $^ -o $@ $(Test_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
-
-
 test/enclave/$(Test_Signed_Enclave_Name): test/enclave/$(Test_Enclave_Lib) \
                                 $(Enclave_Signing_Key)
 	@$(SGX_ENCLAVE_SIGNER) sign -key $(Enclave_Signing_Key) \
@@ -697,18 +685,18 @@ demo/enclave/kmip_util.o: ../src/protocol/kmip_util.c
 	@echo "CC   <=  $<"
 
 demo/enclave/$(Demo_Enclave_Lib): demo/enclave/$(Demo_Enclave_Name)_t.o \
-                        demo/enclave/kmyth_enclave_memory_util.o \
-                        demo/enclave/sgx_retrieve_key_impl.o \
-                        demo/enclave/ec_key_cert_marshal.o \
-                        demo/enclave/ec_key_cert_unmarshal.o \
-                        demo/enclave/ecdh_util.o \
-						demo/enclave/retrieve_key_protocol.o \
-                        demo/enclave/kmyth_enclave_seal.o \
-                        demo/enclave/kmyth_enclave_unseal.o \
-                        demo/enclave/kmyth_enclave_retrieve_key.o \
-                        demo/enclave/aes_gcm.o \
-                        demo/enclave/memory_util.o \
-			demo/enclave/kmip_util.o
+                                  demo/enclave/kmyth_enclave_memory_util.o \
+                                  demo/enclave/sgx_retrieve_key_impl.o \
+                                  demo/enclave/ec_key_cert_marshal.o \
+                                  demo/enclave/ec_key_cert_unmarshal.o \
+                                  demo/enclave/ecdh_util.o \
+						          demo/enclave/retrieve_key_protocol.o \
+                                  demo/enclave/kmyth_enclave_seal.o \
+                                  demo/enclave/kmyth_enclave_unseal.o \
+                                  demo/enclave/kmyth_enclave_retrieve_key.o \
+                                  demo/enclave/aes_gcm.o \
+                                  demo/enclave/memory_util.o \
+			                      demo/enclave/kmip_util.o
 	@$(CXX) $^ -o $@ $(Demo_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 

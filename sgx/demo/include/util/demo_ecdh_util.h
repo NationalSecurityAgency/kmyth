@@ -1,12 +1,13 @@
 /**
- * @file  demo_util.h
+ * @file  demo_ecdh_util.h
  *
  * @brief Provides global constants, structs, and function declarations
- *        for utilities supporting the SGX 'retrieve key demo' applications.
+ *        for utilities supporting the ECDH connectuion utilized in the
+ *        SGX 'retrieve key demo'.
  */
 
-#ifndef _KMYTH_DEMO_UTIL_H_
-#define _KMYTH_DEMO_UTIL_H_
+#ifndef _KMYTH_DEMO_ECDH_UTIL_H_
+#define _KMYTH_DEMO_ECDH_UTIL_H_
 
 #include <getopt.h>
 #include <netdb.h>
@@ -84,20 +85,12 @@ typedef struct ECDHNode
 
 #define UNSET_FD -1
 
-void log_openssl_error(const char* const label);
+void demo_ecdh_init(ECDHPeer * ecdhconn, bool clientMode);
+void demo_ecdh_cleanup(ECDHPeer * ecdhconn);
 
-void ecdh_init(ECDHPeer * ecdhconn, bool clientMode);
-void ecdh_cleanup(ECDHPeer * ecdhconn);
+void demo_ecdh_error(ECDHPeer * ecdhconn);
 
-int ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len);
-int ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len);
-
-void ecdh_error(ECDHPeer * ecdhconn);
-
-int ecdh_check_options(ECDHNode * ecdhopts);
-
-void ecdh_encrypt_send(ECDHPeer * ecdhconn, unsigned char *plaintext, size_t plaintext_len);
-void ecdh_recv_decrypt(ECDHPeer * ecdhconn, unsigned char **plaintext, size_t *plaintext_len);
+int demo_ecdh_check_options(ECDHNode * ecdhopts);
 
 void ecdh_create_server_socket(ECDHPeer * ecdhconn);
 void ecdh_create_client_socket(ECDHPeer * ecdhconn);
@@ -110,15 +103,10 @@ void ecdh_make_ephemeral_keypair(ECDHPeer * ecdhconn);
 
 int ecdh_get_session_key(ECDHPeer * ecdhconn);
 
-void ecdh_recv_client_hello_msg(ECDHPeer * ecdhconn);
 void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn);
 
 void send_operational_key(ECDHPeer * ecdhconn);
 void get_operational_key(ECDHPeer * ecdhconn);
-
-int ecdh_send_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_in);
-int ecdh_recv_msg(ECDHPeer * ecdhconn, ECDHMessage * msg_out);
-
 
 int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg);
 int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg);
@@ -126,4 +114,4 @@ int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg);
 int demo_ecdh_recv_client_hello_msg(ECDHPeer * server);
 int demo_ecdh_send_server_hello_msg(ECDHPeer * server);
 
-#endif    // _KMYTH_DEMO_UTIL_H_
+#endif    // _KMYTH_DEMO_ECDH_UTIL_H_

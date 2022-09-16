@@ -14,13 +14,13 @@
 void proxy_init(TLSProxy * proxy)
 {
   secure_memset(proxy, 0, sizeof(TLSProxy));
-  ecdh_init(&proxy->ecdhconn, false);
+  demo_ecdh_init(&proxy->ecdhconn, false);
   tls_init(&proxy->tlsconn, true);
 }
 
 void proxy_cleanup(TLSProxy * proxy)
 {
-  ecdh_cleanup(&proxy->ecdhconn);
+  demo_ecdh_cleanup(&proxy->ecdhconn);
   if (proxy->tlsconn.bio != NULL)
   {
     BIO_free_all(proxy->tlsconn.bio);
@@ -127,7 +127,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 
 void proxy_check_options(TLSProxy * proxy)
 {
-  ecdh_check_options(&proxy->ecdhopts);
+  demo_ecdh_check_options(&proxy->ecdhopts);
 
 
   bool err = false;
@@ -149,7 +149,7 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
-int create_proxy_ecdh_server_connection(TLSProxy * proxy)
+int proxy_create_ecdh_server(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
   ECDHNode *ecdhopts = &proxy->ecdhopts;
@@ -168,6 +168,7 @@ int create_proxy_ecdh_server_connection(TLSProxy * proxy)
   else
   {
     kmyth_log(LOG_ERR, "invalid ECDH session limit");
+    return EXIT_FAILURE;
   }
 
   kmyth_log(LOG_DEBUG, "setting up server socket on port %s", ecdhconn->port);
@@ -202,24 +203,26 @@ int create_proxy_ecdh_server_connection(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int create_proxy_tls_client_connection(TLSProxy * proxy)
+int proxy_create_tls_client(TLSProxy * proxy)
 {
   TLSPeer *tlsconn = &proxy->tlsconn;
 
   if (tls_config_ctx(tlsconn))
   {
-    proxy_error(proxy);
+    kmyth_log(LOG_ERR, "failed to configure TLS context");
+    return EXIT_FAILURE;
   }
 
   if (tls_config_client_connect(tlsconn))
   {
-    proxy_error(proxy);
+    kmyth_log(LOG_ERR, "failed to configure TLS client connection");
+    return EXIT_FAILURE;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
-int setup_ecdh_session(TLSProxy * proxy)
+int proxy_setup_ecdh_session(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
   int ret = -1;
@@ -388,6 +391,96 @@ void cleanup_defunct() {
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
+int proxy_handle_session(TLSProxy * proxy)
+{
+  struct pollfd pfds[NUM_POLL_FDS];
+
+  int bytes_read = 0;
+  int bytes_written = 0;
+
+  unsigned char tls_msg_buf[KMYTH_TLS_MAX_MSG_SIZE];
+  unsigned char ecdh_msg_buf[KMYTH_ECDH_MAX_MSG_SIZE];
+
+  size_t ecdh_msg_len = 0;
+  ECDHPeer *ecdhconn = &proxy->ecdhconn;
+  BIO *tls_bio = proxy->tlsconn.bio;
+
+  secure_memset(pfds, 0, sizeof(pfds));
+  secure_memset(tls_msg_buf, 0, sizeof(tls_msg_buf));
+
+  pfds[0].fd = ecdhconn->socket_fd;
+  pfds[0].events = POLLIN;
+
+  pfds[1].fd = BIO_get_fd(tls_bio, NULL);
+  pfds[1].events = POLLIN;
+
+  // wait to receive data with no timeout
+  // (Note: we expect to receive a 'Client Hello' message on the ECDH
+  //        interface, but no interaction should be initiated from the
+  //        KMIP server on the TLS interface. Nonetheless, we monitor
+  //        both interfaces.)
+  poll(pfds, NUM_POLL_FDS, -1);
+
+  if (pfds[0].revents & POLLIN)
+  {
+    kmyth_log(LOG_DEBUG, "ECDH receive event initiates session setup");
+
+    // execute session setup (e.g., key agreement) protocol phase
+    if (EXIT_SUCCESS == proxy_setup_ecdh_session(proxy))
+    {
+      // obtain key retrieval request from client-side of ECDH session
+      if (EXIT_SUCCESS == get_client_key_request(proxy))
+      {
+        // pass KMIP request to / receive KMIP response from key server over TLS
+        if (EXIT_SUCCESS == get_kmip_response(proxy))
+        {
+          // return 'retrieve key' response to the client that submitted request
+          if (EXIT_SUCCESS != send_key_response_message(proxy))
+          {
+            kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
+          }
+        }
+        else
+        {
+          kmyth_log(LOG_DEBUG, "failed to retrieve KMIP 'get key' response");
+        }
+      }
+      else
+      {
+        kmyth_log(LOG_DEBUG, "failed to receive 'Key Request' message");
+      }
+    }
+    else
+    {
+      kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
+    }
+
+    // done with this session, cleanup and then decrement session count
+    ecdhconn->session_limit--;
+  }
+
+  if (pfds[1].revents & POLLIN)
+  {
+    kmyth_log(LOG_DEBUG, "unexpected TLS event initiated by server");
+    bytes_read = BIO_read(proxy->tlsconn.bio,
+                          tls_msg_buf,
+                          sizeof(tls_msg_buf));
+    if (bytes_read == 0)
+    {
+      kmyth_log(LOG_INFO, "TLS connection is closed");
+    }
+    else if (bytes_read < 0)
+    {
+      kmyth_log(LOG_ERR, "TLS read error");
+    }
+    else
+    {
+      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection ... %s",
+                           bytes_read, "ignored");
+    }
+  }
+}
+
 int manage_ecdh_client_connections(TLSProxy * proxy)
 {
   ECDHPeer *ecdhconn = &proxy->ecdhconn;
@@ -446,102 +539,6 @@ int manage_ecdh_client_connections(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-
-int proxy_handle_session(TLSProxy * proxy)
-{
-  struct pollfd pfds[NUM_POLL_FDS];
-
-  int bytes_read = 0;
-  int bytes_written = 0;
-
-  unsigned char tls_msg_buf[KMYTH_TLS_MAX_MSG_SIZE];
-  unsigned char ecdh_msg_buf[KMYTH_ECDH_MAX_MSG_SIZE];
-
-  size_t ecdh_msg_len = 0;
-  ECDHPeer *ecdhconn = &proxy->ecdhconn;
-  BIO *tls_bio = proxy->tlsconn.bio;
-
-  secure_memset(pfds, 0, sizeof(pfds));
-  secure_memset(tls_msg_buf, 0, sizeof(tls_msg_buf));
-
-  pfds[0].fd = ecdhconn->socket_fd;
-  pfds[0].events = POLLIN;
-
-  pfds[1].fd = BIO_get_fd(tls_bio, NULL);
-  pfds[1].events = POLLIN;
-
-  /* Wait to receive data with no timeout. */
-  poll(pfds, NUM_POLL_FDS, -1);
-
-  if (pfds[0].revents & POLLIN)
-  {
-    kmyth_log(LOG_DEBUG, "ECDH receive event initiates session setup");
-
-    // execute session setup (e.g., key agreement) protocol phase
-    if (EXIT_SUCCESS == setup_ecdh_session(proxy))
-    {
-      // obtain key retrieval request from client-side of ECDH session
-      if (EXIT_SUCCESS == get_client_key_request(proxy))
-      {
-        // pass KMIP request to / receive KMIP response from key server over TLS
-        if (EXIT_SUCCESS == get_kmip_response(proxy))
-        {
-          // return 'retrieve key' response to the client that submitted request
-          if (EXIT_SUCCESS != send_key_response_message(proxy))
-          {
-            kmyth_log(LOG_DEBUG, "failed to send 'Key Response' message");
-          }
-        }
-        else
-        {
-          kmyth_log(LOG_DEBUG, "failed to retrieve KMIP 'get key' response");
-        }
-      }
-      else
-      {
-        kmyth_log(LOG_DEBUG, "failed to receive 'Key Request' message");
-      }
-    }
-    else
-    {
-      kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
-    }
-
-    // done with this session, cleanup and then decrement session count
-    ecdhconn->session_limit--;
-  }
-
-  if (pfds[1].revents & POLLIN)
-  {
-    kmyth_log(LOG_DEBUG, "unexpected TLS event initiated by server");
-    bytes_read = BIO_read(proxy->tlsconn.bio,
-                          tls_msg_buf,
-                          sizeof(tls_msg_buf));
-    if (bytes_read == 0)
-    {
-      kmyth_log(LOG_INFO, "TLS connection is closed");
-    }
-    else if (bytes_read < 0)
-    {
-      kmyth_log(LOG_ERR, "TLS read error");
-    }
-    else
-    {
-      kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection ... %s",
-                           bytes_read, "ignored");
-    }
-  }
-}
-
-/*
-void proxy_main(TLSProxy * proxy)
-{
-  // The ECDH setup must come first because it forks a new process to handle each new connection.
-  setup_ecdhconn(proxy);
-  setup_tlsconn(proxy);
-  proxy_start(proxy);
-}
-*/
 int main(int argc, char **argv)
 {
   TLSProxy proxy;
@@ -558,8 +555,8 @@ int main(int argc, char **argv)
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
 
-  create_proxy_tls_client_connection(&proxy);
-  create_proxy_ecdh_server_connection(&proxy);
+  proxy_create_tls_client(&proxy);
+  proxy_create_ecdh_server(&proxy);
   manage_ecdh_client_connections(&proxy);
 
   proxy_handle_session(&proxy);

@@ -1,26 +1,12 @@
 /**
- * @file demo_util.c
- * @brief Shared code for the SGX 'retrieve key demo' client/server
- *        applications.
+ * @file demo_ecdh_util.c
+ * @brief ECDH connection related utilities supporting the SGX
+ *        'retrieve key demo' applications.
  */
 
-#include "demo_util.h"
+#include "demo_ecdh_util.h"
 
-void log_openssl_error(const char* const label)
-{
-  unsigned long err = ERR_get_error();
-  const char* const str = ERR_reason_error_string(err);
-  if (str)
-  {
-    kmyth_log(LOG_ERR, "%s: %s", label, str);
-  }
-  else
-  {
-    kmyth_log(LOG_ERR, "%s failed: %lu (0x%lx)", label, err, err);
-  }
-}
-
-void ecdh_init(ECDHPeer * ecdhconn, bool clientMode)
+void demo_ecdh_init(ECDHPeer * ecdhconn, bool clientMode)
 {
   secure_memset(ecdhconn, 0, sizeof(ECDHPeer));
   ecdhconn->socket_fd = UNSET_FD;
@@ -29,7 +15,7 @@ void ecdh_init(ECDHPeer * ecdhconn, bool clientMode)
   ecdhconn->isClient = clientMode;
 }
 
-void ecdh_cleanup(ECDHPeer * ecdhconn)
+void demo_ecdh_cleanup(ECDHPeer * ecdhconn)
 {
   // Note: These clear and free functions should all be safe to use with
   // null pointer values.
@@ -95,16 +81,16 @@ void ecdh_cleanup(ECDHPeer * ecdhconn)
                          ecdhconn->response_session_key.size);
   }
 
-  ecdh_init(ecdhconn, false);
+  demo_ecdh_init(ecdhconn, false);
 }
 
-void ecdh_error(ECDHPeer * ecdhconn)
+void demo_ecdh_error(ECDHPeer * ecdhconn)
 {
-  ecdh_cleanup(ecdhconn);
+  demo_ecdh_cleanup(ecdhconn);
   exit(EXIT_FAILURE);
 }
 
-int ecdh_check_options(ECDHNode * ecdhopts)
+int demo_ecdh_check_options(ECDHNode * ecdhopts)
 {
   bool err = false;
 
@@ -151,6 +137,7 @@ int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg)
   // read message header (and do some sanity checks)
   uint8_t *hdr_buf = calloc(sizeof(msg->hdr), sizeof(uint8_t));
   ssize_t bytes_read = read(socket_fd, hdr_buf, sizeof(msg->hdr));
+  kmyth_log(LOG_DEBUG, "bytes_read = %d", bytes_read);
   if (bytes_read == 0)
   {
     kmyth_log(LOG_ERR, "ECDH connection is closed");
@@ -161,13 +148,18 @@ int demo_ecdh_recv_msg(int socket_fd, ECDHMessage * msg)
     kmyth_log(LOG_ERR, "read invalid number of ECDH message header bytes");
     return EXIT_FAILURE;
   }
-  msg->hdr.msg_size = ntohs(hdr_buf);
+  kmyth_log(LOG_DEBUG, "hdr_buf[0] = 0x%02X, hdr_buf[1] = 0x%02X",
+                       hdr_buf[0], hdr_buf[1]);
+  msg->hdr.msg_size = hdr_buf[0] << 8;
+  msg->hdr.msg_size += hdr_buf[1];
+  //msg->hdr.msg_size = ntohs(hdr_buf);
   free(hdr_buf);
   if (msg->hdr.msg_size > KMYTH_ECDH_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "length in ECDH message header exceeds limit");
     return EXIT_FAILURE;
   }
+  kmyth_log(LOG_DEBUG, "msg->hdr.msg_size = %d", msg->hdr.msg_size);
 
   // allocate memory for ECDH message receive buffer
   msg->body = calloc(msg->hdr.msg_size, sizeof(unsigned char));
@@ -224,89 +216,6 @@ int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg)
   }
 
   return EXIT_SUCCESS;
-}
-
-int ecdh_send_data(ECDHPeer * ecdhconn, const void *buf, size_t len)
-{
-  ssize_t bytes_sent = write(ecdhconn->socket_fd, buf, len);
-
-  if (bytes_sent != len)
-  {
-    kmyth_log(LOG_ERR, "failed to send ECDH message");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-int ecdh_recv_data(ECDHPeer * ecdhconn, void *buf, size_t len)
-{
-  ssize_t bytes_read = read(ecdhconn->socket_fd, buf, len);
-
-  kmyth_log(LOG_DEBUG, "bytes_read = %d", bytes_read);
-
-  if (bytes_read == 0)
-  {
-    kmyth_log(LOG_ERR, "ECDH connection is closed");
-    return EXIT_FAILURE;
-  }
-  else if (bytes_read != len)
-  {
-    // should always receive exactly (len) bytes
-    kmyth_log(LOG_ERR, "failed to receive ECDH data");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-int ecdh_recv_msg(ECDHPeer * ecdhconn, ECDHMessage * msg)
-{
-  unsigned char rx_msg_size_bytes[sizeof(uint16_t)] = { 0 };
-
-  // perform blocking read, use message buffer to capture message size bytes
-  if (ecdh_recv_data(ecdhconn,
-                     rx_msg_size_bytes,
-                     sizeof(uint16_t)) != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "failed to receive message size");
-    return EXIT_FAILURE;
-  }
-
-  // process received message length (big-endian ordered bytes => uint16_t)
-  msg->hdr.msg_size = rx_msg_size_bytes[0] << 8;
-  msg->hdr.msg_size += rx_msg_size_bytes[1];
-
-  // allocate memory for receive message buffer
-  msg->body = malloc(msg->hdr.msg_size);
-  if (msg->body == NULL)
-  {
-    kmyth_log(LOG_ERR, "receive message buffer memory allocation failed");
-    return EXIT_FAILURE;
-  }
-
-  // perform blocking read to recover message payload
-  if (ecdh_recv_data(ecdhconn,
-                     msg->body,
-                     msg->hdr.msg_size) != EXIT_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "failed to receive message payload");
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-void ecdh_create_client_socket(ECDHPeer * ecdhconn)
-{
-  kmyth_log(LOG_DEBUG, "setting up client socket");
-  if (setup_client_socket(ecdhconn->host,
-                          ecdhconn->port,
-                          &ecdhconn->socket_fd))
-  {
-    kmyth_log(LOG_ERR, "failed to setup client socket.");
-    ecdh_error(ecdhconn);
-  }
 }
 
 int ecdh_load_local_sign_key(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
@@ -398,7 +307,7 @@ int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
 {
   struct ECDHMessage *msg = &server->client_hello;
 
-  if (EXIT_SUCCESS != ecdh_recv_msg(server, msg))
+  if (EXIT_SUCCESS != demo_ecdh_recv_msg(server->socket_fd, msg))
   {
     kmyth_log(LOG_ERR, "error receiving 'Client Hello' message");
     return EXIT_FAILURE;
@@ -456,38 +365,37 @@ int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
 
 void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn)
 {
+  struct ECDHMessage *msg = &ecdhconn->key_request;
+
   int ret;
 
-  unsigned char msg_in_len_bytes[2] = { 0 };
-
   kmyth_log(LOG_DEBUG, "waiting for 'Key Request' message");
-  ecdh_recv_data(ecdhconn, msg_in_len_bytes, 2);
 
-  // process received message length
-  uint16_t msg_in_len = msg_in_len_bytes[0] << 8;
-  msg_in_len += msg_in_len_bytes[1];
-
-  // create appropriately sized receive buffer and read encrypted payload
-  unsigned char *msg_in = malloc(msg_in_len);
-  ecdh_recv_data(ecdhconn, msg_in, (size_t) msg_in_len);
+  if (EXIT_SUCCESS != demo_ecdh_recv_msg(ecdhconn->socket_fd, msg))
+  {
+    kmyth_log(LOG_ERR, "error receiving 'Key Request' message");
+    //return EXIT_FAILURE;
+  }
 
   kmyth_log(LOG_DEBUG, "received 'Key Request' (CT): %02X%02X ... %02X%02X"
                        " (%d bytes)",
-                       msg_in[0], msg_in[1], msg_in[msg_in_len-2],
-                       msg_in[msg_in_len-1], msg_in_len);
+                       msg->body[0], msg->body[1],
+                       msg->body[msg->hdr.msg_size-2],
+                       msg->body[msg->hdr.msg_size-1],
+                       msg->hdr.msg_size);
 
   // decrypt, validate message, and parse out 'Key Request' fields
   if (EXIT_SUCCESS != parse_key_request_msg(ecdhconn->remote_sign_cert,
                                             ecdhconn->request_session_key.buffer,
                                             ecdhconn->request_session_key.size,
-                                            msg_in,
-                                            msg_in_len,
+                                            msg->body,
+                                            msg->hdr.msg_size,
                                             ecdhconn->local_eph_keypair,
                                             &(ecdhconn->kmip_request.buffer),
                                             &(ecdhconn->kmip_request.size)))
   {
     kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
-    ecdh_error(ecdhconn);
+    demo_ecdh_error(ecdhconn);
   }
   kmyth_log(LOG_DEBUG, "KMIP Get Key Request: 0x%02X%02X...%02X%02X"
             " (%ld bytes)", (ecdhconn->kmip_request.buffer)[0],
@@ -495,8 +403,6 @@ void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn)
             (ecdhconn->kmip_request.buffer)[ecdhconn->kmip_request.size - 2],
             (ecdhconn->kmip_request.buffer)[ecdhconn->kmip_request.size - 1],
             ecdhconn->kmip_request.size);
-
-  free(msg_in);
 }
 
 int ecdh_get_session_key(ECDHPeer * ecdhconn)
@@ -553,4 +459,3 @@ int ecdh_get_session_key(ECDHPeer * ecdhconn)
 
   return EXIT_SUCCESS;
 }
-

@@ -76,7 +76,7 @@ static sgx_status_t initialize_enclave(const char *enclave_fn,
 int main(int argc, char **argv)
 {
   // setup default logging parameters
-  set_app_name("client              ");
+  set_app_name("enclave             ");
   set_app_version("");
   set_applog_path("../sgx/sgx_retrievekey_demo.log");
   set_applog_severity_threshold(DEMO_LOG_LEVEL);

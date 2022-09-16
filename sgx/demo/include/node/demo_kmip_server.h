@@ -16,7 +16,7 @@
 #include <getopt.h>
 
 #include "demo_tls_util.h"
-#include "demo_util.h"
+#include "demo_ecdh_util.h"
 
 #define DEMO_OP_KEY_ID_LEN 1
 #define DEMO_OP_KEY_ID { 0x37 }
