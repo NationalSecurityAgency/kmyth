@@ -225,7 +225,9 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *
  * @return 0 on success, 1 on error
  */
-  int parse_client_hello_msg(ECDHPeer * server);
+  int parse_client_hello_msg(ECDHMessage * msg_in,
+                             X509 * client_sign_cert,
+                             EVP_PKEY ** client_eph_pubkey);
 
 /**
  * @brief Assembles the 'Server Hello' message, the server response to

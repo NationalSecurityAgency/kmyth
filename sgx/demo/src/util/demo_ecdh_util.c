@@ -316,7 +316,9 @@ int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
                       msg->hdr.msg_size);
 
   // validate 'Client Hello' message and parse out message fields
-  if (EXIT_SUCCESS != parse_client_hello_msg(server))
+  if (EXIT_SUCCESS != parse_client_hello_msg(msg,
+                                             server->remote_sign_cert,
+                                             &(server->remote_eph_pubkey)))
   {
     kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
     return EXIT_FAILURE;

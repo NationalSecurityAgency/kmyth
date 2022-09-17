@@ -218,31 +218,31 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
 /*****************************************************************************
  * parse_client_hello_msg()
  ****************************************************************************/
-int parse_client_hello_msg(ECDHPeer * server)
+int parse_client_hello_msg(ECDHMessage * msg_in,
+                           X509 * client_sign_cert,
+                           EVP_PKEY ** client_eph_pubkey)
 {
-  // assign 'Client Hello' message buffer variables for use in parsing
-  unsigned char *msg_buf = server->client_hello.body;
-  size_t msg_buf_len = server->client_hello.hdr.msg_size;
+  // parse out fields in 'Client Hello' message buffer
   int buf_index = 0;
 
   // get client identity field size
-  uint16_t client_id_len = msg_buf[buf_index] << 8;
-  client_id_len += msg_buf[buf_index+1];
+  uint16_t client_id_len = msg_in->body[buf_index] << 8;
+  client_id_len += msg_in->body[buf_index+1];
   buf_index += 2;
   
   // get client identity field bytes
   uint8_t *client_id_bytes = malloc(client_id_len);
-  memcpy(client_id_bytes, msg_buf+buf_index, client_id_len);
+  memcpy(client_id_bytes, msg_in->body+buf_index, client_id_len);
   buf_index += client_id_len;
 
   // get client ephemeral contribution field size
-  uint16_t client_eph_pub_len = msg_buf[buf_index] << 8;
-  client_eph_pub_len += msg_buf[buf_index+1];
+  uint16_t client_eph_pub_len = msg_in->body[buf_index] << 8;
+  client_eph_pub_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get client ephemeral contribution field bytes
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
-  memcpy(client_eph_pub_bytes, msg_buf+buf_index, client_eph_pub_len);
+  memcpy(client_eph_pub_bytes, msg_in->body+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
   // buffer index now points just past end of message body
@@ -250,13 +250,13 @@ int parse_client_hello_msg(ECDHPeer * server)
   size_t msg_body_size = buf_index;
 
   // get message signature size
-  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
-  msg_sig_len += msg_buf[buf_index+1];
+  uint16_t msg_sig_len = msg_in->body[buf_index] << 8;
+  msg_sig_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
-  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
+  memcpy(msg_sig_bytes, msg_in->body+buf_index, msg_sig_len);
 
   // convert client identity bytes in message to X509_NAME struct
   X509_NAME *client_id = NULL;
@@ -277,7 +277,7 @@ int parse_client_hello_msg(ECDHPeer * server)
   // extract expected client identity (X509_NAME struct) from pre-loaded cert
   X509_NAME *expected_client_id = NULL;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server->remote_sign_cert,
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
                                                        &expected_client_id))
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract client ID from certificate");
@@ -303,7 +303,7 @@ int parse_client_hello_msg(ECDHPeer * server)
 
   // extract client's public signing key (needed to verify signature over
   // message) from X509 certificate
-  EVP_PKEY *client_sign_pubkey = X509_get_pubkey(server->remote_sign_cert);
+  EVP_PKEY *client_sign_pubkey = X509_get_pubkey(client_sign_cert);
   if (client_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
@@ -315,7 +315,7 @@ int parse_client_hello_msg(ECDHPeer * server)
 
   // check message signature
   if (EXIT_SUCCESS != ec_verify_buffer(client_sign_pubkey,
-                                       msg_buf,
+                                       msg_in->body,
                                        msg_body_size,
                                        msg_sig_bytes,
                                        msg_sig_len))
@@ -333,14 +333,15 @@ int parse_client_hello_msg(ECDHPeer * server)
 
   // check that the buffer parameter for the public key (EVP_PKEY struct)
   // was not yet allocated. If it was (e.g., from a previous session), 
-  // reset it to a NULL pointer before creating an empty EVP_PKEY struct.
-  if (server->remote_eph_pubkey != NULL)
+  // free the allocated memory and reset it to a NULL pointer before
+  // creating an empty EVP_PKEY struct.
+  if (*client_eph_pubkey != NULL)
   {
     kmyth_sgx_log(LOG_ERR, "resetting previously allocated EVP_PKEY struct");
-    free(server->remote_eph_pubkey);
-    server->remote_eph_pubkey = NULL;
+    free(*client_eph_pubkey);
+    *client_eph_pubkey = NULL;
   }
-  server->remote_eph_pubkey = EVP_PKEY_new();
+  *client_eph_pubkey = EVP_PKEY_new();
 
   // initialize an EC_KEY struct for the right elliptic curve
   EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
@@ -371,7 +372,7 @@ int parse_client_hello_msg(ECDHPeer * server)
   }
 
   // encapsulate client ephemeral public key in EVP_PKEY struct
-  if (1 != EVP_PKEY_set1_EC_KEY(server->remote_eph_pubkey,
+  if (1 != EVP_PKEY_set1_EC_KEY(*client_eph_pubkey,
                                 client_eph_ec_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
