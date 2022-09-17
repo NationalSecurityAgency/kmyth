@@ -34,19 +34,18 @@ int extract_identity_bytes_from_x509(X509 *cert_in, X509_NAME **identity_out)
 }
 
 /*****************************************************************************
- * append_signature()
+ * append_msg_signature()
  ****************************************************************************/
-int append_signature(EVP_PKEY * sign_key,
-                     unsigned char ** msg_buf,
-                     size_t * msg_buf_len)
+int append_msg_signature(EVP_PKEY * sign_key,
+                         ECDHMessage * msg)
 {
   // compute message signature
   unsigned char *signature_bytes = NULL;
   int signature_len = 0;
 
   if (EXIT_SUCCESS != ec_sign_buffer(sign_key,
-                                     *msg_buf,
-                                     *msg_buf_len,
+                                     msg->body,
+                                     msg->hdr.msg_size,
                                      &signature_bytes,
                                      &signature_len))
   {
@@ -56,39 +55,39 @@ int append_signature(EVP_PKEY * sign_key,
   }
 
   // create a temporary copy of the input message
-  size_t buf_copy_len = *msg_buf_len;
+  size_t buf_copy_len = msg->hdr.msg_size;
   unsigned char *buf_copy = malloc(buf_copy_len);
-  memcpy(buf_copy, *msg_buf, *msg_buf_len);
+  memcpy(buf_copy, msg->body, msg->hdr.msg_size);
 
   // resize input message buffer to make room for appended signature
   //   - signature size (2 byte unsigned integer)
   //   - signature value (byte array)
-  *msg_buf_len += 2 + signature_len;
-  *msg_buf = realloc(*msg_buf, *msg_buf_len);
-  if (*msg_buf == NULL)
+  msg->hdr.msg_size += 2 + signature_len;
+  msg->body = realloc(msg->body, msg->hdr.msg_size);
+  if (msg->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "realloc error for resized input buffer");
     free(signature_bytes);
-    free(buf_copy);
+    kmyth_clear_and_free(buf_copy, buf_copy_len);
     return EXIT_FAILURE;
   }
   
   // populate output buffer with concatenated fields
   uint16_t temp_val = 0;
-  unsigned char *buf_out = *msg_buf;
+  unsigned char *buf_ptr = msg->body;
 
   // start by copying the orignally input message to the ouput message buffer
-  memcpy(buf_out, buf_copy, buf_copy_len);
-  free(buf_copy);
-  buf_out += buf_copy_len;
+  memcpy(buf_ptr, buf_copy, buf_copy_len);
+  kmyth_clear_and_free(buf_copy, buf_copy_len);
+  buf_ptr += buf_copy_len;
 
   // append signature size bytes
   temp_val = htobe16((uint16_t) signature_len);
-  memcpy(buf_out, &temp_val, 2);
-  buf_out += 2;
+  memcpy(buf_ptr, &temp_val, 2);
+  buf_ptr += 2;
 
   // finally, append signature bytes
-  memcpy(buf_out, signature_bytes, signature_len);
+  memcpy(buf_ptr, signature_bytes, signature_len);
   free(signature_bytes);
 
   return EXIT_SUCCESS;
@@ -204,9 +203,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
 
   // append signature to tail end of message
-  if (EXIT_SUCCESS != append_signature(client_sign_key,
-                                       &(msg_out->body),
-                                       (size_t *) &(msg_out->hdr.msg_size)))
+  if (EXIT_SUCCESS != append_msg_signature(client_sign_key, msg_out))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
@@ -299,8 +296,6 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   }
   X509_NAME_free(client_id);
 
-  kmyth_sgx_log(LOG_DEBUG, "validated client ID in 'Client Hello'");
-
   // extract client's public signing key (needed to verify signature over
   // message) from X509 certificate
   EVP_PKEY *client_sign_pubkey = X509_get_pubkey(client_sign_cert);
@@ -328,8 +323,6 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   }
   EVP_PKEY_free(client_sign_pubkey);
   free(msg_sig_bytes);
-
-  kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Client Hello'");
 
   // check that the buffer parameter for the public key (EVP_PKEY struct)
   // was not yet allocated. If it was (e.g., from a previous session), 
@@ -381,9 +374,6 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   }
   EC_KEY_free(client_eph_ec_pubkey);
 
-  kmyth_sgx_log(LOG_DEBUG,
-                "parsed/validated client ephemeral in 'Client Hello'");
-  
   return EXIT_SUCCESS;
 }                                 
 
@@ -410,8 +400,6 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
     return EXIT_FAILURE;
   }
 
-  kmyth_sgx_log(LOG_DEBUG, "extracted server ID");
-
   // marshal TLS proxy (server) ID into byte array (DER formatted) format
   unsigned char *server_id_bytes = NULL;
   size_t server_id_len = 0;
@@ -429,8 +417,6 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
     return EXIT_FAILURE;
   }
   X509_NAME_free(server_id);
-
-  kmyth_sgx_log(LOG_DEBUG, "marshalled server ID");
 
   // Convert client-side ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
@@ -473,8 +459,6 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   }
   EC_KEY_free(server_eph_ec_pubkey);
 
-  kmyth_sgx_log(LOG_DEBUG, "computed server ephemeral public key");
-
   // allocate memory for 'Server Hello' message body byte array
   //  - Server ID size (two-byte unsigned integer)
   //  - Server ID value (DER-formatted X509_NAME byte array)
@@ -492,8 +476,6 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     return EXIT_FAILURE;
   }
-
-  kmyth_sgx_log(LOG_DEBUG, "allocated memory for 'Server Hello' message");
 
   // initialize:
   //   - 2-byte unsigned integer to facilitate length value format conversions
@@ -531,9 +513,7 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
 
   // append signature
-  if (EXIT_SUCCESS != append_signature(server_sign_key,
-                                       &(msg_out->body),
-                                       (size_t *) &(msg_out->hdr.msg_size)))
+  if (EXIT_SUCCESS != append_msg_signature(server_sign_key, msg_out))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
@@ -647,8 +627,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
     return EXIT_FAILURE;
   }
 
-  kmyth_sgx_log(LOG_DEBUG, "validated server ID in 'Server Hello'");
-
   // extract server's public signing key (needed to verify signature over
   // message) from X509 certificate
   EVP_PKEY *server_sign_pubkey = X509_get_pubkey(server_sign_cert);
@@ -672,8 +650,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
     kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
     return EXIT_FAILURE;
   }
-
-  kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Server Hello'");
 
   // done with signature, clean-up memory
   free(msg_sig_bytes);
@@ -725,9 +701,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   kmyth_sgx_log(LOG_DEBUG, "client ephemeral public key check passed");
   EVP_PKEY_free(rcvd_client_eph_pub);
 
-  kmyth_sgx_log(LOG_DEBUG,
-                "parsed/validated client ephemeral in 'Server Hello'");
-
   // convert DER-formatted byte array to EC_KEY struct
   EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
   if (1 != EC_KEY_oct2key(server_eph_ec_pubkey,
@@ -766,9 +739,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   }
   EC_KEY_free(server_eph_ec_pubkey);
 
-  kmyth_sgx_log(LOG_DEBUG,
-                "parsed/validated server ephemeral in 'Server Hello'");
-
   return EXIT_SUCCESS;
 }                                 
 
@@ -781,8 +751,6 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
                             EVP_PKEY * server_eph_pubkey,
                             ECDHMessage * msg_out)
 {
-  kmyth_sgx_log(LOG_DEBUG, "inside compose_key_request_msg()");
-
   // create KMIP key request
   KMIP kmip_context = { 0 };
   kmip_init(&kmip_context, NULL, 0, KMIP_2_0);
@@ -806,8 +774,6 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   }
   kmip_destroy(&kmip_context);
 
-  kmyth_sgx_log(LOG_DEBUG, "built KMIP Get Key request");
-
   // Convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
   size_t server_eph_pubkey_len = 0;
@@ -827,8 +793,6 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   }
   EC_KEY_free(server_eph_ec_pubkey);
 
-  kmyth_sgx_log(LOG_DEBUG, "created server ephemeral public key");
-  
   // allocate memory for 'Key Request' message body byte array
   //  - KMIP key request size (two-byte unsigned integer)
   //  - KMIP key request bytes (byte array)
@@ -872,12 +836,18 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   free(server_eph_pubkey_bytes);
 
   // append signature
-  if (EXIT_SUCCESS != append_signature(client_sign_key,
-                                       &(pt_msg.body),
-                                       (size_t *) &(pt_msg.hdr.msg_size)))
+  if (EXIT_SUCCESS != append_msg_signature(client_sign_key, &pt_msg))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
+  }
+
+  // if output message buffer allocated, free and set to NULL
+  if (msg_out->body != NULL)
+  {
+    free(msg_out->body);
+    msg_out->hdr.msg_size = 0;
+    msg_out->body = NULL;
   }
 
   // encrypt signed 'Key Request' message using the specified key
@@ -992,8 +962,6 @@ int parse_key_request_msg(X509 * client_sign_cert,
     return EXIT_FAILURE;
   }
 
-  kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Key Request'");
-
   // done with signature, clean-up memory
   free(msg_sig_bytes);
 
@@ -1038,32 +1006,27 @@ int parse_key_request_msg(X509 * client_sign_cert,
   }
   EVP_PKEY_free(rcvd_server_eph_pub);
 
-  kmyth_sgx_log(LOG_DEBUG,
-                "parsed/validated server ephemeral in 'Key Request'");
-
   return EXIT_SUCCESS;
 }
 
 /*****************************************************************************
  * compose_key_response_msg()
  ****************************************************************************/
-int compose_key_response_msg(EVP_PKEY * msg_sign_key,
-                             unsigned char * msg_enc_key_bytes,
-                             size_t msg_enc_key_len,
-                             unsigned char * kmip_response_bytes,
-                             size_t kmip_response_len,
-                             unsigned char ** msg_out,
-                             size_t * msg_out_len)
+int compose_key_response_msg(EVP_PKEY * server_sign_key,
+                             ByteBuffer * msg_enc_key,
+                             ByteBuffer * kmip_response,
+                             ECDHMessage * msg_out)
 {
-  char lmsg[MAX_LOG_MSG_LEN];
+  kmyth_sgx_log(LOG_DEBUG, "composing 'Key Response' message");
 
   // allocate memory for 'Key Response' message body byte array
   //  - KMIP 'get key' response size (two-byte unsigned integer)
   //  - KMIP 'get key' response bytes (byte array)
-  size_t msg_buf_len = 2 + kmip_response_len;
+  ECDHMessage pt_msg = { { 0 }, NULL };
+  pt_msg.hdr.msg_size = 2 + kmip_response->size;
 
-  unsigned char *msg_buf = calloc(msg_buf_len, sizeof(unsigned char));
-  if (msg_buf == NULL)
+  pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
+  if (pt_msg.body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     return EXIT_FAILURE;
@@ -1073,37 +1036,45 @@ int compose_key_response_msg(EVP_PKEY * msg_sign_key,
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
-  unsigned char *buf_ptr = msg_buf;
+  unsigned char *buf_ptr = pt_msg.body;
 
   // insert KMIP 'get key' response size
-  temp_val = htobe16((uint16_t) kmip_response_len);
+  temp_val = htobe16((uint16_t) kmip_response->size);
   memcpy(buf_ptr, &temp_val, 2);
   buf_ptr += 2;
 
-  snprintf(lmsg, MAX_LOG_MSG_LEN, "kmip_response_bytes[0] = 0x%02x", kmip_response_bytes[0]);
-  kmyth_sgx_log(LOG_DEBUG, lmsg);
-
   // insert KMIP 'get key' response bytes
-  memcpy(buf_ptr, kmip_response_bytes, kmip_response_len);
+  memcpy(buf_ptr, kmip_response->buffer, kmip_response->size);
 
-  // append signature
-  if (EXIT_SUCCESS != append_signature(msg_sign_key, &msg_buf, &msg_buf_len))
+  // append signature to unencrypted 'Key Response' message
+  if (EXIT_SUCCESS != append_msg_signature(server_sign_key, &pt_msg))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
-    free(msg_buf);
+    kmyth_clear_and_free(pt_msg.body, pt_msg.hdr.msg_size);
     return EXIT_FAILURE;
+  }
+
+  // if output message buffer allocated, free and set to NULL
+  if (msg_out->body != NULL)
+  {
+    free(msg_out->body);
+    msg_out->hdr.msg_size = 0;
+    msg_out->body = NULL;
   }
 
   // encrypt signed 'Key Response' message using the specified key
-  if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key_bytes, msg_enc_key_len,
-                                      msg_buf, msg_buf_len,
-                                      msg_out, msg_out_len))
+  if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key->buffer,
+                                      msg_enc_key->size,
+                                      pt_msg.body,
+                                      pt_msg.hdr.msg_size,
+                                      &(msg_out->body),
+                                      (size_t *) &(msg_out->hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "failed to encrypt the 'Key Response' message");
-    free(msg_buf);
+    kmyth_clear_and_free(pt_msg.body, pt_msg.hdr.msg_size);
     return EXIT_FAILURE;
   }
-  free(msg_buf);
+  kmyth_clear_and_free(pt_msg.body, pt_msg.hdr.msg_size);
 
   return EXIT_SUCCESS;
 }
@@ -1111,77 +1082,58 @@ int compose_key_response_msg(EVP_PKEY * msg_sign_key,
 /*****************************************************************************
  * parse_key_response_msg()
  ****************************************************************************/
-int parse_key_response_msg(X509 * msg_sign_cert,
-                           unsigned char * msg_enc_key_bytes,
-                           size_t msg_enc_key_len,
-                           unsigned char * msg_in,
-                           size_t msg_in_len,
-                           unsigned char ** kmip_resp_bytes_out,
-                           size_t * kmip_resp_len_out)
+int parse_key_response_msg(X509 * server_sign_cert,
+                           ByteBuffer * msg_dec_key,
+                           ECDHMessage * msg_in,
+                           ByteBuffer * kmip_response)
 {
-  char msg[MAX_LOG_MSG_LEN];
+  // decrypt message using input message decryption key
+  ECDHMessage pt_msg = { { 0 }, NULL };
 
-  // decrypt message using input message encryption key
-  unsigned char *msg_buf = NULL;
-  size_t msg_buf_len = 0;
-
-  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_enc_key_bytes, msg_enc_key_len,
-                                      msg_in, msg_in_len,
-                                      &msg_buf, &msg_buf_len))
+  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_dec_key->buffer,
+                                      msg_dec_key->size,
+                                      msg_in->body,
+                                      msg_in->hdr.msg_size,
+                                      &(pt_msg.body),
+                                      (size_t *) &(pt_msg.hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "failed to decrypt the 'Key Response' message");
-    free(msg_buf);
+    if (pt_msg.body != NULL)
+    {
+      kmyth_clear_and_free(pt_msg.body, pt_msg.hdr.msg_size);
+    }
     return EXIT_FAILURE;
   }
-
-  snprintf(msg, MAX_LOG_MSG_LEN,
-           "'Key Response' message (PT): 0x%02X%02X ,,, %02X%02X (%ld bytes)",
-           msg_buf[0], msg_buf[1], msg_buf[msg_buf_len-1],
-           msg_buf[msg_buf_len-2], msg_buf_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // parse message body fields into variables
   int buf_index = 0;
 
   // get size (in bytes) of KMIP 'get key' request field
-  uint16_t kmip_key_resp_len = msg_buf[buf_index] << 8;
-  kmip_key_resp_len += msg_buf[buf_index+1];
+  kmip_response->size = (pt_msg.body)[buf_index] << 8;
+  kmip_response->size += (pt_msg.body)[buf_index+1];
   buf_index += 2;
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "KMIP Response size = %d bytes)", kmip_key_resp_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
   // get KMIP 'get key' response bytes
-  *kmip_resp_len_out = (size_t) kmip_key_resp_len;
-  *kmip_resp_bytes_out = malloc(*kmip_resp_len_out);
-  memcpy(*kmip_resp_bytes_out, msg_buf+buf_index, *kmip_resp_len_out);
-  buf_index += *kmip_resp_len_out;
-
-  snprintf(msg, MAX_LOG_MSG_LEN, "*kmip_resp_bytes_out[0] = 0x%02x)", **kmip_resp_bytes_out);
-  kmyth_sgx_log(LOG_DEBUG, msg);
+  kmip_response->buffer = malloc(kmip_response->size);
+  memcpy(kmip_response->buffer, (pt_msg.body)+buf_index, kmip_response->size);
+  buf_index += kmip_response->size;
 
   // buffer index now points just past end of message body
   // capture this index so we can access message body as part of input buffer
   size_t msg_body_size = buf_index;
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "message body size = %ld bytes)", msg_body_size);
-  kmyth_sgx_log(LOG_DEBUG, msg);
-
   // get size of message signature
-  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
-  msg_sig_len += msg_buf[buf_index+1];
+  uint16_t msg_sig_len = (pt_msg.body)[buf_index] << 8;
+  msg_sig_len += (pt_msg.body)[buf_index+1];
   buf_index += 2;
-
-  snprintf(msg, MAX_LOG_MSG_LEN, "signature size = %d bytes)", msg_sig_len);
-  kmyth_sgx_log(LOG_DEBUG, msg);
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
-  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
+  memcpy(msg_sig_bytes, (pt_msg.body)+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
   // check that number of parsed bytes matches message length input parameter
-  if (buf_index != msg_buf_len)
+  if (buf_index != pt_msg.hdr.msg_size)
   {
     kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
     free(msg_sig_bytes);
@@ -1190,7 +1142,7 @@ int parse_key_response_msg(X509 * msg_sign_cert,
 
   // extract server's public signing key (needed to verify signature over
   // message) from X509 certificate
-  EVP_PKEY *msg_sign_pubkey = X509_get_pubkey(msg_sign_cert);
+  EVP_PKEY *msg_sign_pubkey = X509_get_pubkey(server_sign_cert);
   if (msg_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
@@ -1200,7 +1152,7 @@ int parse_key_response_msg(X509 * msg_sign_cert,
 
   // check message signature
   if (EXIT_SUCCESS != ec_verify_buffer(msg_sign_pubkey,
-                                       msg_buf,
+                                       pt_msg.body,
                                        msg_body_size,
                                        msg_sig_bytes,
                                        msg_sig_len))
@@ -1208,8 +1160,6 @@ int parse_key_response_msg(X509 * msg_sign_cert,
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
     return EXIT_FAILURE;
   }
-
-  kmyth_sgx_log(LOG_DEBUG, "validated signature over 'Key Request'");
 
   // done with signature, clean-up memory
   free(msg_sig_bytes);

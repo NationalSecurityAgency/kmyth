@@ -443,17 +443,17 @@ int ecdh_get_session_key(ECDHPeer * ecdhconn)
     kmyth_log(LOG_ERR, "server computation of 'session key' results failed");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "shared session key #1 = 0x%02X%02X...%02X%02X (%ld bytes)",
+  kmyth_log(LOG_DEBUG, "'Key Request' key: 0x%02X%02X...%02X%02X (%ld bytes)",
             req_skey->buffer[0], req_skey->buffer[1],
             req_skey->buffer[req_skey->size - 2],
             req_skey->buffer[req_skey->size - 1],
             req_skey->size);
 
-  kmyth_log(LOG_DEBUG, "shared session key #2 = 0x%02X%02X...%02X%02X (%ld bytes)",
-            req_skey->buffer[0], req_skey->buffer[1],
-            req_skey->buffer[req_skey->size - 2],
-            req_skey->buffer[req_skey->size - 1],
-            req_skey->size);
+  kmyth_log(LOG_DEBUG, "'Key Response' key: 0x%02X%02X...%02X%02X (%ld bytes)",
+            resp_skey->buffer[0], resp_skey->buffer[1],
+            resp_skey->buffer[resp_skey->size - 2],
+            resp_skey->buffer[resp_skey->size - 1],
+            resp_skey->size);
 
   return EXIT_SUCCESS;
 }

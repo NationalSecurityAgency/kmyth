@@ -173,7 +173,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
   snprintf(lmsg, MAX_LOG_MSG_LEN,
-           "'Key Request' session key = 0x%02X%02X...%02X%02X (%ld bytes)",
+           "'Key Request' key: 0x%02X%02X...%02X%02X (%ld bytes)",
            req_skey->buffer[0], req_skey->buffer[1],
            req_skey->buffer[req_skey->size-2],
            req_skey->buffer[req_skey->size-1],
@@ -181,7 +181,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, lmsg);
 
   snprintf(lmsg, MAX_LOG_MSG_LEN,
-           "'Key Response' session key = 0x%02X%02X...%02X%02X (%ld bytes)",
+           "'Key Response' key: 0x%02X%02X...%02X%02X (%ld bytes)",
            resp_skey->buffer[0],
            resp_skey->buffer[1],
            resp_skey->buffer[resp_skey->size-2],
@@ -241,12 +241,9 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // parse out and validate received 'Key Response' message fields
   ret_val = parse_key_response_msg(enclave_client.remote_sign_cert,
-                                   enclave_client.response_session_key.buffer,
-                                   enclave_client.response_session_key.size,
-                                   key_resp_msg->body,
-                                   key_resp_msg->hdr.msg_size,
-                                   &(kmip_resp->buffer),
-                                   (size_t *) &(kmip_resp->size));
+                                   &(enclave_client.response_session_key),
+                                   key_resp_msg,
+                                   kmip_resp);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "'Key Response' message parse/validate error");

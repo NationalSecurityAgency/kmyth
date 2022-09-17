@@ -413,34 +413,20 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        is computed over the message body and appended to the tail end
  *        of the message (as a length/value pair).
  * 
- * @param[in]  client_sign_key      Pointer to client's elliptic curve
- *                                  signing key (EVP_PKEY)
+ * @param[in]  server_sign_key
  * 
- * @param[in]  msg_enc_key_bytes
+ * @param[in]  msg_enc_key
  * 
- * @param[in]  msg_enc_key_len
+ * @param[in]  kmip_response
  * 
- * @param[in]  kmip_response_bytes
- * 
- * @param[in]  kmip_response_len
- * 
- * @param[out] msg_out              Pointer to byte buffer containing the
- *                                  'Key Response' message to be returned
- *                                  to a peer (i.e., response to client's
- *                                  'Key Request' message)
- *
- * @param[out] msg_out_len          Pointer to 'Key Response' message length
- *                                  (in bytes)
+ * @param[out] msg_out
  *
  * @return 0 on success, 1 on error
  */
-  int compose_key_response_msg(EVP_PKEY * msg_sign_key,
-                               unsigned char * msg_enc_key_bytes,
-                               size_t msg_enc_key_len,
-                               unsigned char * kmip_response_bytes,
-                               size_t kmip_response_len,
-                               unsigned char ** msg_out,
-                               size_t * msg_out_len);
+  int compose_key_response_msg(EVP_PKEY * server_sign_key,
+                               ByteBuffer * msg_enc_key,
+                               ByteBuffer * kmip_response,
+                               ECDHMessage * msg_out);
 
 /**
  * @brief Validates and parses a 'Key Response' message
@@ -455,39 +441,23 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The elliptic curve signature (over the body of the message) is first
  *        verified (using the public key provided as an input parameter)
  * 
- * @param[in]  msg_sign_cert            Pointer to X509 formatted public
+ * @param[in]  server_sign_cert         Pointer to X509 formatted public
  *                                      certificate to be used in validating
  *                                      the signature computed over the
  *                                      'Key Response' message being parsed
  * 
- * @param[in]  msg_in                   Byte buffer containing a
- *                                      'Key Response' message to be
- *                                      validated and parsed
- * 
- * @param[in]  msg_dec_key_bytes        Symmetric key bytes needed to decrypt
- *                                      the input 'Key Response' message
- * 
- * @param[in]  msg_dec_key_len          Length (in bytes) of symmetric message
- *                                      decryption key
+ * @param[in]  msg_dec_key
  *
- * @param[in]  msg_in_len               'Key Response' message size (in bytes)
- * 
- * @param[out] kmip_response_bytes_out  Pointer to the contents of the KMIP
- *                                      'get key' response field contained
- *                                      in the input 'Key Response' message
+ * @param[in]  msg_in
  *                                     
- * @param[out] kmip_response_len_out    Pointer to the size (in bytes) of the
- *                                      parsed KMIP 'get key' response value
+ * @param[out] kmip_response
  *
  * @return 0 on success, 1 on error
  */
-  int parse_key_response_msg(X509 * msg_sign_cert,
-                            unsigned char * msg_dec_key_bytes,
-                            size_t msg_dec_key_len,
-                            unsigned char * msg_in,
-                            size_t msg_in_len,
-                            unsigned char ** kmip_response_bytes_out,
-                            size_t * kmip_response_len_out);
+  int parse_key_response_msg(X509 * server_sign_cert,
+                             ByteBuffer * msg_dec_key,
+                             ECDHMessage * msg_in,
+                             ByteBuffer * kmip_response);
 
 #ifdef __cplusplus
 }

@@ -355,12 +355,9 @@ int proxy_send_key_response_message(TLSProxy * proxy)
   ECDHPeer *p = &(proxy->ecdhconn);
 
   if (EXIT_SUCCESS != compose_key_response_msg(p->local_sign_key,
-                                               p->response_session_key.buffer,
-                                               p->response_session_key.size,
-                                               p->kmip_response.buffer,
-                                               p->kmip_response.size,
-                                               &(p->key_response.body),
-                                    (size_t *) &(p->key_response.hdr.msg_size)))
+                                               &(p->response_session_key),
+                                               &(p->kmip_response),
+                                               &(p->key_response)))
   {
     kmyth_log(LOG_ERR, "failed to compose 'Key Response' message");
     return EXIT_FAILURE;
