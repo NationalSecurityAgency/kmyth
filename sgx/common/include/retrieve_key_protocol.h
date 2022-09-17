@@ -373,38 +373,26 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The elliptic curve signature (over the body of the message) is first
  *        verified (using the public key provided as an input parameter)
  * 
- * @param[in]  msg_sign_cert         Pointer to X509 formatted public cert
- *                                   to be used in validating both the
- *                                   server identity information contained
- *                                   within and the signature computed over
- *                                   the received "Server Hello' message
+ * @param[in]  client_sign_cert      Pointer to X509 formatted public cert
+ *                                   to be used in validating the signature
+ *                                   computed over the received "Key Request'
+ *                                   message
  * 
- * @param[in]  msg_in                Byte buffer containing a 'Server Hello'
- *                                   message received from a remote peer
- *                                   (TLS proxy for server)
- *
- * @param[in]  msg_in_len            'Server Hello' message length (in bytes)
+ * @param[in]  msg_enc_key
  * 
- * @param[out] kmip_key_req_out      Pointer to the client's public epehemeral
- *                                   contribution (EC_KEY struct) - used to
- *                                   validate the value received as part of the
- *                                   'Server Hello' response
+ * @param[in]  msg_in
+ * 
+ * @param[in]  server_eph_pubkey
  *
- * @param[out] kmip_key_req_out_len  Pointer to pointer to the parsed and
- *                                   unmarshalled contents of the server's
- *                                   public epehemeral contribution (EC_KEY
- *                                   struct)
+ * @param[out] kmip_key_req          Pointer to ByteBuffer struct containing
  *
  * @return 0 on success, 1 on error
  */
-  int parse_key_request_msg(X509 * msg_sign_cert,
-                            unsigned char * msg_enc_key_bytes,
-                            size_t msg_enc_key_len,
-                            unsigned char * msg_in,
-                            size_t msg_in_len,
-                            EVP_PKEY * server_eph_pub_in,
-                            unsigned char ** kmip_key_req_out,
-                            size_t * kmip_key_req_out_len);
+  int parse_key_request_msg(X509 * client_sign_cert,
+                           ByteBuffer * msg_enc_key,
+                           ECDHMessage * msg_in,
+                           EVP_PKEY * server_eph_pubkey,
+                           ByteBuffer * kmip_key_req);
 
 /**
  * @brief Assembles the 'Key Response' message, a signed, encrypted

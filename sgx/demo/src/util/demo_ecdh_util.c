@@ -387,13 +387,10 @@ void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn)
 
   // decrypt, validate message, and parse out 'Key Request' fields
   if (EXIT_SUCCESS != parse_key_request_msg(ecdhconn->remote_sign_cert,
-                                            ecdhconn->request_session_key.buffer,
-                                            ecdhconn->request_session_key.size,
-                                            msg->body,
-                                            msg->hdr.msg_size,
+                                            &(ecdhconn->request_session_key),
+                                            msg,
                                             ecdhconn->local_eph_keypair,
-                                            &(ecdhconn->kmip_request.buffer),
-                                            &(ecdhconn->kmip_request.size)))
+                                            &(ecdhconn->kmip_request)))
   {
     kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
     demo_ecdh_error(ecdhconn);
