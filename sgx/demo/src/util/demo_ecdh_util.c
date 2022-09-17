@@ -308,7 +308,7 @@ int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
     return EXIT_FAILURE;
   }
 
-  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02x%02x ... %02x%02x "
+  kmyth_log(LOG_DEBUG, "received 'Client Hello': %02X%02X ... %02X%02X "
                       "(%d bytes)",
                       msg->body[0], msg->body[1],
                       msg->body[msg->hdr.msg_size - 2],

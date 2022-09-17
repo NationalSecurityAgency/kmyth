@@ -545,44 +545,42 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
 /*****************************************************************************
  * parse_server_hello_msg()
  ****************************************************************************/
-int parse_server_hello_msg(ECDHPeer * client)
+int parse_server_hello_msg(ECDHMessage * msg_in,
+                           X509 * server_sign_cert,
+                           EVP_PKEY * client_eph_keypair,
+                           EVP_PKEY ** server_eph_pubkey)
 {
-  char msg[MAX_LOG_MSG_LEN];
-
-  unsigned char * msg_buf = client->server_hello.body;
-  size_t msg_buf_len = client->server_hello.hdr.msg_size;
-
   // parse message body fields into variables
   int buf_index = 0;
 
   // get size of server identity field (server_id_len)
-  uint16_t server_id_len = msg_buf[buf_index] << 8;
-  server_id_len += msg_buf[buf_index+1];
+  uint16_t server_id_len = msg_in->body[buf_index] << 8;
+  server_id_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get server identity field bytes (server_id)
   uint8_t *server_id_bytes = malloc(server_id_len);
-  memcpy(server_id_bytes, msg_buf+buf_index, server_id_len);
+  memcpy(server_id_bytes, msg_in->body+buf_index, server_id_len);
   buf_index += server_id_len;
 
   // get size of client ephemeral contribution field (client_eph_pub_len)
-  uint16_t client_eph_pub_len = msg_buf[buf_index] << 8;
-  client_eph_pub_len += msg_buf[buf_index+1];
+  uint16_t client_eph_pub_len = msg_in->body[buf_index] << 8;
+  client_eph_pub_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get client ephemeral contribution field bytes (client_eph_pub_bytes)
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
-  memcpy(client_eph_pub_bytes, msg_buf+buf_index, client_eph_pub_len);
+  memcpy(client_eph_pub_bytes, msg_in->body+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
   // get size of server ephemeral contribution field (server_eph_pub_len)
-  uint16_t server_eph_pub_len = msg_buf[buf_index] << 8;
-  server_eph_pub_len += msg_buf[buf_index+1];
+  uint16_t server_eph_pub_len = msg_in->body[buf_index] << 8;
+  server_eph_pub_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get server ephemeral contribution field bytes (server_eph_pub_bytes)
   unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
-  memcpy(server_eph_pub_bytes, msg_buf+buf_index, server_eph_pub_len);
+  memcpy(server_eph_pub_bytes, msg_in->body+buf_index, server_eph_pub_len);
   buf_index += server_eph_pub_len;
 
   // buffer index now points just past end of message body
@@ -590,17 +588,17 @@ int parse_server_hello_msg(ECDHPeer * client)
   size_t msg_body_size = buf_index;
 
   // get size of message signature
-  uint16_t msg_sig_len = msg_buf[buf_index] << 8;
-  msg_sig_len += msg_buf[buf_index+1];
+  uint16_t msg_sig_len = msg_in->body[buf_index] << 8;
+  msg_sig_len += msg_in->body[buf_index+1];
   buf_index += 2;
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
-  memcpy(msg_sig_bytes, msg_buf+buf_index, msg_sig_len);
+  memcpy(msg_sig_bytes, msg_in->body+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
   // check that number of parsed bytes matches message length input parameter
-  if (buf_index != msg_buf_len)
+  if (buf_index != msg_in->hdr.msg_size)
   {
     kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
     free(server_id_bytes);
@@ -610,13 +608,13 @@ int parse_server_hello_msg(ECDHPeer * client)
     return EXIT_FAILURE;
   }
 
-  // convert client identity bytes in message to X509_NAME struct
+  // convert server identity bytes in message to X509_NAME struct
   X509_NAME *rcvd_server_id = NULL;
   if (EXIT_SUCCESS != unmarshal_der_to_x509_name(server_id_bytes,
                                                  (size_t) server_id_len,
                                                  &rcvd_server_id))
   {
-    kmyth_sgx_log(LOG_ERR, "error unmarshaling client identity bytes");
+    kmyth_sgx_log(LOG_ERR, "error unmarshaling server identity bytes");
     free(server_id_bytes);
     free(client_eph_pub_bytes);
     free(server_eph_pub_bytes);
@@ -628,7 +626,7 @@ int parse_server_hello_msg(ECDHPeer * client)
   // extract expected server identity (X509_NAME struct) from pre-loaded cert
   X509_NAME *expected_server_id = NULL;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client->remote_sign_cert,
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server_sign_cert,
                                                        &expected_server_id))
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
@@ -653,7 +651,7 @@ int parse_server_hello_msg(ECDHPeer * client)
 
   // extract server's public signing key (needed to verify signature over
   // message) from X509 certificate
-  EVP_PKEY *server_sign_pubkey = X509_get_pubkey(client->remote_sign_cert);
+  EVP_PKEY *server_sign_pubkey = X509_get_pubkey(server_sign_cert);
   if (server_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
@@ -666,7 +664,7 @@ int parse_server_hello_msg(ECDHPeer * client)
 
   // check message signature
   if (EXIT_SUCCESS != ec_verify_buffer(server_sign_pubkey,
-                                       msg_buf,
+                                       msg_in->body,
                                        msg_body_size,
                                        msg_sig_bytes,
                                        msg_sig_len))
@@ -717,7 +715,7 @@ int parse_server_hello_msg(ECDHPeer * client)
   // check received client ephemeral public matches expected value
   kmyth_sgx_log(LOG_DEBUG, "before client ephemeral public key check");
   if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_client_eph_pub,
-                        (const EVP_PKEY *) client->local_eph_keypair))
+                        (const EVP_PKEY *) client_eph_keypair))
   {
     kmyth_sgx_log(LOG_ERR, "client ephemeral public mismatch");
     free(server_eph_pub_bytes);
@@ -751,15 +749,15 @@ int parse_server_hello_msg(ECDHPeer * client)
   }
 
   // create empty EVP_PKEY struct, if previously allocated, free memory first
-  if (client->remote_eph_pubkey != NULL)
+  if (*server_eph_pubkey != NULL)
   {
-    EVP_PKEY_free(client->remote_eph_pubkey);
-    client->remote_eph_pubkey = NULL;
+    EVP_PKEY_free(*server_eph_pubkey);
+    *server_eph_pubkey = NULL;
   }
-  client->remote_eph_pubkey = EVP_PKEY_new();
+  *server_eph_pubkey = EVP_PKEY_new();
 
   // encapsulate server ephemeral public key in EVP_PKEY struct
-  if (1 != EVP_PKEY_set1_EC_KEY(client->remote_eph_pubkey,
+  if (1 != EVP_PKEY_set1_EC_KEY(*server_eph_pubkey,
                                 server_eph_ec_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
@@ -778,13 +776,10 @@ int parse_server_hello_msg(ECDHPeer * client)
  * compose_key_request_msg()
  ****************************************************************************/
 int compose_key_request_msg(EVP_PKEY * client_sign_key,
-                            unsigned char * msg_enc_key_bytes,
-                            size_t msg_enc_key_len,
-                            unsigned char * req_key_id_bytes,
-                            size_t req_key_id_len,
+                            ByteBuffer * msg_enc_key,
+                            ByteBuffer * req_key_id,
                             EVP_PKEY * server_eph_pubkey,
-                            unsigned char ** msg_out,
-                            size_t * msg_out_len)
+                            ECDHMessage * msg_out)
 {
   kmyth_sgx_log(LOG_DEBUG, "inside compose_key_request_msg()");
 
@@ -796,10 +791,10 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   size_t kmip_key_request_len = 0;
 
   if (EXIT_SUCCESS != build_kmip_get_request(&kmip_context,
-                                   req_key_id_bytes,
-                                   req_key_id_len,
-                                   &kmip_key_request_bytes,
-                                   &kmip_key_request_len))
+                                            req_key_id->buffer,
+                                            req_key_id->size,
+                                            &kmip_key_request_bytes,
+                                            &kmip_key_request_len))
   {
     kmyth_sgx_log(LOG_ERR, "failed to build the 'KMIP Get' request");
     kmip_destroy(&kmip_context);
@@ -831,16 +826,19 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
     return EXIT_FAILURE;
   }
   EC_KEY_free(server_eph_ec_pubkey);
+
+  kmyth_sgx_log(LOG_DEBUG, "created server ephemeral public key");
   
   // allocate memory for 'Key Request' message body byte array
   //  - KMIP key request size (two-byte unsigned integer)
   //  - KMIP key request bytes (byte array)
   //  - Server ephemeral size (two-byte unsigned integer)
-  //  - Server ephemeral value (DER formatted EC_KEY byte array) 
-  size_t msg_buf_len = 2 + kmip_key_request_len +
-                       2 + server_eph_pubkey_len;
-  unsigned char *msg_buf = calloc(msg_buf_len, sizeof(unsigned char));
-  if (msg_buf == NULL)
+  //  - Server ephemeral value (DER formatted EC_KEY byte array)
+  ECDHMessage pt_msg = { 0 };
+  pt_msg.hdr.msg_size = 2 + kmip_key_request_len +
+                        2 + server_eph_pubkey_len;
+  pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
+  if (pt_msg.body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     free(kmip_key_request_bytes);
@@ -852,7 +850,7 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
-  unsigned char *buf_ptr = msg_buf;
+  unsigned char *buf_ptr = pt_msg.body;
 
   // insert kmip key request size  
   temp_val = htobe16((uint16_t) kmip_key_request_len);
@@ -874,23 +872,27 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   free(server_eph_pubkey_bytes);
 
   // append signature
-  if (EXIT_SUCCESS != append_signature(client_sign_key, &msg_buf, &msg_buf_len))
+  if (EXIT_SUCCESS != append_signature(client_sign_key,
+                                       &(pt_msg.body),
+                                       (size_t *) &(pt_msg.hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
-    free(msg_buf);
     return EXIT_FAILURE;
   }
 
   // encrypt signed 'Key Request' message using the specified key
-  if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key_bytes, msg_enc_key_len,
-                                      msg_buf, msg_buf_len,
-                                      msg_out, msg_out_len))
+  if (EXIT_SUCCESS != aes_gcm_encrypt(msg_enc_key->buffer,
+                                      msg_enc_key->size,
+                                      pt_msg.body,
+                                      pt_msg.hdr.msg_size,
+                                      &(msg_out->body),
+                                      (size_t *) &(msg_out->hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "failed to encrypt the 'Key Request' message");
-    free(msg_buf);
+    free(pt_msg.body);
     return EXIT_FAILURE;
   }
-  free(msg_buf);
+  free(pt_msg.body);
 
   return EXIT_SUCCESS;
 }

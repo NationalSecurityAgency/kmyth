@@ -298,14 +298,20 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        and the contents of the message fields are placed in the
  *        appropriate output parameters.
  * 
- * @param[inout] client   Pointer to ECDHPeer struct containing configuration
- *                        and state information for the ECDH client-side node
- *                        that received a 'Server Hello' message that it needs
- *                        to validate and parse.
+ * @param[in]  msg_in
+ * 
+ * @param[in]  server_sign_cert
+ * 
+ * @param[in]  client_eph_keypair
+ * 
+ * @param[out] server_eph_pubkey
  *
  * @return 0 on success, 1 on error
  */
-  int parse_server_hello_msg(ECDHPeer * client);
+  int parse_server_hello_msg(ECDHMessage * msg_in,
+                             X509 * server_sign_cert,
+                             EVP_PKEY * client_eph_keypair,
+                             EVP_PKEY ** server_eph_pubkey);
 
 /**
  * @brief Assembles the 'Key Request' message, a signed, encrypted
@@ -334,35 +340,23 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  * @param[in]  client_sign_key      Pointer to client's elliptic curve
  *                                  signing key (EVP_PKEY)
  * 
- * @param[in]  msg_enc_key_bytes
+ * @param[in]  msg_enc_key
  * 
- * @param[in]  msg_enc_key_len
- * 
- * @param[in]  req_key_id_bytes
- * 
- * @param[in]  req_key_id_len
+ * @param[in]  req_key_id
  * 
  * @param[in]  server_eph_pubkey    Pointer to public key from the client's
  *                                  public epehemeral contribution (EVP_PKEY)
  *                                  received in the 'Client Hello' message
  * 
- * @param[out] msg_out              Pointer to byte buffer containing the
- *                                  'Key Request' message to be exchanged
- *                                  with a peer (e.g., key server)
- *
- * @param[out] msg_out_len          Pointer to 'Key Request' message length
- *                                  (in bytes)
+ * @param[out] msg_out
  *
  * @return 0 on success, 1 on error
  */
   int compose_key_request_msg(EVP_PKEY * client_sign_key,
-                              unsigned char * msg_enc_key_bytes,
-                              size_t msg_enc_key_len,
-                              unsigned char * req_key_id_bytes,
-                              size_t req_key_id_len,
+                              ByteBuffer * msg_enc_key,
+                              ByteBuffer * req_key_id,
                               EVP_PKEY * server_eph_pubkey,
-                              unsigned char ** msg_out,
-                              size_t * msg_out_len);
+                              ECDHMessage * msg_out);
 
 /**
  * @brief Validates and parses the 'Key Request' message

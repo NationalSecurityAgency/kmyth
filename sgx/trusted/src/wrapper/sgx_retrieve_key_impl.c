@@ -44,6 +44,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   ECDHMessage *key_resp_msg = &(enclave_client.key_response);
   ByteBuffer *kmip_resp = &(enclave_client.kmip_response);
 
+  ByteBuffer kmip_key_id = { req_key_id_len, req_key_id };
+
   // configure the enclave state to indicate that it has the client role
   enclave_client.isClient = true;
 
@@ -125,7 +127,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_sgx_log(LOG_DEBUG, lmsg);
 
   // parse out and validate received 'Server Hello' message fields
-  ret_val = parse_server_hello_msg(&enclave_client);
+  ret_val = parse_server_hello_msg(&(enclave_client.server_hello),
+                                   enclave_client.remote_sign_cert,
+                                   enclave_client.local_eph_keypair,
+                                   &(enclave_client.remote_eph_pubkey));
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "'Server Hello' message parse/validate error");
@@ -186,13 +191,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // compose 'Key Request' message (client to server request to retrieve key)
   ret_val = compose_key_request_msg(enclave_client.local_sign_key,
-                                    req_skey->buffer,
-                                    req_skey->size,
-                                    req_key_id,
-                                    req_key_id_len,
+                                    req_skey,
+                                    &kmip_key_id,
                                     enclave_client.remote_eph_pubkey,
-                                    &(key_req_msg->body),
-                                    (size_t *) &(key_req_msg->hdr.msg_size));
+                                    key_req_msg);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Key Request' message");
