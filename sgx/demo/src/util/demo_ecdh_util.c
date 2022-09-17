@@ -334,7 +334,11 @@ int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
   int ret = -1;
 
   // compose 'Server Hello' message
-  ret = compose_server_hello_msg(ecdhconn);
+  ret = compose_server_hello_msg(ecdhconn->local_sign_key,
+                                 ecdhconn->local_sign_cert,
+                                 ecdhconn->remote_eph_pubkey,
+                                 ecdhconn->local_eph_keypair,
+                                 &(ecdhconn->server_hello));
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to create 'Server Hello' message");

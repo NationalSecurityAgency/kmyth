@@ -218,11 +218,12 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        Finally, some sanity checks are performed on thethe received
  *        ephemeral public key (using EC_KEY_check_key())
  * 
- * @param[inout] server  Pointer to ECDHPeer struct containing configuration
- *                       and state information for the ECDH server-side node
- *                       that received a 'Client Hello' message that it needs
- *                       to validate and parse.
- *
+ * @param[in]  msg_in
+ * 
+ * @param[in]  client_sign_cert
+ * 
+ * @param[out] client_eph_pubkey
+ * 
  * @return 0 on success, 1 on error
  */
   int parse_client_hello_msg(ECDHMessage * msg_in,
@@ -254,13 +255,24 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        is computed over the message body and appended to the tail end
  *        of the message.
  * 
- * @param[inout] server    Pointer to ECDHPeer struct containing configuration
- *                         and state information for the ECDH server-side node
- *                         that needs to compose a 'Server Hello' message.
+ * @param[in]  server_sign_key
+ * 
+ * @param[in]  server_sign_cert
+ * 
+ * @param[in]  client_eph_pubkey
+ * 
+ * @param[in]  server_eph_keypair
+ * 
+ * @param[out] msg_out
  *
  * @return 0 on success, 1 on error
  */
-  int compose_server_hello_msg(ECDHPeer * server);
+  int compose_server_hello_msg(EVP_PKEY * server_sign_key,
+                               X509 * server_sign_cert,
+                               EVP_PKEY * client_eph_pubkey,
+                               EVP_PKEY * server_eph_keypair,
+                               ECDHMessage * msg_out);
+
 
 /**
  * @brief Validates and then parses the 'Server Hello' message, the

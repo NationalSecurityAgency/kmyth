@@ -390,12 +390,16 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
 /*****************************************************************************
  * compose_server_hello_msg()
  ****************************************************************************/
-int compose_server_hello_msg(ECDHPeer *server)
+int compose_server_hello_msg(EVP_PKEY * server_sign_key,
+                             X509 * server_sign_cert,
+                             EVP_PKEY * client_eph_pubkey,
+                             EVP_PKEY * server_eph_keypair,
+                             ECDHMessage * msg_out)
 {
   // extract server (TLS proxy) ID (subject name) bytes from cert
   X509_NAME *server_id = X509_NAME_new();
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server->local_sign_cert,
+  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(server_sign_cert,
                                                        &server_id))
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
@@ -405,6 +409,8 @@ int compose_server_hello_msg(ECDHPeer *server)
     }
     return EXIT_FAILURE;
   }
+
+  kmyth_sgx_log(LOG_DEBUG, "extracted server ID");
 
   // marshal TLS proxy (server) ID into byte array (DER formatted) format
   unsigned char *server_id_bytes = NULL;
@@ -424,12 +430,14 @@ int compose_server_hello_msg(ECDHPeer *server)
   }
   X509_NAME_free(server_id);
 
+  kmyth_sgx_log(LOG_DEBUG, "marshalled server ID");
+
   // Convert client-side ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
 
   EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server->remote_eph_pubkey);
+  client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
   client_eph_pubkey_len = EC_KEY_key2buf(client_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &client_eph_pubkey_bytes,
@@ -449,7 +457,7 @@ int compose_server_hello_msg(ECDHPeer *server)
   size_t server_eph_pubkey_len = 0;
 
   EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server->local_eph_keypair);
+  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_keypair);
   server_eph_pubkey_len = EC_KEY_key2buf(server_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &server_eph_pubkey_bytes,
@@ -465,6 +473,8 @@ int compose_server_hello_msg(ECDHPeer *server)
   }
   EC_KEY_free(server_eph_ec_pubkey);
 
+  kmyth_sgx_log(LOG_DEBUG, "computed server ephemeral public key");
+
   // allocate memory for 'Server Hello' message body byte array
   //  - Server ID size (two-byte unsigned integer)
   //  - Server ID value (DER-formatted X509_NAME byte array)
@@ -472,23 +482,24 @@ int compose_server_hello_msg(ECDHPeer *server)
   //  - Client ephemeral value (DER formatted EC_KEY byte array) 
   //  - Server ephemeral size (two-byte unsigned integer)
   //  - Server ephemeral value (DER formatted EC_KEY byte array)
-  ECDHMessage *shello = &(server->server_hello);
-  shello->hdr.msg_size = 2 + server_id_len +
-                         2 + client_eph_pubkey_len +
-                         2 + server_eph_pubkey_len;
+  msg_out->hdr.msg_size = 2 + server_id_len +
+                          2 + client_eph_pubkey_len +
+                          2 + server_eph_pubkey_len;
 
-  shello->body = malloc(shello->hdr.msg_size);
-  if (shello->body == NULL)
+  msg_out->body = malloc(msg_out->hdr.msg_size);
+  if (msg_out->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     return EXIT_FAILURE;
   }
 
+  kmyth_sgx_log(LOG_DEBUG, "allocated memory for 'Server Hello' message");
+
   // initialize:
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
-  unsigned char *buf = shello->body;
+  unsigned char *buf = msg_out->body;
 
   // insert server identity length bytes
   temp_val = htobe16((uint16_t) server_id_len);
@@ -520,9 +531,9 @@ int compose_server_hello_msg(ECDHPeer *server)
   kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
 
   // append signature
-  if (EXIT_SUCCESS != append_signature(server->local_sign_key,
-                                       &(shello->body),
-                                       (size_t *) &(shello->hdr.msg_size)))
+  if (EXIT_SUCCESS != append_signature(server_sign_key,
+                                       &(msg_out->body),
+                                       (size_t *) &(msg_out->hdr.msg_size)))
   {
     kmyth_sgx_log(LOG_ERR, "error appending message signature");
     return EXIT_FAILURE;
