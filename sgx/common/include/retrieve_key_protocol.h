@@ -71,33 +71,6 @@ typedef struct ByteBuffer {
   uint8_t *buffer;
 } ByteBuffer;
 
-/**
- * @brief This struct concatenates state information required for a
- *        participant (peer) to complete the kmyth 'retrieve key' protocol.
- */
-typedef struct ECDHPeer
-{
-  bool isClient;
-  char *host;
-  char *port;
-  int session_limit;
-  int socket_fd;
-  EVP_PKEY *local_sign_key;
-  X509 *local_sign_cert;
-  X509 *remote_sign_cert;
-  EVP_PKEY *local_eph_keypair;
-  EVP_PKEY *remote_eph_pubkey;
-  ECDHMessage client_hello;
-  ECDHMessage server_hello;
-  ByteBuffer session_secret;
-  ByteBuffer request_session_key;
-  ByteBuffer response_session_key;
-  ByteBuffer kmip_request;
-  ECDHMessage key_request;
-  ByteBuffer kmip_response;
-  ECDHMessage key_response;
-} ECDHPeer;
-
 
 /**
  * @brief Extracts identity information (subject name) from an input X509
@@ -123,24 +96,16 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *                        private elliptic curve key to use when computing
  *                        the signature.
  *
- * @param[inout] buf      Pointer to byte array containing the bytes to be
- *                        signed. On return from this function, memory is
- *                        re-allocated to make room for the signature bytes,
- *                        and this parameter contains the original bytes
- *                        passed in plus the computed signature bytes
- *                        (appended to the tail end).
- *
- * @param[inout] buf_len  Pointer to length (in bytes) of the byte buffer -
- *                        on entry the value should reflect the size of the
- *                        data to be signed and on exit the value will be
- *                        the combined size of the original data plus
- *                        computed signature bytes
+ * @param[inout] msg      Pointer to ECDHMessage struct containing the
+ *                        message to be signed. On return from this function,
+ *                        memory is re-allocated to make room for the
+ *                        signature bytes and the computed signature bytes
+ *                        are appended to the tail end of the input message.
  *
  * @return 0 on success, 1 on error
  */
-  int append_signature(EVP_PKEY * sign_key,
-                       unsigned char ** buf,
-                       size_t * buf_len);
+  int append_msg_signature(EVP_PKEY * sign_key,
+                           ECDHMessage * msg);
 
 /**
  * @brief Builds the 'Client Hello' message, which initiates the ECDH

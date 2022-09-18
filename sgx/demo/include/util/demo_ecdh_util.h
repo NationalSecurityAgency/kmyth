@@ -36,6 +36,33 @@
 #include "kmip_util.h"
 #include "socket_util.h"
 
+/**
+ * @brief This struct concatenates state information required for a
+ *        participant (peer) to complete the kmyth 'retrieve key' protocol.
+ */
+typedef struct ECDHPeer
+{
+  bool isClient;
+  char *host;
+  char *port;
+  int session_limit;
+  int socket_fd;
+  EVP_PKEY *local_sign_key;
+  X509 *local_sign_cert;
+  X509 *remote_sign_cert;
+  EVP_PKEY *local_eph_keypair;
+  EVP_PKEY *remote_eph_pubkey;
+  ECDHMessage client_hello;
+  ECDHMessage server_hello;
+  ByteBuffer session_secret;
+  ByteBuffer request_session_key;
+  ByteBuffer response_session_key;
+  ByteBuffer kmip_request;
+  ECDHMessage key_request;
+  ByteBuffer kmip_response;
+  ECDHMessage key_response;
+} ECDHPeer;
+
 typedef struct ECDHNode
 {
   bool isClient;
