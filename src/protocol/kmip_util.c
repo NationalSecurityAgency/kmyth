@@ -323,18 +323,6 @@ int parse_kmip_get_response(KMIP * ctx,
   KeyValue *key_value = key_block->key_value;
   ByteString *key_material = key_value->key_material;
 
-  if (payload->unique_identifier->size == 32) {
-    kmyth_log(LOG_DEBUG, "KMIP ID length = 32");
-  }
-  else {
-    if (payload->unique_identifier->size == 1) {
-      kmyth_log(LOG_DEBUG, "KMIP ID length = 1");
-    }
-    else {
-      kmyth_log(LOG_DEBUG, "KMIP ID length = ??");
-    }
-  }
-
   // Set up the official ID and key buffers and clean up.
   *id = calloc(payload->unique_identifier->size, sizeof(unsigned char));
   if (*id == NULL)

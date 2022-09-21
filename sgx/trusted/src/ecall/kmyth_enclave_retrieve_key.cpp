@@ -38,8 +38,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
     EVP_PKEY_free(client_sign_privkey);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG,
-                "unmarshalled client private signing key (to EVP_PKEY)");
+  kmyth_sgx_log(LOG_DEBUG, "unmarshalled client signing key");
 
   // now that input client private bytes processed, clear this sensitive data
   kmyth_enclave_clear(client_private_bytes, client_private_bytes_len);
@@ -52,13 +51,13 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                      &client_cert);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of client certificate (to X509) failed");
+    kmyth_sgx_log(LOG_ERR, "unmarshal of client cert failed");
     kmyth_enclave_clear(client_sign_privkey, sizeof(client_sign_privkey));
     EVP_PKEY_free(client_sign_privkey);
     X509_free(client_cert);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "unmarshalled client certificate (to X509)");
+  kmyth_sgx_log(LOG_DEBUG, "unmarshalled client cert");
 
   // unmarshal server cert (containing public key for signature verification)
   X509 *server_cert = NULL;
@@ -68,14 +67,14 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                      &server_cert);
   if (ret_val != EXIT_SUCCESS)
   {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of server certificate (to X509) failed");
+    kmyth_sgx_log(LOG_ERR, "unmarshal of server cert failed");
     kmyth_enclave_clear(client_sign_privkey, sizeof(client_sign_privkey));
     EVP_PKEY_free(client_sign_privkey);
     X509_free(client_cert);
     X509_free(server_cert);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "unmarshalled server certificate (to X509)");
+  kmyth_sgx_log(LOG_DEBUG, "unmarshalled server cert");
 
   unsigned char *retrieve_key_result = NULL;
   size_t retrieve_key_result_len = 0;
@@ -116,16 +115,17 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   EVP_PKEY_free(client_sign_privkey);
   X509_free(client_cert);
   X509_free(server_cert);
-/*
+
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
-  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved into enclave key with ID: %.*s",
+  snprintf(msg, MAX_LOG_MSG_LEN, "Retrieved key (ID: %.*s) into enclave",
            (int) retrieve_key_result_id_len, retrieve_key_result_id);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
   snprintf(msg, MAX_LOG_MSG_LEN,
-           "Retrieved into enclave key value: 0x%02X..%02X",
-           retrieve_key_result[0],
+           "Retrieved key value: 0x%02X%02X..%02X%02X",
+           retrieve_key_result[0], retrieve_key_result[1],
+           retrieve_key_result[retrieve_key_result_len - 2],
            retrieve_key_result[retrieve_key_result_len - 1]);
   kmyth_sgx_log(LOG_DEBUG, msg);
 
@@ -133,7 +133,11 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   // matches the requested Key ID eliminates the need to return this parameter
   // to the ECALL caller. A successful ECALL return indicates that the
   // returned key ID matches the input value that the caller provided.
-  if (strcmp((const char*) retrieve_key_result_id, (const char*) key_id) != 0)
+  char rcvd_key_id[retrieve_key_result_id_len + 1] = { 0 };
+  memcpy(rcvd_key_id, retrieve_key_result_id, retrieve_key_result_id_len);
+  rcvd_key_id[retrieve_key_result_id_len] = '\0';
+
+  if (strcmp((const char*) rcvd_key_id, (const char*) key_id) != 0)
   {
     kmyth_sgx_log(LOG_ERR, "retrieved key ID mismatches requested key ID");
     kmyth_enclave_clear(retrieve_key_result, retrieve_key_result_len);
@@ -142,7 +146,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
     free(retrieve_key_result_id);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "Key ID matched");
+  kmyth_sgx_log(LOG_DEBUG, "Retrieved/requested key ID match");
 
   // free memory for 'retrieve key' wrapper function results
   // Note: probably should instead return a pointer to these buffers so they
@@ -152,6 +156,6 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   kmyth_enclave_clear(retrieve_key_result_id, retrieve_key_result_id_len);
   free(retrieve_key_result);
   free(retrieve_key_result_id);
-*/
+
   return EXIT_SUCCESS;
 }

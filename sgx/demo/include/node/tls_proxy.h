@@ -18,9 +18,7 @@
 typedef struct TLSProxy
 {
   TLSPeer tlsconn;
-  ECDHNode ecdhopts;
   ECDHPeer ecdhconn;
-  int ecdh_server_socket_fd;
 } TLSProxy;
 
 static const struct option proxy_longopts[] = {
@@ -40,5 +38,8 @@ static const struct option proxy_longopts[] = {
   {"help", no_argument, 0, 'h'},
   {0, 0, 0, 0}
 };
+
+
+void proxy_init(TLSProxy * proxy);
 
 #endif // KMYTH_TLS_PROXY_H

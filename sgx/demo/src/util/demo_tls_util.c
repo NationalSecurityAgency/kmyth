@@ -35,6 +35,9 @@ void tls_get_verify_error(TLSPeer * tlsconn)
 
 int tls_config_ctx(TLSPeer * tlsconn)
 {
+  SSL_load_error_strings();
+  SSL_library_init();
+
   // create new TLS context (using client or server method, as appropriate)
   const SSL_METHOD *method = NULL;
 

@@ -20,6 +20,7 @@ void demo_kmip_server_init(DemoServer * server)
 
 void demo_kmip_server_cleanup(DemoServer * server)
 {
+  BIO_free_all(server->tlsconn.bio);
   if (server->tlsconn.ctx != NULL)
   {
     SSL_CTX_free(server->tlsconn.ctx);

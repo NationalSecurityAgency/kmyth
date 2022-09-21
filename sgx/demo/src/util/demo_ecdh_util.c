@@ -6,105 +6,132 @@
 
 #include "demo_ecdh_util.h"
 
-void demo_ecdh_init(ECDHPeer * ecdhconn, bool clientMode)
+/*****************************************************************************
+ * demo_ecdh_init()
+ ****************************************************************************/
+void demo_ecdh_init(bool clientMode, ECDHPeer * ecdhconn)
 {
   secure_memset(ecdhconn, 0, sizeof(ECDHPeer));
-  ecdhconn->socket_fd = UNSET_FD;
 
-  // caller sets client/server mode
-  ecdhconn->isClient = clientMode;
+  // initialize the protocol session socket file descriptor to 'unset' value
+  ecdhconn->session.session_socket_fd = UNSET_FD;
+
+  // set client/server mode as specified by caller
+  ecdhconn->config.isClient = clientMode;
 }
 
+/*****************************************************************************
+ * demo_ecdh_cleanup()
+ ****************************************************************************/
 void demo_ecdh_cleanup(ECDHPeer * ecdhconn)
 {
   // Note: These clear and free functions should all be safe to use with
   // null pointer values.
 
-  if (ecdhconn->socket_fd != UNSET_FD)
+  // if there is an open ECDH session socket, close it
+  if (ecdhconn->session.session_socket_fd != UNSET_FD)
   {
-    close(ecdhconn->socket_fd);
+    close(ecdhconn->session.session_socket_fd);
   }
 
-  if (ecdhconn->local_sign_key != NULL)
+  // clear and/or free memory for loaded keys and certs
+  if (ecdhconn->config.local_sign_key != NULL)
   {
-    EVP_PKEY_free(ecdhconn->local_sign_key);
+    EVP_PKEY_free(ecdhconn->config.local_sign_key);
+  }
+  if (ecdhconn->config.local_sign_cert != NULL)
+  {
+    X509_free(ecdhconn->config.local_sign_cert);
+  }
+  if (ecdhconn->config.remote_sign_cert != NULL)
+  {
+    X509_free(ecdhconn->config.remote_sign_cert);
   }
 
-  if (ecdhconn->remote_sign_cert != NULL)
+  // clear/free memory for 'ephemeral' session key agreement contributions
+  if (ecdhconn->session.local_eph_keypair != NULL)
   {
-    X509_free(ecdhconn->remote_sign_cert);
+    EVP_PKEY_free(ecdhconn->session.local_eph_keypair);
+  }
+  if (ecdhconn->session.remote_eph_pubkey != NULL)
+  {
+    EVP_PKEY_free(ecdhconn->session.remote_eph_pubkey);
   }
 
-  if (ecdhconn->local_eph_keypair != NULL)
+  // clear/free memory for session secrets and keys
+  if (ecdhconn->session.shared_secret.buffer != NULL)
   {
-    EVP_PKEY_free(ecdhconn->local_eph_keypair);
+    kmyth_clear_and_free(ecdhconn->session.shared_secret.buffer,
+                         ecdhconn->session.shared_secret.size);
+  }
+  if (ecdhconn->session.request_symkey.buffer != NULL)
+  {
+    kmyth_clear_and_free(ecdhconn->session.request_symkey.buffer,
+                         ecdhconn->session.request_symkey.size);
+  }
+  if (ecdhconn->session.response_symkey.buffer != NULL)
+  {
+    kmyth_clear_and_free(ecdhconn->session.response_symkey.buffer,
+                         ecdhconn->session.response_symkey.size);
   }
 
-  if (ecdhconn->remote_eph_pubkey != NULL)
+  // free and/or clear memory for protocol message state variables
+  if (ecdhconn->session.proto.client_hello.body != NULL)
   {
-    EVP_PKEY_free(ecdhconn->remote_eph_pubkey);
+    kmyth_clear_and_free(ecdhconn->session.proto.client_hello.body,
+                         ecdhconn->session.proto.client_hello.hdr.msg_size);
   }
 
-  if (ecdhconn->client_hello.body != NULL)
+  if (ecdhconn->session.proto.server_hello.body != NULL)
   {
-    kmyth_clear_and_free(ecdhconn->client_hello.body,
-                         ecdhconn->client_hello.hdr.msg_size);
+    kmyth_clear_and_free(ecdhconn->session.proto.server_hello.body,
+                         ecdhconn->session.proto.server_hello.hdr.msg_size);
   }
 
-  if (ecdhconn->server_hello.body != NULL)
+  if (ecdhconn->session.proto.kmip_request.buffer != NULL)
   {
-    kmyth_clear_and_free(ecdhconn->server_hello.body,
-                         ecdhconn->server_hello.hdr.msg_size);
+    kmyth_clear_and_free(ecdhconn->session.proto.kmip_request.buffer,
+                         ecdhconn->session.proto.kmip_request.size);
   }
 
-  if (ecdhconn->kmip_request.buffer != NULL)
+  if (ecdhconn->session.proto.kmip_response.buffer != NULL)
   {
-    kmyth_clear_and_free(ecdhconn->kmip_request.buffer,
-                         ecdhconn->kmip_request.size);
-  }
-
-  if (ecdhconn->kmip_response.buffer != NULL)
-  {
-    kmyth_clear_and_free(ecdhconn->kmip_response.buffer,
-                         ecdhconn->kmip_response.size);
+    kmyth_clear_and_free(ecdhconn->session.proto.kmip_response.buffer,
+                         ecdhconn->session.proto.kmip_response.size);
   }
   
-  if (ecdhconn->request_session_key.buffer != NULL)
-  {
-    kmyth_clear_and_free(ecdhconn->request_session_key.buffer,
-                         ecdhconn->request_session_key.size);
-  }
-
-  if (ecdhconn->response_session_key.buffer != NULL)
-  {
-    kmyth_clear_and_free(ecdhconn->response_session_key.buffer,
-                         ecdhconn->response_session_key.size);
-  }
-
   demo_ecdh_init(ecdhconn, false);
 }
 
+/*****************************************************************************
+ * demo_ecdh_error()
+ ****************************************************************************/
 void demo_ecdh_error(ECDHPeer * ecdhconn)
 {
   demo_ecdh_cleanup(ecdhconn);
   exit(EXIT_FAILURE);
 }
 
-int demo_ecdh_check_options(ECDHNode * ecdhopts)
+/*****************************************************************************
+ * demo_ecdh_check_options()
+ ****************************************************************************/
+int demo_ecdh_check_options(ECDHConfig * ecdhopts)
 {
   bool err = false;
 
-  if (ecdhopts->local_sign_key_path == NULL)
+  kmyth_log(LOG_DEBUG, "demo_ecdh_check_options()");
+
+  if (ecdhopts->local_sign_key == NULL)
   {
     fprintf(stderr, "local signature key path argument (-r) is required\n");
     err = true;
   }
-  if (ecdhopts->local_sign_cert_path == NULL)
+  if (ecdhopts->local_sign_cert == NULL)
   {
     fprintf(stderr, "local cert path argument (-c) is required\n");
     err = true;
   }
-  if (ecdhopts->remote_sign_cert_path == NULL)
+  if (ecdhopts->remote_sign_cert == NULL)
   {
     fprintf(stderr, "remote cert path argument (-u) is required\n");
     err = true;
@@ -125,6 +152,108 @@ int demo_ecdh_check_options(ECDHNode * ecdhopts)
     kmyth_log(LOG_ERR, "invalid command-line arguments");
     return EXIT_FAILURE;
   }
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * demo_ecdh_load_local_sign_key()
+ ****************************************************************************/
+int demo_ecdh_load_local_sign_key(ECDHPeer * ecdhconn,
+                                  char * local_sign_key_path)
+{
+  // read  elliptic curve private signing key from file (.pem formatted)
+  BIO *priv_key_bio = BIO_new_file(local_sign_key_path, "r");
+
+  if (priv_key_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
+                       local_sign_key_path);
+    return EXIT_FAILURE;
+  }
+
+  ecdhconn->config.local_sign_key = PEM_read_bio_PrivateKey(priv_key_bio,
+                                                            NULL, 0, NULL);
+
+  BIO_free(priv_key_bio);
+  priv_key_bio = NULL;
+
+  if (!ecdhconn->config.local_sign_key)
+  {
+    kmyth_log(LOG_ERR, "elliptic curve key PEM file (%s) read failed",
+                       local_sign_key_path);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "loaded local private signing key from file (%s)",
+                       local_sign_key_path);
+
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * demo_ecdh_load_local_sign_cert()
+ ****************************************************************************/
+int demo_ecdh_load_local_sign_cert(ECDHPeer * ecdhconn,
+                                   char * local_sign_cert_path)
+{
+  // read  elliptic curve private signing key from file (.pem formatted)
+  BIO *cert_bio = BIO_new_file(local_sign_cert_path, "r");
+
+  if (cert_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
+                       local_sign_cert_path);
+    return EXIT_FAILURE;
+  }
+
+  ecdhconn->config.local_sign_cert = PEM_read_bio_X509(cert_bio,
+                                                       NULL, 0, NULL);
+  BIO_free(cert_bio);
+  cert_bio = NULL;
+  if (!ecdhconn->config.local_sign_cert)
+  {
+    kmyth_log(LOG_ERR, "elliptic curve X509 PEM file (%s) read failed",
+                       local_sign_cert_path);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "loaded local certificate from file (%s)",
+                       local_sign_cert_path);
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * demo_ecdh_load_remote_sign_cert()
+ ****************************************************************************/
+int demo_ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn,
+                                    char * remote_sign_cert_path)
+{
+  // read remote certificate (X509) from file (.pem formatted)
+  X509 *client_cert = NULL;
+
+  BIO *pub_cert_bio = BIO_new_file(remote_sign_cert_path, "r");
+
+  if (pub_cert_bio == NULL)
+  {
+    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
+                       remote_sign_cert_path);
+    return EXIT_FAILURE;
+  }
+
+  ecdhconn->config.remote_sign_cert = PEM_read_bio_X509(pub_cert_bio,
+                                                        NULL, 0, NULL);
+  BIO_free(pub_cert_bio);
+  pub_cert_bio = NULL;
+  if (ecdhconn->config.remote_sign_cert == NULL)
+  {
+    kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
+                       remote_sign_cert_path);
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "loaded remote certificate from file (%s)",
+                       remote_sign_cert_path);
 
   return EXIT_SUCCESS;
 }
@@ -213,96 +342,17 @@ int demo_ecdh_send_msg(int socket_fd, ECDHMessage * msg)
   return EXIT_SUCCESS;
 }
 
-int ecdh_load_local_sign_key(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
+/*****************************************************************************
+ * demo_ecdh_recv_client_hello_msg()
+ ****************************************************************************/
+int demo_ecdh_recv_client_hello_msg(ECDHPeer * ecdh_svr)
 {
-  // read  elliptic curve private signing key from file (.pem formatted)
-  BIO *priv_key_bio = BIO_new_file(ecdhopts->local_sign_key_path, "r");
+  int ret = -1;
 
-  if (priv_key_bio == NULL)
-  {
-    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhopts->local_sign_key_path);
-    return EXIT_FAILURE;
-  }
+  struct ECDHMessage *msg = &(ecdh_svr->session.proto.client_hello);
 
-  ecdhconn->local_sign_key = PEM_read_bio_PrivateKey(priv_key_bio,
-                                                     NULL,
-                                                     0,
-                                                     NULL);
-  BIO_free(priv_key_bio);
-  priv_key_bio = NULL;
-  if (!ecdhconn->local_sign_key)
-  {
-    kmyth_log(LOG_ERR, "elliptic curve key PEM file (%s) read failed",
-              ecdhopts->local_sign_key_path);
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "obtained local private signing key from file");
-
-  return EXIT_SUCCESS;
-}
-
-int ecdh_load_local_sign_cert(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
-{
-  // read  elliptic curve private signing key from file (.pem formatted)
-  BIO *cert_bio = BIO_new_file(ecdhopts->local_sign_cert_path, "r");
-
-  if (cert_bio == NULL)
-  {
-    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-              ecdhopts->local_sign_cert_path);
-    return EXIT_FAILURE;
-  }
-
-  ecdhconn->local_sign_cert = PEM_read_bio_X509(cert_bio, NULL, 0, NULL);
-  BIO_free(cert_bio);
-  cert_bio = NULL;
-  if (!ecdhconn->local_sign_cert)
-  {
-    kmyth_log(LOG_ERR, "elliptic curve X509 PEM file (%s) read failed",
-              ecdhopts->local_sign_cert_path);
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "obtained local signature certificate from file");
-  return EXIT_SUCCESS;
-}
-
-int ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn, ECDHNode * ecdhopts)
-{
-  // read remote certificate (X509) from file (.pem formatted)
-  X509 *client_cert = NULL;
-
-  BIO *pub_cert_bio = BIO_new_file(ecdhopts->remote_sign_cert_path, "r");
-
-  if (pub_cert_bio == NULL)
-  {
-    kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
-                       ecdhopts->remote_sign_cert_path);
-    return EXIT_FAILURE;
-  }
-
-  ecdhconn->remote_sign_cert = PEM_read_bio_X509(pub_cert_bio, NULL, 0, NULL);
-  BIO_free(pub_cert_bio);
-  pub_cert_bio = NULL;
-  if (ecdhconn->remote_sign_cert == NULL)
-  {
-    kmyth_log(LOG_ERR, "EC Certificate PEM file (%s) read failed",
-                       ecdhopts->remote_sign_cert_path);
-    return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "obtained remote certificate from file");
-
-  return EXIT_SUCCESS;
-}
-
-int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
-{
-  struct ECDHMessage *msg = &server->client_hello;
-
-  if (EXIT_SUCCESS != demo_ecdh_recv_msg(server->socket_fd, msg))
+  ret = demo_ecdh_recv_msg(ecdh_svr->session.session_socket_fd, msg);
+  if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "error receiving 'Client Hello' message");
     return EXIT_FAILURE;
@@ -316,9 +366,10 @@ int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
                       msg->hdr.msg_size);
 
   // validate 'Client Hello' message and parse out message fields
-  if (EXIT_SUCCESS != parse_client_hello_msg(msg,
-                                             server->remote_sign_cert,
-                                             &(server->remote_eph_pubkey)))
+  ret = parse_client_hello_msg(msg,
+                               ecdh_svr->config.remote_sign_cert,
+                               &(ecdh_svr->session.remote_eph_pubkey));
+  if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "'Client Hello' message parse/validate error");
     return EXIT_FAILURE;
@@ -329,88 +380,58 @@ int demo_ecdh_recv_client_hello_msg(ECDHPeer * server)
   return EXIT_SUCCESS;
 }
 
-int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdhconn)
+/*****************************************************************************
+ * demo_ecdh_send_server_hello_msg()
+ ****************************************************************************/
+int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdh_svr)
 {
   int ret = -1;
 
+  ECDHMessage *msg = &(ecdh_svr->session.proto.server_hello);
+
   // compose 'Server Hello' message
-  ret = compose_server_hello_msg(ecdhconn->local_sign_key,
-                                 ecdhconn->local_sign_cert,
-                                 ecdhconn->remote_eph_pubkey,
-                                 ecdhconn->local_eph_keypair,
-                                 &(ecdhconn->server_hello));
+  ret = compose_server_hello_msg(ecdh_svr->config.local_sign_key,
+                                 ecdh_svr->config.local_sign_cert,
+                                 ecdh_svr->session.remote_eph_pubkey,
+                                 ecdh_svr->session.local_eph_keypair,
+                                 msg);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to create 'Server Hello' message");
     return EXIT_FAILURE;
   }
 
-  ECDHMessage *svr_hello = &(ecdhconn->server_hello);
 
   kmyth_log(LOG_DEBUG, "composed 'Server Hello': %02x%02x ... %02x%02x "
                       "(%ld bytes)",
-                      svr_hello->body[0], svr_hello->body[1],
-                      svr_hello->body[svr_hello->hdr.msg_size - 2],
-                      svr_hello->body[svr_hello->hdr.msg_size - 1],
-                      svr_hello->hdr.msg_size);
+                      msg->body[0], msg->body[1],
+                      msg->body[msg->hdr.msg_size - 2],
+                      msg->body[msg->hdr.msg_size - 1],
+                      msg->hdr.msg_size);
 
   // send newly created 'Server Hello' message
-  ret = demo_ecdh_send_msg(ecdhconn->socket_fd, svr_hello);
+  ret = demo_ecdh_send_msg(ecdh_svr->session.session_socket_fd, msg);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_log(LOG_ERR, "failed to send 'Server Hello' message");
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "sent 'Server Hello' message to peer");
+
+  return EXIT_SUCCESS;
 }
 
-void ecdh_recv_key_request_msg(ECDHPeer * ecdhconn)
-{
-  struct ECDHMessage *msg = &ecdhconn->key_request;
-
-  int ret;
-
-  kmyth_log(LOG_DEBUG, "waiting for 'Key Request' message");
-
-  if (EXIT_SUCCESS != demo_ecdh_recv_msg(ecdhconn->socket_fd, msg))
-  {
-    kmyth_log(LOG_ERR, "error receiving 'Key Request' message");
-    //return EXIT_FAILURE;
-  }
-
-  kmyth_log(LOG_DEBUG, "received 'Key Request' (CT): %02X%02X ... %02X%02X"
-                       " (%d bytes)",
-                       msg->body[0], msg->body[1],
-                       msg->body[msg->hdr.msg_size-2],
-                       msg->body[msg->hdr.msg_size-1],
-                       msg->hdr.msg_size);
-
-  // decrypt, validate message, and parse out 'Key Request' fields
-  if (EXIT_SUCCESS != parse_key_request_msg(ecdhconn->remote_sign_cert,
-                                            &(ecdhconn->request_session_key),
-                                            msg,
-                                            ecdhconn->local_eph_keypair,
-                                            &(ecdhconn->kmip_request)))
-  {
-    kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
-    demo_ecdh_error(ecdhconn);
-  }
-  kmyth_log(LOG_DEBUG, "KMIP Get Key Request: 0x%02X%02X...%02X%02X"
-            " (%ld bytes)", (ecdhconn->kmip_request.buffer)[0],
-            (ecdhconn->kmip_request.buffer)[1],
-            (ecdhconn->kmip_request.buffer)[ecdhconn->kmip_request.size - 2],
-            (ecdhconn->kmip_request.buffer)[ecdhconn->kmip_request.size - 1],
-            ecdhconn->kmip_request.size);
-}
-
-int ecdh_get_session_key(ECDHPeer * ecdhconn)
+/*****************************************************************************
+ * demo_ecdh_get_session_key()
+ ****************************************************************************/
+int demo_ecdh_get_session_key(ECDHPeer * ecdh_svr)
 {
   int ret = -1;
 
-  ByteBuffer *secret = &(ecdhconn->session_secret);
+  ByteBuffer *secret = &(ecdh_svr->session.shared_secret);
 
-  ret = compute_ecdh_shared_secret(ecdhconn->local_eph_keypair,
-                                   ecdhconn->remote_eph_pubkey,
+  ret = compute_ecdh_shared_secret(ecdh_svr->session.local_eph_keypair,
+                                   ecdh_svr->session.remote_eph_pubkey,
                                    &(secret->buffer),
                                    &(secret->size));
   if (ret != EXIT_SUCCESS)
@@ -419,21 +440,24 @@ int ecdh_get_session_key(ECDHPeer * ecdhconn)
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "session secret: 0x%02X%02X...%02X%02X (%d bytes)",
-            secret->buffer[0], secret->buffer[1],
-            secret->buffer[secret->size - 2], secret->buffer[secret->size - 1],
-            secret->size);
+                       secret->buffer[0], secret->buffer[1],
+                       secret->buffer[secret->size - 2],
+                       secret->buffer[secret->size - 1],
+                       secret->size);
 
   // generate two session key results for ECDH key agreement (server side)
   // by passing 'shared secret' through a HMAC key derivation function (HKDF)
-  ByteBuffer *req_skey = &(ecdhconn->request_session_key);
-  ByteBuffer *resp_skey = &(ecdhconn->response_session_key);
+  ECDHMessage *chello_msg = &(ecdh_svr->session.proto.client_hello);
+  ECDHMessage *shello_msg = &(ecdh_svr->session.proto.server_hello);
+  ByteBuffer *req_skey = &(ecdh_svr->session.request_symkey);
+  ByteBuffer *resp_skey = &(ecdh_svr->session.response_symkey);
 
   ret = compute_ecdh_session_key(secret->buffer,
                                  secret->size,
-                                 ecdhconn->client_hello.body,
-                                 ecdhconn->client_hello.hdr.msg_size,
-                                 ecdhconn->server_hello.body,
-                                 ecdhconn->server_hello.hdr.msg_size,
+                                 chello_msg->body,
+                                 chello_msg->hdr.msg_size,
+                                 shello_msg->body,
+                                 shello_msg->hdr.msg_size,
                                  &(req_skey->buffer),
                                  &(req_skey->size),
                                  &(resp_skey->buffer),
@@ -444,16 +468,64 @@ int ecdh_get_session_key(ECDHPeer * ecdhconn)
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "'Key Request' key: 0x%02X%02X...%02X%02X (%ld bytes)",
-            req_skey->buffer[0], req_skey->buffer[1],
-            req_skey->buffer[req_skey->size - 2],
-            req_skey->buffer[req_skey->size - 1],
-            req_skey->size);
+                       req_skey->buffer[0], req_skey->buffer[1],
+                       req_skey->buffer[req_skey->size - 2],
+                       req_skey->buffer[req_skey->size - 1],
+                       req_skey->size);
 
   kmyth_log(LOG_DEBUG, "'Key Response' key: 0x%02X%02X...%02X%02X (%ld bytes)",
-            resp_skey->buffer[0], resp_skey->buffer[1],
-            resp_skey->buffer[resp_skey->size - 2],
-            resp_skey->buffer[resp_skey->size - 1],
-            resp_skey->size);
+                       resp_skey->buffer[0], resp_skey->buffer[1],
+                       resp_skey->buffer[resp_skey->size - 2],
+                       resp_skey->buffer[resp_skey->size - 1],
+                       resp_skey->size);
 
+  return EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+ * demo_ecdh_recv_key_request_msg()
+ ****************************************************************************/
+int demo_ecdh_recv_key_request_msg(ECDHPeer * ecdh_svr)
+{
+  int ret = -1;
+
+  struct ECDHMessage *msg = &(ecdh_svr->session.proto.key_request);
+
+  kmyth_log(LOG_DEBUG, "waiting for 'Key Request' message");
+
+  ret = demo_ecdh_recv_msg(ecdh_svr->session.session_socket_fd, msg);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "error receiving 'Key Request' message");
+    return EXIT_FAILURE;
+  }
+
+  kmyth_log(LOG_DEBUG, "received 'Key Request' (CT): %02X%02X ... %02X%02X"
+                       " (%d bytes)",
+                       msg->body[0], msg->body[1],
+                       msg->body[msg->hdr.msg_size-2],
+                       msg->body[msg->hdr.msg_size-1],
+                       msg->hdr.msg_size);
+
+  // decrypt, validate message, and parse out 'Key Request' fields
+  ByteBuffer *kmip_req = &(ecdh_svr->session.proto.kmip_request);
+
+  ret = parse_key_request_msg(ecdh_svr->config.remote_sign_cert,
+                              &(ecdh_svr->session.request_symkey),
+                              msg,
+                              ecdh_svr->session.local_eph_keypair,
+                              kmip_req);
+  if (ret != EXIT_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "validation/parsing of 'Key Request' failed");
+    return EXIT_FAILURE;
+  }
+  kmyth_log(LOG_DEBUG, "KMIP Get Key Request: 0x%02X%02X...%02X%02X"
+            " (%ld bytes)",
+            (kmip_req->buffer)[0], (kmip_req->buffer)[1],
+            (kmip_req->buffer)[kmip_req->size - 2],
+            (kmip_req->buffer)[kmip_req->size - 1],
+            kmip_req->size);
+  
   return EXIT_SUCCESS;
 }
