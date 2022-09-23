@@ -142,19 +142,22 @@ extern "C"
  * @param[in]  msg2_in_len      Length (in bytes) of the input 'Server Hello'
  *                              message
  *
- * @param[out] key1_out_bytes   Pointer to HKDF output key bytes result (64 bytes,
- *                              512 bits) that will be used as the
- *                              concatenation resulting from the hash of the
- *                              input secret value. This result will be used
- *                              as a session key value.
+ * @param[out] key1_out_bytes   Pointer to first half (32 bytes, 256-bits) of
+ *                              the HKDF output key bytes result (64 bytes,
+ *                              512 bits). This result will be used as a
+ *                              session key value (first of two session keys).
  *
  * @param[out] key1_out_len     Pointer to the length (in bytes) of the
- *                              session key result.
+ *                              first session key result (should be 32 bytes).
  * 
- * @param[out] key2_out_bytes
- * 
- * @param[out] key2_out_len
+ * @param[out] key2_out_bytes   Pointer to second half (32 bytes, 256-bits) of
+ *                              the HKDF output key bytes result (64 bytes,
+ *                              512 bits). This result will be used as a
+ *                              session key value (second of two session keys).
  *
+ * @param[out] key2_out_len     Pointer to the length (in bytes) of the
+ *                              second session key result (should be 32 bytes).
+ * 
  * @return 0 on success, 1 on error
  */
   int compute_ecdh_session_key(unsigned char * secret_in_bytes,
@@ -172,22 +175,22 @@ extern "C"
  * @brief Generates a signature over the data in an input buffer passed
  *        in to the function, using a specified EC private key
  *
- * @param[in]  ec_sign_pkey       Pointer to EC_KEY containing an elliptic
- *                                curve private key to be used for signing
+ * @param[in]  ec_sign_pkey    Pointer to EC_KEY containing an elliptic
+ *                             curve private key to be used for signing
  *
- * @param[in]  buf_in             Input buffer (pointer to byte array)
- *                                containing data to be signed
+ * @param[in]  buf_in          Input buffer (pointer to byte array)
+ *                             containing data to be signed
  *
- * @param[in]  buf_in_len         Length (in bytes) of input data buffer
+ * @param[in]  buf_in_len      Length (in bytes) of input data buffer
  *
- * @param[out] signature_out      Pointer to byte array that will hold the
- *                                signature computed by this function. A NULL
- *                                pointer must be passed in. This function
- *                                will allocate memory for and then populate
- *                                this buffer.
+ * @param[out] sig_out         Pointer to byte array that will hold the
+ *                             signature computed by this function. A NULL
+ *                             pointer must be passed in. This function
+ *                             will allocate memory for and then populate
+ *                             this buffer.
  *
- * @param[out] signature_out_len  Pointer to the length (in bytes) of the
- *                                output signature
+ * @param[out] sig_out_len     Pointer to the length (in bytes) of the
+ *                             output signature
  *
  * @return 0 on success, 1 on error
  */
@@ -201,21 +204,21 @@ extern "C"
  * @brief Validates a signature over the data in an input buffer passed
  *        in to the function, using a specified EC private key
  *
- * @param[in]  ec_sign_pkey       Pointer to EC_KEY containing an elliptic
- *                                curve public key to be used for signature
- *                                verification.
+ * @param[in]  ec_verify_pkey    Pointer to EC_KEY containing an elliptic
+ *                               curve public key to be used for signature
+ *                               verification.
  *
- * @param[in]  buf_in             Input buffer (pointer to byte array)
- *                                containing the data over which
- *                                the signature was computed.
+ * @param[in]  buf_in            Input buffer (pointer to byte array)
+ *                               containing the data over which
+ *                               the signature was computed.
  *
- * @param[in]  buf_in_len         Length (in bytes) of input data buffer
+ * @param[in]  buf_in_len        Length (in bytes) of input data buffer
  *
- * @param[in]  signature_out      Pointer to byte array that holds the
- *                                signature to be verified.
+ * @param[in]  sig_out           Pointer to byte array that holds the
+ *                               signature to be verified.
  *
- * @param[in]  signature_out_len  Pointer to the length (in bytes) of the
- *                                signature buffer
+ * @param[in]  sig_out_len       Pointer to the length (in bytes) of the
+ *                               signature buffer
  *
  * @return 0 on success (signature verification passed),
  *         1 on error (signature verification failed)

@@ -139,19 +139,37 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        A two-byte (big-endian) unsigned integer message length field is
  *        prepended to the front of the message
  * 
- * @param[in]  client_sign_key
+ * @param[in]  client_sign_key     Pointer to private elliptic curve (EC) key,
+ *                                 packaged in an EVP_PKEY struct, that
+ *                                 will be used by the ECDH client to sign
+ *                                 the 'Client Hello' message composed by
+ *                                 this function.
  * 
- * @param[in]  client_sign_cert
+ * @param[in]  client_sign_cert    Pointer to public X509 struct containing the
+ *                                 certificate that is paired with the ECDH
+ *                                 client's signing key. This is used to obtain
+ *                                 client identity information that is included
+ *                                 as part of the 'Client Hello' message
+ *                                 composed by this function.
  * 
- * @param[in]  client_eph_keypair
+ * @param[in]  client_eph_pubkey   Pointer to EVP_PKEY struct containing the
+ *                                 ephemeral elliptic curve public key
+ *                                 generated for this retrieve key protocol
+ *                                 session by the ECDH client. The public key
+ *                                 is extracted, DER formatted, and
+ *                                 incorporated into the 'Client Hello'
+ *                                 message composed by this function.
  * 
- * @param[out] msg_out
+ * @param[out] msg_out             Pointer to an ECDHMessage struct that the
+ *                                 'Client Hello' message result of this
+ *                                 function can be placed into and 'returned'
+ *                                 for use by the caller.
  * 
  * @return 0 on success, 1 on error
  */
   int compose_client_hello_msg(EVP_PKEY * client_sign_key,
                                X509 * client_sign_cert,
-                               EVP_PKEY * client_eph_keypair,
+                               EVP_PKEY * client_eph_pubkey,
                                ECDHMessage * msg_out);
 
 /**
@@ -183,11 +201,21 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        Finally, some sanity checks are performed on thethe received
  *        ephemeral public key (using EC_KEY_check_key())
  * 
- * @param[in]  msg_in
+ * @param[in]  msg_in              Pointer to ECDHMessage struct containing
+ *                                 the 'Client Hello' message to be parsed
+ *                                 and validated.
  * 
- * @param[in]  client_sign_cert
+ * @param[in]  client_sign_cert    Pointer to X509 struct containing the
+ *                                 ECDH client's signing certificate. The
+ *                                 public key contained in this certificate
+ *                                 is needed to validate the 'Client Hello'
+ *                                 message signature.
  * 
- * @param[out] client_eph_pubkey
+ * @param[out] client_eph_pubkey   Pointer to pointer to EVP_PKEY struct that
+ *                                 this function places the parsed ephemeral
+ *                                 public key contribution of the ECDH client
+ *                                 that is shared in the 'Client Hello'
+ *                                 message and needed for ECDH key agreement.
  * 
  * @return 0 on success, 1 on error
  */
@@ -220,15 +248,38 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        is computed over the message body and appended to the tail end
  *        of the message.
  * 
- * @param[in]  server_sign_key
+ * @param[in]  server_sign_key     Pointer to private elliptic curve (EC) key,
+ *                                 packaged in an EVP_PKEY struct, that
+ *                                 will be used by the ECDH server-side peer
+ *                                 to sign the 'Server Hello' message composed
+ *                                 by this function.
  * 
- * @param[in]  server_sign_cert
+ * @param[in]  server_sign_cert    Pointer to public X509 struct containing
+ *                                 the certificate that is paired with the
+ *                                 ECDH server-side peer's signing key. This
+ *                                 is used to obtain the server identity
+ *                                 information that is included as part of
+ *                                 the 'Server Hello' message composed by
+ *                                 this function.
  * 
- * @param[in]  client_eph_pubkey
+ * @param[in]  client_eph_pubkey   Pointer to EVP_PKEY struct containing the
+ *                                 ephemeral elliptic curve public key that
+ *                                 was produced for this retrieve key protocol
+ *                                 session and shared with the server-side
+ *                                 peer in a preceding 'Client Hello' message.
  * 
- * @param[in]  server_eph_keypair
+ * @param[in]  server_eph_pubkey   Pointer to EVP_PKEY struct containing the
+ *                                 ephemeral elliptic curve public key
+ *                                 generated for this retrieve key protocol
+ *                                 session by the ECDH server-side peer. The
+ *                                 public key is extracted, DER formatted,
+ *                                 and incorporated into the 'Server Hello'
+ *                                 message composed by this function.
  * 
- * @param[out] msg_out
+ * @param[out] msg_out             Pointer to an ECDHMessage struct that the
+ *                                 'Server Hello' message result of this
+ *                                 function can be placed into and 'returned'
+ *                                 for use by the caller.
  *
  * @return 0 on success, 1 on error
  */
@@ -263,14 +314,32 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        and the contents of the message fields are placed in the
  *        appropriate output parameters.
  * 
- * @param[in]  msg_in
+ * @param[in]  msg_in              Pointer to ECDHMessage struct containing
+ *                                 the 'Server Hello' message to be parsed
+ *                                 and validated.
  * 
- * @param[in]  server_sign_cert
+ * @param[in]  server_sign_cert    Pointer to X509 struct containing the
+ *                                 ECDH server-side peer's signing
+ *                                 certificate. The public key contained in
+ *                                 this certificate is needed to validate the
+ *                                 'Server Hello' message signature.
  * 
- * @param[in]  client_eph_keypair
+ * @param[in]  client_eph_keypair  Pointer to EVP_PKEY struct containing the
+ *                                 ephemeral elliptic curve key pair generated
+ *                                 for this retrieve key protocol session by
+ *                                 the ECDH client. The public key portion is
+ *                                 extracted and used to validate the client
+ *                                 ephemeral contribution value included in
+ *                                 the 'Server Hello' message being parsed and
+ *                                 validated by this function.
  * 
- * @param[out] server_eph_pubkey
- *
+ * @param[out] server_eph_pubkey   Pointer to pointer to EVP_PKEY struct that
+ *                                 this function places the parsed ephemeral
+ *                                 public key contribution of the ECDH
+ *                                 server-side peer that is shared in the
+ *                                 'Server Hello' message and needed for ECDH
+ *                                 key agreement.
+ * 
  * @return 0 on success, 1 on error
  */
   int parse_server_hello_msg(ECDHMessage * msg_in,
@@ -302,18 +371,35 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        is computed over the message body and appended to the tail end
  *        of the message (as a length/value pair).
  * 
- * @param[in]  client_sign_key      Pointer to client's elliptic curve
- *                                  signing key (EVP_PKEY)
+ * @param[in]  client_sign_key     Pointer to ECDH client's elliptic curve
+ *                                 signing key (EVP_PKEY). This key is used
+ *                                 by this function to sign the 'Key Request'
+ *                                 message it composes.
  * 
- * @param[in]  msg_enc_key
+ * @param[in]  msg_enc_key         Pointer to ByteBuffer struct containing
+ *                                 a 32-byte, 256-bit symmetric message
+ *                                 encryption key that this function will
+ *                                 use to encrypt its 'Key Request' message
+ *                                 result.
  * 
- * @param[in]  req_key_id
+ * @param[in]  req_key_id          Pointer to ByteBuffer struct containing
+ *                                 the KMIP key identifier for the key being
+ *                                 requested from the server-side peer in
+ *                                 the 'Key Request' message composed by
+ *                                 this function. It is used to produce a
+ *                                 KMIP 'get key' request that is
+ *                                 incorporated into the 'Key Request'
+ *                                 message result.
  * 
- * @param[in]  server_eph_pubkey    Pointer to public key from the client's
- *                                  public epehemeral contribution (EVP_PKEY)
- *                                  received in the 'Client Hello' message
+ * @param[in]  server_eph_pubkey   Pointer to public key from the server-side
+ *                                 peer's public epehemeral contribution
+ *                                 (EVP_PKEY) received in the preceding
+ *                                 'Server Hello' message.
  * 
- * @param[out] msg_out
+ * @param[out] msg_out             Pointer to an ECDHMessage struct that the
+ *                                 'Key Request' message result of this
+ *                                 function can be placed into and 'returned'
+ *                                 for use by the caller.
  *
  * @return 0 on success, 1 on error
  */
@@ -338,26 +424,51 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The elliptic curve signature (over the body of the message) is first
  *        verified (using the public key provided as an input parameter)
  * 
- * @param[in]  client_sign_cert      Pointer to X509 formatted public cert
- *                                   to be used in validating the signature
- *                                   computed over the received "Key Request'
- *                                   message
+ * @param[in]  client_sign_cert    Pointer to X509 formatted public cert
+ *                                 (paired with the ECDH client signing key)
+ *                                 to be used in validating the signature
+ *                                 computed over the received 'Key Request'
+ *                                 message
  * 
- * @param[in]  msg_enc_key
+ * @param[in]  msg_dec_key         Pointer to ByteBuffer struct containing
+ *                                 a 32-byte, 256-bit symmetric message
+ *                                 encryption key that this function will
+ *                                 use to decrypt the input 'Key Request'
+ *                                 message.
  * 
- * @param[in]  msg_in
+ * @param[out] msg_in              Pointer to an ECDHMessage struct that
+ *                                 contains an input 'Key Request' message
+ *                                 to be decrypted, parsed, and validated by
+ *                                 this function.
  * 
- * @param[in]  server_eph_pubkey
- *
- * @param[out] kmip_key_req          Pointer to ByteBuffer struct containing
+ * @param[in]  server_eph_pubkey   Pointer to EVP_PKEY struct containing the
+ *                                 ephemeral elliptic curve public key
+ *                                 contribution generated for this retrieve
+ *                                 key protocol session by the ECDH
+ *                                 server-side peer. The public key is
+ *                                 extracted and used to validate the server
+ *                                 ephemeral contribution value included in
+ *                                 the 'Key Request' message being parsed and
+ *                                 validated by this function.
+ * 
+ * @param[out] server_eph_pubkey   Pointer to pointer to EVP_PKEY struct that
+ *                                 public key contribution of the ECDH
+ *                                 server-side peer that is shared in the
+ *                                 'Server Hello' message and needed for ECDH
+ *                                 key agreement.
+ * 
+ * @param[out] kmip_request        Pointer to ByteBuffer struct where this
+ *                                 function places the parsed KMIP 'get key'
+ *                                 request, used to specify which key is to
+ *                                 retrieved.
  *
  * @return 0 on success, 1 on error
  */
   int parse_key_request_msg(X509 * client_sign_cert,
-                           ByteBuffer * msg_enc_key,
+                           ByteBuffer * msg_dec_key,
                            ECDHMessage * msg_in,
                            EVP_PKEY * server_eph_pubkey,
-                           ByteBuffer * kmip_key_req);
+                           ByteBuffer * kmip_request);
 
 /**
  * @brief Assembles the 'Key Response' message, a signed, encrypted
@@ -378,13 +489,28 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        is computed over the message body and appended to the tail end
  *        of the message (as a length/value pair).
  * 
- * @param[in]  server_sign_key
+ * @param[in]  server_sign_key     Pointer to private elliptic curve (EC) key,
+ *                                 packaged in an EVP_PKEY struct, that
+ *                                 will be used by the ECDH server-side peer
+ *                                 to sign the 'Key Response' message composed
+ *                                 by this function.
  * 
- * @param[in]  msg_enc_key
+ * @param[in]  msg_enc_key         Pointer to ByteBuffer struct containing
+ *                                 a 32-byte, 256-bit symmetric message
+ *                                 encryption key that this function will
+ *                                 use to encrypt its 'Key Response' message
+ *                                 result.
  * 
- * @param[in]  kmip_response
+ * @param[out] kmip_response       Pointer to ByteBuffer struct that contains
+ *                                 the KMIP 'get key' response to be
+ *                                 incorporated into the 'Key Response'
+ *                                 message and returned to the ECDH client
+ *                                 that initiated the retrieve key protocol.
  * 
- * @param[out] msg_out
+ * @param[out] msg_out             Pointer to an ECDHMessage struct that the
+ *                                 'Key Response' message result of this
+ *                                 function can be placed into and 'returned'
+ *                                 for use by the caller.
  *
  * @return 0 on success, 1 on error
  */
@@ -406,15 +532,34 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The elliptic curve signature (over the body of the message) is first
  *        verified (using the public key provided as an input parameter)
  * 
- * @param[in]  server_sign_cert         Pointer to X509 formatted public
- *                                      certificate to be used in validating
- *                                      the signature computed over the
- *                                      'Key Response' message being parsed
+ * @param[in]  server_sign_cert    Pointer to X509 formatted public
+ *                                 certificate paired to the server-side
+ *                                 signing key, to be used in validating
+ *                                 the signature computed over the
+ *                                 'Key Response' message being parsed
  * 
- * @param[in]  msg_dec_key
+ * @param[in]  msg_dec_key         Pointer to ByteBuffer struct containing
+ *                                 a 32-byte, 256-bit symmetric message
+ *                                 encryption key that this function will
+ *                                 use to decrypt the input 'Key Request'
+ *                                 message.
+ * 
+ * @param[out] msg_in              Pointer to an ECDHMessage struct that
+ *                                 contains an input 'Key Response' message
+ *                                 to be decrypted, parsed, and validated by
+ *                                 this function.
+ * 
+ * @param[out] kmip_key            Pointer to ByteBuffer struct that this
+ *                                 function places the parsed KMIP 'get key'
+ *                                 request, used to specify which key is to
+ *                                 retrieved.
  *
- * @param[in]  msg_in
- *                                     
+ * @param[out] kmip_response       Pointer to ByteBuffer struct where this
+ *                                 function places the parsed KMIP 'get key'
+ *                                 response, which contains the key value
+ *                                 result that the retrieve key protocol's
+ *                                 objective is to get from a remote server.
+ *
  * @param[out] kmip_response
  *
  * @return 0 on success, 1 on error

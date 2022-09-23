@@ -98,7 +98,7 @@ int append_msg_signature(EVP_PKEY * sign_key,
  ****************************************************************************/
 int compose_client_hello_msg(EVP_PKEY * client_sign_key,
                              X509 * client_sign_cert,
-                             EVP_PKEY * client_eph_keypair,
+                             EVP_PKEY * client_eph_pubkey,
                              ECDHMessage * msg_out)
 {
   // extract client (enclave) ID (subject name) bytes from cert
@@ -138,7 +138,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
   
-  EC_KEY *client_eph_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_keypair);
+  EC_KEY *client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
   if (client_eph_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting EC_KEY from EVP_PKEY struct");
@@ -146,7 +146,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
     return EXIT_FAILURE;
   } 
   
-  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_pubkey,
+  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &client_eph_pubkey_bytes,
                                          NULL);
@@ -157,7 +157,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(client_eph_pubkey);
+  EC_KEY_free(client_eph_ec_pubkey);
 
   // allocate memory for 'Client Hello' message body byte array
   //  - Client ID size (two-byte unsigned integer)
@@ -383,7 +383,7 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
 int compose_server_hello_msg(EVP_PKEY * server_sign_key,
                              X509 * server_sign_cert,
                              EVP_PKEY * client_eph_pubkey,
-                             EVP_PKEY * server_eph_keypair,
+                             EVP_PKEY * server_eph_pubkey,
                              ECDHMessage * msg_out)
 {
   // extract server (TLS proxy) ID (subject name) bytes from cert
@@ -443,7 +443,7 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   size_t server_eph_pubkey_len = 0;
 
   EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_keypair);
+  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_pubkey);
   server_eph_pubkey_len = EC_KEY_key2buf(server_eph_ec_pubkey,
                                          POINT_CONVERSION_UNCOMPRESSED,
                                          &server_eph_pubkey_bytes,
@@ -527,7 +527,7 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
  ****************************************************************************/
 int parse_server_hello_msg(ECDHMessage * msg_in,
                            X509 * server_sign_cert,
-                           EVP_PKEY * client_eph_keypair,
+                           EVP_PKEY * client_eph_pubkey,
                            EVP_PKEY ** server_eph_pubkey)
 {
   // parse message body fields into variables
@@ -691,7 +691,7 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   // check received client ephemeral public matches expected value
   kmyth_sgx_log(LOG_DEBUG, "before client ephemeral public key check");
   if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_client_eph_pub,
-                        (const EVP_PKEY *) client_eph_keypair))
+                        (const EVP_PKEY *) client_eph_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "client ephemeral public mismatch");
     free(server_eph_pub_bytes);
@@ -871,16 +871,16 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
  * parse_key_request_msg()
  ****************************************************************************/
 int parse_key_request_msg(X509 * client_sign_cert,
-                          ByteBuffer * msg_enc_key,
+                          ByteBuffer * msg_dec_key,
                           ECDHMessage * msg_in,
                           EVP_PKEY * server_eph_pubkey,
-                          ByteBuffer * kmip_key_req)
+                          ByteBuffer * kmip_request)
 {
   // decrypt message using input message encryption key
   ECDHMessage pt_msg = { { 0 }, NULL };
 
-  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_enc_key->buffer,
-                                      msg_enc_key->size,
+  if (EXIT_SUCCESS != aes_gcm_decrypt(msg_dec_key->buffer,
+                                      msg_dec_key->size,
                                       msg_in->body,
                                       msg_in->hdr.msg_size,
                                       &(pt_msg.body),
@@ -898,14 +898,14 @@ int parse_key_request_msg(X509 * client_sign_cert,
   int buf_index = 0;
 
   // get size (in bytes) of KMIP 'get key' request field
-  kmip_key_req->size = pt_msg.body[buf_index] << 8;
-  kmip_key_req->size += pt_msg.body[buf_index+1];
+  kmip_request->size = pt_msg.body[buf_index] << 8;
+  kmip_request->size += pt_msg.body[buf_index+1];
   buf_index += 2;
 
   // get KMIP 'get key' request bytes
-  kmip_key_req->buffer = malloc(kmip_key_req->size);
-  memcpy(kmip_key_req->buffer, pt_msg.body+buf_index, kmip_key_req->size);
-  buf_index += kmip_key_req->size;
+  kmip_request->buffer = malloc(kmip_request->size);
+  memcpy(kmip_request->buffer, pt_msg.body+buf_index, kmip_request->size);
+  buf_index += kmip_request->size;
 
   // get size of server-side ephemeral public key field
   uint16_t server_eph_pub_len = pt_msg.body[buf_index] << 8;
