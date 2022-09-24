@@ -162,7 +162,7 @@ void demo_kmip_server_setup(DemoServer *server)
   server->tlsconn.ctx = ctx;
 
   // configure TLS context
-  if (EXIT_SUCCESS != tls_config_ctx(&server->tlsconn))
+  if (EXIT_SUCCESS != demo_tls_config_ctx(&server->tlsconn))
   {
     kmyth_log(LOG_ERR, "failed to configure TLS context");
     demo_kmip_server_error(server);

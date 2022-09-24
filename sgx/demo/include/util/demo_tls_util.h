@@ -72,11 +72,51 @@ typedef struct TLSPeer
   BIO *bio;
 } TLSPeer;
 
-void tls_init(TLSPeer * tlsconn, bool clientMode);
+/**
+ * @brief Initializes TLS 'node' with the client/server role specified by
+ *        the caller.
+ *
+ * @param[in]  clientMode   Boolean value used to specify whether the TLS
+ *                          'node' is participating in the role of a client
+ *                          (clientMode = true) or server (clientMode = false)
+ *
+ * @param[out] tlsconn      Pointer to TLSPeer struct being configured
+ * 
+ * @return none
+ */
+void demo_tls_init(bool clientMode, TLSPeer * tlsconn);
 
-void tls_get_verify_error(TLSPeer * tlsconn);
+/**
+ * @brief Cleans up memory resources and resets TLS 'node' configuration/state
+ *
+ * @param[out] tlsconn      Pointer to TLSPeer struct being 'cleaned up'
+ * 
+ * @return none
+ */
+void demo_tls_cleanup(TLSPeer * tlsconn);
 
-int tls_config_ctx(TLSPeer * tlsconn);
+/**
+ * @brief Logs more detailed TLS error information using the OpenSSL
+ *        SSL_get_verify_result() utility
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing SSL BIO
+ *                       pointer to be used for the SSL_get_verify_result()
+ *                       call.
+ * 
+ * @return none
+ */
+void demo_tls_get_verify_error(TLSPeer * tlsconn);
+
+/**
+ * @brief Configures the OpenSSL TLS context (SSL_CTX)
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the pointer
+ *                       to the SSL_CTX struct to be configured.
+ * 
+ * @return none
+ */
+int demo_tls_config_ctx(TLSPeer * tlsconn);
+
 int tls_config_client_connect(TLSPeer * tlsconn);
 int tls_config_server_accept(TLSPeer * tlsconn);
 int tls_client_connect(TLSPeer * tlsconn);

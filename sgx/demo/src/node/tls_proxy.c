@@ -11,37 +11,46 @@
 
 #define NUM_POLL_FDS 2
 
+/*****************************************************************************
+ * proxy_init()
+ ****************************************************************************/
 void proxy_init(TLSProxy * proxy)
 {
+  // start from a blank (all zero) state
   secure_memset(proxy, 0, sizeof(TLSProxy));
 
+  // initialize ECDH interface as a server
   demo_ecdh_init(false, &(proxy->ecdhconn));
 
-  tls_init(&(proxy->tlsconn), true);
+  // initialize proxy's TLS interface as a client
+  demo_tls_init(true, &(proxy->tlsconn));
 }
 
+/*****************************************************************************
+ * proxy_cleanup()
+ ****************************************************************************/
 void proxy_cleanup(TLSProxy * proxy)
 {
   demo_ecdh_cleanup(&(proxy->ecdhconn));
-  if (proxy->tlsconn.bio != NULL)
-  {
-    BIO_free_all(proxy->tlsconn.bio);
-  }
 
-  if (proxy->tlsconn.ctx != NULL)
-  {
-    SSL_CTX_free(proxy->tlsconn.ctx);
-  }
+  demo_tls_cleanup(&(proxy->tlsconn));
 
   proxy_init(proxy);
 }
 
+/*****************************************************************************
+ * proxy_error()
+ ****************************************************************************/
 void proxy_error(TLSProxy * proxy)
 {
   proxy_cleanup(proxy);
+
   exit(EXIT_FAILURE);
 }
 
+/*****************************************************************************
+ * proxy_usage()
+ ****************************************************************************/
 static void proxy_usage(const char *prog)
 {
   fprintf(stdout,
@@ -64,6 +73,9 @@ static void proxy_usage(const char *prog)
     "  -h or --help     Help (displays this usage).\n\n", prog);
 }
 
+/*****************************************************************************
+ * proxy_get_options()
+ ****************************************************************************/
 static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 {
   int ret = -1;
@@ -150,6 +162,9 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
   }
 }
 
+/*****************************************************************************
+ * proxy_check_options()
+ ****************************************************************************/
 void proxy_check_options(TLSProxy * proxy)
 {
   demo_ecdh_check_options(&(proxy->ecdhconn.config));
@@ -173,11 +188,14 @@ void proxy_check_options(TLSProxy * proxy)
   }
 }
 
+/*****************************************************************************
+ * proxy_create_tls_client()
+ ****************************************************************************/
 int proxy_create_tls_client(TLSProxy * proxy)
 {
   TLSPeer *tls_clnt = &(proxy->tlsconn);
 
-  if (tls_config_ctx(tls_clnt))
+  if (demo_tls_config_ctx(tls_clnt))
   {
     kmyth_log(LOG_ERR, "failed to configure TLS context");
     return EXIT_FAILURE;
@@ -192,6 +210,9 @@ int proxy_create_tls_client(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
+/*****************************************************************************
+ * proxy_create_ecdh_server()
+ ****************************************************************************/
 int proxy_create_ecdh_server(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
@@ -236,6 +257,9 @@ int proxy_create_ecdh_server(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
+/*****************************************************************************
+ * proxy_setup_ecdh_session()
+ ****************************************************************************/
 int proxy_setup_ecdh_session(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
@@ -276,6 +300,9 @@ int proxy_setup_ecdh_session(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
+/*****************************************************************************
+ * proxy_get_client_key_request()
+ ****************************************************************************/
 int proxy_get_client_key_request(TLSProxy * proxy)
 {
   int ret = -1;
@@ -370,6 +397,9 @@ int proxy_get_kmip_response(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
+/*****************************************************************************
+ * proxy_send_key_response_message()
+ ****************************************************************************/
 int proxy_send_key_response_message(TLSProxy * proxy)
 {
   int ret = -1;
@@ -409,11 +439,18 @@ int proxy_send_key_response_message(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-void cleanup_defunct() {
+/*****************************************************************************
+ * proxy_cleanup_defunct()
+ ****************************************************************************/
+void proxy_cleanup_defunct()
+{
   /* Clean up all defunct child processes. */
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
+/*****************************************************************************
+ * proxy_handle_session()
+ ****************************************************************************/
 void proxy_handle_session(TLSProxy * proxy)
 {
   struct pollfd pfds[NUM_POLL_FDS];
@@ -502,6 +539,9 @@ void proxy_handle_session(TLSProxy * proxy)
   }
 }
 
+/*****************************************************************************
+ * proxy_manage_ecdh_client_connections()
+ ****************************************************************************/
 int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
@@ -510,7 +550,7 @@ int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
   int session_count = 0;
 
   // Register handler to automatically reap defunct child processes
-  signal(SIGCHLD, cleanup_defunct);
+  signal(SIGCHLD, proxy_cleanup_defunct);
 
   while (true)
   {
@@ -561,6 +601,9 @@ int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
   }
 }
 
+/*****************************************************************************
+ * main()
+ ****************************************************************************/
 int main(int argc, char **argv)
 {
   TLSProxy proxy;

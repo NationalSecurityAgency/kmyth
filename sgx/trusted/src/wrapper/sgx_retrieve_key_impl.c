@@ -266,23 +266,25 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
     return EXIT_FAILURE;
   }
 
+  snprintf(lmsg, MAX_LOG_MSG_LEN, "received KMIP object with ID: %.*s "
+                                  "(length=%ld)", (int) *retrieved_key_id_len,
+                                  *retrieved_key_id, *retrieved_key_id_len);
+  kmyth_sgx_log(LOG_DEBUG, lmsg);
+
   if (*retrieved_key_id_len != req_key_id_len
       || memcmp(*retrieved_key_id, req_key_id, req_key_id_len))
   {
-    snprintf(lmsg, MAX_LOG_MSG_LEN, "*retrieved_key_id_len = %ld, req_key_id_len = %ld",
-             *retrieved_key_id_len, req_key_id_len);
-    kmyth_sgx_log(LOG_DEBUG, lmsg);
-    kmyth_sgx_log(LOG_ERR, "retrieved key ID does not match request");
+    snprintf(lmsg, MAX_LOG_MSG_LEN, "retrieved key ID size (%ld) mismatches "
+                                    "requested (%ld)",
+                                    *retrieved_key_id_len, req_key_id_len);
+    kmyth_sgx_log(LOG_ERR, lmsg);
     return EXIT_FAILURE;
   }
 
-  snprintf(lmsg, MAX_LOG_MSG_LEN, "Received a KMIP object with ID: %.*s",
-           (int) *retrieved_key_id_len, *retrieved_key_id);
-  kmyth_sgx_log(LOG_DEBUG, lmsg);
-
   snprintf(lmsg, MAX_LOG_MSG_LEN,
-           "Received KMIP object with key: 0x%02X..%02X (%ld bytes)",
-           (*retrieved_key)[0],
+           "Received KMIP object with key: 0x%02X%02X..%02X%02X (%ld bytes)",
+           (*retrieved_key)[0], (*retrieved_key)[1],
+           (*retrieved_key)[*retrieved_key_len - 2],
            (*retrieved_key)[*retrieved_key_len - 1],
            *retrieved_key_len);
   kmyth_sgx_log(LOG_DEBUG, lmsg);

@@ -6,13 +6,69 @@
 #include "demo_tls_util.h"
 
 
-void tls_init(TLSPeer * tlsconn, bool clientMode)
+/*****************************************************************************
+ * demo_tls_init()
+ ****************************************************************************/
+void demo_tls_init(bool clientMode, TLSPeer * tlsconn)
 {
   secure_memset(tlsconn, 0, sizeof(TLSPeer));
 
   tlsconn->isClient = clientMode;
 }
 
+/*****************************************************************************
+ * demo_tls_cleanup()
+ ****************************************************************************/
+void demo_tls_cleanup(TLSPeer * tlsconn)
+{
+  // clean up TLS BIO chains
+  if (tlsconn->bio != NULL)
+  {
+    BIO_free_all(tlsconn->bio);
+  }
+
+  // clean up TLS context
+  if (tlsconn->ctx != NULL)
+  {
+    SSL_CTX_free(tlsconn->ctx);
+  }
+
+  // clean up 'host' / 'IP' string for TLS interface
+  if (tlsconn->host != NULL)
+  {
+    free(tlsconn->host);
+  }
+
+  // clean up 'port' string for TLS interface
+  if (tlsconn->port != NULL)
+  {
+    free(tlsconn->port);
+  }
+
+  // clean up CA certificate file path string for TLS interface
+  if (tlsconn->ca_cert_path != NULL)
+  {
+    free(tlsconn->ca_cert_path);
+  }
+
+  // clean up local key file path string for TLS interface
+  if (tlsconn->local_key_path != NULL)
+  {
+    free(tlsconn->local_key_path);
+  }
+
+  // clean up local certificate file path string for TLS interface
+  if (tlsconn->local_cert_path != NULL)
+  {
+    free(tlsconn->local_cert_path);
+  }
+
+  demo_tls_init(false, tlsconn);
+}
+
+/*****************************************************************************
+ * demo_tls_get_verify_error()
+ ****************************************************************************/
 void tls_get_verify_error(TLSPeer * tlsconn)
 {
   SSL *ssl = NULL;
@@ -33,7 +89,10 @@ void tls_get_verify_error(TLSPeer * tlsconn)
   }
 }
 
-int tls_config_ctx(TLSPeer * tlsconn)
+/*****************************************************************************
+ * demo_tls_config_ctx()
+ ****************************************************************************/
+int demo_tls_config_ctx(TLSPeer * tlsconn)
 {
   SSL_load_error_strings();
   SSL_library_init();
