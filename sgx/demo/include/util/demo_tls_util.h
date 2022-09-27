@@ -117,9 +117,70 @@ void demo_tls_get_verify_error(TLSPeer * tlsconn);
  */
 int demo_tls_config_ctx(TLSPeer * tlsconn);
 
-int tls_config_client_connect(TLSPeer * tlsconn);
-int tls_config_server_accept(TLSPeer * tlsconn);
-int tls_client_connect(TLSPeer * tlsconn);
-int tls_server_accept(TLSPeer * tlsconn);
+/**
+ * @brief Configure a TLS client for connection to a server.
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS client to be configured.
+ * 
+ * @return none
+ */
+int demo_tls_config_client_connect(TLSPeer * tls_clnt);
+
+/**
+ * @brief Configure TLS server 'node' to accept connections from TLS client(s)
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS server to be configured.
+ * 
+ * @return none
+ */
+int demo_tls_config_server_accept(TLSPeer * tls_svr);
+
+/**
+ * @brief Connect a TLS client with a server.
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS client to be connected.
+ * 
+ * @return none
+ */
+int demo_tls_client_connect(TLSPeer * tls_clnt);
+
+/**
+ * @brief TLS server 'node' accepts client connection.
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS server to accept connection.
+ * 
+ * @return none
+ */
+int demo_tls_server_accept(TLSPeer * tls_svr);
+
+/**
+ * @brief TLS 'peer' receives a 'retrieve key' demo message.
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS peer receiving a message.
+ * 
+ * @return none
+ */
+int demo_tls_recv_msg(int socket_fd, TLSMessage * msg);
+
+/**
+ * @brief TLS 'peer' sends a 'retrieve key' demo message.
+ *
+ * @param[out] tlsconn   Pointer to TLSPeer struct containing the
+ *                       configuration and state information for
+ *                       the TLS peer sending a message.
+ * 
+ * @return none
+ */
+int demo_tls_send_msg(int socket_fd, TLSMessage * msg);
 
 #endif

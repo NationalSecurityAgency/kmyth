@@ -689,7 +689,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
 
   // check received client ephemeral public matches expected value
-  kmyth_sgx_log(LOG_DEBUG, "before client ephemeral public key check");
   if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_client_eph_pub,
                         (const EVP_PKEY *) client_eph_pubkey))
   {
@@ -698,7 +697,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
     EVP_PKEY_free(rcvd_client_eph_pub);
     return EXIT_FAILURE;
   }
-  kmyth_sgx_log(LOG_DEBUG, "client ephemeral public key check passed");
   EVP_PKEY_free(rcvd_client_eph_pub);
 
   // convert DER-formatted byte array to EC_KEY struct
@@ -1017,8 +1015,6 @@ int compose_key_response_msg(EVP_PKEY * server_sign_key,
                              ByteBuffer * kmip_response,
                              ECDHMessage * msg_out)
 {
-  kmyth_sgx_log(LOG_DEBUG, "composing 'Key Response' message");
-
   // allocate memory for 'Key Response' message body byte array
   //  - KMIP 'get key' response size (two-byte unsigned integer)
   //  - KMIP 'get key' response bytes (byte array)

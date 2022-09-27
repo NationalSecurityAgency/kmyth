@@ -130,7 +130,6 @@ int demo_tls_config_ctx(TLSPeer * tlsconn)
     log_openssl_error("SSL_CTX_new()");
     return -1;
   }
-  kmyth_log(LOG_DEBUG, "created new TLS context");
 
   // disable deprecated TLS versions
   if (1 != SSL_CTX_set_min_proto_version(tlsconn->ctx, TLS1_2_VERSION))
@@ -205,34 +204,37 @@ int demo_tls_config_ctx(TLSPeer * tlsconn)
   return 0;
 }
 
-int tls_config_client_connect(TLSPeer * tlsconn)
+/*****************************************************************************
+ * demo_tls_config_client_connect()
+ ****************************************************************************/
+int demo_tls_config_client_connect(TLSPeer * tls_clnt)
 {
   // verify that this configuration is correctly for a client connection
-  if (!tlsconn->isClient)
+  if (!tls_clnt->isClient)
   {
     kmyth_log(LOG_ERR, "client config inappropriate for server connection");
     return -1;
   }
 
   // creates new BIO chain of an SSL BIO followed by a connect BIO
-  tlsconn->bio = BIO_new_ssl_connect(tlsconn->ctx);
-  if (tlsconn->bio == NULL)
+  tls_clnt->bio = BIO_new_ssl_connect(tls_clnt->ctx);
+  if (tls_clnt->bio == NULL)
   {
     log_openssl_error("BIO_new_ssl_connect()");
     return -1;
   }
 
   // set the port number for the connection
-  if (1 != BIO_set_conn_port(tlsconn->bio, tlsconn->port))
+  if (1 != BIO_set_conn_port(tls_clnt->bio, tls_clnt->port))
   {
     log_openssl_error("BIO_set_conn_port()");
     return -1;
   }
 
   // for a TLS client, configure server hostname settings
-  if (tlsconn->isClient)
+  if (tls_clnt->isClient)
   {
-    if (1 != BIO_set_conn_hostname(tlsconn->bio, tlsconn->host))
+    if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->host))
     {
       log_openssl_error("BIO_set_conn_hostname()");
       return -1;
@@ -240,7 +242,7 @@ int tls_config_client_connect(TLSPeer * tlsconn)
 
     SSL *ssl = NULL;
 
-    BIO_get_ssl(tlsconn->bio, &ssl);  // internal pointer, not a new allocation
+    BIO_get_ssl(tls_clnt->bio, &ssl);  // internal pointer, not a new allocation
     if (ssl == NULL)
     {
       log_openssl_error("BIO_get_ssl()");
@@ -248,14 +250,14 @@ int tls_config_client_connect(TLSPeer * tlsconn)
     }
 
     /* set hostname for Server Name Indication. */
-    if (1 != SSL_set_tlsext_host_name(ssl, tlsconn->host))
+    if (1 != SSL_set_tlsext_host_name(ssl, tls_clnt->host))
     {
       log_openssl_error("SSL_set_tlsext_host_name()");
       return -1;
     }
 
     /* Set hostname for certificate verification. */
-    if (1 != SSL_set1_host(ssl, tlsconn->host))
+    if (1 != SSL_set1_host(ssl, tls_clnt->host))
     {
       log_openssl_error("SSL_set1_host()");
       return -1;
@@ -265,17 +267,20 @@ int tls_config_client_connect(TLSPeer * tlsconn)
   return 0;
 }
 
-int tls_config_server_accept(TLSPeer * tlsconn)
+/*****************************************************************************
+ * demo_tls_config_server_accept()
+ ****************************************************************************/
+int demo_tls_config_server_accept(TLSPeer * tls_svr)
 {
   // verify that this configuration is correctly for a client connection
-  if (tlsconn->isClient)
+  if (tls_svr->isClient)
   {
     kmyth_log(LOG_ERR, "server config inappropriate for client connection");
     return -1;
   }
 
   // setup new SSL BIO as server
-  BIO *sbio = BIO_new_ssl(tlsconn->ctx, 0);
+  BIO *sbio = BIO_new_ssl(tls_svr->ctx, 0);
   SSL *ssl = NULL;
   BIO_get_ssl(sbio, &ssl);
   if (ssl == NULL)
@@ -289,7 +294,7 @@ int tls_config_server_accept(TLSPeer * tlsconn)
   SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
   // creates new accept BIO to accept client connection to the server
-  BIO *abio = BIO_new_accept(tlsconn->port);
+  BIO *abio = BIO_new_accept(tls_svr->port);
   if (abio == NULL)
   {
     kmyth_log(LOG_ERR, "failed to create new accept BIO");
@@ -309,32 +314,38 @@ int tls_config_server_accept(TLSPeer * tlsconn)
   }
 
   // only want one connection so remove and free accept BIO 
-  tlsconn->bio = abio;
+  tls_svr->bio = abio;
 
   return 0;
 }
 
-int tls_client_connect(TLSPeer * tlsconn)
+/*****************************************************************************
+ * demo_tls_client_connect()
+ ****************************************************************************/
+int demo_tls_client_connect(TLSPeer * tls_clnt)
 {
-  if (1 != BIO_do_connect(tlsconn->bio))
+  if (1 != BIO_do_connect(tls_clnt->bio))
   {
     // both connection failures and certificate verification failures are caught here. */
     log_openssl_error("BIO_do_connect()");
-    tls_get_verify_error(tlsconn);
+    tls_get_verify_error(tls_clnt);
     return -1;
   }
 
   return 0;
 }
 
-int tls_server_accept(TLSPeer * tlsconn)
+/*****************************************************************************
+ * demo_tls_server_accept()
+ ****************************************************************************/
+int demo_tls_server_accept(TLSPeer * tls_svr)
 {
-  if (1 != BIO_do_accept(tlsconn->bio))
+  if (1 != BIO_do_accept(tls_svr->bio))
   {
     // Both connection and certificate verification failures caught here
     kmyth_log(LOG_ERR, "error accepting client connection");
     log_openssl_error("BIO_do_accept()");
-    tls_get_verify_error(tlsconn);
+    tls_get_verify_error(tls_svr);
     return -1;
   }
 

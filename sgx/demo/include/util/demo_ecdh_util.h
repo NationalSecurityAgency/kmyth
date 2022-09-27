@@ -89,8 +89,8 @@ typedef struct ECDHSession
 
 /**
  * @brief This struct consolidates complete (overall) state information
- *        required for a participant 'node' (i.e., peer) to complete the
- *        kmyth 'retrieve key' protocol.
+ *        required for an ECDH connection participant 'node' (i.e., peer)
+ *        to complete the kmyth 'retrieve key' protocol.
  */
 typedef struct ECDHPeer
 {

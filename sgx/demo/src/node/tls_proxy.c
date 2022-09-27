@@ -14,7 +14,7 @@
 /*****************************************************************************
  * proxy_init()
  ****************************************************************************/
-void proxy_init(TLSProxy * proxy)
+static void proxy_init(TLSProxy * proxy)
 {
   // start from a blank (all zero) state
   secure_memset(proxy, 0, sizeof(TLSProxy));
@@ -29,7 +29,7 @@ void proxy_init(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_cleanup()
  ****************************************************************************/
-void proxy_cleanup(TLSProxy * proxy)
+static void proxy_cleanup(TLSProxy * proxy)
 {
   demo_ecdh_cleanup(&(proxy->ecdhconn));
 
@@ -41,7 +41,7 @@ void proxy_cleanup(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_error()
  ****************************************************************************/
-void proxy_error(TLSProxy * proxy)
+static void proxy_error(TLSProxy * proxy)
 {
   proxy_cleanup(proxy);
 
@@ -79,8 +79,6 @@ static void proxy_usage(const char *prog)
 static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 {
   int ret = -1;
-
-  kmyth_log(LOG_DEBUG, "proxy_get_options()");
 
   // Exit early if there are no arguments.
   if (1 == argc)
@@ -130,23 +128,23 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       break;
     // ECDH Connection
     case 'p':
-      proxy->ecdhconn.config.port = optarg;
+      proxy->ecdhconn.config.port = strdup(optarg);
       break;
     // TLS Connection
     case 'I':
-      proxy->tlsconn.host = optarg;
+      proxy->tlsconn.host = strdup(optarg);
       break;
     case 'P':
-      proxy->tlsconn.port = optarg;
+      proxy->tlsconn.port = strdup(optarg);
       break;
     case 'C':
-      proxy->tlsconn.ca_cert_path = optarg;
+      proxy->tlsconn.ca_cert_path = strdup(optarg);
       break;
     case 'R':
-      proxy->tlsconn.local_key_path = optarg;
+      proxy->tlsconn.local_key_path = strdup(optarg);
       break;
     case 'U':
-      proxy->tlsconn.local_cert_path = optarg;
+      proxy->tlsconn.local_cert_path = strdup(optarg);
       break;
     // Test
     case 'm':
@@ -165,7 +163,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
 /*****************************************************************************
  * proxy_check_options()
  ****************************************************************************/
-void proxy_check_options(TLSProxy * proxy)
+static void proxy_check_options(TLSProxy * proxy)
 {
   demo_ecdh_check_options(&(proxy->ecdhconn.config));
 
@@ -191,7 +189,7 @@ void proxy_check_options(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_create_tls_client()
  ****************************************************************************/
-int proxy_create_tls_client(TLSProxy * proxy)
+static int proxy_create_tls_client(TLSProxy * proxy)
 {
   TLSPeer *tls_clnt = &(proxy->tlsconn);
 
@@ -201,7 +199,7 @@ int proxy_create_tls_client(TLSProxy * proxy)
     return EXIT_FAILURE;
   }
 
-  if (tls_config_client_connect(tls_clnt))
+  if (demo_tls_config_client_connect(tls_clnt))
   {
     kmyth_log(LOG_ERR, "failed to configure TLS client connection");
     return EXIT_FAILURE;
@@ -213,7 +211,7 @@ int proxy_create_tls_client(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_create_ecdh_server()
  ****************************************************************************/
-int proxy_create_ecdh_server(TLSProxy * proxy)
+static int proxy_create_ecdh_server(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   ECDHConfig *ecdhopts = &(proxy->ecdhconn.config);
@@ -260,7 +258,7 @@ int proxy_create_ecdh_server(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_setup_ecdh_session()
  ****************************************************************************/
-int proxy_setup_ecdh_session(TLSProxy * proxy)
+static int proxy_setup_ecdh_session(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   int ret = -1;
@@ -303,7 +301,7 @@ int proxy_setup_ecdh_session(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_get_client_key_request()
  ****************************************************************************/
-int proxy_get_client_key_request(TLSProxy * proxy)
+static int proxy_get_client_key_request(TLSProxy * proxy)
 {
   int ret = -1;
 
@@ -323,12 +321,15 @@ int proxy_get_client_key_request(TLSProxy * proxy)
   return EXIT_SUCCESS;
 }
 
-int proxy_get_kmip_response(TLSProxy * proxy)
+/*****************************************************************************
+ * proxy_get_kmip_response()
+ ****************************************************************************/
+static int proxy_get_kmip_response(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   TLSPeer *tls_clnt = &(proxy->tlsconn);
 
-  if (tls_client_connect(tls_clnt))
+  if (demo_tls_client_connect(tls_clnt))
   {
     kmyth_log(LOG_ERR, "TLS connection failed");
     return EXIT_FAILURE;
@@ -362,8 +363,6 @@ int proxy_get_kmip_response(TLSProxy * proxy)
   ByteBuffer *kmip_resp = &(ecdh_svr->session.proto.kmip_response);
   unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE];
 
-  kmyth_log(LOG_DEBUG, "getting KMIP response from server");
-
   num_bytes = BIO_read(tls_clnt->bio, buf, sizeof(tls_hdr));
   if (num_bytes != sizeof(tls_hdr))
   {
@@ -392,7 +391,11 @@ int proxy_get_kmip_response(TLSProxy * proxy)
     kmyth_log(LOG_ERR, "TLS read error");
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "Received %zu bytes on TLS connection", num_bytes);
+  kmyth_log(LOG_DEBUG, "Received KMIP response: 0x%02X%02X ... %02X%02X "
+                       "(%zu bytes)",
+                       kmip_resp->buffer[0], kmip_resp->buffer[1],
+                       kmip_resp->buffer[num_bytes - 2],
+                       kmip_resp->buffer[num_bytes - 1], num_bytes);
 
   return EXIT_SUCCESS;
 }
@@ -400,7 +403,7 @@ int proxy_get_kmip_response(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_send_key_response_message()
  ****************************************************************************/
-int proxy_send_key_response_message(TLSProxy * proxy)
+static int proxy_send_key_response_message(TLSProxy * proxy)
 {
   int ret = -1;
 
@@ -442,7 +445,7 @@ int proxy_send_key_response_message(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_cleanup_defunct()
  ****************************************************************************/
-void proxy_cleanup_defunct()
+static void proxy_cleanup_defunct()
 {
   /* Clean up all defunct child processes. */
   while (waitpid(-1, NULL, WNOHANG) > 0);
@@ -451,7 +454,7 @@ void proxy_cleanup_defunct()
 /*****************************************************************************
  * proxy_handle_session()
  ****************************************************************************/
-void proxy_handle_session(TLSProxy * proxy)
+static void proxy_handle_session(TLSProxy * proxy)
 {
   struct pollfd pfds[NUM_POLL_FDS];
 
@@ -542,7 +545,7 @@ void proxy_handle_session(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_manage_ecdh_client_connections()
  ****************************************************************************/
-int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
+static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   ECDHSession *clnt_conn = &(ecdh_svr->session);
@@ -619,12 +622,9 @@ int main(int argc, char **argv)
 
   proxy_init(&proxy);
 
-  kmyth_log(LOG_DEBUG, "parsing/validating options ...");
-
+  // apply and validate command-line options
   proxy_get_options(&proxy, argc, argv);
   proxy_check_options(&proxy);
-
-  kmyth_log(LOG_DEBUG, "completed option configuration/validation ...");
 
   // setup proxy's TLS client interface
   if (EXIT_SUCCESS != proxy_create_tls_client(&proxy))
@@ -633,16 +633,12 @@ int main(int argc, char **argv)
     proxy_error(&proxy);
   }
 
-  kmyth_log(LOG_DEBUG, "setup TLS client interface ...");
-
   // setup proxy's ECDH server interface
   if (EXIT_SUCCESS != proxy_create_ecdh_server(&proxy))
   {
     kmyth_log(LOG_ERR, "failed to setup proxy's ECDH server interface");
     proxy_error(&proxy);
   }
-
-  kmyth_log(LOG_DEBUG, "setup ECDH server interface ...");
 
   // accept connections from ECDH client(s)
   if (EXIT_SUCCESS != proxy_manage_ecdh_client_connections(&proxy))

@@ -12,6 +12,15 @@
 
 #include <kmyth/kmyth_log.h>
 
+/**
+ * @brief Simple utility that prints more detailed error information for calls
+ *        using the OpenSSL library API.
+ *
+ * @param[in]  label   String to use as a 'label' that precedes the log
+ *                     message produced by this function.
+ * 
+ * @return none
+ */
 void log_openssl_error(const char* const label);
 
 #endif    // _KMYTH_DEMO_MISC_UTIL_H_

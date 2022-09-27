@@ -119,8 +119,6 @@ int demo_ecdh_check_options(ECDHConfig * ecdhopts)
 {
   bool err = false;
 
-  kmyth_log(LOG_DEBUG, "demo_ecdh_check_options()");
-
   if (ecdhopts->local_sign_key == NULL)
   {
     fprintf(stderr, "local signature key path argument (-r) is required\n");
