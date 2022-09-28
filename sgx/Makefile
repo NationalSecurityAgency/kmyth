@@ -86,7 +86,7 @@ Test_App_Name := test/bin/kmyth_enclave_tests
 Demo_App_Name := demo/bin/kmyth_sgx_retrieve_key_demo
 
 Test_App_Source_Files := test/app/kmyth_sgx_test.c \
-	                     untrusted/src/wrapper/sgx_seal_unseal_impl.c
+                         untrusted/src/wrapper/sgx_seal_unseal_impl.c
 
 Demo_App_Source_files := demo/src/app/kmyth_sgx_retrieve_key_demo.c
 
@@ -350,10 +350,10 @@ endif
 
 
 demo-test-keys-certs: demo/data/client_priv_test.pem \
-	                  demo/data/client_cert_test.pem \
-	                  demo/data/proxy_priv_test.pem  \
+                      demo/data/client_cert_test.pem \
+                      demo/data/proxy_priv_test.pem  \
                       demo/data/proxy_cert_test.pem  \
-	                  demo/data/server_priv_test.pem \
+                      demo/data/server_priv_test.pem \
                       demo/data/server_cert_test.pem
 
 demo: demo-all demo-test-keys-certs
@@ -434,10 +434,10 @@ test/enclave/msg_util.o: untrusted/src/util/msg_util.c
 
 test/enclave/$(Test_Enclave_Name)_u.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
 	@cd test/enclave && $(SGX_EDGER8R) --untrusted $(Test_Enclave_Name).edl \
-                                      --search-path $(SGX_SDK)/include \
-                                      --search-path . \
-                                      --search-path ../../trusted \
-                                      --search-path $(SGX_SSL_INCLUDE_PATH)
+                                       --search-path $(SGX_SDK)/include \
+                                       --search-path . \
+                                       --search-path ../../trusted \
+                                       --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 test/enclave/$(Test_Enclave_Name)_u.o: test/enclave/$(Test_Enclave_Name)_u.c
@@ -445,16 +445,16 @@ test/enclave/$(Test_Enclave_Name)_u.o: test/enclave/$(Test_Enclave_Name)_u.c
 	@echo "CC   <=  $<"
 
 $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o \
-                                 test/enclave/ec_key_cert_marshal.o \
-                                 test/enclave/ec_key_cert_unmarshal.o \
-                                 test/enclave/ecdh_util.o \
-								 test/enclave/retrieve_key_protocol.o \
-								 test/enclave/msg_util.o \
-                                 test/enclave/protocol_ocall.o \
-                                 test/enclave/memory_ocall.o \
-                                 test/enclave/log_ocall.o
+                                           test/enclave/ec_key_cert_marshal.o \
+                                           test/enclave/ec_key_cert_unmarshal.o \
+                                           test/enclave/ecdh_util.o \
+                                           test/enclave/retrieve_key_protocol.o \
+                                           test/enclave/msg_util.o \
+                                           test/enclave/protocol_ocall.o \
+                                           test/enclave/memory_ocall.o \
+                                           test/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Test_App_Cpp_Flags) $(Test_App_Link_Flags) \
-	                                  -Lenclave -lcrypto -lcunit
+	                                       -Lenclave -lcrypto -lcunit
 	@echo "LINK =>  $@"
 
 
@@ -500,8 +500,8 @@ $(Demo_App_Name): demo/obj/kmyth_sgx_retrieve_key_demo.o \
                   demo/enclave/ec_key_cert_marshal.o \
                   demo/enclave/ec_key_cert_unmarshal.o \
                   demo/enclave/ecdh_util.o \
-				  demo/enclave/retrieve_key_protocol.o \
-			      demo/enclave/msg_util.o \
+                  demo/enclave/retrieve_key_protocol.o \
+                  demo/enclave/msg_util.o \
                   demo/enclave/protocol_ocall.o \
                   demo/enclave/memory_ocall.o \
                   demo/enclave/log_ocall.o 
@@ -520,27 +520,27 @@ demo/obj/%.o: demo/src/util/%.c
 
 $(Server_Name): demo/obj/demo_kmip_server.o \
                 demo/obj/demo_ecdh_util.o \
-				demo/obj/demo_tls_util.o \
-				demo/obj/demo_misc_util.o \
+                demo/obj/demo_tls_util.o \
+                demo/obj/demo_misc_util.o \
                 demo/enclave/ec_key_cert_marshal.o \
-				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/msg_util.o \
+                demo/enclave/ec_key_cert_unmarshal.o \
+                demo/enclave/msg_util.o \
                 demo/enclave/ecdh_util.o \
-				demo/enclave/retrieve_key_protocol.o \
+                demo/enclave/retrieve_key_protocol.o \
                 demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
-$(Proxy_Name):  demo/obj/tls_proxy.o \
-                demo/obj/demo_ecdh_util.o \
-                demo/obj/demo_tls_util.o \
-				demo/obj/demo_misc_util.o \
-                demo/enclave/ec_key_cert_marshal.o \
-				demo/enclave/ec_key_cert_unmarshal.o \
-				demo/enclave/msg_util.o \
-                demo/enclave/ecdh_util.o \
-				demo/enclave/retrieve_key_protocol.o \
-                demo/enclave/log_ocall.o
+$(Proxy_Name): demo/obj/tls_proxy.o \
+               demo/obj/demo_ecdh_util.o \
+               demo/obj/demo_tls_util.o \
+               demo/obj/demo_misc_util.o \
+               demo/enclave/ec_key_cert_marshal.o \
+               demo/enclave/ec_key_cert_unmarshal.o \
+               demo/enclave/msg_util.o \
+               demo/enclave/ecdh_util.o \
+               demo/enclave/retrieve_key_protocol.o \
+               demo/enclave/log_ocall.o
 	@$(CXX) $^ -o $@ $(Demo_App_C_Flags) $(Demo_App_Link_Flags) -lssl
 	@echo "LINK =>  $@"
 
@@ -548,10 +548,10 @@ $(Proxy_Name):  demo/obj/tls_proxy.o \
 
 test/enclave/$(Test_Enclave_Name)_t.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
 	@cd test/enclave && $(SGX_EDGER8R) --trusted $(Test_Enclave_Name).edl \
-		                      --search-path $(SGX_SDK)/include \
-                                      --search-path . \
-				      --search-path ../../trusted \
-                                      --search-path $(SGX_SSL_INCLUDE_PATH)
+	                                   --search-path $(SGX_SDK)/include \
+	                                   --search-path . \
+	                                   --search-path ../../trusted \
+	                                   --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 test/enclave/$(Test_Enclave_Name)_t.o: test/enclave/$(Test_Enclave_Name)_t.c
@@ -598,27 +598,27 @@ test/enclave/kmip_util.o: ../src/protocol/kmip_util.c
 	@echo "CC   <=  $<"
 
 test/enclave/$(Test_Enclave_Lib): test/enclave/$(Test_Enclave_Name)_t.o \
-                        test/enclave/kmyth_sgx_test_trusted.o \
-                        test/enclave/ec_key_cert_marshal.o \
-                        test/enclave/ec_key_cert_unmarshal.o \
-                        test/enclave/ecdh_util.o \
-						test/enclave/retrieve_key_protocol.o \
-                        test/enclave/kmyth_enclave_memory_util.o \
-                        test/enclave/sgx_retrieve_key_impl.o \
-                        test/enclave/kmyth_enclave_seal.o \
-                        test/enclave/kmyth_enclave_unseal.o \
-                        test/enclave/kmyth_enclave_retrieve_key.o \
-                        test/enclave/aes_gcm.o \
-                        test/enclave/memory_util.o \
-                        test/enclave/kmip_util.o
+                                  test/enclave/kmyth_sgx_test_trusted.o \
+                                  test/enclave/ec_key_cert_marshal.o \
+                                  test/enclave/ec_key_cert_unmarshal.o \
+                                  test/enclave/ecdh_util.o \
+                                  test/enclave/retrieve_key_protocol.o \
+                                  test/enclave/kmyth_enclave_memory_util.o \
+                                  test/enclave/sgx_retrieve_key_impl.o \
+                                  test/enclave/kmyth_enclave_seal.o \
+                                  test/enclave/kmyth_enclave_unseal.o \
+                                  test/enclave/kmyth_enclave_retrieve_key.o \
+                                  test/enclave/aes_gcm.o \
+                                  test/enclave/memory_util.o \
+                                  test/enclave/kmip_util.o
 	@$(CXX) $^ -o $@ $(Test_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 test/enclave/$(Test_Signed_Enclave_Name): test/enclave/$(Test_Enclave_Lib) \
-                                $(Enclave_Signing_Key)
+                                          $(Enclave_Signing_Key)
 	@$(SGX_ENCLAVE_SIGNER) sign -key $(Enclave_Signing_Key) \
-		                    -enclave test/enclave/$(Test_Enclave_Lib) \
-		                    -out $@ \
+	                            -enclave test/enclave/$(Test_Enclave_Lib) \
+	                            -out $@ \
 	                            -config test/enclave/$(Test_Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
@@ -642,10 +642,10 @@ test-clean:
 
 demo/enclave/$(Demo_Enclave_Name)_t.c: $(SGX_EDGER8R) demo/enclave/$(Demo_Enclave_Name).edl
 	@cd demo/enclave && $(SGX_EDGER8R) --trusted $(Demo_Enclave_Name).edl \
-	                              --search-path $(SGX_SDK)/include \
-	                              --search-path . \
-	                              --search-path ../../trusted \
-	                              --search-path $(SGX_SSL_INCLUDE_PATH)
+	                                   --search-path $(SGX_SDK)/include \
+	                                   --search-path . \
+	                                   --search-path ../../trusted \
+	                                   --search-path $(SGX_SSL_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 demo/enclave/$(Demo_Enclave_Name)_t.o: demo/enclave/$(Demo_Enclave_Name)_t.c
@@ -690,13 +690,13 @@ demo/enclave/$(Demo_Enclave_Lib): demo/enclave/$(Demo_Enclave_Name)_t.o \
                                   demo/enclave/ec_key_cert_marshal.o \
                                   demo/enclave/ec_key_cert_unmarshal.o \
                                   demo/enclave/ecdh_util.o \
-						          demo/enclave/retrieve_key_protocol.o \
+                                  demo/enclave/retrieve_key_protocol.o \
                                   demo/enclave/kmyth_enclave_seal.o \
                                   demo/enclave/kmyth_enclave_unseal.o \
                                   demo/enclave/kmyth_enclave_retrieve_key.o \
                                   demo/enclave/aes_gcm.o \
                                   demo/enclave/memory_util.o \
-			                      demo/enclave/kmip_util.o
+                                  demo/enclave/kmip_util.o
 	@$(CXX) $^ -o $@ $(Demo_Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -729,4 +729,3 @@ demo-clean:
 clean:
 	make test-clean
 	make demo-clean
-
