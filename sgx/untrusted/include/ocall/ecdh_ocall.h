@@ -40,8 +40,6 @@ extern "C"
  * @param[in]  server_host                String IP address or hostname used to
  *                                        connect to the key server.
  *
- * @param[in]  server_host_len            Length (in bytes) of server_host string.
- *
  * @param[in]  server_port                TCP port number used to
  *                                        connect to the key server.
  *
@@ -51,7 +49,7 @@ extern "C"
  *
  * @return 0 on success, 1 on failure
  */
-  int setup_socket_ocall(const char *server_host, int server_host_len,
+  int setup_socket_ocall(const char *server_host,
                          int server_port, int *socket_fd);
 
 /**

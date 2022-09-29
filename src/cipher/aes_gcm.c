@@ -114,7 +114,7 @@ int aes_gcm_encrypt(unsigned char *key,
   }
 
   // verify that the resultant CT length matches the input PT length
-  if (ciphertext_len != inData_len)
+  if ((size_t) ciphertext_len != inData_len)
   {
     free(*outData);
     EVP_CIPHER_CTX_free(ctx);
@@ -188,7 +188,7 @@ int aes_gcm_decrypt(unsigned char *key,
   // variables to hold/accumulate length returned by EVP library calls
   //   - OpenSSL insists this be an int
   int len = 0;
-  int plaintext_len = 0;
+  size_t plaintext_len = 0;
 
   // initialize the cipher context to match cipher suite being used
   EVP_CIPHER_CTX *ctx;

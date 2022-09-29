@@ -33,7 +33,7 @@ int init_suite(void)
 {
   sgx_status_t retval;
 
-  retval = sgx_create_enclave(ENCLAVE_PATH, 0, NULL, NULL, &eid, NULL);
+  retval = sgx_create_enclave(ENCLAVE_PATH, SGX_DEBUG_FLAG, NULL, NULL, &eid, NULL);
   if (retval != SGX_SUCCESS)
   {
     return 1;
