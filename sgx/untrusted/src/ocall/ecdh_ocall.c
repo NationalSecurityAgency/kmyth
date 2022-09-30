@@ -13,7 +13,7 @@
 /*****************************************************************************
  * setup_socket_ocall()
  ****************************************************************************/
-int setup_socket_ocall(const char *server_host,
+int setup_socket_ocall(const char *server_host, int server_host_len,
                        int server_port, int *socket_fd)
 {
   *socket_fd = UNSET_FD;
@@ -23,8 +23,8 @@ int setup_socket_ocall(const char *server_host,
   snprintf(server_service, 6, "%d", server_port);
 
   // connect to server
-  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %d",
-            server_host, server_port);
+  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %.*s, port: %d",
+            server_host_len, server_host, server_port);
 
   if (setup_client_socket(server_host, server_service, socket_fd))
   {
