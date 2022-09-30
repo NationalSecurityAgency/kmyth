@@ -96,7 +96,7 @@ int kmyth_unsealed_data_table_cleanup(void)
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
-bool kmyth_unseal_into_enclave(uint32_t data_size, uint8_t * data,
+bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
                                uint64_t * handle)
 {
 
