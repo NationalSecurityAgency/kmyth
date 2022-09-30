@@ -23,8 +23,8 @@ int setup_socket_ocall(const char *server_host, int server_host_len,
   snprintf(server_service, 6, "%d", server_port);
 
   // connect to server
-  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %d",
-            server_host, server_port);
+  kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %.*s, port: %d",
+            server_host_len, server_host, server_port);
 
   if (setup_client_socket(server_host, server_service, socket_fd))
   {
@@ -67,7 +67,7 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
                         unsigned int *remote_eph_pub_signature_len,
                         int socket_fd)
 {
-  int num_bytes;
+  size_t num_bytes;
 
   kmyth_log(LOG_DEBUG, "Sending ephemeral public key.");
   num_bytes =
@@ -171,7 +171,7 @@ int ecdh_send_ocall(unsigned char *encrypted_msg,
                     size_t encrypted_msg_len,
                     int socket_fd)
 {
-  ssize_t write_result;
+  size_t write_result;
   struct ECDHMessageHeader header;
 
   kmyth_log(LOG_DEBUG, "Sending ecdh message.");
