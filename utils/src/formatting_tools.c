@@ -8,12 +8,14 @@
 #include "tpm2_interface.h"
 
 #include <string.h>
+#include <malloc.h>
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
 
 #include "defines.h"
+#include <stdio.h>
 
 //############################################################################
 // get_block_bytes()
@@ -325,25 +327,30 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
 {
   // substring to holds 2 hex values at a time
   char substr[3];
-
   substr[2] = '\0';
 
   size_t strlength = strlen(str);
 
   if (strlength != (size_t) (2 * KMYTH_DIGEST_SIZE) )
   {
+    kmyth_log(LOG_ERR, "invalid input string length ... exiting");
     return 1;
   }
 
   if (digest == NULL || digest->buffer == NULL )
   {
+    kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
     return 1;
   }
 
   // initializes buffer with all 0 hex values
   unsigned long ul;
   unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
-  if( expectedPolicyBuffer == NULL ) return 1;
+  if( expectedPolicyBuffer == NULL )
+  {
+    kmyth_log(LOG_ERR, "unable to reserve intermediate buffer ... exiting");
+    return 1;
+  }
 
   // iterates through each pair of hex values and fills the
   //  buffer with values indicated in the string
@@ -369,18 +376,36 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
   // points at the beginning, end of the address space
   // expected that this is safe to execute since the string_buf will be 2x+1 as long
   // as the TPM2B_DIGEST size.
+  //
+  //
+
+  if (string_buf == NULL)
+  {
+     kmyth_log(LOG_ERR, "NULL output buffer ... exiting");
+     return 1;
+  }
+  if (digest == NULL || digest->buffer == NULL)
+  {
+     kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
+     return 1;
+  }
+
+  // malloc_usable_size depends on malloc.h in glibc
+  if (2*digest->size+1 > malloc_usable_size( (void *) string_buf ))
+  {
+     kmyth_log(LOG_ERR, "insufficient space in output argument string_buf ... exiting");
+     return 1;
+  }
+
   char *ptr = string_buf;
-  char *string_buf_end = &string_buf[(digest->size * 2) + 1];
+  *ptr = '\0'; // start NULL and append
 
   for (size_t i = 0; i < digest->size; i++)
   {
-    if (ptr + 2 < string_buf_end)
-    {
-      // each iteration, sprintf fills string_buf with 2 hex characters
-      // followed by '\0'. sprintf returns 2, incrementing the pointer by 2.
-      // '\0' is overwritten unless it's the last iteration
-      ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) digest->buffer[i]);
-    }
+     // each iteration, sprintf fills string_buf with 2 hex characters
+     // followed by '\0'. sprintf returns 2, incrementing the pointer by 2.
+     // '\0' is overwritten unless it's the last iteration
+     ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) digest->buffer[i]);
   }
 
   return 0;
