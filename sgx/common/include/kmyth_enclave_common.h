@@ -57,7 +57,7 @@ extern "C"
   const int src_line = __LINE__;\
   int log_level = severity;\
   const char *log_msg = message;\
-  log_event_ocall(src_file, src_func, &src_line, &log_level, log_msg);\
+  log_event_ocall(src_file, src_func, src_line, log_level, log_msg);\
 }
 
 #include "ec_key_cert_marshal.h"

@@ -24,9 +24,9 @@ extern "C"
  *
  * @param[in] src_func         Function name string
  *
- * @param[in] src_line_ptr     Pointer to source code line number integer
+ * @param[in] src_line         Integer specifying source code line number
  *
- * @param[in] severity_ptr     Pointer to integer representing the severity
+ * @param[in] severity         Integer representing the severity
  *                             level of the event to be logged.
  *
  * @param[in] msg              String containing the message to be logged.
@@ -35,8 +35,8 @@ extern "C"
  */
   void log_event_ocall(const char *src_file,
                        const char *src_func,
-                       const int *src_line_ptr,
-                       int *severity_ptr,
+                       int src_line,
+                       int severity,
                        const char *msg);
 
 #ifdef __cplusplus

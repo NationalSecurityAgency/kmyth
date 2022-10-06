@@ -12,9 +12,9 @@
  ****************************************************************************/
 void log_event_ocall(const char *src_file,
                      const char *src_func,
-                     const int *src_line_ptr,
-                     int *severity_ptr,
+                     int src_line,
+                     int severity,
                      const char *msg)
 {
-  log_event(src_file, src_func, *src_line_ptr, *severity_ptr, msg);
+  log_event(src_file, src_func, src_line, severity, msg);
 }
