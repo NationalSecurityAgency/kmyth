@@ -117,7 +117,8 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  *remote_ephemeral_public = OPENSSL_zalloc(*remote_ephemeral_public_len);
+  *remote_ephemeral_public = calloc(*remote_ephemeral_public_len,
+                                    sizeof(unsigned char));
   if (*remote_ephemeral_public == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");
@@ -146,7 +147,8 @@ int ecdh_exchange_ocall(unsigned char *enclave_ephemeral_public,
     return EXIT_FAILURE;
   }
 
-  *remote_eph_pub_signature = OPENSSL_zalloc(*remote_eph_pub_signature_len);
+  *remote_eph_pub_signature = calloc(*remote_eph_pub_signature_len,
+                                     sizeof(unsigned char));
   if (*remote_eph_pub_signature == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the remote ephemeral public key.");
