@@ -2149,13 +2149,23 @@ void test_concat(void)
 //----------------------------------------------------------------------------
 void test_verifyConvertionStringDigest(void)
 {
-  char string[18] = "ThisIsATestString";
-  char *convertion_string;
-  TPM2B_DIGEST digest = { 0 };
-  TPM2B_DIGEST test_digest = { 0 };
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-  CU_ASSERT(convert_string_to_digest(string, &digest) == 0);
-  CU_ASSERT(convert_digest_to_string(digest, &convertion_string) == 0);
-  CU_ASSERT(strcmp(convertion_string, string) == 0);
+  init_tpm2_connection(&sapi_ctx);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+
+  TPM2B_DIGEST digest;
+  TPM2B_DIGEST test_digest;
+  char *string;
+
+  create_policy_digest(sapi_ctx, pcrs_struct, &digest);
+  CU_ASSERT(digest.size != 0);
+  string = (char *) malloc((digest.size *2) + 1);
+
+  CU_ASSERT(convert_digest_to_string(&digest, string) == 0);
+  CU_ASSERT(string != NULL);
+  CU_ASSERT(convert_string_to_digest(string, &test_digest) == 0);
+  CU_ASSERT(test_digest.size != 0);
+  free(string);
 }
 
