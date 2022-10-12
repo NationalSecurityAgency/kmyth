@@ -400,12 +400,11 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
               temp_handle);
 
     // Make the newly recreated SRK primary object persistent
-    TSS2_RC rc = Tss2_Sys_EvictControl(sapi_ctx,
-                                       TPM2_RH_OWNER,
-                                       temp_handle,
-                                       &createObjectCmdAuths,
-                                       object_dest_handle,
-                                       &createObjectRspAuths);
+    rc = Tss2_Sys_EvictControl(sapi_ctx,
+                               TPM2_RH_OWNER,
+                               temp_handle,
+                               &createObjectCmdAuths,
+                               object_dest_handle, &createObjectRspAuths);
 
     if (rc != TSS2_RC_SUCCESS)
     {
@@ -440,16 +439,6 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
       // If a non-NULL authorization session (indicating policy authorization)
       // was passed in, the object being created is a sealed data object
       //   - SK authorization is required for use of the SK to seal
-
-      // Apply policy to session context, in preparation for the "create" command
-      if (apply_policy(sapi_ctx,
-                       createObjectAuthSession->sessionHandle, parent_pcrList))
-      {
-        kmyth_log(LOG_ERR,
-                  "error applying policy to session context ... exiting");
-        return 1;
-      }
-
       // Obtain policy session digest
       TPM2B_DIGEST session_digest;
 
@@ -688,7 +677,7 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   // Tss2_Sys_Load() command. Loading an object into the TPM requires
   // authorization based on the criteria of the parent object that the new
   // object is being loaded under:
-  //   - If the object being loaded is a storage key (SK), as it is being 
+  //   - If the object being loaded is a storage key (SK), as it is being
   //     sealed to the SRK, password authorization using the owner hierarchy
   //     authorization (emptyAuth by default) is required.
   // Note: If password authorization is being used, the caller should pass
@@ -713,15 +702,6 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
     // If a non-NULL authorization session (indicating policy authorization)
     // was passed in, the object being loaded is a sealed data object
     //   - Storage Key (SK) auth is required to load it under the SK
-
-    // Apply policy to session context, in preparation for the "load" command
-    if (apply_policy(sapi_ctx,
-                     loadObjectAuthSession->sessionHandle, parent_pcrList))
-    {
-      kmyth_log(LOG_ERR, "apply policy to session context error ... exiting");
-      return 1;
-    }
-
     // Get policy session digest (hash)
     TPM2B_DIGEST session_digest;
 
@@ -857,6 +837,8 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * unsealObjectAuthSession,
                         TPM2_HANDLE object_handle,
                         TPM2B_AUTH object_auth,
+                        TPM2B_DIGEST policyBranch1,
+                        TPM2B_DIGEST policyBranch2,
                         TPML_PCR_SELECTION object_pcrList,
                         TPM2B_SENSITIVE_DATA * object_sensitive)
 {
@@ -888,8 +870,9 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   // PCR selection list (empty by default).
 
   // Apply policy to session context, in preparation for the "unseal" command
-  if (apply_policy(sapi_ctx,
-                   unsealObjectAuthSession->sessionHandle, object_pcrList))
+  if (unseal_apply_policy
+      (sapi_ctx, unsealObjectAuthSession->sessionHandle, object_pcrList,
+       policyBranch1, policyBranch2))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;

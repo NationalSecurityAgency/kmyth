@@ -128,17 +128,19 @@ static void usage(const char *prog)
   fprintf(stdout,
           "\nusage: %s [options] \n\n"
           "options are: \n\n"
-          " -a or --auth_string   String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
-          " -i or --input         Path to file containing the data to be sealed.\n"
-          " -o or --output        Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
-          " -f or --force         Force the overwrite of an existing .ski file when using default output.\n"
-          " -p or --pcrs_list     List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
-          "                       Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
-          " -c or --cipher        Specifies the cipher type to use. Defaults to \'%s\'\n"
-          " -l or --list_ciphers  Lists all valid ciphers and exits.\n"
-          " -w or --owner_auth    TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
-          " -v or --verbose       Enable detailed logging.\n"
-          " -h or --help          Help (displays this usage).\n", prog,
+          " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
+          " -i or --input           Path to file containing the data to be sealed.\n"
+          " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
+          " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
+          " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
+          "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
+          " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
+          " -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers \n"
+          " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
+          " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
+          " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
+          " -v or --verbose         Enable detailed logging.\n"
+          " -h or --help            Help (displays this usage).\n", prog,
           cipher_list[0].cipher_name);
 }
 
@@ -168,6 +170,8 @@ const struct option longopts[] = {
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
+  {"get_exp_policy", no_argument, 0, 'g'},
+  {"expected_policy", required_argument, 0, 'e'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
   {"list_ciphers", no_argument, 0, 'l'},
@@ -197,13 +201,15 @@ int main(int argc, char **argv)
   char *pcrsString = NULL;
   char *cipherString = NULL;
   bool forceOverwrite = false;
+  char *expected_policy = NULL;
+  uint8_t bool_trial_only = 0;
 
   // Parse and apply command line options
   int options;
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:i:o:c:p:w:fhlv", longopts,
+          getopt_long(argc, argv, "a:e:i:o:c:p:w:fghlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -230,6 +236,12 @@ int main(int argc, char **argv)
       break;
     case 'f':
       forceOverwrite = true;
+      break;
+    case 'g':
+      bool_trial_only = 1;
+      break;
+    case 'e':
+      expected_policy = optarg;
       break;
     case 'p':
       pcrsString = optarg;
@@ -342,7 +354,8 @@ int main(int argc, char **argv)
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, pcrs_len, cipherString))
+                           pcrs, pcrs_len, cipherString, expected_policy,
+                           bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);

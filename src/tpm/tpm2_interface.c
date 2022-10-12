@@ -386,7 +386,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // get_tpm2_impl_type()
 //############################################################################
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator)
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
 {
   TPMS_CAPABILITY_DATA capData;
 
@@ -922,31 +922,9 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   // declare a session structure variable for the trial policy session
   SESSION trialPolicySession;
 
-  // create an initial callerNonce
-  TPM2B_NONCE initialNonce;
-
-  initialNonce.size = KMYTH_DIGEST_SIZE;
-  create_caller_nonce(&initialNonce);
-
-  // initialize session state with "start-up" nonce values
-  //   - nonceNewer initialized to nonceCaller value just generated
-  //   - nonceOlder initialized to all-zero value of KMYTH_DIGEST_SIZE length
-  //   - nonceTPM initialized to empty nonce
-  trialPolicySession.nonceNewer.size = KMYTH_DIGEST_SIZE;
-  memset(trialPolicySession.nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
-  trialPolicySession.nonceOlder.size = KMYTH_DIGEST_SIZE;
-  if (rollNonces(&trialPolicySession, initialNonce))
+  if (create_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
-    return 1;
-  }
-  trialPolicySession.nonceTPM.size = 0;
-
-  // create (start) unbound, unsalted trial policy session
-  // consistent with the Kmyth authorization criteria
-  if (start_policy_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
-  {
-    kmyth_log(LOG_ERR, "start policy session error ... exiting");
+    kmyth_log(LOG_ERR, "error creating auth session ... exiting");
     return 1;
   }
 
@@ -992,15 +970,22 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// create_policy_auth_session
+// create_auth_session
 //############################################################################
-int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                               SESSION * policySession)
+int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * policySession, TPM2_SE session_type)
 {
   // create initial callerNonce
   TPM2B_NONCE initialNonce;
 
-  initialNonce.size = 0;        // start with empty nonce
+  if (session_type != TPM2_SE_POLICY)
+  {
+    initialNonce.size = KMYTH_DIGEST_SIZE;
+  }
+  else
+  {
+    initialNonce.size = 0;      // start with empty nonce
+  }
   create_caller_nonce(&initialNonce);
 
   // initialize session state with "start-up" nonce values
@@ -1009,6 +994,12 @@ int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   //   - nonceTPM initialized to empty nonce
   policySession->nonceNewer.size = KMYTH_DIGEST_SIZE;
   memset(policySession->nonceNewer.buffer, 0, KMYTH_DIGEST_SIZE);
+
+  if (session_type != TPM2_SE_POLICY)
+  {
+    policySession->nonceOlder.size = KMYTH_DIGEST_SIZE;
+  }
+
   if (rollNonces(policySession, initialNonce))
   {
     kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
@@ -1017,7 +1008,7 @@ int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   policySession->nonceTPM.size = 0;
 
   // initiate an unbound, unsalted policy session
-  if (start_policy_auth_session(sapi_ctx, policySession, TPM2_SE_POLICY))
+  if (start_policy_auth_session(sapi_ctx, policySession, session_type))
   {
     kmyth_log(LOG_ERR, "error starting policy session ... exiting");
     return 1;
@@ -1137,6 +1128,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     TPM2B_DIGEST pcrEmptyDigest;
 
     pcrEmptyDigest.size = 0;
+
     rc = Tss2_Sys_PolicyPCR(sapi_ctx,
                             policySessionHandle,
                             nullCmdAuths,
@@ -1150,6 +1142,69 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     }
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
   }
+  return 0;
+}
+
+//############################################################################
+// unseal_apply_policy()
+//############################################################################
+int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                        TPM2_HANDLE policySessionHandle,
+                        TPML_PCR_SELECTION policySession_pcrList,
+                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2)
+{
+
+  if (apply_policy(sapi_ctx, policySessionHandle, policySession_pcrList))
+  {
+    return 1;
+  }
+
+  TPML_DIGEST pHashList = {.count = 0 };
+  for (size_t i = 0; i < 8; i++)
+  {
+    pHashList.digests[i].size = 0;
+  }
+
+  if (policy1.size != 0 && policy2.size != 0)
+  {
+    apply_policy_or(sapi_ctx, policySessionHandle, &policy1, &policy2,
+                    &pHashList);
+  }
+  return 0;
+}
+
+//############################################################################
+// apply_policy_or()
+//############################################################################
+int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
+                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
+                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList)
+{
+  // Apply authorization value (AuthValue) policy command
+  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
+  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+
+  // initializing all digests to empty buffers
+  for (size_t i; i < 8; i++)
+  {
+    pHashList->digests[0].size = 0;
+  }
+
+  pHashList->count = 2;
+  pHashList->digests[0] = *policy1;
+  pHashList->digests[1] = *policy2;
+
+  TPM2_RC rc =
+    Tss2_Sys_PolicyOR(sapi_ctx, policySessionHandle, nullCmdAuths, pHashList,
+                      nullRspAuths);
+
+  if (rc != TPM2_RC_SUCCESS)
+  {
+    kmyth_log(LOG_ERR, "Tss2_Sys_PolicyOR(): rc = 0x%08X, %s", rc,
+              getErrorString(rc));
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "applied PCR policyOR to session context");
   return 0;
 }
 
