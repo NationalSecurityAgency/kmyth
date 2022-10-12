@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
 
+#include "tpm2_interface.h"
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
 #include "marshalling_tools.h"
@@ -154,6 +155,12 @@ int formatting_tools_add_tests(CU_pSuite suite)
   }
 
   if (NULL == CU_add_test(suite, "concat() Tests", test_concat))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "verifyConvertionStringDigest() Tests",
+                          test_verifyConvertionStringDigest))
   {
     return 1;
   }
@@ -1997,3 +2004,19 @@ void test_concat(void)
   CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
   free(dest);
 }
+
+//----------------------------------------------------------------------------
+// test_verifyConvertionStringDigest()
+//----------------------------------------------------------------------------
+void test_verifyConvertionStringDigest(void)
+{
+  char string[18] = "ThisIsATestString";
+  char *convertion_string;
+  TPM2B_DIGEST digest = { 0 };
+  TPM2B_DIGEST test_digest = { 0 };
+
+  CU_ASSERT(convert_string_to_digest(string, &digest) == 0);
+  CU_ASSERT(convert_digest_to_string(digest, &convertion_string) == 0);
+  CU_ASSERT(strcmp(convertion_string, string) == 0);
+}
+

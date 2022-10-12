@@ -156,6 +156,16 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   {
     return 1;
   }
+/*
+  if (NULL == CU_add_test(suite, "unseal_apply_policy() Tests", test_unseal_apply_policy))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
+  {
+    return 1;
+  }*/
 
   return 0;
 }
@@ -749,3 +759,41 @@ void test_rollNonces(void)
   CU_ASSERT(rollNonces(&session, new) != 0);
 
 }
+/*
+//----------------------------------------------------------------------------
+// test_unseal_apply_policy
+//----------------------------------------------------------------------------
+void test_unseal_apply_policy(void)
+{
+  SESSION session;
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  init_tpm2_connection(&sapi_ctx);
+
+  //Valid test
+  create_policy_auth_session(sapi_ctx, &session);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  CU_ASSERT(unseal_apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+  //NULL context
+  CU_ASSERT(unseal_apply_policy(NULL, session.sessionHandle, pcrs_struct) != 0);
+
+  //Invalid Handle
+  CU_ASSERT(unseal_apply_policy(sapi_ctx, 0, pcrs_struct) != 0);
+
+  //Multiple pcrs
+  int pcrs[2] = { };
+  pcrs[0] = 5;
+  pcrs[1] = 3;
+  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
+  CU_ASSERT(unseal_apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+  free_tpm2_resources(&sapi_ctx);
+}
+
+//----------------------------------------------------------------------------
+// test_apply_policy_or
+//----------------------------------------------------------------------------
+void test_apply_policy_or(void)
+{
+}*/
