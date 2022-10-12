@@ -652,8 +652,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   size_t wk64_priv_size = 0;
   uint8_t *enc64_data = NULL;
   size_t enc64_data_size = 0;
-  uint8_t *policy64_data = NULL;
-  size_t policy64_data_size = 0;
+  //uint8_t *policy64_data = NULL;
+  //size_t policy64_data_size = 0;
   uint8_t *p_branch_1_64_data = NULL;
   size_t p_branch_1_64_data_size = 0;
   uint8_t *p_branch_2_64_data = NULL;

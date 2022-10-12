@@ -12,12 +12,14 @@
 
 #include "defines.h"
 #include "file_io.h"
+#include "formatting_tools.h"
 #include "marshalling_tools.h"
 #include "memory_util.h"
 #include "object_tools.h"
 #include "pcrs.h"
 #include "storage_key_tools.h"
 #include "tpm2_interface.h"
+
 
 #include "cipher/cipher.h"
 
@@ -26,73 +28,6 @@
  *        cipher options (see src/util/kmyth_cipher.c)
  */
 extern const cipher_t cipher_list[];
-
-//############################################################################
-// convert_string_to_digest()
-//############################################################################
-static int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
-{
-  // substring to holds 2 hex values at a time
-  char substr[3];
-
-  substr[2] = '\0';
-
-  size_t strlength = strlen(str);
-
-  if (strlength != (size_t) 132)
-  {
-    return 1;
-  }
-  // initializes buffer with all 0 hex values
-  unsigned char expectedPolicyBuffer[132] = { 0x00 };
-  unsigned long ul;
-
-  // iterates through each pair of hex values and fills the
-  //  buffer with values indicated in the string
-  for (size_t i = 0; i < strlength; i += 2)
-  {
-    strncpy(substr, &str[i], 2);
-    ul = strtoul(substr, NULL, 16);
-    expectedPolicyBuffer[i / 2] = ul;
-  }
-
-  // converts the byte array into a TPM2B_DIGEST struct
-  memcpy(digest, expectedPolicyBuffer, sizeof(expectedPolicyBuffer));
-  return 0;
-}
-
-//############################################################################
-// convert_digest_to_string()
-//############################################################################
-static int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
-{
-  // total number of hex values in the TPM2B digest
-  size_t digest_size = (8 * sizeof(digest)) + 2;
-
-  char hex_buf[digest_size];
-
-  memcpy(hex_buf, digest, digest_size);
-
-  // points at the beginning of the address
-  char *ptr = string_buf;
-
-  // each hex number in the digest is 4 bits. digest_size is multiplied by 2
-  // since they will each be represented as byte chars. +1 for the null terminator
-  char *string_buf_end = &string_buf[(digest_size * 2) + 1];
-
-  for (size_t i = 0; i < digest_size; i++)
-  {
-    if (ptr + 2 < string_buf_end)
-    {
-      // each iteration, sprintf fills string_buf with 2 hex characters
-      // followed by '\0'. sprintf returns 2, incrementing the pointer by 2.
-      // '\0' is overwritten unless it's the last iteration
-      ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) hex_buf[i]);
-    }
-  }
-
-  return 0;
-}
 
 //############################################################################
 // tpm2_kmyth_seal()
@@ -223,10 +158,12 @@ int tpm2_kmyth_seal(uint8_t * input,
   // to be used to calculate a second policy for policyOR authorization
   if (bool_trial_only == 1)
   {
-    // size of string is 128 chars for the size of the TPM2B_DIGEST buffer + 4
+    // size of string is 2x chars for the size of the TPM2B_DIGEST buffer + 4
     // for TPM2B struct which encodes size in memory + 1 byte for null termination.
     // prints to the console and finishes the program without sealing
-    size_t string_size = (16 * sizeof(objAuthPolicy)) + 5;
+    // By using TPM2B_DIGEST size we're reserving a little bit more than needed but
+    // then the output_string can be reserved based on compile-time values.
+    size_t string_size = (2 * sizeof(TPM2B_DIGEST)) + 1;
     char output_string[string_size];
 
     convert_digest_to_string(&objAuthPolicy, output_string);

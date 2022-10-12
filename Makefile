@@ -285,6 +285,7 @@ LDFLAGS += -Wl,-rpath=lib#               runtime path for libkmyth-*.so
 .PHONY: all
 all: clean-backups \
      $(BIN_DIR)/kmyth-seal \
+     $(BIN_DIR)/kmyth-reseal \
      $(BIN_DIR)/kmyth-unseal \
      $(BIN_DIR)/kmyth-getkey \
      $(BIN_DIR)/nsl-client \
@@ -339,6 +340,17 @@ $(BIN_DIR)/kmyth-seal: $(MAIN_OBJ_DIR)/seal.o \
                        $(BIN_DIR)
 	$(CC) $(MAIN_OBJ_DIR)/seal.o \
 	      -o $(BIN_DIR)/kmyth-seal \
+	      $(LDFLAGS) \
+	      $(LDLIBS) \
+	      -lkmyth-utils \
+	      -lkmyth-logger \
+	      -lkmyth-tpm
+
+$(BIN_DIR)/kmyth-reseal: $(MAIN_OBJ_DIR)/reseal.o \
+                       $(LIB_DIR)/libkmyth-tpm.so | \
+                       $(BIN_DIR)
+	$(CC) $(MAIN_OBJ_DIR)/reseal.o \
+	      -o $(BIN_DIR)/kmyth-reseal \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lkmyth-utils \
@@ -589,6 +601,10 @@ ifeq ($(wildcard $(BIN_DIR)/kmyth-seal), $(BIN_DIR)/kmyth-seal)
 	install -d $(DESTDIR)$(PREFIX)/bin
 	install -m 755 $(BIN_DIR)/kmyth-seal $(DESTDIR)$(PREFIX)/bin/
 endif
+ifeq ($(wildcard $(BIN_DIR)/kmyth-reseal), $(BIN_DIR)/kmyth-reseal)
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN_DIR)/kmyth-reseal $(DESTDIR)$(PREFIX)/bin/
+endif
 ifeq ($(wildcard $(BIN_DIR)/kmyth-unseal), $(BIN_DIR)/kmyth-unseal)
 	install -d $(DESTDIR)$(PREFIX)/bin
 	install -m 755 $(BIN_DIR)/kmyth-unseal $(DESTDIR)$(PREFIX)/bin/
@@ -608,6 +624,7 @@ ifeq ($(wildcard $(DESTDIR)$(PREFIX)/include/kmyth/*.h),)
 	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
 endif
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-seal
+	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-reseal
 	rm -f $(DESTDIR)$(PREFIX)/bin/kmyth-unseal
 
 .PHONY: install-test-vectors
