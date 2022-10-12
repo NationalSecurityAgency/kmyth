@@ -113,5 +113,6 @@ void test_encodeBase64Data(void);
 void test_decodeBase64Data(void);
 void test_concat(void);
 void test_verifyConvertionStringDigest(void);
+void test_verifyPackUnpackDigest(void);
 
 #endif

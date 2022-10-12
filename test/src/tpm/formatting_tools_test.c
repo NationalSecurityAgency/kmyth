@@ -165,6 +165,12 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
+  if (NULL == CU_add_test(suite, "verifyPackUnpackDigest() Tests",
+                          test_verifyPackUnpackDigest))
+  {
+    return 1;
+  }
+
   return 0;
 }
 
@@ -2167,5 +2173,35 @@ void test_verifyConvertionStringDigest(void)
   CU_ASSERT(convert_string_to_digest(string, &test_digest) == 0);
   CU_ASSERT(test_digest.size != 0);
   free(string);
+}
+
+//----------------------------------------------------------------------------
+// test_verifyPackUnpackDigest()
+//----------------------------------------------------------------------------
+void test_verifyPackUnpackDigest(void)
+{
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  init_tpm2_connection(&sapi_ctx);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+
+  TPM2B_DIGEST digest;
+  TPM2B_DIGEST digest_out;
+
+  uint8_t * packed_data;
+  size_t packed_data_size = 0;
+  size_t packed_data_offset = 0;
+
+  create_policy_digest(sapi_ctx, pcrs_struct, &digest);
+  CU_ASSERT(digest.size != 0);
+
+  packed_data_size = (digest.size * 2) + 1;
+  packed_data = (uint8_t *) malloc(packed_data_size);
+
+  CU_ASSERT(pack_digest(&digest, packed_data, packed_data_size, packed_data_offset) == 0);
+  CU_ASSERT(packed_data != NULL);
+  CU_ASSERT(unpack_digest(&digest_out, packed_data, packed_data_size, packed_data_offset) == 0);
+  CU_ASSERT(digest_out.size != 0);
+  CU_ASSERT(digest_out.size = digest.size);
 }
 
