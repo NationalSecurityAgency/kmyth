@@ -126,8 +126,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     EC_KEY_free(client_ephemeral_keypair);
     free(client_ephemeral_pub);
     free(client_eph_pub_signature);
-    OPENSSL_free_ocall((void **) &server_ephemeral_pub);
-    OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    free_ocall((void **) &server_ephemeral_pub);
+    free_ocall((void **) &server_eph_pub_signature);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -149,8 +149,8 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
     kmyth_sgx_log(LOG_ERR, "client ephemeral 'public key' signature invalid");
     EVP_PKEY_free(server_sign_pubkey);
     EC_KEY_free(client_ephemeral_keypair);
-    OPENSSL_free_ocall((void **) &server_ephemeral_pub);
-    OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+    free_ocall((void **) &server_ephemeral_pub);
+    free_ocall((void **) &server_eph_pub_signature);
     close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
@@ -159,7 +159,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
 
   // done with signature verification of server contribution
   EVP_PKEY_free(server_sign_pubkey);
-  OPENSSL_free_ocall((void **) &server_eph_pub_signature);
+  free_ocall((void **) &server_eph_pub_signature);
 
   // convert server's ephemeral public octet string to an EC_POINT struct
   EC_POINT *server_ephemeral_pub_pt = NULL;
@@ -182,7 +182,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                 "reconstructed server ECDH ephemeral 'public key' point");
 
   // done with server_ephemeral_pub
-  OPENSSL_free_ocall((void **) &server_ephemeral_pub);
+  free_ocall((void **) &server_ephemeral_pub);
 
   // generate shared secret value result for ECDH key agreement (client side)
   unsigned char *session_secret = NULL;
@@ -310,7 +310,7 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
   ret_val = aes_gcm_decrypt(session_key, session_key_len,
                             encrypted_response, encrypted_response_len,
                             &response, &response_len);
-  OPENSSL_free_ocall((void **) &encrypted_response);
+  free_ocall((void **) &encrypted_response);
   kmyth_enclave_clear_and_free(session_key, session_key_len);
   if (ret_val)
   {
