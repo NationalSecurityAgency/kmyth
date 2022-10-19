@@ -88,8 +88,8 @@ enclave {
 
     /**
      * @brief Negotiates a session key (using ECDH) for creating a secure
-              connection with key server and then retrieves a key from the
-              key server using that secure connection.
+     *        connection with key server and then retrieves a key from the
+     *        key server using that secure connection.
      *
      * @param[in]  client_private_bytes      DER-formatted private signing
      *                                       key for the client (enclave)
@@ -97,40 +97,51 @@ enclave {
      * @param[in]  client_private_bytes_len  Length (in bytes) of the client
      *                                       (enclave) private key
      *
+     * @param[in]  client_cert_bytes         DER-formatted public certificate
+     *                                       for the client (enclave)
+     *
+     * @param[in]  client_cert_bytes_len     Length (in bytes) of the client
+     *                                       (enclave) public certificate
+     *
      * @param[in]  server_cert_bytes         DER-formatted public certificate
-     *                                       for the key server.
+     *                                       for the key server
      *
      * @param[in]  server_cert_bytes_len     Length (in bytes) of the key
-     *                                       server certificate.
+     *                                       server certificate
      *
      * @param[in]  server_host               Hostname/IP string for key server.
      *
      * @param[in]  server_host_len           Length of hostname/IP string for
-     *                                       the key server.
+     *                                       the key server
      *
-     * @param[in]  server_port               TCP port for key server.
+     * @param[in]  server_port               TCP port for key server 
      *
      * @param[in]  key_id                    ID string used to specify the key
      *                                       to be retrieved from the server
-     *                                       (not null-terminated).
+     *                                       (not null-terminated)
      *
      * @param[in]  key_id_len                Length of the requested key's ID
-     *                                       string.
+     *                                       string
      *
-     * @return 0 on success, -1 on failure.
+     * @return 0 on success, -1 on failure
      */
     public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len]
-                                                        uint8_t* client_private_bytes,
+                                                        uint8_t * client_private_bytes,
                                                       size_t client_private_bytes_len,
+                                                      [in, count=client_cert_bytes_len]
+                                                        uint8_t * client_cert_bytes,
+                                                      size_t client_cert_bytes_len,                                                                                                              
                                                       [in, count=server_cert_bytes_len]
-                                                        uint8_t* server_cert_bytes,
+                                                        uint8_t * server_cert_bytes,
                                                       size_t server_cert_bytes_len,
                                                       [in, count=server_host_len]
-                                                        const char* server_host,
+                                                        const char * server_host,
                                                       int server_host_len,
-                                                      int server_port,
+                                                      [in, count=server_port_len]
+                                                        const char * server_port,
+                                                      int server_port_len,
                                                       [in, count=key_id_len]
-                                                        unsigned char* key_id,
+                                                        unsigned char * key_id,
                                                       size_t key_id_len);
 
   };
@@ -161,10 +172,9 @@ enclave {
                          int severity,
                          [in, string] const char *msg);
 
-
     /**
-     * @brief Supports freeing untrusted memory resources from within the
-              enclave. As an example of where this might be needed, If a
+     * @brief Supports freeing untrusted memory resources from within
+              the enclave. As an example of where this might be needed, If a
               pointer passed as a parameter of an OCALL is allocated by
               untrusted code, the trusted code cannot use a simple free()
               call to de-allocate that memory block. This function, then,
@@ -174,15 +184,13 @@ enclave {
      *
      * @return                     None
      */
-    void free_ocall([in] void **mem_block_ptr);
+    void free_ocall([user_check] void ** mem_block_ptr);
 
     /**
      * @brief Creates a socket connected to the external key server.
      *
      * @param[in]  server_host                String IP address or hostname used to
      *                                        connect to the key server.
-     *
-     * @param[in]  server_host_len            Length (in bytes) of server_host string.
      *
      * @param[in]  server_port                TCP port number used to
      *                                        connect to the key server.
@@ -196,7 +204,9 @@ enclave {
     int setup_socket_ocall([in, count=server_host_len]
                              const char *server_host,
                            int server_host_len,
-                           int server_port,
+                           [in, count=server_port_len]
+                             const char *server_port,
+                           int server_port_len,
                            [out] int *socket_fd);
 
     /**
@@ -235,47 +245,43 @@ enclave {
      *                                                of enclave (client) public
      *                                                ephemeral contribution
      *
-     * @param[in]  enclave_eph_pub_signature          Pointer to signature over
-     *                                                enclave (client) public
-     *                                                ephemeral contribution.
+     * @param[out] server_hello       Pointer to byte array containing the
+     *                                'Server Hello' message received from
+     *                                the remote peer (TLS proxy) in
+     *                                response to the 'Client Hello' sent
+     *                                by the enclave (client)
      *
-     * @param[in]  enclave_eph_pub_signature_len      Length (in bytes)
-     *                                                of signature for client
-     *                                                (enclave) public ephemeral
-     *                                                contribution.
+     * @param[out] server_hello_len   Pointer to length (in bytes) of the
+     *                                'Server Hello' message received from
+     *                                the remote peer (TLS proxy for server)
      *
      * @param[out] remote_ephemeral_public            Pointer to remote (server)
      *                                                public ephemeral contribution
      *                                                to be exchanged with enclave
      *                                                (client)
      *
-     * @param[out] remote_ephemeral_public_len        Pointer to length (in bytes)
-     *                                                of remote (server) public
-     *                                                ephemeral contribution.
+     * @param[in]  client_hello_len   Length (in bytes) of enclave's
+     *                                'Client Hello' message
      *
-     * @param[out] remote_eph_pub_signature           Pointer to signature over
-     *                                                remote (server) public
-     *                                                ephemeral contribution.
+     * @param[out] server_hello       Pointer to byte array containing the
+     *                                'Server Hello' message received from
+     *                                the remote peer (TLS proxy) in
+     *                                response to the 'Client Hello' sent
+     *                                by the enclave (client)
      *
-     * @param[out] remote_eph_pub_signature_len       Pointer to length (in bytes)
-     *                                                of signature for remote
-     *                                                (server) public ephemeral
-     *                                                contribution.
+     * @param[out] server_hello_len   Pointer to length (in bytes) of the
+     *                                'Server Hello' message received from
+     *                                the remote peer (TLS proxy for server)
      *
-     * @param[in] socket_fd                           File descriptor number for
-     *                                                a socket connected to
-     *                                                the remote key server.
+     * @param[in] socket_fd           File descriptor number for a socket
+     *                                connected to the remote peer (TLS proxy
+     *                                for key server)
      */
-    int ecdh_exchange_ocall([in, count=enclave_contribution_len]
-                               unsigned char *enclave_contribution,
-                             size_t enclave_contribution_len,
-                             [in, count=enclave_contribution_signature_len]
-                               unsigned char *enclave_contribution_signature,
-                             unsigned int enclave_contribution_signature_len,
-                             [out] unsigned char **remote_contribution,
-                             [out] size_t *remote_contribution_len,
-                             [out] unsigned char **remote_contribution_signature,
-                             [out] unsigned int *remote_contribution_signature_len,
+    int ecdh_exchange_ocall([in, count=client_hello_len]
+                               unsigned char *client_hello,
+                             size_t client_hello_len,
+                             [out] unsigned char **server_hello,
+                             [out] size_t *server_hello_len,
                              int socket_fd);
 
     /**
@@ -292,30 +298,29 @@ enclave {
      *
      * @return 0 on success, 1 on failure
      */
-    int ecdh_send_ocall([in, count=encrypted_msg_len]
-                           unsigned char *encrypted_msg,
-                        size_t encrypted_msg_len,
-                        int socket_fd);
+    int ecdh_send_msg_ocall([in, count=encrypted_msg_len]
+                             unsigned char *encrypted_msg,
+                             size_t encrypted_msg_len,
+                             int socket_fd);
 
     /**
      * @brief Receive a message over the ECDH network connection.
      *
-     * @param[out]  encrypted_msg             Pointer used to return the address
-     *                                        of an allocated buffer containing
-     *                                        the received encrypted message.
+     * @param[out] msg         Pointer used to return the address of an
+     *                         allocated buffer containing the received
+     *                         message.
      *
-     * @param[out] encrypted_msg_len          Pointer to length (in bytes)
-     *                                        of the encrypted message.
+     * @param[out] msg_len     Pointer to length (in bytes) of the
+     *                         received message.
      *
-     * @param[in] socket_fd                   File descriptor number for
-     *                                        a network socket with an
-     *                                        active ECDH session.
+     * @param[in] socket_fd    File descriptor number for a network
+     *                         socket with an active ECDH session.
      *
      * @return 0 on success, 1 on failure
      */
-    int ecdh_recv_ocall([out] unsigned char **encrypted_msg,
-                        [out] size_t *encrypted_msg_len,
-                        int socket_fd);
+    int ecdh_recv_msg_ocall([out] unsigned char **msg,
+                            [out] size_t *msg_len,
+                            int socket_fd);
 
   };
 

@@ -9,6 +9,8 @@
 #define MEMORY_UTIL_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +55,23 @@ void kmyth_clear_and_free(void *v, size_t size);
  * @return the cleared pointer 
  */
 void *secure_memset(void *v, int c, size_t n);
+
+
+/**
+ * Allocates an array of bytes:
+ * 
+ * @param[in] v Pointer to array to be allocated. If this pointer is null,
+ *              the calloc() utility will be used to allocate a new array
+ *              of zero-valued bytes. If this pointer has be previously
+ *              allocated, it will be re-allocated and cleared.
+ * 
+ * @param[in] n The number of bytes that should be allocated for the byte
+ *              array on function exit.
+ *
+ * @return      The pointer to the allocated (or re-allocated) byte array
+ *              or NULL on error.
+ */
+uint8_t *allocate_byte_buffer(uint8_t *v, size_t n);
 
 #ifdef __cplusplus
 }

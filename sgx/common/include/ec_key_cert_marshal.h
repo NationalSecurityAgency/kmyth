@@ -51,7 +51,7 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int marshal_ec_pkey_to_der(EVP_PKEY ** ec_pkey_in,
+  int marshal_ec_pkey_to_der(EVP_PKEY *ec_pkey_in,
                              unsigned char **ec_der_bytes_out,
                              int *ec_der_bytes_out_len);
 
@@ -77,9 +77,35 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int marshal_ec_x509_to_der(X509 ** ec_cert_in,
+  int marshal_ec_x509_to_der(X509 *ec_cert_in,
                              unsigned char **ec_der_bytes_out,
                              int *ec_der_bytes_out_len);
+
+/**
+ * @brief DER formats public certificate 'subject name' struct (X509_NAME)
+ *
+ * @param[in] cert_dn_in             Pointer to an X509_NAME input struct
+ *                                   (distinguished name) to be marshalled
+ *                                   (i.e., serialized into a DER formatted
+ *                                   byte array)
+ *
+ * @param[out] cert_dn_bytes_out     Pointer to byte array that contains
+ *                                   the marshalled X509_NAME public result.
+ *                                   A NULL pointer must be passed into this
+ *                                   function for this parameter. On return,
+ *                                   it will point to an allocated byte array
+ *                                   containing the DER result. The calling
+ *                                   function must free this memory when done
+ *                                   with it.
+ *
+ * @param[out] cert_dn_bytes_out_len Pointer to size of the byte array
+ *                                   containing the marshalled X509_NAME bytes
+ *
+ * @return 0 on success, 1 on error
+ */
+  int marshal_x509_name_to_der(X509_NAME *cert_dn_in,
+                               unsigned char **cert_dn_bytes_out,
+                               int *cert_dn_bytes_out_len);
 
 #ifdef __cplusplus
 }
