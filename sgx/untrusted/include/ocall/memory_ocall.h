@@ -34,7 +34,7 @@ extern "C"
  *
  * @return                     None
  */
-  void OPENSSL_free_ocall(void **mem_block_ptr);
+  void free_ocall(void ** mem_block_ptr);
 
 #ifdef __cplusplus
 }

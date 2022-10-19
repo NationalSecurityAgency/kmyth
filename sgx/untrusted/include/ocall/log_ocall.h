@@ -20,24 +20,24 @@ extern "C"
  *        about the event out explicitly since we must invoke the logging API
  *        from untrusted space.
  *
- * @param[in] src_file_ptr     Pointer to source code filename string
+ * @param[in] src_file         Source code filename string
  *
- * @param[in] src_func_ptr     Pointer to function name string
+ * @param[in] src_func         Function name string
  *
- * @param[in] src_line_ptr     Pointer to source code line number integer
+ * @param[in] src_line         Integer specifying source code line number
  *
- * @param[in] severity_ptr     Pointer to integer representing the severity
+ * @param[in] severity         Integer representing the severity
  *                             level of the event to be logged.
  *
- * @param[in] message_ptr      Pointer to string containing the message to
- *                             be logged.
+ * @param[in] msg              String containing the message to be logged.
  *
  * @return                     None
  */
-  void log_event_ocall(const char **src_file_ptr,
-                       const char **src_func_ptr,
-                       const int *src_line_ptr,
-                       int *severity_ptr, const char **message_ptr);
+  void log_event_ocall(const char *src_file,
+                       const char *src_func,
+                       int src_line,
+                       int severity,
+                       const char *msg);
 
 #ifdef __cplusplus
 }

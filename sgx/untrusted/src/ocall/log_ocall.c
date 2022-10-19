@@ -10,11 +10,11 @@
 /*****************************************************************************
  * log_event_ocall
  ****************************************************************************/
-void log_event_ocall(const char **src_file_ptr,
-                     const char **src_func_ptr,
-                     const int *src_line_ptr, int *severity_ptr,
-                     const char **message_ptr)
+void log_event_ocall(const char *src_file,
+                     const char *src_func,
+                     int src_line,
+                     int severity,
+                     const char *msg)
 {
-  log_event(*src_file_ptr, *src_func_ptr, *src_line_ptr, *severity_ptr,
-            *message_ptr);
+  log_event(src_file, src_func, src_line, severity, msg);
 }
