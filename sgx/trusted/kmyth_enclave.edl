@@ -184,7 +184,7 @@ enclave {
      *
      * @return                     None
      */
-    void free_ocall([user_check] void ** mem_block_ptr);
+    void free_ocall([in, count=1] void ** mem_block_ptr);
 
     /**
      * @brief Creates a socket connected to the external key server.

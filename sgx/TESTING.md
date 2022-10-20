@@ -172,8 +172,8 @@ signed by the proxy's long-term signing key.
 
 Client and server (proxy) derive the ECDH ephemeral key as a shared secret
 and run this through a key derivation function (KDF) using the two 'Hello'
-messages and the two public ephemerals as "additional info" to produce a
-512 bit (64 byte) result.
+messages (containing identification and public ephemeral values for both
+peers) as "additional info" to produce a 512 bit (64 byte) result.
 
 The client sends a "key request" message, packaging a KMIP 'get key' request
 along with the server-side (proxy) ephemeral public key. This message is

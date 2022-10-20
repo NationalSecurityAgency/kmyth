@@ -200,12 +200,18 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
     return EXIT_FAILURE;
   }
 
-  // set additional information input for HKDF
-  if (EVP_PKEY_CTX_add1_hkdf_info(pctx, "label", 5) != 1)
+  // set additional information input for HKDF - use concatenated msg inputs
+  size_t addl_info_len = msg1_in_len + msg2_in_len;
+  unsigned char *addl_info = calloc(addl_info_len, sizeof(unsigned char));
+  memcpy(addl_info, msg1_in_bytes, msg1_in_len);
+  memcpy(addl_info+msg1_in_len, msg2_in_bytes, msg2_in_len);
+  if (EVP_PKEY_CTX_add1_hkdf_info(pctx, addl_info, addl_info_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF additional information input");
+    free(addl_info);
     return EXIT_FAILURE;
   }
+  free(addl_info);
 
   // derive key bits
   unsigned char kdf_out[KMYTH_ECDH_KDF_OUTPUT_SIZE];
