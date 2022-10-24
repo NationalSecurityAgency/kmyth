@@ -33,11 +33,14 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
   if (ret == 0)
   {
     data = (uint8_t *) malloc(data_size);
+    if (data == NULL) return 1;
+
     enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy,
                   attribute_mask);
     if (ret == 1)
     {
       kmyth_log(LOG_ERR, "error to seal data ... exiting");
+      free(data);
       return 1;
     }
   }

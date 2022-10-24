@@ -10,6 +10,7 @@
 #include <openssl/rand.h>
 
 #include "memory_util.h"
+#include <malloc.h>
 
 //############################################################################
 // aes_gcm_encrypt()
@@ -37,9 +38,12 @@ int aes_gcm_encrypt(unsigned char *key,
   //   - resultant ciphertext (same length as the input plaintext)
   //   - GCM_TAG_LEN (16) byte tag
   *outData_len = GCM_IV_LEN + inData_len + GCM_TAG_LEN;
-  *outData = NULL;
-  *outData = malloc(*outData_len);
-  if (*outData == NULL)
+  if( *outData == NULL || malloc_usable_size(*outData) < *outData_len )
+  {
+     if( *outData != NULL ) free(*outData);
+     *outData = malloc(*outData_len);
+  }
+  if (*outData == NULL) // failed malloc
   {
     return 1;
   }
@@ -55,7 +59,8 @@ int aes_gcm_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     return 1;
   }
   int init_result = 0;
@@ -76,7 +81,8 @@ int aes_gcm_encrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -84,7 +90,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // create the IV
   if (RAND_bytes(iv, GCM_IV_LEN) != 1)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -92,7 +99,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // set the IV length in the cipher context
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, GCM_IV_LEN, NULL))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -100,7 +108,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // set the key and IV in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -108,7 +117,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // encrypt the input plaintext, put result in the output ciphertext buffer
   if (!EVP_EncryptUpdate(ctx, ciphertext, &ciphertext_len, inData, inData_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -116,7 +126,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // verify that the resultant CT length matches the input PT length
   if (ciphertext_len != inData_len)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -124,7 +135,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // OpenSSL requires a "finalize" operation. For AES/GCM no data is written.
   if (!EVP_EncryptFinal_ex(ctx, tag, &ciphertext_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -132,7 +144,8 @@ int aes_gcm_encrypt(unsigned char *key,
   // get the AES/GCM tag value, appending it to the output ciphertext
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_LEN, tag))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -170,9 +183,12 @@ int aes_gcm_decrypt(unsigned char *key,
   // output data buffer (outData) will contain only the plaintext, which
   // should be sized as the input minus the lengths of the IV and tag fields
   *outData_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
-  *outData = NULL;
-  *outData = malloc(*outData_len);
-  if (*outData == NULL)
+  if( *outData == NULL || malloc_usable_size(*outData) < *outData_len )
+  {
+     if( *outData != NULL ) free(*outData);
+     *outData = malloc(*outData_len);
+  }
+  if (*outData == NULL) // failed malloc
   {
     return 1;
   }

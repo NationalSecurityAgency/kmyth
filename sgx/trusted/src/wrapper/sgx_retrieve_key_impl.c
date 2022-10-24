@@ -235,8 +235,11 @@ int enclave_retrieve_key(EVP_PKEY * enclave_sign_privkey, X509 * peer_cert,
                   "mutually agreed upon session key computation failed");
     kmyth_enclave_clear_and_free(session_key, session_key_len);
     close_socket_ocall(socket_fd);
+    free(session_secret);
+    close_socket_ocall(socket_fd);
     return EXIT_FAILURE;
   }
+  free(session_secret); // never used again
   snprintf(msg, MAX_LOG_MSG_LEN,
            "client-side session key = 0x%02x%02x...%02x%02x (%d bytes)",
            session_key[0], session_key[1],

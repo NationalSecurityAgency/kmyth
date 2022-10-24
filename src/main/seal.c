@@ -289,7 +289,13 @@ int main(int argc, char **argv)
   if (outPath == NULL)
   {
     char *original_fn = basename(inPath);
-    char *temp_str = malloc((strlen(original_fn) + 5) * sizeof(char));
+    char *temp_str, *temp_str_root = malloc((strlen(original_fn) + 5) * sizeof(char));
+    if (temp_str_root == NULL)
+    {
+      kmyth_log(LOG_ERR,"insufficient memory allocation ... exiting");
+      return 1;
+    }
+    temp_str = temp_str_root;
 
     strncpy(temp_str, original_fn, strlen(original_fn));
 
@@ -300,23 +306,25 @@ int main(int argc, char **argv)
     }
     char *scratch;
 
-    // Everything beyond first '.' in original filename, with any leading
+    // Everything beyond first '.' in original filename, after any leading
     // '.'(s) removed, is treated as extension
     temp_str = strtok_r(temp_str, ".", &scratch);
+    outPath_size = strlen(temp_str);
 
-    // Append .ski file extension
-    strncat(temp_str, ".ski", 5);
-
-    outPath_size = strlen(temp_str) + 1;
     // Make sure resultant default file name does not have empty basename
-    if (outPath_size < 6)
+    if (outPath_size == 0)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
-      free(temp_str);
+      free(temp_str_root);
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
+
+     // Append .ski file extension
+    strncat(temp_str, ".ski", 5);
+    outPath_size = strlen(temp_str) + 1; // size needed includes \0 terminator
+
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
     if (!stat(temp_str, &st) && !forceOverwrite)
@@ -324,7 +332,7 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR,
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
-      free(temp_str);
+      free(temp_str_root);
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
@@ -332,8 +340,9 @@ int main(int argc, char **argv)
     // Go ahead and make the default value the output path
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, temp_str, outPath_size);
-    free(temp_str);
+    free(temp_str_root);
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
+    free(outPath);
   }
 
   uint8_t *output = NULL;

@@ -62,6 +62,10 @@ int get_block_bytes(char **contents,
 
   else
   {
+    if (*block != NULL) free(*block); // since looping, should free previous block allocation
+                                      // (inefficient, yes, but easy-to-code, otherwise must
+                                      //  calculate size and re-allocate)
+
     // allocate enough memory for output parameter to hold parsed block data
     //   - must be allocated here because size is calculated here
     //   - must be freed by caller because data must be passed back

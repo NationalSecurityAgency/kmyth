@@ -18,6 +18,7 @@
 
 #include "cipher/cipher.h"
 
+#include <malloc.h>
 /**
  * @brief The external list of valid (implemented and configured) symmetric
  *        cipher options (see src/util/kmyth_cipher.c)
@@ -287,7 +288,13 @@ int main(int argc, char **argv)
   if (outPath == NULL)
   {
     char *original_fn = basename(inPath);
-    char *temp_str = malloc((strlen(original_fn) + 5) * sizeof(char));
+    char *temp_str, *temp_str_root = malloc((strlen(original_fn) + 5) * sizeof(char));
+    if (temp_str_root == NULL) 
+    {
+      kmyth_log(LOG_ERR, "failed memory allocation ... exiting");
+      return 1;
+    }
+    temp_str = temp_str_root;
 
     strncpy(temp_str, original_fn, strlen(original_fn));
 
@@ -310,7 +317,7 @@ int main(int argc, char **argv)
     if (outPath_size < 6)
     {
       kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
-      free(temp_str);
+      free(temp_str_root);
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
@@ -322,15 +329,27 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR,
                 "default output filename (%s) already exists ... exiting",
                 temp_str);
-      free(temp_str);
+      free(temp_str_root);
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
     // Go ahead and make the default value the output path
-    outPath = malloc(outPath_size * sizeof(char));
+    if (malloc_usable_size(outPath) < outPath_size )
+    {
+      free(outPath);
+      outPath = malloc(outPath_size * sizeof(char));
+      if (outPath == NULL)
+      {
+        kmyth_log(LOG_ERR, "insufficient memory for allocation ... existing");
+        free(temp_str_root);
+        kmyth_clear(authString, auth_string_len);
+        kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+        return 1;
+      }
+    }
     memcpy(outPath, temp_str, outPath_size);
-    free(temp_str);
+    free(temp_str_root);
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
@@ -345,6 +364,7 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
     free(outPath);
     free(output);
+    free(pcrs);
     return 1;
   }
 

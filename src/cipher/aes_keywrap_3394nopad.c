@@ -9,6 +9,7 @@
 #include <openssl/evp.h>
 
 #include "defines.h"
+#include <malloc.h>
 
 //############################################################################
 // aes_keywrap_3394nopad_encrypt()
@@ -40,13 +41,12 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   //   - an 8-byte integrity check value is prepended to input plaintext
   //   - the ciphertext output is the same length as the expanded plaintext
   *outData_len = inData_len + 8;
-  *outData = NULL;
-  *outData = malloc(*outData_len);
-  if (*outData == NULL)
+  if (*outData == NULL || malloc_usable_size(*outData) < *outData_len)
   {
-    return 1;
+    if (*outData != NULL ) free(*outData);
+    *outData = malloc(*outData_len);
+    if (*outData == NULL) return 1;
   }
-
   // initialize the cipher context to match cipher suite being used
   //   - OpenSSL requires the WRAP_ALLOW flag be explicitly set to use key
   //     wrap modes through EVP.
@@ -55,6 +55,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
     free(*outData);
+    *outData = NULL;
     return 1;
   }
   EVP_CIPHER_CTX_set_flags(ctx, EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);
@@ -77,6 +78,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (!init_result)
   {
     free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -85,6 +87,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
     free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -101,6 +104,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
     free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -110,6 +114,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (!EVP_EncryptFinal_ex(ctx, (*outData) + ciphertext_len, &tmp_len))
   {
     free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -120,6 +125,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (ciphertext_len != *outData_len)
   {
     free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -167,11 +173,11 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // output data buffer (outData) will contain the decrypted plaintext, which
   // should be the same size as the input ciphertext data (original plaintext
   // plus prepended 8-byte integrity check value)
-  *outData = NULL;
-  *outData = malloc(inData_len);
-  if (*outData == NULL)
+  if (*outData == NULL || malloc_usable_size(*outData) < inData_len)
   {
-    return 1;
+    if (*outData != NULL ) free(*outData);
+    *outData = malloc(inData_len);
+    if (*outData == NULL) return 1;
   }
 
   // initialize the cipher context to match cipher suite being used
@@ -181,7 +187,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     return 1;
   }
   EVP_CIPHER_CTX_set_flags(ctx, EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);
@@ -203,7 +210,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -211,7 +219,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // set the decryption key in the cipher context
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -225,7 +234,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // check value validated and removed) in the output plaintext buffer
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -234,7 +244,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // "finalize" decryption
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -244,7 +255,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // the length of the 8-byte integrity check value
   if (*outData_len != inData_len - 8)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
