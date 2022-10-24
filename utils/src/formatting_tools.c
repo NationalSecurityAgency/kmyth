@@ -347,7 +347,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
     return 1;
   }
 
-  // initializes buffer with all 0 hex values
+  // initializes buffer with all proper hexadexcimal values from str input
   unsigned long ul;
   unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
   if( expectedPolicyBuffer == NULL )
