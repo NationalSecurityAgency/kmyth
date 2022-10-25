@@ -154,12 +154,15 @@ The proxy uses TCP for network communications. The port number is configurable.
 #### 'Retrieve Key' Protocol
 
 Kmyth includes functionality for retrieving a key from a remote server
-(e.g., a KMIP server) into the enclave. Although, for the connection to
-the the key server, TLS is appropriate, in order to avoid potential
-licensing issues with our open source code, we did not implement a
-TLS client within the enclave. Instead, we implemented a TLS proxy,
-in untrusted code, which might reside, say, in environment that provides
-some level of enhanced protection. The three-way protocol used for this
+(e.g., a KMIP server) into the enclave. Although key servers generally require TLS,
+we did not implement a TLS client within the enclave in order to avoid potential
+licensing issues with our open source code. Instead, we implemented a standalone TLS proxy
+to support encrypted communications using ECDH between the enclave and proxy
+and TLS between the proxy and key server.
+The proxy runs in untrusted code, but it could reside in an environment
+providing other enhanced protections.
+
+The three-way protocol used for this
 demonstration exchanges the following set of ordered messages:
 
 The client sends a "client hello" message containing the client's identity
