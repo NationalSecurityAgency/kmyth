@@ -30,7 +30,7 @@ connection.
 
 This demonstration was created only to provide an example of securely fetching
 a secret value (e.g., a cryptographic key) from a remote server into an SGX
-enclave using kmyth. This code, is not intended for any use beyond
+enclave using kmyth. This code is not intended for any use beyond
 demonstration and testing.  
 
 To run this demonstration, please be sure that Kmyth has been built and installed  
