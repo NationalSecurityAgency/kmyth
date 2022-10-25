@@ -588,7 +588,7 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
     {
       // parent process loops to accept more connections or exits
       // if session limit has been reached
-      close(ecdh_svr->config.listen_socket_fd);
+      close(clnt_conn->session_socket_fd);
       if ((ecdh_svr->config.session_limit != 0) &&
           (session_count >= ecdh_svr->config.session_limit))
       {
