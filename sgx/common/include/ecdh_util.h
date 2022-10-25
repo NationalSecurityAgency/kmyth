@@ -81,7 +81,7 @@ extern "C"
 /**
  * @brief Computes shared secret value, using ECDH, from a local private
  *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
- *        eohemeral key (e.g., 'abG') that is mutually derivable by both
+ *        ephemeral key (e.g., 'abG') that is mutually derivable by both
  *        the local and remote party. The shared secret result is derived
  *        from this shared ephemeral key.
  *
