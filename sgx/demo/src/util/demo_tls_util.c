@@ -1,6 +1,7 @@
 /**
- * @file ecdh_demo.c
- * @brief Shared code for the ECDHE client/server applications.
+ * @file demo_tls_util.c
+ * @brief TLS connection related utilities supporting the SGX
+ *        'retrieve key demo' applications.
  */
 
 #include "demo_tls_util.h"
