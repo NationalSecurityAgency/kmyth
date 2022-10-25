@@ -108,7 +108,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   }
 
   // initialize the newly created context
-	retval = EVP_PKEY_derive_init(ctx);
+  retval = EVP_PKEY_derive_init(ctx);
   if (retval != 1)
   {
     kmyth_sgx_log(LOG_ERR, "init error for shared secret derivation context");
