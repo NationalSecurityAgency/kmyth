@@ -113,6 +113,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if (retval != 1)
   {
     kmyth_sgx_log(LOG_ERR, "init error for shared secret derivation context");
+    EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
 
@@ -121,6 +122,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if (retval != 1)
   {
     kmyth_sgx_log(LOG_ERR, "error setting peer's public key in context");
+    EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
 
@@ -129,6 +131,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if ((retval != 1) || (*shared_secret_len <= 0))
   {
     kmyth_sgx_log(LOG_ERR, "error computing required buffer size");
+    EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
 
@@ -137,6 +140,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if (*shared_secret == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating buffer for shared secret");
+    EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
 
@@ -145,6 +149,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if (retval != 1)
   {
     kmyth_sgx_log(LOG_ERR, "error deriving shared secret value");
+    EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
 
@@ -172,11 +177,18 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   EVP_PKEY_CTX *pctx;
 
   pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+  if (pctx == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error creating HKDF context");
+    return EXIT_FAILURE;
+  }
+
 
   // initialize HKDF context
   if (EVP_PKEY_derive_init(pctx) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to initialize HKDF context");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
@@ -184,6 +196,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   if (EVP_PKEY_CTX_set_hkdf_md(pctx, KMYTH_ECDH_MD) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF message digest");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
@@ -191,6 +204,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, "kmyth", 5) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF 'salt' value");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
@@ -198,6 +212,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   if (EVP_PKEY_CTX_set1_hkdf_key(pctx, secret_in_bytes, secret_in_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF input key bytes");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
@@ -210,6 +225,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF additional information input");
     free(addl_info);
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
   free(addl_info);
@@ -221,6 +237,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   if (EVP_PKEY_derive(pctx, kdf_out, &kdf_out_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "HKDF extract and expand operation failed");
+    EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
 
@@ -256,6 +273,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   if (NULL == *key2_out_bytes)
   {
     kmyth_sgx_log(LOG_ERR, "failed to allocate buffer for session key #2");
+    free(*key1_out_bytes);
     return EXIT_FAILURE;
   }
   memcpy(*key2_out_bytes, kdf_out+*key1_out_len, *key2_out_len);
