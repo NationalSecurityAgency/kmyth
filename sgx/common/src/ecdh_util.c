@@ -100,7 +100,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   int retval = 0;
   
   // create the context for the shared secret derivation
-	ctx = EVP_PKEY_CTX_new(local_eph_keypair, NULL);
+  ctx = EVP_PKEY_CTX_new(local_eph_keypair, NULL);
   if (ctx == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error creating shared secret derivation context");
