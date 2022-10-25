@@ -136,7 +136,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   }
 
   // allocate buffer to hold shared secret
-  *shared_secret = OPENSSL_malloc(*shared_secret_len);
+  *shared_secret = calloc(*shared_secret_len, sizeof(unsigned char));
   if (*shared_secret == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating buffer for shared secret");
@@ -149,6 +149,8 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
   if (retval != 1)
   {
     kmyth_sgx_log(LOG_ERR, "error deriving shared secret value");
+    kmyth_clear_and_free(*shared_secret, *shared_secret_len);
+    *shared_secret_len = 0;
     EVP_PKEY_CTX_free(ctx);
     return EXIT_FAILURE;
   }
