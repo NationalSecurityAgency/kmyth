@@ -243,7 +243,7 @@ int demo_ecdh_send_server_hello_msg(ECDHPeer * ecdh_svr);
 /**
  * @brief After exchanging public ephemeral contributions with an ECDH
  *        peer, compute the 'shared secret' and use a key derivation
- *        function (KDF) to generation session keys that can be used to
+ *        function (KDF) to generate session keys that can be used to
  *        encrypt the 'Key Request' and 'Key Response' protocol messages.
  *
  * @param[inout] ecdh_svr  Pointer to ECDHPeer struct containing
