@@ -14,13 +14,6 @@
  ****************************************************************************/
 int create_ecdh_ephemeral_keypair(EVP_PKEY ** ephemeral_key_pair)
 {
-  // create empty parameters object
-  EVP_PKEY *params = EVP_PKEY_new();
-  if (params == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "failed to create empty parameters object")
-  }
-
   // create parameter generation context for creating ephemeral key pair
   EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
   if (pctx == NULL)
@@ -45,10 +38,18 @@ int create_ecdh_ephemeral_keypair(EVP_PKEY ** ephemeral_key_pair)
     return EXIT_FAILURE;
   }
 
+  // create empty parameters object
+  EVP_PKEY *params = EVP_PKEY_new();
+  if (params == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "failed to create empty parameters object")
+  }
+
   // generate parameters
-  if ((EVP_PKEY_paramgen(pctx, &params) != 1) || (params == NULL))
+  if (EVP_PKEY_paramgen(pctx, &params) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "parameter generation failed");
+    EVP_PKEY_free(params);
     EVP_PKEY_CTX_free(pctx);
     return EXIT_FAILURE;
   }
