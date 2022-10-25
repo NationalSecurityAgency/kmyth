@@ -125,7 +125,7 @@ int compute_ecdh_shared_secret(EVP_PKEY *local_eph_keypair,
 
   // compute buffer size required for shared secret
   retval = EVP_PKEY_derive(ctx, NULL, shared_secret_len);
-  if ((retval != 1) || (shared_secret_len <= 0))
+  if ((retval != 1) || (*shared_secret_len <= 0))
   {
     kmyth_sgx_log(LOG_ERR, "error computing required buffer size");
     return EXIT_FAILURE;
