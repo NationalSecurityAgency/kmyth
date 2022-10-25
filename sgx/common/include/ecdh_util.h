@@ -110,11 +110,6 @@ extern "C"
                                  unsigned char ** shared_secret,
                                  size_t * shared_secret_len);
 
-//  int compute_ecdh_shared_secret(EVP_PKEY * local_eph_priv_key,
-//                                 EC_POINT * remote_eph_pub_point,
-//                                 unsigned char **shared_secret,
-//                                 size_t *shared_secret_len);
-
 /**
  * @brief Computes session key from a shared secret value (and other) inputs
  *
