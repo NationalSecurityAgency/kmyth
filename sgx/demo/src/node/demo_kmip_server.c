@@ -153,12 +153,12 @@ static void demo_kmip_server_setup(DemoServer *demo_server)
   demo_server->tlsconn.host = NULL;
 
   // specify demonstration key to be served
-  char temp_id[DEMO_OP_KEY_ID_LEN+1] = DEMO_OP_KEY_ID_STR;
   memcpy(demo_server->demo_key_id,
-         (unsigned char *) temp_id,
+         (unsigned char[DEMO_OP_KEY_ID_LEN]) DEMO_OP_KEY_ID,
          DEMO_OP_KEY_ID_LEN);
-  unsigned char temp_key[DEMO_OP_KEY_VAL_LEN] = DEMO_OP_KEY_VAL;
-  memcpy(demo_server->demo_key_val, temp_key, DEMO_OP_KEY_VAL_LEN);
+  memcpy(demo_server->demo_key_val,
+         (unsigned char[DEMO_OP_KEY_VAL_LEN]) DEMO_OP_KEY_VAL,
+         DEMO_OP_KEY_VAL_LEN);
 
   // some OpenSSL setup
   SSL_load_error_strings();
@@ -267,8 +267,14 @@ int validate_kmip_get_key_request(unsigned char * kmip_key_req_bytes,
     return EXIT_FAILURE;
   }
 
+  if ((*kmip_key_req_id_len == 0) || (*kmip_key_req_id_bytes == NULL))
+  {
+    kmyth_log(LOG_ERR, "KMIP request specifies invalid (empty) key ID");
+    kmip_destroy(&kmip_ctx);
+    return EXIT_FAILURE;
+  }
   char *id_str = malloc(*kmip_key_req_id_len + 1);
-  memcpy(id_str, *kmip_key_req_id_bytes, *kmip_key_req_id_len);
+  memcpy(id_str, (char *) *kmip_key_req_id_bytes, *kmip_key_req_id_len);
   *(id_str+*kmip_key_req_id_len) = '\0';
 
 if (*kmip_key_req_id_len != strlen(DEMO_OP_KEY_ID_STR))
@@ -324,23 +330,6 @@ int compose_kmip_get_key_response(unsigned char *key_id,
     kmip_destroy(&kmip_ctx);
     return EXIT_FAILURE;
   }
-
-  unsigned char *tmp_id = NULL;
-  size_t tmp_id_len = 0;
-  unsigned char *tmp_key = NULL;
-  size_t tmp_key_len = 0;
-
-  parse_kmip_get_response(&kmip_ctx,
-                          *response_bytes, *response_len,
-                          &tmp_id, &tmp_id_len,
-                          &tmp_key, &tmp_key_len);
-
-  unsigned char *tmp_buf = *response_bytes;
-
-  kmyth_log(LOG_DEBUG, "created KMIP Response = 0x%02X%02X ... %02X%02X "
-                       "(%d bytes)",
-                       tmp_buf[0], tmp_buf[1], tmp_buf[*response_len-2],
-                       tmp_buf[*response_len-1], *response_len);
 
   kmip_destroy(&kmip_ctx);
 
