@@ -214,7 +214,6 @@ static int proxy_create_tls_client(TLSProxy * proxy)
 static int proxy_create_ecdh_server(TLSProxy * proxy)
 {
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
-  ECDHConfig *ecdhopts = &(proxy->ecdhconn.config);
 
   ecdh_svr->config.listen_socket_fd = UNSET_FD;
 
@@ -517,9 +516,6 @@ static void proxy_handle_session(TLSProxy * proxy)
     {
       kmyth_log(LOG_DEBUG, "failed to setup ECDH session (with client)");
     }
-
-    // done with this session, cleanup and then decrement session count
-    ecdh_svr->config.session_limit--;
   }
 
   if (pfds[1].revents & POLLIN)
