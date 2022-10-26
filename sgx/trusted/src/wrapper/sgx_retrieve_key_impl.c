@@ -54,6 +54,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "client ECDH ephemeral creation failed");
+    EVP_PKEY_free(enclave_ephemeral_keypair);
     return EXIT_FAILURE;
   }
   kmyth_sgx_log(LOG_DEBUG, "created client-side ephemeral key pair");
@@ -68,6 +69,8 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Client Hello' message");
+    EVP_PKEY_free(enclave_ephemeral_keypair);
+    free(client_hello_msg.body);
     return EXIT_FAILURE;
   }
 
@@ -91,6 +94,9 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "key agreement message exchange unsuccessful");
+    EVP_PKEY_free(enclave_ephemeral_keypair);
+    free(client_hello_msg.body);
+    free_ocall((void **) &(server_hello_msg.body));
     return EXIT_FAILURE;
   }
 
@@ -112,6 +118,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "'Server Hello' message parse/validate error");
+    EVP_PKEY_free(enclave_ephemeral_keypair);
+    EVP_PKEY_free(server_ephemeral_pubkey);
+    free(client_hello_msg.body);
+    free_ocall((void **) &(server_hello_msg.body));
     return EXIT_FAILURE;
   }
 
@@ -125,8 +135,14 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR, "shared secret computation failed");
+    EVP_PKEY_free(enclave_ephemeral_keypair);
+    EVP_PKEY_free(server_ephemeral_pubkey);
+    free(client_hello_msg.body);
+    free_ocall((void **) &(server_hello_msg.body));
     return EXIT_FAILURE;
   }
+  EVP_PKEY_free(enclave_ephemeral_keypair);
+
   snprintf(lmsg, MAX_LOG_MSG_LEN,
            "shared secret = 0x%02X%02X...%02X%02X (%ld bytes)",
            secret.buffer[0],
@@ -153,8 +169,16 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR, "session key computation failed");
+    kmyth_enclave_clear_and_free(secret.buffer, secret.size);
+    EVP_PKEY_free(server_ephemeral_pubkey);
+    free(client_hello_msg.body);
+    free_ocall((void **) &(server_hello_msg.body));
     return EXIT_FAILURE;
   }
+  kmyth_enclave_clear_and_free(secret.buffer, secret.size);
+  free(client_hello_msg.body);
+  free_ocall((void **) &(server_hello_msg.body));
+
   snprintf(lmsg, MAX_LOG_MSG_LEN,
            "'Key Request' key: 0x%02X%02X...%02X%02X (%ld bytes)",
            request_session_key.buffer[0], request_session_key.buffer[1],
@@ -184,8 +208,17 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error creating 'Key Request' message");
+    kmyth_enclave_clear_and_free(request_session_key.buffer,
+                                 request_session_key.size);
+    kmyth_enclave_clear_and_free(response_session_key.buffer,
+                                 response_session_key.size);
+    EVP_PKEY_free(server_ephemeral_pubkey);
+    free(key_request_msg.body);
     return EXIT_FAILURE;
   }
+  kmyth_enclave_clear_and_free(request_session_key.buffer,
+                               request_session_key.size);
+
   snprintf(lmsg, MAX_LOG_MSG_LEN,
            "composed Key Request: 0x%02X%02X...%02X%02X (%d bytes)",
            key_request_msg.body[0],
@@ -203,8 +236,12 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "failed to send the 'Key Request' message");
+    kmyth_enclave_clear_and_free(response_session_key.buffer,
+                                 response_session_key.size);
+    free(key_request_msg.body);
     return EXIT_FAILURE;
   }
+  free(key_request_msg.body);
 
   // receive 'Key Response' message from TLS proxy (server)
   ECDHMessage key_response_msg = { { 0 }, NULL };
@@ -216,6 +253,9 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_ocall != SGX_SUCCESS || ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "failed to receive the 'Key Response' message");
+    kmyth_enclave_clear_and_free(response_session_key.buffer,
+                                 response_session_key.size);
+    free_ocall((void **) &(key_response_msg.body));
     return EXIT_FAILURE;
   }
 
@@ -237,8 +277,15 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "'Key Response' message parse/validate error");
+    kmyth_enclave_clear_and_free(response_session_key.buffer,
+                                 response_session_key.size);
+    kmyth_enclave_clear_and_free(kmip_response.buffer, kmip_response.size);
+    free_ocall((void **) &(key_response_msg.body));
     return EXIT_FAILURE;
   }
+  kmyth_enclave_clear_and_free(response_session_key.buffer,
+                               response_session_key.size);
+  free_ocall((void **) &(key_response_msg.body));
 
   snprintf(lmsg, MAX_LOG_MSG_LEN,
            "KMIP 'get key' response = 0x%02X%02X...%02X%02X (%ld bytes)",
@@ -263,8 +310,10 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   if (ret_val)
   {
     kmyth_sgx_log(LOG_ERR, "failed to parse the KMIP 'get key' response");
+    kmyth_enclave_clear_and_free(kmip_response.buffer, kmip_response.size);
     return EXIT_FAILURE;
   }
+  kmyth_enclave_clear_and_free(kmip_response.buffer, kmip_response.size);
 
   snprintf(lmsg, MAX_LOG_MSG_LEN, "received KMIP object with ID: %.*s "
                                   "(length=%ld)", (int) *retrieved_key_id_len,
