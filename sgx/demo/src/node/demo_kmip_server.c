@@ -132,7 +132,7 @@ static void demo_kmip_server_check_options(DemoServer * demo_server)
   }
   if (demo_server->tlsconn.local_cert_path == NULL)
   {
-    fprintf(stderr, "file path for server-s certificate required\n");
+    fprintf(stderr, "file path for server's certificate required\n");
     err = true;
   }
 
