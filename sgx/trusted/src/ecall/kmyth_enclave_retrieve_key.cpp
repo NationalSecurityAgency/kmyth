@@ -43,7 +43,7 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   // now that input client private bytes processed, clear this sensitive data
   kmyth_enclave_clear(client_private_bytes, client_private_bytes_len);
 
-  // unmarshal client cert (contains information linkded to client identity)
+  // unmarshal client cert (contains information linked to client identity)
   X509 *client_cert = NULL;
 
   ret_val = unmarshal_ec_der_to_x509(client_cert_bytes,
