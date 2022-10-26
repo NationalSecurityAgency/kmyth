@@ -232,37 +232,35 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
     return -1;
   }
 
-  // for a TLS client, configure server hostname settings
-  if (tls_clnt->isClient)
+  // configure server hostname settings
+  if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->host))
   {
-    if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->host))
-    {
-      log_openssl_error("BIO_set_conn_hostname()");
-      return -1;
-    }
+    log_openssl_error("BIO_set_conn_hostname()");
+    return -1;
+  }
 
-    SSL *ssl = NULL;
+  // obtain SSL BIO pointer for the TLS client BIO chain
+  SSL *ssl = NULL;
 
-    BIO_get_ssl(tls_clnt->bio, &ssl);  // internal pointer, not a new allocation
-    if (ssl == NULL)
-    {
-      log_openssl_error("BIO_get_ssl()");
-      return -1;
-    }
+  BIO_get_ssl(tls_clnt->bio, &ssl);  // internal pointer, not a new allocation
+  if (ssl == NULL)
+  {
+    log_openssl_error("BIO_get_ssl()");
+    return -1;
+  }
 
-    /* set hostname for Server Name Indication. */
-    if (1 != SSL_set_tlsext_host_name(ssl, tls_clnt->host))
-    {
-      log_openssl_error("SSL_set_tlsext_host_name()");
-      return -1;
-    }
+  // set hostname for Server Name Indication
+  if (1 != SSL_set_tlsext_host_name(ssl, tls_clnt->host))
+  {
+    log_openssl_error("SSL_set_tlsext_host_name()");
+    return -1;
+  }
 
-    /* Set hostname for certificate verification. */
-    if (1 != SSL_set1_host(ssl, tls_clnt->host))
-    {
-      log_openssl_error("SSL_set1_host()");
-      return -1;
-    }
+  // set hostname for certificate verification
+  if (1 != SSL_set1_host(ssl, tls_clnt->host))
+  {
+    log_openssl_error("SSL_set1_host()");
+    return -1;
   }
 
   return 0;
@@ -314,7 +312,7 @@ int demo_tls_config_server_accept(TLSPeer * tls_svr)
     return -1;
   }
 
-  // only want one connection so remove and free accept BIO 
+  // update input TLSPeer struct to contain pointer to accept BIO
   tls_svr->bio = abio;
 
   return 0;
@@ -359,7 +357,7 @@ int demo_tls_server_accept(TLSPeer * tls_svr)
 int demo_tls_recv_msg(int socket_fd, TLSMessage * msg)
 {
   // read message header (and do some sanity checks)
-  uint8_t *hdr_buf = calloc(sizeof(msg->hdr), sizeof(uint8_t));
+  uint8_t hdr_buf[sizeof(msg->hdr)];
   ssize_t bytes_read = read(socket_fd, hdr_buf, sizeof(msg->hdr));
   if (bytes_read == 0)
   {
@@ -373,7 +371,6 @@ int demo_tls_recv_msg(int socket_fd, TLSMessage * msg)
   }
   msg->hdr.msg_size = hdr_buf[0] << 8;
   msg->hdr.msg_size += hdr_buf[1];
-  free(hdr_buf);
   if (msg->hdr.msg_size > KMYTH_TLS_MAX_MSG_SIZE)
   {
     kmyth_log(LOG_ERR, "length in TLS message header exceeds limit");
@@ -419,7 +416,7 @@ int demo_tls_send_msg(int socket_fd, TLSMessage * msg)
 
   // send message header (two-byte, unsigned, big-endian message size value)
   uint16_t hdr_buf = htons(msg->hdr.msg_size);
-  ssize_t bytes_sent = write(socket_fd, &hdr_buf, sizeof(msg->hdr.msg_size));
+  ssize_t bytes_sent = write(socket_fd, &hdr_buf, sizeof(msg->hdr));
   if (bytes_sent != sizeof(msg->hdr))
   {
     kmyth_log(LOG_ERR, "sending TLS message header failed");
