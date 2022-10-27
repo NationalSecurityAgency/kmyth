@@ -241,8 +241,6 @@ static int proxy_create_ecdh_server(TLSProxy * proxy)
                        ecdh_svr->config.port);
     return EXIT_FAILURE;
   }
-  kmyth_log(LOG_DEBUG, "proxy->ecdh_server_socket_fd = %d",
-                       ecdh_svr->config.listen_socket_fd);
 
   if (listen(ecdh_svr->config.listen_socket_fd, 1))
   {
@@ -553,7 +551,8 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
 
   while (true)
   {
-    kmyth_log(LOG_DEBUG, "ECDH 'server' waiting for client connection");
+    kmyth_log(LOG_DEBUG, "proxy (parent) listen for ECDH client connection "
+                         "(session #%d)", session_count + 1);
  
     clnt_conn->session_socket_fd = accept(ecdh_svr->config.listen_socket_fd,
                                           NULL, NULL);
@@ -578,6 +577,8 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
     {
       // forked child process handles accepted connection from ECDH client
       close(ecdh_svr->config.listen_socket_fd);
+      kmyth_log(LOG_DEBUG, "proxy (child) handling ECDH session #%d",
+                           session_count);
       return EXIT_SUCCESS;
     }
     else
@@ -588,7 +589,8 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
       if ((ecdh_svr->config.session_limit != 0) &&
           (session_count >= ecdh_svr->config.session_limit))
       {
-        kmyth_log(LOG_DEBUG, "server reached ECDH session limit");
+        kmyth_log(LOG_DEBUG, "proxy ECDH session count reached limit (%d)",
+                             ecdh_svr->config.session_limit);
       
         close(ecdh_svr->config.listen_socket_fd);
         while (wait(NULL) > 0);
