@@ -198,7 +198,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *          - client identity as an X509_NAME struct
  *          - client ephemeral public key contribution as an EC_KEY struct
  * 
- *        Finally, some sanity checks are performed on thethe received
+ *        Finally, some sanity checks are performed on the received
  *        ephemeral public key (using EC_KEY_check_key())
  * 
  * @param[in]  msg_in              Pointer to ECDHMessage struct containing
