@@ -364,7 +364,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The unsigned integer "length" values have been specified as
  *        two-byte values (uint16_t) stored in the byte array in
  *        big-endian (network) byte order. This is done to make these
- *        parameters a well-defined, machine-indepenedent size so that
+ *        parameters a well-defined, machine-independent size so that
  *        they can be deterministically parsed by the message recipient.
  * 
  *        An elliptic curve signature (using the client's signing key)
