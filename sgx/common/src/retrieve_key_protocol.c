@@ -53,35 +53,26 @@ int append_msg_signature(EVP_PKEY * sign_key,
     return EXIT_FAILURE;
   }
 
-  // create a temporary copy of the input message
-  size_t buf_copy_len = msg->hdr.msg_size;
-  unsigned char *buf_copy = malloc(buf_copy_len);
-  memcpy(buf_copy, msg->body, msg->hdr.msg_size);
-
   // resize input message buffer to make room for appended signature
   //   - signature size (2 byte unsigned integer)
   //   - signature value (byte array)
-  msg->hdr.msg_size += 2 + signature_len;
-  msg->body = realloc(msg->body, msg->hdr.msg_size);
+  size_t orig_buf_len = msg->hdr.msg_size;
+  size_t new_buf_len = msg->hdr.msg_size + 2 + signature_len;
+
+  msg->body = realloc(msg->body, new_buf_len);
   if (msg->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "realloc error for resized input buffer");
+    msg->hdr.msg_size = 0;
     free(signature_bytes);
-    kmyth_clear_and_free(buf_copy, buf_copy_len);
     return EXIT_FAILURE;
   }
   
-  // populate output buffer with concatenated fields
-  uint16_t temp_val = 0;
-  unsigned char *buf_ptr = msg->body;
-
-  // start by copying the orignally input message to the ouput message buffer
-  memcpy(buf_ptr, buf_copy, buf_copy_len);
-  kmyth_clear_and_free(buf_copy, buf_copy_len);
-  buf_ptr += buf_copy_len;
-
+  msg->hdr.msg_size = new_buf_len;
+  unsigned char *buf_ptr = msg->body + orig_buf_len;
+  
   // append signature size bytes
-  temp_val = htobe16((uint16_t) signature_len);
+  uint16_t temp_val = htobe16((uint16_t) signature_len);
   memcpy(buf_ptr, &temp_val, 2);
   buf_ptr += 2;
 
