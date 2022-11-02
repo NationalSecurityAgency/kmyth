@@ -129,7 +129,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The unsigned integer "length" values have been specified as
  *        two-byte values (uint16_t) stored in the byte array in
  *        big-endian (network) byte order. This is done to make these
- *        parameters a well-defined, machine-indepenedent size so that
+ *        parameters a well-defined, machine-independent size so that
  *        they can be deterministically parsed by the message recipient.
  * 
  *        An elliptic curve signature is computed, using the client's
@@ -198,7 +198,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *          - client identity as an X509_NAME struct
  *          - client ephemeral public key contribution as an EC_KEY struct
  * 
- *        Finally, some sanity checks are performed on thethe received
+ *        Finally, some sanity checks are performed on the received
  *        ephemeral public key (using EC_KEY_check_key())
  * 
  * @param[in]  msg_in              Pointer to ECDHMessage struct containing
@@ -241,7 +241,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The unsigned integer "length" values have been specified as
  *        two-byte values (uint16_t) stored in the byte array in
  *        big-endian (network) byte order. This is done to make these
- *        parameters a well-defined, machine-indepenedent size so that
+ *        parameters a well-defined, machine-independent size so that
  *        they can be deterministically parsed by the message recipient.
  * 
  *        An elliptic curve signature (using the server's signing key)
@@ -364,7 +364,7 @@ int extract_identity_bytes_from_x509(X509 * cert_in,
  *        The unsigned integer "length" values have been specified as
  *        two-byte values (uint16_t) stored in the byte array in
  *        big-endian (network) byte order. This is done to make these
- *        parameters a well-defined, machine-indepenedent size so that
+ *        parameters a well-defined, machine-independent size so that
  *        they can be deterministically parsed by the message recipient.
  * 
  *        An elliptic curve signature (using the client's signing key)
