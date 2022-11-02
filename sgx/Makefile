@@ -426,11 +426,11 @@ test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
 
 test/enclave/protocol_ocall.o: untrusted/src/ocall/protocol_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"1
+	@echo "CC   <=  $<"
 
 test/enclave/msg_util.o: untrusted/src/util/msg_util.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"1
+	@echo "CC   <=  $<"
 
 test/enclave/$(Test_Enclave_Name)_u.c: $(SGX_EDGER8R) test/enclave/$(Test_Enclave_Name).edl
 	@cd test/enclave && $(SGX_EDGER8R) --untrusted $(Test_Enclave_Name).edl \
