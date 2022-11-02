@@ -324,7 +324,7 @@ int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
-  *sig_out = OPENSSL_malloc(max_sig_len);
+  *sig_out = calloc(max_sig_len, sizeof(unsigned char));
   if (*sig_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "malloc of signature buffer failed");
@@ -337,6 +337,7 @@ int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
                     (unsigned int *) sig_out_len, ec_sign_pkey) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "signature creation failed");
+    free(*sig_out);
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }

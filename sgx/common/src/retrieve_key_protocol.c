@@ -50,7 +50,6 @@ int append_msg_signature(EVP_PKEY * sign_key,
                                      &signature_len))
   {
     kmyth_sgx_log(LOG_ERR, "error signing buffer");
-    free(signature_bytes);
     return EXIT_FAILURE;
   }
 
