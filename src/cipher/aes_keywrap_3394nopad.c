@@ -9,7 +9,6 @@
 #include <openssl/evp.h>
 
 #include "defines.h"
-#include <malloc.h>
 
 //############################################################################
 // aes_keywrap_3394nopad_encrypt()
@@ -41,9 +40,8 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   //   - an 8-byte integrity check value is prepended to input plaintext
   //   - the ciphertext output is the same length as the expanded plaintext
   *outData_len = inData_len + 8;
-  if (*outData == NULL || malloc_usable_size(*outData) < *outData_len)
+  if (*outData == NULL)
   {
-    if (*outData != NULL ) free(*outData);
     *outData = malloc(*outData_len);
     if (*outData == NULL) return 1;
   }
@@ -173,9 +171,8 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // output data buffer (outData) will contain the decrypted plaintext, which
   // should be the same size as the input ciphertext data (original plaintext
   // plus prepended 8-byte integrity check value)
-  if (*outData == NULL || malloc_usable_size(*outData) < inData_len)
+  if (*outData == NULL)
   {
-    if (*outData != NULL ) free(*outData);
     *outData = malloc(inData_len);
     if (*outData == NULL) return 1;
   }

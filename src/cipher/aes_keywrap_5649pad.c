@@ -10,7 +10,6 @@
 
 #include "defines.h"
 
-#include <malloc.h>
 
 //##########################################################################
 // aes_keywrap_5649pad_encrypt()
@@ -42,9 +41,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   //   2. add 8 to account for the 4 byte IV and 4 byte counter
   //   3. allocate memory based on the size calculation
   *outData_len = ((inData_len + 7) & ~7) + 8;
-  if (*outData == NULL || malloc_usable_size(*outData) < *outData_len)
+  if (*outData == NULL)
   {
-    if (*outData != NULL) free(*outData);
     *outData = malloc(*outData_len);
   }
   if (*outData == NULL)
@@ -186,9 +184,8 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   // should be the same size as the input ciphertext data (original plaintext
   // plus prepended 4-byte integrity check value and 4-byte semiblock count
   // plus any appended padding bytes)
-  if (*outData == NULL || malloc_usable_size(*outData) < inData_len)
+  if (*outData == NULL)
   {
-    if (*outData != NULL) free(*outData);
     *outData = malloc(inData_len);
   }
   if (*outData == NULL)

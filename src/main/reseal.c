@@ -335,18 +335,13 @@ int main(int argc, char **argv)
       return 1;
     }
     // Go ahead and make the default value the output path
-    if (malloc_usable_size(outPath) < outPath_size )
+    if (outPath == NULL)
     {
-      free(outPath);
-      outPath = malloc(outPath_size * sizeof(char));
-      if (outPath == NULL)
-      {
-        kmyth_log(LOG_ERR, "insufficient memory for allocation ... existing");
-        free(temp_str_root);
-        kmyth_clear(authString, auth_string_len);
-        kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-        return 1;
-      }
+      kmyth_log(LOG_ERR, "insufficient memory for allocation ... existing");
+      free(temp_str_root);
+      kmyth_clear(authString, auth_string_len);
+      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+      return 1;
     }
     memcpy(outPath, temp_str, outPath_size);
     free(temp_str_root);

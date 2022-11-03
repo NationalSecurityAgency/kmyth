@@ -10,7 +10,6 @@
 #include <openssl/rand.h>
 
 #include "memory_util.h"
-#include <malloc.h>
 
 //############################################################################
 // aes_gcm_encrypt()
@@ -38,11 +37,8 @@ int aes_gcm_encrypt(unsigned char *key,
   //   - resultant ciphertext (same length as the input plaintext)
   //   - GCM_TAG_LEN (16) byte tag
   *outData_len = GCM_IV_LEN + inData_len + GCM_TAG_LEN;
-  if( *outData == NULL || malloc_usable_size(*outData) < *outData_len )
-  {
-     if( *outData != NULL ) free(*outData);
-     *outData = malloc(*outData_len);
-  }
+  if (*outData == NULL) free( *outData );
+  *outData = malloc(*outData_len);
   if (*outData == NULL) // failed malloc
   {
     return 1;
@@ -183,11 +179,8 @@ int aes_gcm_decrypt(unsigned char *key,
   // output data buffer (outData) will contain only the plaintext, which
   // should be sized as the input minus the lengths of the IV and tag fields
   *outData_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
-  if( *outData == NULL || malloc_usable_size(*outData) < *outData_len )
-  {
-     if( *outData != NULL ) free(*outData);
-     *outData = malloc(*outData_len);
-  }
+  if (*outData == NULL) free(*outData);
+  *outData = malloc(*outData_len);
   if (*outData == NULL) // failed malloc
   {
     return 1;

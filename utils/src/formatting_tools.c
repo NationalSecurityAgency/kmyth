@@ -8,7 +8,6 @@
 #include "tpm2_interface.h"
 
 #include <string.h>
-#include <malloc.h>
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -391,13 +390,6 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
   if (digest == NULL || digest->buffer == NULL)
   {
      kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
-     return 1;
-  }
-
-  // malloc_usable_size depends on malloc.h in glibc
-  if (2*digest->size+1 > malloc_usable_size( (void *) string_buf ))
-  {
-     kmyth_log(LOG_ERR, "insufficient space in output argument string_buf ... exiting");
      return 1;
   }
 
