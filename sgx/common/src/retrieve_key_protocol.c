@@ -465,6 +465,9 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   if (msg_out->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
+    kmyth_clear_and_free(server_id_bytes, server_id_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
