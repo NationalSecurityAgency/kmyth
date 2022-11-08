@@ -1160,6 +1160,7 @@ int parse_key_response_msg(X509 * server_sign_cert,
 
   // done with signature, clean-up memory
   free(msg_sig_bytes);
+  EVP_PKEY_free(msg_sign_pubkey);
 
   return EXIT_SUCCESS;
 }
