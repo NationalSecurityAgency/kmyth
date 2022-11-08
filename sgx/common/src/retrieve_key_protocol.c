@@ -1155,6 +1155,8 @@ int parse_key_response_msg(X509 * server_sign_cert,
                                        msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
+    free(msg_sig_bytes);
+    EVP_PKEY_free(msg_sign_pubkey);
     return EXIT_FAILURE;
   }
 
