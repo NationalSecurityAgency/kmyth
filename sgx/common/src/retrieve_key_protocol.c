@@ -219,6 +219,11 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   
   // get client identity field bytes
   uint8_t *client_id_bytes = malloc(client_id_len);
+  if (client_id_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for client identity");
+    return EXIT_FAILURE;
+  }
   memcpy(client_id_bytes, msg_in->body+buf_index, client_id_len);
   buf_index += client_id_len;
 
@@ -229,6 +234,12 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
 
   // get client ephemeral contribution field bytes
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
+  if (client_eph_pub_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating client ephemeral byte buffer");
+    free(client_id_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(client_eph_pub_bytes, msg_in->body+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
@@ -243,6 +254,13 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  if (msg_sig_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating message signature byte buffer");
+    free(client_id_bytes);
+    free(client_eph_pub_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(msg_sig_bytes, msg_in->body+buf_index, msg_sig_len);
 
   // convert client identity bytes in message to X509_NAME struct
@@ -534,6 +552,11 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
   // get server identity field bytes (server_id)
   uint8_t *server_id_bytes = malloc(server_id_len);
+  if (server_id_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating memory for server identity");
+    return EXIT_FAILURE;
+  }
   memcpy(server_id_bytes, msg_in->body+buf_index, server_id_len);
   buf_index += server_id_len;
 
@@ -544,6 +567,12 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
   // get client ephemeral contribution field bytes (client_eph_pub_bytes)
   unsigned char *client_eph_pub_bytes = malloc(client_eph_pub_len);
+  if (client_eph_pub_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating client ephemeral byte buffer");
+    free(server_id_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(client_eph_pub_bytes, msg_in->body+buf_index, client_eph_pub_len);
   buf_index += client_eph_pub_len;
 
@@ -554,6 +583,13 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
   // get server ephemeral contribution field bytes (server_eph_pub_bytes)
   unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
+  if (server_eph_pub_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating server ephemeral byte buffer");
+    free(server_id_bytes);
+    free(client_eph_pub_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(server_eph_pub_bytes, msg_in->body+buf_index, server_eph_pub_len);
   buf_index += server_eph_pub_len;
 
@@ -568,6 +604,14 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  if (msg_sig_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating message signature byte buffer");
+    free(server_id_bytes);
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(msg_sig_bytes, msg_in->body+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
@@ -901,6 +945,11 @@ int parse_key_request_msg(X509 * client_sign_cert,
 
   // get KMIP 'get key' request bytes
   kmip_request->buffer = malloc(kmip_request->size);
+  if (kmip_request->buffer == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating KMIP request byte buffer");
+    return EXIT_FAILURE;
+  }
   memcpy(kmip_request->buffer, pt_msg.body+buf_index, kmip_request->size);
   buf_index += kmip_request->size;
 
@@ -911,6 +960,13 @@ int parse_key_request_msg(X509 * client_sign_cert,
 
   // get server-side ephemeral public key field bytes
   unsigned char *server_eph_pub_bytes = malloc(server_eph_pub_len);
+  if (server_eph_pub_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating server ephemeral byte buffer");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
+    return EXIT_FAILURE;
+  }
   memcpy(server_eph_pub_bytes, pt_msg.body+buf_index, server_eph_pub_len);
   buf_index += server_eph_pub_len;
 
@@ -925,6 +981,14 @@ int parse_key_request_msg(X509 * client_sign_cert,
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  if (msg_sig_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating message signature byte buffer");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
+    free(server_eph_pub_bytes);
+    return EXIT_FAILURE;
+  }
   memcpy(msg_sig_bytes, pt_msg.body+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
@@ -1126,6 +1190,11 @@ int parse_key_response_msg(X509 * server_sign_cert,
 
   // get KMIP 'get key' response bytes
   kmip_response->buffer = malloc(kmip_response->size);
+  if (kmip_response->buffer == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating KMIP response byte buffer");
+    return EXIT_FAILURE;
+  }
   memcpy(kmip_response->buffer, (pt_msg.body)+buf_index, kmip_response->size);
   buf_index += kmip_response->size;
 
@@ -1140,6 +1209,13 @@ int parse_key_response_msg(X509 * server_sign_cert,
 
   // get message signature bytes
   uint8_t *msg_sig_bytes = malloc(msg_sig_len);
+  if (msg_sig_bytes == NULL)
+  {
+    kmyth_sgx_log(LOG_ERR, "error allocating message signature byte buffer");
+    free(kmip_response->buffer);
+    kmyth_clear(kmip_response, sizeof(ByteBuffer));
+    return EXIT_FAILURE;
+  }
   memcpy(msg_sig_bytes, (pt_msg.body)+buf_index, msg_sig_len);
   buf_index += msg_sig_len;
 
