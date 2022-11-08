@@ -641,6 +641,10 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
                                        msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Server Hello' message invalid");
+    EVP_PKEY_free(server_sign_pubkey);
+    free(client_eph_pub_bytes);
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
 
