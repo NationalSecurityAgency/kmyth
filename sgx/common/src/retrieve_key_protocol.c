@@ -145,6 +145,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
     kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
     kmyth_clear_and_free(client_id_bytes, client_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    EC_KEY_free(client_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
   EC_KEY_free(client_eph_ec_pubkey);
