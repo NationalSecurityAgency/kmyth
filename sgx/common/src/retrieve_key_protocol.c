@@ -627,7 +627,6 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   if (server_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
-    EVP_PKEY_free(server_sign_pubkey);
     free(client_eph_pub_bytes);
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
