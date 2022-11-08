@@ -6,8 +6,8 @@
  *        modular fashion
  */
 
-#ifndef _ECDH_UTIL_H_
-#define _ECDH_UTIL_H_
+#ifndef _KMYTH_ECDH_UTIL_H_
+#define _KMYTH_ECDH_UTIL_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -15,14 +15,21 @@ extern "C"
 #endif
 
 #include <stdio.h>
+#include <string.h>
+#include <endian.h>
 
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/evp.h>
 #include <openssl/ecdsa.h>
 #include <openssl/bn.h>
+#include <openssl/kdf.h>
 #include <openssl/err.h>
 
+#include <kmip/kmip.h>
+
+#include "kmip_util.h"
+#include "aes_gcm.h"
 #include "kmyth_enclave_common.h"
 
 /**
@@ -35,203 +42,190 @@ extern "C"
  *        calling functions a way to easily specify the kmyth default
  *        when invoking API calls that include a 'curve ID' parameter.
  */
-#define KMYTH_EC_NID NID_secp384r1
+#define KMYTH_EC_NID NID_secp521r1
 
 /**
- * @brief OpenSSL's compute_ecdh_key() call supports optionally passing
- *        a function pointer for a KDF to apply to the derived shared
- *        secret value. If the intent is to use the shared secret value
- *        directly, NULL should be passed for this parameter. This macro
- *        provides a centralized way to configure this behavior. For now
- *        this is set to NULL and the compute_ecdh_session_key() function
- *        was added to hash the ECDH mutually computed secret as a 'KDF'
- *        and create a 'session key'
+ * @brief Specify the size (in bytes) required for the ECDH 'shared
+ *        secret' key agreement result
  */
-#define KMYTH_ECDH_KDF NULL
+#define KMYTH_ECDH_SHARED_SECRET_SIZE 66
 
 /**
- * @brief Maximum size of an encrypted ECDH message.
- *        (This is the same value as the maximum fragment length in a TLS record.)
+ * @brief Specify the cryptographic hash algorithm to be used by the
+ *        ECDH-based Kmyth 'retrieve key from server' protocol 
  */
-#define ECDH_MAX_MSG_SIZE 16384
+#define KMYTH_ECDH_MD EVP_sha512()
 
 /**
- * @brief Custom message header prepended to encrypted messages
- *        sent over an ECDH connection. (Similar to TLS record headers.)
+ * @brief Specify the size (in bytes) of the desired key derivation
+ *        function (KDF) output. Also specify the size for each of
+ *        the two 'session keys' to be created (note that this must
+ *        be <= half of the KDF output size) 
  */
-struct ECDHMessageHeader {
-  uint16_t msg_size;
-};
+#define KMYTH_ECDH_KDF_OUTPUT_SIZE 64
+#define KMYTH_ECDH_SESSION_KEY_SIZE 32
 
 /**
  * @brief Creates an ephemeral elliptic curve key pair (containing both the
  *        private and public components) for a participant's contribution
- *        in an ECDH key agreement protocol
+ *        in an ECDH key agreement protocol. The elliptic curve defined
+ *        by KMYTH_EC_NID is used.
  *
- * @param[in]  ec_nid                     ID for the elliptic curve to use
- *                                        for generating this ephemeral
- *                                        private/public key pair.
- *
- * @param[out] ephemeral_ec_key_pair_out  Pointer to ephemeral key pair
- *                                        (EC_KEY struct) generated
+ * @param[out] ephemeral_key_pair  Pointer to pointer to ephemeral key pair
+ *                                 (EVP_PKEY struct) created by this function
  *
  * @return 0 on success, 1 on error
  */
-  int create_ecdh_ephemeral_key_pair(int ec_nid,
-                                     EC_KEY ** ephemeral_ec_key_pair_out);
-
-/**
- * @brief Creates an ephemeral 'public key' contribution (in byte array or
- *        'octet string' format0 to be exchanged with a peer as part of an
- *        ECDH key agreement protocol
- *
- * @param[in]  ephemeral_ec_key_pair_in  Pointer to ephemeral elliptic curve
- *                                       key pair to be used for generating
- *                                       the 'public key' octet string
- *
- * @param[out] ephemeral_ec_pub_out      Pointer to ephemeral 'public key'
- *                                       octet string generated
- *
- * @param[out] ephemeral_ec_pub_out_len  Pointer to length (in bytes) of
- *                                       ephemeral 'public key' octet string
- *                                       generated
- *
- * @return 0 on success, 1 on error
- */
-  int create_ecdh_ephemeral_public(EC_KEY * ephemeral_ec_key_pair_in,
-                                   unsigned char **ephemeral_ec_pub_out,
-                                   size_t *ephemeral_ec_pub_out_len);
-
-/**
- * @brief Reconstructs the curve point for an elliptic curve 'public key' in
- *        octet string format
- *
- * @param[in]  ec_nid               ID for the elliptic curve to use for
- *                                  generating this ephemeral 'public key'
- *                                  point
- *
- * @param[in]  ec_octet_str_in      Input elliptic curve 'public key' in octet
- *                                  string format
- *
- * @param[in]  ec_octet_str_in_len  Length (in bytes) of input octet string
- *
- * @param[out] ec_point_out         Pointer to EC_POINT struct that represents
- *                                  the elliptic curve point for the input
- *                                  elliptic curve 'public key' contribution
- *
- * @return 0 on success, 1 on error
- */
-  int reconstruct_ecdh_ephemeral_public_point(int ec_nid,
-                                              unsigned char *ec_octet_str_in,
-                                              size_t ec_octet_str_in_len,
-                                              EC_POINT ** ec_point_out);
+  int create_ecdh_ephemeral_keypair(EVP_PKEY ** ephemeral_key_pair);
 
 /**
  * @brief Computes shared secret value, using ECDH, from a local private
  *        (e.g., 'a') and remote public (e.g., 'bG') to derive a shared
- *        secret (e.g., 'abG') that is mutually derivable by both the local
- *        and remote party.
+ *        ephemeral key (e.g., 'abG') that is mutually derivable by both
+ *        the local and remote party. The shared secret result is derived
+ *        from this shared ephemeral key.
  *
- * @param[in]  local_eph_priv_key   Key pair containing the ephemeral
- *                                  'private key' for the 'local' party
- *                                  participating in the ECDH exchange.
+ * @param[in]  local_eph_keypair    Pointer to elliptic curve ephemeral
+ *                                  private/public 'key pair' (as an EVP_PKEY
+ *                                  struct) for the 'local' party participating
+ *                                  in the ECDH exchange (need local private
+ *                                  key for shared secret computation)
  *
- * @param[in]  remote_eph_pub_point Elliptic curve 'public key' point
- *                                  representing remote peer's contribution
- *                                  to the ECDH shared secret computation
+ * @param[in]  remote_eph_pubkey    Pointer to elliptic curve ephemeral
+ *                                  'public key' (as an EVP_PKEY struct) for
+ *                                  the 'remote' party participating in the
+ *                                  ECDH exchange
  *
  * @param[out] shared_secret        computed X component of the remote peer's
  *                                  'public key' point dotted with the local
  *                                  'private key' point
  *
  * @param[out] shared_secret_len    Pointer to the length (in bytes) of the
- *                                  shared secret result.
+ *                                  shared secret result
  *
  * @return 0 on success, 1 on error
  */
-  int compute_ecdh_shared_secret(EC_KEY * local_eph_priv_key,
-                                 EC_POINT * remote_eph_pub_point,
-                                 unsigned char **shared_secret,
-                                 size_t *shared_secret_len);
+  int compute_ecdh_shared_secret(EVP_PKEY * local_eph_keypair,
+                                 EVP_PKEY * peer_eph_pubkey,
+                                 unsigned char ** shared_secret,
+                                 size_t * shared_secret_len);
 
 /**
- * @brief Computes session key from a shared secret value input.
+ * @brief Computes session key from a shared secret value (and other) inputs
  *
- * @param[in]  secret           Secret value that will be hashed to produce
- *                              a session key result of the desired length.
+ * @param[in]  secret_in_bytes  Secret value that will be used as the HKDF
+ *                              'input key' bytes
  *
- * @param[in]  secret_len       Length (in bytes) of the input secret value
+ * @param[in]  secret_in_len    Length (in bytes) of the input secret value
+ * 
+ * @param[in]  msg1_in_bytes    Byte buffer containing the 'Client Hello'
+ *                              message bytes (length of client ID, client ID,
+ *                              length of client enphemeral public key, client
+ *                              ephemeral public key, length of signature,
+ *                              signature)
+ * 
+ * @param[in]  msg1_in_len      Length (in bytes) of the input 'Client Hello'
+ *                              message
+ * 
+ * @param[in]  msg2_in_bytes    Byte buffer containing the 'Server Hello'
+ *                              message bytes (length of server ID, server ID,
+ *                              length of client ephemeral public key, client
+ *                              ephemeral public key, length of server
+ *                              ephemeral public key, server ephemeral public
+ *                              key, length of signature, signature)
+ * 
+ * @param[in]  msg2_in_len      Length (in bytes) of the input 'Server Hello'
+ *                              message
  *
- * @param[out] session_key      Message digest resulting from the hash of the
- *                              input secret value. This result will be used
- *                              as a session key value.
+ * @param[out] key1_out_bytes   Pointer to first half (32 bytes, 256-bits) of
+ *                              the HKDF output key bytes result (64 bytes,
+ *                              512 bits). This result will be used as a
+ *                              session key value (first of two session keys).
  *
- * @param[out] session_key_len  Pointer to the length (in bytes) of the
- *                              session key result.
+ * @param[out] key1_out_len     Pointer to the length (in bytes) of the
+ *                              first session key result (should be 32 bytes).
+ * 
+ * @param[out] key2_out_bytes   Pointer to second half (32 bytes, 256-bits) of
+ *                              the HKDF output key bytes result (64 bytes,
+ *                              512 bits). This result will be used as a
+ *                              session key value (second of two session keys).
  *
+ * @param[out] key2_out_len     Pointer to the length (in bytes) of the
+ *                              second session key result (should be 32 bytes).
+ * 
  * @return 0 on success, 1 on error
  */
-  int compute_ecdh_session_key(unsigned char *secret,
-                               size_t secret_len,
-                               unsigned char **session_key,
-                               unsigned int *session_key_len);
+  int compute_ecdh_session_key(unsigned char * secret_in_bytes,
+                               size_t secret_in_len,
+                               unsigned char * msg1_in_bytes,
+                               size_t msg1_in_len,
+                               unsigned char * msg2_in_bytes,
+                               size_t msg2_in_len,
+                               unsigned char ** key1_out_bytes,
+                               size_t * key1_out_len,
+                               unsigned char ** key2_out_bytes,
+                               size_t * key2_out_len);
 
 /**
  * @brief Generates a signature over the data in an input buffer passed
  *        in to the function, using a specified EC private key
  *
- * @param[in]  ec_sign_pkey       Pointer to EC_KEY containing an elliptic
- *                                curve private key to be used for signing
+ * @param[in]  ec_sign_pkey    Pointer to EC_KEY containing an elliptic
+ *                             curve private key to be used for signing
  *
- * @param[in]  buf_in             Input buffer (pointer to byte array)
- *                                containing data to be signed
+ * @param[in]  buf_in          Input buffer (pointer to byte array)
+ *                             containing data to be signed
  *
- * @param[in]  buf_in_len         Length (in bytes) of input data buffer
+ * @param[in]  buf_in_len      Length (in bytes) of input data buffer
  *
- * @param[out] signature_out      Pointer to byte array that will hold the
- *                                signature computed by this function. A NULL
- *                                pointer must be passed in. This function
- *                                will allocate memory for and then populate
- *                                this buffer.
+ * @param[out] sig_out         Pointer to byte array that will hold the
+ *                             signature computed by this function. A NULL
+ *                             pointer must be passed in. This function
+ *                             will allocate memory for and then populate
+ *                             this buffer.
  *
- * @param[out] signature_out_len  Pointer to the length (in bytes) of the
- *                                output signature
+ * @param[out] sig_out_len     Pointer to the length (in bytes) of the
+ *                             output signature
  *
  * @return 0 on success, 1 on error
  */
-  int sign_buffer(EVP_PKEY * ec_sign_pkey,
-                  unsigned char *buf_in, size_t buf_in_len,
-                  unsigned char **sig_out, unsigned int *sig_out_len);
+  int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
+                     unsigned char * buf_in,
+                     size_t buf_in_len,
+                     unsigned char ** sig_out,
+                     unsigned int * sig_out_len);
 
 /**
  * @brief Validates a signature over the data in an input buffer passed
  *        in to the function, using a specified EC private key
  *
- * @param[in]  ec_sign_pkey       Pointer to EC_KEY containing an elliptic
- *                                curve public key to be used for signature
- *                                verification.
+ * @param[in]  ec_verify_pkey    Pointer to EC_KEY containing an elliptic
+ *                               curve public key to be used for signature
+ *                               verification.
  *
- * @param[in]  buf_in             Input buffer (pointer to byte array)
- *                                containing the data over which
- *                                the signature was computed.
+ * @param[in]  buf_in            Input buffer (pointer to byte array)
+ *                               containing the data over which
+ *                               the signature was computed.
  *
- * @param[in]  buf_in_len         Length (in bytes) of input data buffer
+ * @param[in]  buf_in_len        Length (in bytes) of input data buffer
  *
- * @param[in]  signature_out      Pointer to byte array that holds the
- *                                signature to be verified.
+ * @param[in]  sig_out           Pointer to byte array that holds the
+ *                               signature to be verified.
  *
- * @param[in]  signature_out_len  Pointer to the length (in bytes) of the
- *                                signature buffer
+ * @param[in]  sig_out_len       Pointer to the length (in bytes) of the
+ *                               signature buffer
  *
  * @return 0 on success (signature verification passed),
  *         1 on error (signature verification failed)
  */
-  int verify_buffer(EVP_PKEY * ec_verify_pkey,
-                    unsigned char *buf_in, size_t buf_in_len,
-                    unsigned char *sig_in, unsigned int sig_in_len);
+  int ec_verify_buffer(EVP_PKEY * ec_verify_pkey,
+                       unsigned char * buf_in,
+                       size_t buf_in_len,
+                       unsigned char * sig_in,
+                       unsigned int sig_in_len);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif  // _KMYTH_ECDH_UTIL_H_
