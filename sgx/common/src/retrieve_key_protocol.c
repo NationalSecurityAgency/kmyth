@@ -932,6 +932,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   if (buf_index != pt_msg.hdr.msg_size)
   {
     kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
@@ -943,6 +945,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   if (msg_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
@@ -956,6 +960,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
                                        msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     free(server_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
@@ -969,6 +975,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   if (rcvd_server_eph_ec_pub == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     free(server_eph_pub_bytes);
     return EXIT_FAILURE;
   } 
@@ -978,6 +986,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
                           NULL))
   {
     kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     free(server_eph_pub_bytes);
     EC_KEY_free(rcvd_server_eph_ec_pub);
     return EXIT_FAILURE;
@@ -988,6 +998,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   if (1 != EVP_PKEY_set1_EC_KEY(rcvd_server_eph_pub, rcvd_server_eph_ec_pub))
   {
     kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY in EVP_PKEY");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     EC_KEY_free(rcvd_server_eph_ec_pub);
     EVP_PKEY_free(rcvd_server_eph_pub);
     return EXIT_FAILURE;
@@ -1000,6 +1012,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
                         (const EVP_PKEY *) server_eph_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "server ephemeral public mismatch");
+    free(kmip_request->buffer);
+    kmyth_clear(kmip_request, sizeof(ByteBuffer));
     EVP_PKEY_free(rcvd_server_eph_pub);
     return EXIT_FAILURE;
   }
