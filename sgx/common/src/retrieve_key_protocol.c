@@ -284,6 +284,7 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
     return EXIT_FAILURE;
   }
   X509_NAME_free(client_id);
+  X509_NAME_free(expected_client_id);
 
   // extract client's public signing key (needed to verify signature over
   // message) from X509 certificate
