@@ -279,6 +279,7 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   {
     kmyth_sgx_log(LOG_ERR, "'Client Hello' - unexpected client identity");
     X509_NAME_free(client_id);
+    X509_NAME_free(expected_client_id);
     free(client_eph_pub_bytes);
     free(msg_sig_bytes);
     return EXIT_FAILURE;
