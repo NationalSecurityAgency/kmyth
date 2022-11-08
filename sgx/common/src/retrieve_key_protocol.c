@@ -705,6 +705,7 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   {
     kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
     free(server_eph_pub_bytes);
+    EC_KEY_free(server_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
   free(server_eph_pub_bytes);
