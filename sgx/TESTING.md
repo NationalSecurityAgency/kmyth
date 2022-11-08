@@ -117,10 +117,10 @@ The proxy should only be used for testing and demonstration purposes.
 
 The proxy provides an ECDH server connection and a TLS client connection.
 It implements the 'retrieve key' protocol, described at a high level below,
-over its ECDH connection with the SGX enclave client. It emulates an interface
+over its ECDH connection with the SGX enclave client. It provides an interface
 with a remote KMIP key server over its TLS connection. Overall, it supports
-retrieving a demonstration key value that is requested by the enclave client
-from the remote 'demo server' and returning it to the enclave client.
+retrieving a key value that is requested by the enclave client from the remote
+server and returning it to the enclave client.
 
 #### Usage
 
@@ -159,6 +159,7 @@ we did not implement a TLS client within the enclave in order to avoid potential
 licensing issues with our open source code. Instead, we implemented a standalone TLS proxy
 to support encrypted communications using ECDH between the enclave and proxy
 and TLS between the proxy and key server.
+
 The proxy runs in untrusted code, but it could reside in an environment
 providing other enhanced protections.
 
