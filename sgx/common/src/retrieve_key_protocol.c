@@ -713,6 +713,7 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   if (1 != EC_KEY_check_key(server_eph_ec_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "checks on received ephemeral public key failed");
+    EC_KEY_free(server_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
 
