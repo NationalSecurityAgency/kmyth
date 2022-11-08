@@ -956,6 +956,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
                                        msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
+    free(server_eph_pub_bytes);
+    free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
 
