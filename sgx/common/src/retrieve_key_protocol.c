@@ -1147,6 +1147,8 @@ int parse_key_response_msg(X509 * server_sign_cert,
   if (buf_index != pt_msg.hdr.msg_size)
   {
     kmyth_sgx_log(LOG_ERR, "parsed byte count mismatches input message length");
+    free(kmip_response->buffer);
+    kmyth_clear(kmip_response, sizeof(ByteBuffer));
     free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
@@ -1157,6 +1159,8 @@ int parse_key_response_msg(X509 * server_sign_cert,
   if (msg_sign_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting public signature key from cert");
+    free(kmip_response->buffer);
+    kmyth_clear(kmip_response, sizeof(ByteBuffer));
     free(msg_sig_bytes);
     return EXIT_FAILURE;
   }
@@ -1169,6 +1173,8 @@ int parse_key_response_msg(X509 * server_sign_cert,
                                        msg_sig_len))
   {
     kmyth_sgx_log(LOG_ERR, "signature over 'Key Request' message invalid");
+    free(kmip_response->buffer);
+    kmyth_clear(kmip_response, sizeof(ByteBuffer));
     free(msg_sig_bytes);
     EVP_PKEY_free(msg_sign_pubkey);
     return EXIT_FAILURE;
