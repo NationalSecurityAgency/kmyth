@@ -129,7 +129,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   size_t client_eph_pubkey_len = 0;
   
   EC_KEY *client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
-  if (client_eph_pubkey == NULL)
+  if (client_eph_ec_pubkey == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error extracting EC_KEY from EVP_PKEY struct");
     free(client_id_bytes);
