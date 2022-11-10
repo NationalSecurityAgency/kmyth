@@ -9,6 +9,8 @@
 #define MEMORY_UTIL_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {

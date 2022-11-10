@@ -333,6 +333,7 @@ int parse_kmip_get_response(KMIP * ctx,
     return 1;
   }
   *id_len = payload->unique_identifier->size;
+
   memcpy(*id, payload->unique_identifier->value, *id_len);
 
   *key = calloc(key_material->size, sizeof(unsigned char));

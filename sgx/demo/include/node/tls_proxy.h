@@ -8,29 +8,29 @@
 #ifndef KMYTH_TLS_PROXY_H
 #define KMYTH_TLS_PROXY_H
 
-#include <getopt.h>
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
+#include <poll.h>
 
-#include "ecdh_demo.h"
+#include "retrieve_key_protocol.h"
 
-typedef struct TLSConnection
-{
-  char *host;
-  char *port;
-  char *ca_path;
-  char *client_key_path;
-  char *client_cert_path;
-  SSL_CTX *ctx;
-  BIO *conn;
-} TLSConnection;
+#include "demo_ecdh_util.h"
+#include "demo_tls_util.h"
 
+/**
+ * @brief This struct consolidates complete (overall) state information
+ *        required for a 'TLS Proxy' node to complete the kmyth
+ *        'retrieve key' protocol. This proxy bridges an ECDH and a TLS
+ *        connection and contains interfaces for a TLS client and an
+ *        ECDH server.
+ */
 typedef struct TLSProxy
 {
-  TLSConnection tlsconn;
-  ECDHServer ecdhconn;
+  TLSPeer tlsconn;
+  ECDHPeer ecdhconn;
 } TLSProxy;
 
+/**
+ * @brief Command-line options for the 'TLS proxy' application
+ */
 static const struct option proxy_longopts[] = {
   // ECDH connection info
   {"local-port", required_argument, 0, 'p'},
@@ -49,4 +49,4 @@ static const struct option proxy_longopts[] = {
   {0, 0, 0, 0}
 };
 
-#endif
+#endif // KMYTH_TLS_PROXY_H
