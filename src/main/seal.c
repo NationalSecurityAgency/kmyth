@@ -288,61 +288,67 @@ int main(int argc, char **argv)
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL)
   {
-    char *original_fn = basename(inPath);
-    char *temp_str, *temp_str_root = malloc((strlen(original_fn) + 5) * sizeof(char));
-    if (temp_str_root == NULL)
+    // create buffer to hold default filename derived from input filename
+    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
+    memset(default_fn, '\0', sizeof(default_fn));
+
+    // Initialize default filename to basename() of input path, truncating if
+    // necessary. The maximum size of this "root" value is the must allow space
+    // to add a '.' delimiter (1 byte) and the default extension
+    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
+    size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
+    max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
+    strncpy(default_fn, basename(inPath), max_root_len);
+
+    // remove any leading '.'s
+    while (*default_fn == '.')
     {
-      kmyth_log(LOG_ERR,"insufficient memory allocation ... exiting");
-      return 1;
+      memmove(default_fn, default_fn + 1, sizeof(default_fn) - 1);
     }
-    temp_str = temp_str_root;
 
-    strncpy(temp_str, original_fn, strlen(original_fn));
-
-    // Remove any leading '.'s
-    while (*temp_str == '.')
+    // ensure that this intermediate result is not an empty string
+    if (strlen(default_fn) == 0)
     {
-      memmove(temp_str, temp_str + 1, strlen(temp_str) - 1);
-    }
-    char *scratch;
-
-    // Everything beyond first '.' in original filename, after any leading
-    // '.'(s) removed, is treated as extension
-    temp_str = strtok_r(temp_str, ".", &scratch);
-    outPath_size = strlen(temp_str);
-
-    // Make sure resultant default file name does not have empty basename
-    if (outPath_size == 0)
-    {
-      kmyth_log(LOG_ERR, "invalid default filename derived ... exiting");
-      free(temp_str_root);
+      kmyth_log(LOG_ERR, "invalid/empty default filename root ... exiting");
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
 
-     // Append .ski file extension
-    strncat(temp_str, ".ski", 5);
-    outPath_size = strlen(temp_str) + 1; // size needed includes \0 terminator
+    // everything beyond first non-leading '.' is treated as extension
+    char *ext_ptr = strstr(default_fn, ".");
+    if (ext_ptr == NULL)
+    {
+      // no filename extension found - just add trailing '.'
+      strncat(default_fn, ".", 1);
+    }
+    else
+    {
+      // input fileame extension delimiter found, null everything after it
+      memset(ext_ptr + 1, '\0', sizeof(default_fn) - (ext_ptr - default_fn));
+    }
+
+    // concatenate default filename root and extension
+    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
+                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
-    if (!stat(temp_str, &st) && !forceOverwrite)
+    if (!stat(default_fn, &st) && !forceOverwrite)
     {
       kmyth_log(LOG_ERR,
                 "default output filename (%s) already exists ... exiting",
-                temp_str);
-      free(temp_str_root);
+                default_fn);
       kmyth_clear(authString, auth_string_len);
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
+
     // Go ahead and make the default value the output path
+    outPath_size = strlen(default_fn);
     outPath = malloc(outPath_size * sizeof(char));
-    memcpy(outPath, temp_str, outPath_size);
-    free(temp_str_root);
+    memcpy(outPath, default_fn, outPath_size);
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
-    free(outPath);
   }
 
   uint8_t *output = NULL;
