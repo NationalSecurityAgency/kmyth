@@ -61,6 +61,22 @@
 #define KMYTH_APPLOG_PATH "/var/log/kmyth.log"
 
 /**
+ * @brief Maximum length of a default filename value. The length of any
+ *        default filename must satisfy this maximum (e.g. be truncated
+ *        if too long). This maximum does not apply to user-specified
+ *        filename values.
+ */
+#define KMYTH_MAX_DEFAULT_FILENAME_LEN 25
+
+/**
+ * @brief Default extension value/length for an output kmyth file produced
+ *        by the kmyth-seal application.
+ */
+#define KMYTH_DEFAULT_SEAL_OUT_EXT "ski"
+#define KMYTH_DEFAULT_SEAL_OUT_EXT_LEN 3
+
+
+/**
  * For TPM 2.0 Software Stack (TSS2) library calls where retries might be
  * applicable, we define an upper limit (MAX_RETRIES) to prevent infinite
  * retry attempts.

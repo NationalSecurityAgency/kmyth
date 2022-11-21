@@ -437,7 +437,8 @@ void test_aes_gcm_decrypt_vectors(void)
           // clean-up output_data byte array
           if (rc == 0)
           {
-            free(output_data);
+            if (output_data != NULL) free(output_data);
+            output_data = NULL;
           }
         }
 
@@ -469,6 +470,7 @@ void test_aes_gcm_decrypt_vectors(void)
   free(key_data);
   free(input_data);
   free(result_data);
+  //if( output_data != NULL ) free(output_data);
 }
 
 //----------------------------------------------------------------------------
@@ -735,4 +737,7 @@ void test_gcm_parameter_limits(void)
   CU_ASSERT(inData != NULL);
   CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
+  free(inData);
+  free(outData);
+  free(key);
 }

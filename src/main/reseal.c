@@ -18,6 +18,7 @@
 
 #include "cipher/cipher.h"
 
+#include <malloc.h>
 /**
  * @brief The external list of valid (implemented and configured) symmetric
  *        cipher options (see src/util/kmyth_cipher.c)
@@ -135,7 +136,6 @@ static void usage(const char *prog)
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
-          " -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers \n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
           " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
@@ -170,7 +170,6 @@ const struct option longopts[] = {
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
-  {"get_exp_policy", no_argument, 0, 'g'},
   {"expected_policy", required_argument, 0, 'e'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
@@ -202,14 +201,14 @@ int main(int argc, char **argv)
   char *cipherString = NULL;
   bool forceOverwrite = false;
   char *expected_policy = NULL;
-  uint8_t bool_trial_only = 0;
+  uint8_t bool_trial_only = 1; // reseal forces this
 
   // Parse and apply command line options
   int options;
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:e:i:o:c:p:w:fghlv", longopts,
+          getopt_long(argc, argv, "a:e:i:o:c:p:w:fhlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -237,9 +236,9 @@ int main(int argc, char **argv)
     case 'f':
       forceOverwrite = true;
       break;
-    case 'g':
-      bool_trial_only = 1;
-      break;
+    //case 'g':
+    //  bool_trial_only = 1;
+    //  break;
     case 'e':
       expected_policy = optarg;
       break;
@@ -362,17 +361,18 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
     free(outPath);
     free(output);
+    free(pcrs);
     return 1;
   }
 
-  // Call top-level "kmyth-seal" function
+  // Call top-level "kmyth-reseal" function
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                            pcrs, pcrs_len, cipherString, expected_policy,
                            bool_trial_only))
   {
-    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
+    kmyth_log(LOG_ERR, "kmyth-reseal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(pcrs);

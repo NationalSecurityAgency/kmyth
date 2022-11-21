@@ -80,7 +80,7 @@ void test_kmyth_clear(void)
     }
   }
   CU_ASSERT(result);
-
+  free(tmp1);
 }
 
 //----------------------------------------------------------------------------
@@ -144,4 +144,5 @@ void test_secure_memset(void)
     }
   }
   CU_ASSERT(result);
+  free(tmp1);
 }

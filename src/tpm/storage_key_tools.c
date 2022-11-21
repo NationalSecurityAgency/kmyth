@@ -231,7 +231,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 // check_if_srk()
 //############################################################################
-int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool * isSRK)
+int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 {
   // initialize 'isSRK' result to false - early termination should not result
   // in a true value passed back (even if the return code indicates an error)
@@ -491,7 +491,7 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                        TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
-  //   - The authVal (hash of user specifed authorization string or default
+  //   - The authVal (hash of user specified authorization string or default
   //     all-zero hash) is passed into this function by the caller
   //   - For a key object, we specify the data as NULL to leave the data buffer
   //     empty (zero-size). When the key (SK in this case) is created, the TPM
@@ -525,6 +525,7 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
 
   emptyPCRList.count = 0;       // no auth policy session means no PCR criteria
+
   if (create_kmyth_object(sapi_ctx,
                           nullSession,
                           srk_handle,

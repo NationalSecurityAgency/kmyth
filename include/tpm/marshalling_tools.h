@@ -26,6 +26,9 @@ typedef struct Ski_s
   TPM2B_PUBLIC sk_pub;
   TPM2B_PRIVATE sk_priv;
 
+  TPM2B_DIGEST policyBranch1;
+  TPM2B_DIGEST policyBranch2;
+
   //The cipher used to encrypt the data
   cipher_t cipher;
 
@@ -52,7 +55,8 @@ typedef struct Ski_s
  *
  * @return 0 on success, 1 on error
  */
-int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
+int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
+                    uint8_t bool_policy_or);
 
 /**
  * @brief Creates a byte array in .ski format from a ski struct
@@ -65,7 +69,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output);
  *
  * @return 0 on success, 1 on error
  */
-int create_ski_bytes(Ski input, uint8_t ** output, size_t * output_length);
+int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length);
 
 /**
  * @brief Frees the contents of a ski struct
@@ -190,28 +194,73 @@ Ski get_default_ski(void);
  *                                             the destination buffer for the
  *                                             sealed key private data.
  *
+ * @param[in] p_branch_1                       TPM 2.0 PCR policy digest
+ *                                             struct to be packed - passed
+ *                                             as a pointer to the struct.
+ *
+ * @param[out] p_branch_1_data                 Pointer to a pointer to the
+ *                                             location where the marshaled
+ *                                             policy data will be
+ *                                             stored. Memory for this is
+ *                                             allocated within this function
+ *                                             but must be freed by the caller.
+ *
+ * @param[out] p_branch_1_data_size            Pointer to a size_t to hold the
+ *                                             length (in bytes) of
+ *                                             pb1_data_size
+ *
+ * @param[in] p_branch_1_data_offset           Specifies the starting byte in
+ *                                             the destination buffer for the
+ *                                             policy struct data.
+ *
+ * @param[in] p_branch_2                       TPM 2.0 PCR policy digest
+ *                                             struct to be packed - passed
+ *                                             as a pointer to the struct.
+ *
+ * @param[out] p_branch_2_data                 Pointer to a pointer to the
+ *                                             location where the marshaled
+ *                                             policy data will be
+ *                                             stored. Memory for this is
+ *                                             allocated within this function
+ *                                             but must be freed by the caller.
+ *
+ * @param[out] p_branch_2_data_size            Pointer to a size_t to hold the
+ *                                             length (in bytes) of
+ *                                             pb2_data_size
+ *
+ * @param[in] p_branch_2_data_offset           Specifies the starting byte in
+ *                                             the destination buffer for the
+ *                                             policy struct data.
  * @return 0 if success, 1 if error
  */
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t * pcr_selection_struct_data_size,
+                       size_t *pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t * storage_key_public_data_size,
+                       size_t *storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t * storage_key_private_data_size,
+                       size_t *storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
                        TPM2B_PUBLIC * sealed_key_public_blob,
                        uint8_t ** sealed_key_public_data,
-                       size_t * sealed_key_public_data_size,
+                       size_t *sealed_key_public_data_size,
                        size_t sealed_key_public_data_offset,
                        TPM2B_PRIVATE * sealed_key_private_blob,
                        uint8_t ** sealed_key_private_data,
-                       size_t * sealed_key_private_data_size,
-                       size_t sealed_key_private_data_offset);
+                       size_t *sealed_key_private_data_size,
+                       size_t sealed_key_private_data_offset,
+                       TPM2B_DIGEST * p_branch_1,
+                       uint8_t ** p_branch_1_data,
+                       size_t *p_branch_1_data_size,
+                       size_t p_branch_1_data_offset,
+                       TPM2B_DIGEST * p_branch_2,
+                       uint8_t ** p_branch_2_data,
+                       size_t *p_branch_2_data_size,
+                       size_t p_branch_2_data_offset);
 
 /**
  * @brief Unmarshals TPM 2.0 objects read from a .ski file.
@@ -298,6 +347,39 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *                                            the source (input) buffer for the
  *                                            sealed key private data.
  *
+ *
+ * @param[in]  p_branch_1                     TPM 2.0 PCR policy struct
+ *                                            passed as a pointer to the
+ *                                            TPM2B_DIGEST struct to be
+ *                                            populated with the policy
+ *                                            data read from file.
+ *
+ * @param[out] p_branch_1_data                Buffer containing policy branch 1
+ *                                            struct data.
+ *
+ * @param[out] p_branch_1_data_size           Size (in bytes) of
+ *                                            policy_branch_1_struct_data
+ *
+ * @param[in] p_branch_1_data_offset          Specifies the starting byte in
+ *                                            the destination buffer for the
+ *                                            policy_branch_1 struct data.
+ *
+ * @param[in]  p_branch_2                     TPM 2.0 PCR policy struct
+ *                                            passed as a pointer to the
+ *                                            TPM2B_DIGEST struct to be
+ *                                            populated with the policy
+ *                                            data read from file.
+ *
+ * @param[out] p_branch_2_data                Buffer containing policy branch 2
+ *                                            struct data.
+ *
+ * @param[out] p_branch_2_data_size           Size (in bytes) of
+ *                                            policy_branch_2_struct_data
+ *
+ * @param[in] p_branch_2_data_offset          Specifies the starting byte in
+ *                                            the destination buffer for the
+ *                                            policy_branch_2 struct data.
+ *
  * @return 0 if success, 1 if error
  */
 int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
@@ -319,7 +401,15 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          TPM2B_PRIVATE * sealed_key_private_blob,
                          uint8_t * sealed_key_private_data,
                          size_t sealed_key_private_data_size,
-                         size_t sealed_key_private_data_offset);
+                         size_t sealed_key_private_data_offset,
+                         TPM2B_DIGEST * p_branch_1,
+                         uint8_t * p_branch_1_data,
+                         size_t p_branch_1_data_size,
+                         size_t p_branch_1_data_offset,
+                         TPM2B_DIGEST * p_branch_2,
+                         uint8_t * p_branch_2_data,
+                         size_t p_branch_2_data_size,
+                         size_t p_branch_2_data_offset);
 
 /**
  * @brief This function packs an input TPM 2.0 PCR selection list structure
@@ -510,6 +600,69 @@ int pack_private(TPM2B_PRIVATE * private_blob_in,
 int unpack_private(TPM2B_PRIVATE * private_blob_out,
                    uint8_t * packed_data_in,
                    size_t packed_data_in_size, size_t packed_data_in_offset);
+
+/**
+ * @brief As the contents of memory containing the digest of a
+ *        TPM 2.0 object may have platform-specific formatting
+ *        (padding, byte/bit ordering, etc), this function packs
+ *        a TPM 2.0 digest (TPM2B_DIGEST struct) into a platform
+ *        independent format, supporting the writing of this data to a
+ *        Kmyth .ski output file.
+ *
+ * This function uses the TSS2 API for marshaling data to obtain
+ * the packed, platform independent result.
+ *
+ * @param[in]  digest_in              TPM 2.0 private "blob" to be packed -
+ *                                    passed as a pointer to the TPM2B_PRIVATE
+ *                                    sized buffer containing the private area
+ *                                    contents.
+ *
+ * @param[out] packed_data_out        Data buffer for packed result - passed
+ *                                    as a pointer to the output byte array
+ *
+ * @param[in]  packed_data_out_size   Size, in bytes, of the data buffer to
+ *                                    hold the packed result
+ *
+ * @param[in]  packed_data_out_offset The byte offset, into the data buffer,
+ *                                    where the starting byte of the packed
+ *                                    result should be written
+ *
+ * @return 0 if success, 1 if error
+ */
+int pack_digest(TPM2B_DIGEST * digest_in,
+                uint8_t * digest_data_out,
+                size_t packed_data_out_size, size_t packed_data_out_offset);
+
+/**
+ * @brief As the contents of memory containing the digest of a TPM 2.0
+ *        object may have platform-specific formatting (padding, byte/bit
+ *        ordering, etc), this function unpacks a platform independently
+ *        formatted TPM 2.0 digest (e.g., a policy digest read in from a Kmyth
+ *        .ski file) into a TPM2B_DIGEST struct, where it can be used by a Kmyth
+ *        application interacting with a TPM 2.0.
+ *
+ * This function uses the TSS2 API for unmarshalling data to obtain the unpacked,
+ * platform dependent result.
+ *
+ * @param[out] digest_out           TPM 2.0 digest (TPM2B_DIGEST
+ *                                   buffer) to hold the unpacked digest result.
+ *
+ * @param[in]  packed_data_in        Data buffer holding the packed digest input -
+ *                                   passed as a pointer to the byte array.
+ *
+ * @param[in]  packed_data_in_size   Size, in bytes, of the memory pointed to
+ *                                   by the input packed data buffer
+ *                                   (packed_data_in).
+ *
+ * @param[in] packed_data_in_offset  The byte offset, into the input data
+ *                                   buffer, specifying where the source
+ *                                   data starts.
+ *
+ * @return 0 if success, 1 if error
+ */
+int unpack_digest(TPM2B_DIGEST * digest_out,
+                  uint8_t * packed_data_in,
+                  size_t packed_data_in_size, size_t packed_data_in_offset);
 
 /**
  * There are a number of fixed TPM properties (tagged properties)

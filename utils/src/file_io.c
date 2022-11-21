@@ -176,7 +176,7 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
 
   // Create data buffer and read file into it
   *data = (uint8_t *) malloc(input_size);
-  if (data == NULL)
+  if (*data == NULL)
   {
     kmyth_log(LOG_ERR, "could not allocate memory to read file ... exiting");
     if (!BIO_free(bio))

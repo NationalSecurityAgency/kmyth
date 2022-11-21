@@ -170,7 +170,7 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
  *
  * @return 0 if success, 1 if error
  */
-int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool * isEmulator);
+int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator);
 
 /**
  * @brief Translates error string from hex into human readable.
@@ -486,10 +486,12 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
  * @param[out] policySession Pointer to policy session parameters struct
  *                           initialized by this function
  *
+ * @param[in]  session_type  The type of session to create (Trial or Policy)
+ *
  * @return 0 if success, 1 if error
  */
-int create_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                               SESSION * policySession);
+int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
+                        SESSION * policySession, TPM2_SE session_type);
 
 /**
  * @brief Initiates (starts) a new authorization session (called by
@@ -533,6 +535,59 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPML_PCR_SELECTION policySession_pcrList);
 
 /**
+ * @brief Extension of apply_policy for unsealing. Only calls apply policy
+ * if the user has not elected to use a "policy or". If the user has elected
+ * to use "policy or" it performs the calculations necessary to authorize an action
+ *
+ * @param[in]  sapi_ctx              Pointer to the System API (SAPI) context
+ *
+ * @param[in]  policySessionHandle   Handle referencing authorization policy
+ *                                   session whose context will be updated
+ *                                   by applying these policy commands.
+ *
+ * @param[in]  policySession_pcrList PCR Selection structure for session to
+ *                                   be updated
+ *
+ * @param[in]  policy1               one of two policy branches capable of
+ *                                   satisfying the compound policy
+ *
+ * @param[in]  policy2               The second of two policy branches capable
+ *                                   of satisfying the compound policy
+ *
+ * @return 0 if success, 1 if error.
+ */
+int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                        TPM2_HANDLE policySessionHandle,
+                        TPML_PCR_SELECTION policySession_pcrList,
+                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2);
+
+/**
+ * @brief Executes the Kmyth-specific authorization policy steps and updates
+ *        the authorization policy session context for the specified TPM 2.0
+ *        session handle.
+ *
+ * @param[in]  sapi_ctx              Pointer to the System API (SAPI) context
+ *
+ * @param[in]  policySessionHandle   Handle referencing authorization policy
+ *                                   session whose context will be updated
+ *                                   by applying these policy commands.
+ *
+ * @param[in]  policy1               one of two policy branches capable of
+ *                                   satisfying the compound policy
+ *
+ * @param[in]  policy2               The second of two policy branches capable
+ *                                   of satisfying the compound policy
+ *
+ * @param[out] pHashList            Pointer to a structure containing each policy
+ *                                  hash branch. 2 supported, 8 possible.
+ *
+ * @return 0 if success, 1 if error.
+ */
+int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
+                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
+                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList);
+
+/**
  * @brief Creates a random initial nonce value that the caller can send to the
  *        TPM to provide some protection against replay of TPM commands
  *
@@ -563,5 +618,14 @@ int create_caller_nonce(TPM2B_NONCE * nonceOut);
  * @return 0 if success, 1 if error. 
  */
 int rollNonces(SESSION * session, TPM2B_NONCE newNonce);
+
+/**
+ * @brief Generates nonce for the session and TPM
+ *
+ * @param[out] session:   Pointer to session structure to be updated
+ *
+ *
+ * @return 0 if success, 1 if error.
+ */
 
 #endif /* TPM2_INTERFACE_H */

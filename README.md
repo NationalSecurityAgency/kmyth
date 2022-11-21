@@ -33,7 +33,7 @@ For build and installation instructions see the [INSTALL](INSTALL.md) file.
 ----
 ## Usage
 
-### kmyth-seal
+### kmyth-seal / kmyth-reseal
 
 This tool will *kmyth-seal* a file using the TPM 2.0. In TPM parlance,
 'sealing' typically refers to encrypting the file using a key known only to
@@ -60,21 +60,28 @@ if the PCRs used to encrypt it change, or if the TPM is reset, the data will
 be permanently lost.*
 
     usage: ./bin/kmyth-seal [options] 
+         : ./bin/kmyth-reseal [options] 
     
     options are: 
     
-     -a or --auth_string   String used to create 'authVal' digest. Defaults to empty string (all-zero digest).
-     -i or --input         Path to file containing the data to be sealed.
-     -o or --output        Destination path for the sealed file. Defaults to <filename>.ski in the CWD.
-     -f or --force         Force the overwrite of an existing .ski file when using default output.
-     -p or --pcrs_list     List of TPM platform configuration registers (PCRs) to apply to authorization policy.
-                           Defaults to no PCRs specified. Encapsulate in quotes (e.g. "0, 1, 2").
-     -c or --cipher        Specifies the cipher type to use. Defaults to 'AES/GCM/NoPadding/256'
-     -l or --list_ciphers  Lists all valid ciphers and exits.
-     -w or --owner_auth    TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.
-     -v or --verbose       Enable detailed logging.
-     -h or --help          Help (displays this usage).
+     -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).
+     -i or --input           Path to file containing the data to be sealed.
+     -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.
+     -f or --force           Force the overwrite of an existing .ski file when using default output.
+     -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.
+                             Defaults to no PCRs specified. Encapsulate in quotes (e.g. "0, 1, 2").
+     -c or --cipher          Specifies the cipher type to use. Defaults to 'AES/GCM/NoPadding/256'
+     -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers
+     -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy.
+     -l or --list_ciphers    Lists all valid ciphers and exits.
+     -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.
+     -v or --verbose         Enable detailed logging.
+     -h or --help            Help (displays this usage).
 
+*kmyth-reseal is a specialization of kmyth-seal where the -g / --get_exp_policy option
+is forced but otherwise all the options are available. One may think of
+'kmyth-reseal ..' as identical functionality as 'kmyth-seal -g ..'. Use of the -g flag within kmyth-reseal while
+allowed, is superfluous.
 
 ### kmyth-unseal
 

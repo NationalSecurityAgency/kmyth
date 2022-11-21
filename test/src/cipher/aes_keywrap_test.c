@@ -365,6 +365,8 @@ void test_aes_keywrap_vectors(void)
   unsigned char *ct_data = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
   size_t ct_data_len = 0;
   bool result_bool = false;
+  unsigned char *out = NULL;
+  size_t out_len;
 
   for (int i = 0; i < aes_keywrap_vectors.count; i++)
   {
@@ -393,8 +395,8 @@ void test_aes_keywrap_vectors(void)
                                              &ct_data_len, &result_bool) == 0)
         {
           // Create a new buffer to hold the result for each vector applied
-          unsigned char *out = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
-          size_t out_len = 0;
+          if (out == NULL) out = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+          out_len = 0;
 
           // increment count of test vectors applied and test if limit reached
           // if the test vector count limit is reached, this will be the last
@@ -504,7 +506,8 @@ void test_aes_keywrap_vectors(void)
             // clean-up output_data byte array
             if (rc == 0)
             {
-              free(out);
+              if( out != NULL ) free(out);
+              out = NULL;
             }
           }
           else
@@ -538,7 +541,10 @@ void test_aes_keywrap_vectors(void)
   }
 
   // clean-up allocated test vector memory
+  //if (out != NULL) free(out);
   free(key_data);
   free(pt_data);
   free(ct_data);
+
+  if (out != NULL) free(out);
 }

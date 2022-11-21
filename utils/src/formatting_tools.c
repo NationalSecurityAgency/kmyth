@@ -5,6 +5,7 @@
  */
 
 #include "formatting_tools.h"
+#include "tpm2_interface.h"
 
 #include <string.h>
 
@@ -13,6 +14,7 @@
 #include <openssl/evp.h>
 
 #include "defines.h"
+#include <stdio.h>
 
 //############################################################################
 // get_block_bytes()
@@ -59,6 +61,10 @@ int get_block_bytes(char **contents,
 
   else
   {
+    if (*block != NULL) free(*block); // since looping, should free previous block allocation
+                                      // (inefficient, yes, but easy-to-code, otherwise must
+                                      //  calculate size and re-allocate)
+
     // allocate enough memory for output parameter to hold parsed block data
     //   - must be allocated here because size is calculated here
     //   - must be freed by caller because data must be passed back
@@ -316,3 +322,88 @@ int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
   *dest_length = new_dest_len;
   return (0);
 }
+
+//############################################################################
+// convert_string_to_digest()
+//############################################################################
+int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
+{
+  // substring to holds 2 hex values at a time
+  char substr[3];
+  substr[2] = '\0';
+
+  size_t strlength = strlen(str);
+
+  if (strlength != (size_t) (2 * KMYTH_DIGEST_SIZE) )
+  {
+    kmyth_log(LOG_ERR, "invalid input string length ... exiting");
+    return 1;
+  }
+
+  if (digest == NULL || digest->buffer == NULL )
+  {
+    kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
+    return 1;
+  }
+
+  // initializes buffer with all proper hexadexcimal values from str input
+  unsigned long ul;
+  unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
+  if( expectedPolicyBuffer == NULL )
+  {
+    kmyth_log(LOG_ERR, "unable to reserve intermediate buffer ... exiting");
+    return 1;
+  }
+
+  // iterates through each pair of hex values and fills the
+  //  buffer with values indicated in the string
+  for (size_t i = 0; i < KMYTH_DIGEST_SIZE; i++ )
+  {
+    strncpy(substr, &str[i<<1], 2);
+    ul = strtoul(substr, NULL, 16);
+    expectedPolicyBuffer[i] = ul;
+  }
+
+  // converts the byte array into a TPM2B_DIGEST struct
+  memcpy(digest->buffer, expectedPolicyBuffer, KMYTH_DIGEST_SIZE);
+  digest->size = KMYTH_DIGEST_SIZE;
+  free( expectedPolicyBuffer );
+  return 0;
+}
+
+//############################################################################
+// convert_digest_to_string()
+//############################################################################
+int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
+{
+  // points at the beginning, end of the address space
+  // expected that this is safe to execute since the string_buf will be 2x+1 as long
+  // as the TPM2B_DIGEST size.
+  //
+  //
+
+  if (string_buf == NULL)
+  {
+     kmyth_log(LOG_ERR, "NULL output buffer ... exiting");
+     return 1;
+  }
+  if (digest == NULL || digest->buffer == NULL)
+  {
+     kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
+     return 1;
+  }
+
+  char *ptr = string_buf;
+  *ptr = '\0'; // start NULL and append
+
+  for (size_t i = 0; i < digest->size; i++)
+  {
+     // each iteration, sprintf fills string_buf with 2 hex characters
+     // followed by '\0'. sprintf returns 2, incrementing the pointer by 2.
+     // '\0' is overwritten unless it's the last iteration
+     ptr += sprintf(ptr, "%02x", (unsigned int) (unsigned char) digest->buffer[i]);
+  }
+
+  return 0;
+}
+

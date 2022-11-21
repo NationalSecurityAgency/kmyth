@@ -10,6 +10,7 @@
 
 #include "defines.h"
 
+
 //##########################################################################
 // aes_keywrap_5649pad_encrypt()
 //##########################################################################
@@ -40,8 +41,10 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   //   2. add 8 to account for the 4 byte IV and 4 byte counter
   //   3. allocate memory based on the size calculation
   *outData_len = ((inData_len + 7) & ~7) + 8;
-  *outData = NULL;
-  *outData = malloc(*outData_len);
+  if (*outData == NULL)
+  {
+    *outData = malloc(*outData_len);
+  }
   if (*outData == NULL)
   {
     return 1;
@@ -54,7 +57,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     return 1;
   }
   EVP_CIPHER_CTX_set_flags(ctx, EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);
@@ -79,7 +83,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -87,7 +92,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // set the encryption key in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -103,7 +109,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // encrypt (wrap) the input PT, put result in the output CT buffer
   if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -112,7 +119,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // OpenSSL requires a "finalize" operation
   if (!EVP_EncryptFinal_ex(ctx, (*outData) + ciphertext_len, &tmp_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -122,7 +130,8 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // plus 4-byte IV plus 4-byte counter + any necessary padding)
   if (ciphertext_len != *outData_len)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -175,8 +184,10 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   // should be the same size as the input ciphertext data (original plaintext
   // plus prepended 4-byte integrity check value and 4-byte semiblock count
   // plus any appended padding bytes)
-  *outData = NULL;
-  *outData = malloc(inData_len);
+  if (*outData == NULL)
+  {
+    *outData = malloc(inData_len);
+  }
   if (*outData == NULL)
   {
     return 1;
@@ -188,7 +199,8 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     return 1;
   }
   EVP_CIPHER_CTX_set_flags(ctx, EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);
@@ -215,14 +227,16 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!init_result)
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
 
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -231,7 +245,8 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -239,7 +254,8 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   *outData_len = tmp_len;
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
   {
-    free(*outData);
+    if (*outData != NULL) free(*outData);
+    *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
