@@ -62,6 +62,10 @@ int get_block_bytes(char **contents,
 
   else
   {
+    if (*block != NULL) free(*block); // since looping, should free previous block allocation
+                                      // (inefficient, yes, but easy-to-code, otherwise must
+                                      //  calculate size and re-allocate)
+
     // allocate enough memory for output parameter to hold parsed block data
     //   - must be allocated here because size is calculated here
     //   - must be freed by caller because data must be passed back
@@ -343,7 +347,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
     return 1;
   }
 
-  // initializes buffer with all 0 hex values
+  // initializes buffer with all proper hexadexcimal values from str input
   unsigned long ul;
   unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
   if( expectedPolicyBuffer == NULL )
@@ -387,13 +391,6 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
   if (digest == NULL || digest->buffer == NULL)
   {
      kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
-     return 1;
-  }
-
-  // malloc_usable_size depends on malloc.h in glibc
-  if (2*digest->size+1 > malloc_usable_size( (void *) string_buf ))
-  {
-     kmyth_log(LOG_ERR, "insufficient space in output argument string_buf ... exiting");
      return 1;
   }
 

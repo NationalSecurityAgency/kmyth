@@ -8,6 +8,7 @@
 #include "memory_util.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 //############################################################################
 // kmyth_clear()

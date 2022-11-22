@@ -612,6 +612,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     free(sk_priv_data);
     free(wk_pub_data);
     free(wk_priv_data);
+    free(p_branch_1_data);
+    free(p_branch_2_data);
     return 1;
   }
 
@@ -636,6 +638,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     free(sk_priv_data);
     free(wk_pub_data);
     free(wk_priv_data);
+    free(p_branch_1_data);
+    free(p_branch_2_data);
     return 1;
   }
 
@@ -726,6 +730,8 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
       free(wk64_pub_data);
       free(wk64_priv_data);
       free(enc64_data);
+      free(p_branch_1_data);
+      free(p_branch_2_data);
       return 1;
     }
   }

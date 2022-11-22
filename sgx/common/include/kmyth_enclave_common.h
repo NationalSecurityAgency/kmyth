@@ -57,19 +57,25 @@ extern "C"
   const int src_line = __LINE__;\
   int log_level = severity;\
   const char *log_msg = message;\
-  log_event_ocall(&src_file, &src_func, &src_line, &log_level, &log_msg);\
+  log_event_ocall(src_file, src_func, src_line, log_level, log_msg);\
 }
 
 #include "ec_key_cert_marshal.h"
 #include "ec_key_cert_unmarshal.h"
 #include "ecdh_util.h"
+#include "retrieve_key_protocol.h"
 
 #ifdef _KMYTH_LOCALE_TRUSTED_
-#include ENCLAVE_HEADER_TRUSTED
+
+#include "kmyth_enclave_trusted.h"
+
 #else
+
+#include "msg_util.h"
 #include "log_ocall.h"
 #include "memory_ocall.h"
-#include "ecdh_ocall.h"
+#include "protocol_ocall.h"
+
 #endif
 
 #ifdef __cplusplus
