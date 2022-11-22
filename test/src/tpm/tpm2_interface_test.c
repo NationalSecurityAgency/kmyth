@@ -759,7 +759,32 @@ void test_rollNonces(void)
   CU_ASSERT(rollNonces(&session, new) != 0);
 
 }
-/*
+
+//----------------------------------------------------------------------------
+// test_apply_policy_or
+//----------------------------------------------------------------------------
+void test_apply_policy_or(void)
+{
+  SESSION session;
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  init_tpm2_connection(&sapi_ctx);
+
+  //Valid test
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+  //Multiple pcrs
+  int pcrs[2] = { };
+  pcrs[0] = 5;
+  pcrs[1] = 3;
+  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
+  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+
+  free_tpm2_resources(&sapi_ctx);
+}
+
 //----------------------------------------------------------------------------
 // test_unseal_apply_policy
 //----------------------------------------------------------------------------
@@ -791,9 +816,3 @@ void test_unseal_apply_policy(void)
   free_tpm2_resources(&sapi_ctx);
 }
 
-//----------------------------------------------------------------------------
-// test_apply_policy_or
-//----------------------------------------------------------------------------
-void test_apply_policy_or(void)
-{
-}*/
