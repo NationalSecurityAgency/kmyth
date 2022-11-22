@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <CUnit/CUnit.h>
 
 #include "tpm2_interface.h"
@@ -29,6 +30,7 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   {
     return (0);
   }
+
   if (NULL ==
       CU_add_test(suite, "init_tpm2_connection() Tests",
                   test_init_tpm2_connection))
@@ -156,7 +158,7 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   {
     return 1;
   }
-/*
+
   if (NULL == CU_add_test(suite, "unseal_apply_policy() Tests", test_unseal_apply_policy))
   {
     return 1;
@@ -165,7 +167,7 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
   {
     return 1;
-  }*/
+  }
 
   return 0;
 }
@@ -760,59 +762,103 @@ void test_rollNonces(void)
 
 }
 
-//----------------------------------------------------------------------------
-// test_apply_policy_or
-//----------------------------------------------------------------------------
-void test_apply_policy_or(void)
-{
-  SESSION session;
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-  init_tpm2_connection(&sapi_ctx);
-
-  //Valid test
-  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
-  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
-
-  //Multiple pcrs
-  int pcrs[2] = { };
-  pcrs[0] = 5;
-  pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
-  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
-
-  free_tpm2_resources(&sapi_ctx);
-}
 
 //----------------------------------------------------------------------------
 // test_unseal_apply_policy
 //----------------------------------------------------------------------------
 void test_unseal_apply_policy(void)
 {
-  SESSION session;
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
   init_tpm2_connection(&sapi_ctx);
-
-  //Valid test
-  create_policy_auth_session(sapi_ctx, &session);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
-  CU_ASSERT(unseal_apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
 
-  //NULL context
-  CU_ASSERT(unseal_apply_policy(NULL, session.sessionHandle, pcrs_struct) != 0);
 
-  //Invalid Handle
-  CU_ASSERT(unseal_apply_policy(sapi_ctx, 0, pcrs_struct) != 0);
+  TPM2B_DIGEST policy1;
+  TPM2B_DIGEST policy2;
 
-  //Multiple pcrs
-  int pcrs[2] = { };
-  pcrs[0] = 5;
-  pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
-  CU_ASSERT(unseal_apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+  policy1.size = 0;
+  policy2.size = 0;
+
+  int pcrs[1] = { };
+  pcrs[0] = 23;
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy1) == 0);
+  CU_ASSERT(policy1.size != 0);
+  //Remove printf and tpm2_pcrread after review
+  printf("\nPolicy1: %X\n", policy1.buffer);
+  system("tpm2_pcrread sha256:23");
+
+  system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001");
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
+  CU_ASSERT(policy2.size != 0);
+  //Remove printf and tpm2_pcrread after review
+  printf("Policy2: %X\n", policy2.buffer);
+  system("tpm2_pcrread sha256:23");
+
+  SESSION unsealData_session;
+  CU_ASSERT(create_auth_session(sapi_ctx, &unsealData_session, TPM2_SE_POLICY) == 0);
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  CU_ASSERT(unseal_apply_policy(sapi_ctx, unsealData_session.sessionHandle, pcrs_struct, policy1, policy2) == 0);
+  system("tpm2_pcrreset 23");
+  //Remove tpm2_pcrread after review
+  system("tpm2_pcrread sha256:23");
 
   free_tpm2_resources(&sapi_ctx);
 }
 
+//----------------------------------------------------------------------------
+// test_apply_policy_or
+//----------------------------------------------------------------------------
+void test_apply_policy_or(void)
+{
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  init_tpm2_connection(&sapi_ctx);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+
+  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
+  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+
+  TPM2B_DIGEST policy1;
+  TPM2B_DIGEST policy2;
+  TPM2B_DIGEST policyOR;
+
+  policy1.size = 0;
+  policy2.size = 0;
+  policyOR.size = 0;
+
+  int pcrs[1] = { };
+  pcrs[0] = 23;
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy1) == 0);
+  CU_ASSERT(policy1.size != 0);
+  //Remove printf and tpm2_pcrread after review
+  printf("\nPolicy1: %X\n", policy1.buffer);
+  system("tpm2_pcrread sha256:23");
+
+  system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001");
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
+  CU_ASSERT(policy2.size != 0);
+  //Remove printf and tpm2_pcrread after review
+  printf("Policy2: %X\n", policy2.buffer);
+  system("tpm2_pcrread sha256:23");
+
+  TPML_DIGEST pHashList;
+  SESSION policySessionOR;
+  create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
+  CU_ASSERT(apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy1,
+                    &policy2, &pHashList) == 0);
+  CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
+                             nullCmdAuths, &policyOR, nullRspAuths) == 0);
+  CU_ASSERT(policyOR.size != 0);
+  //Remove printf after review
+  printf("PolicyOR: %X\n", policyOR.buffer);
+  Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
+
+  system("tpm2_pcrreset 23");
+  free_tpm2_resources(&sapi_ctx);
+}

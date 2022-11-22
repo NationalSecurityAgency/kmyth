@@ -44,5 +44,7 @@ void test_start_policy_auth_session(void);
 void test_apply_policy(void);
 void test_create_caller_nonce(void);
 void test_rollNonces(void);
+void test_unseal_apply_policy(void);
+void test_apply_policy_or(void);
 
 #endif
