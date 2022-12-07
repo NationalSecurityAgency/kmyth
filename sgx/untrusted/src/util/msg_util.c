@@ -16,7 +16,7 @@ int recv_ecdh_msg(int socket_fd, unsigned char **buf, size_t *len)
   struct ECDHMessageHeader header;
 
   secure_memset(&header, 0, sizeof(header));
-  ssize_t bytes_read = read(socket_fd, &header, sizeof(header));
+  size_t bytes_read = read(socket_fd, &header, sizeof(header));
   if (bytes_read == 0)
   {
     kmyth_log(LOG_ERR, "ECDH connection is closed");
@@ -74,7 +74,7 @@ int send_ecdh_msg(int socket_fd, unsigned char *buf, size_t len)
   secure_memset(&header, 0, sizeof(header));
   header.msg_size = htons(len);
 
-  ssize_t bytes_sent = write(socket_fd, &header, sizeof(header));
+  size_t bytes_sent = write(socket_fd, &header, sizeof(header));
 
   if (bytes_sent != sizeof(header))
   {

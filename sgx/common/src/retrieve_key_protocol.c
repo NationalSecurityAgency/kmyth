@@ -41,7 +41,7 @@ int append_msg_signature(EVP_PKEY * sign_key,
 {
   // compute message signature
   unsigned char *signature_bytes = NULL;
-  int signature_len = 0;
+  unsigned int signature_len = 0;
 
   if (EXIT_SUCCESS != ec_sign_buffer(sign_key,
                                      msg->body,
