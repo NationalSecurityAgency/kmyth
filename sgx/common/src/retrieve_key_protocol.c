@@ -41,7 +41,7 @@ int append_msg_signature(EVP_PKEY * sign_key,
 {
   // compute message signature
   unsigned char *signature_bytes = NULL;
-  int signature_len = 0;
+  unsigned int signature_len = 0;
 
   if (EXIT_SUCCESS != ec_sign_buffer(sign_key,
                                      msg->body,
@@ -266,7 +266,7 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   // convert client identity bytes in message to X509_NAME struct
   X509_NAME *client_id = NULL;
 
-  if (EXIT_SUCCESS != unmarshal_der_to_x509_name(client_id_bytes,
+  if (EXIT_SUCCESS != unmarshal_der_to_x509_name((const uint8_t *) client_id_bytes,
                                                  (size_t) client_id_len,
                                                  &(client_id)))
   {
@@ -628,7 +628,7 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
 
   // convert server identity bytes in message to X509_NAME struct
   X509_NAME *rcvd_server_id = NULL;
-  if (EXIT_SUCCESS != unmarshal_der_to_x509_name(server_id_bytes,
+  if (EXIT_SUCCESS != unmarshal_der_to_x509_name((const uint8_t *) server_id_bytes,
                                                  (size_t) server_id_len,
                                                  &rcvd_server_id))
   {

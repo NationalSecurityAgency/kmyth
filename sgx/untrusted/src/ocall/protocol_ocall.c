@@ -21,6 +21,12 @@ int setup_socket_ocall(const char *server_host,
 {
   *socket_fd = UNSET_FD;
 
+  if ((server_host_len = 0) || (server_port_len = 0))
+  {
+    kmyth_log(LOG_ERR, "Invalid server host or server port length.");
+    return EXIT_FAILURE;
+  }
+
   // connect to server
   kmyth_log(LOG_DEBUG, "Setting up client socket, remote host: %s, port: %s",
             server_host, server_port);
@@ -62,7 +68,6 @@ int ecdh_exchange_ocall(unsigned char *client_hello,
                         size_t *server_hello_len,
                         int socket_fd)
 {
-  int num_bytes = -1;
   int ret = -1;
 
   kmyth_log(LOG_DEBUG, "Sending enclave's 'Client Hello' message to remote");

@@ -75,7 +75,7 @@ extern "C"
  *
  * @return 0 on success, 1 on error
  */
-  int unmarshal_der_to_x509_name(uint8_t *der_bytes_in,
+  int unmarshal_der_to_x509_name(const uint8_t *der_bytes_in,
                                  size_t der_bytes_in_len,
                                  X509_NAME **x509_name_out);
 
