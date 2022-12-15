@@ -388,9 +388,9 @@ int tls_set_context(unsigned char *client_private_key,
 //############################################################################
 // get_key_from_tls_server()
 //############################################################################
-int get_key_from_tls_server(BIO * bio,
-                            char *message, size_t message_length,
-                            unsigned char **key, size_t * key_size)
+int get_resp_from_tls_server(BIO * bio,
+                             char *req, size_t req_size,
+                             unsigned char **resp, size_t * resp_size)
 {
   // validate input
   if (bio == NULL)
@@ -400,9 +400,9 @@ int get_key_from_tls_server(BIO * bio,
   }
 
   // write message to server
-  if (message_length > 0)
+  if (req_size > 0)
   {
-    if (BIO_write(bio, message, message_length) <= 0)
+    if (BIO_write(bio, req, req_size) <= 0)
     {
       kmyth_log(LOG_ERR, "error writing message to server ... exiting");
       return 1;
@@ -430,17 +430,23 @@ int get_key_from_tls_server(BIO * bio,
     return 1;
   }
 
-  *key_size = recv;
-
-  (*key) = malloc(recv);
-  if (*key == NULL)
+  if (recv >= buf_size)
   {
-    kmyth_log(LOG_ERR, "error allocating fresh memory for key ... exiting");
+    kmyth_log(LOG_ERR, "receive buffer full (%d bytes) ... exiting", recv);
+    free(buf);
+    return 1;
+  }
+
+  *resp_size = recv;
+  (*resp) = malloc(*resp_size);
+  if (*resp == NULL)
+  {
+    kmyth_log(LOG_ERR, "error allocating correctly sized buffer ... exiting");
     buf = secure_memset(buf, 0, buf_size);
     free(buf);
     return 1;
   }
-  memcpy((*key), buf, recv);
+  memcpy((*resp), buf, recv);
 
   buf = secure_memset(buf, 0, buf_size);
   free(buf);

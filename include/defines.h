@@ -322,6 +322,6 @@
 /**
  * @brief kmyth-getkey receive buffer size (in bytes)
  */
-#define KMYTH_GETKEY_RX_BUFFER_SIZE 256
+#define KMYTH_GETKEY_RX_BUFFER_SIZE 16384
 
 #endif // DEFINES_H

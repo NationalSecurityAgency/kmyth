@@ -14,6 +14,7 @@
 
 #include "demo_ecdh_util.h"
 #include "demo_tls_util.h"
+#include "tls_util.h"
 
 /**
  * @brief This struct consolidates complete (overall) state information

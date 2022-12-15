@@ -207,30 +207,26 @@ static int demo_kmip_server_receive_get_key_request(DemoServer *demo_server,
   }
   kmyth_log(LOG_DEBUG, "TLS client connection - completed handshake");
 
-  // get size (in bytes) of KMIP 'get key' request field to be received
+  // get KMIP 'get key' request from TLS client
   unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE] = { 0 };
 
-  int bytes_read = BIO_read(demo_server->tlsconn.bio, buf, 2);
-  if (bytes_read != 2)
+  int bytes_read = BIO_read(demo_server->tlsconn.bio,
+                            buf,
+                            KMYTH_TLS_MAX_MSG_SIZE);
+  if (bytes_read <= 0)
   {
-    kmyth_log(LOG_ERR, "error reading size of 'get key' request");
+    kmyth_log(LOG_ERR, "error reading KMIP 'get key' request");
     return EXIT_FAILURE;
   }
-  *req_len = buf[0] << 8;
-  *req_len += buf[1];
 
   // allocate buffer to hold received KMIP 'get key' request bytes
+  *req_len = (size_t) bytes_read;
   *req_bytes = malloc(*req_len);
 
-  // get KMIP 'get key' request bytes
-  bytes_read = BIO_read(demo_server->tlsconn.bio,
-                        *req_bytes,
-                        (size_t) *req_len);
-  if (bytes_read != *req_len)
-  {
-    kmyth_log(LOG_ERR, "error reading 'get key' request bytes");
-    return EXIT_FAILURE;
-  }
+  // copy received KMIP request from temporary buffer to newly allocated one
+  memcpy(*req_bytes, buf, bytes_read);
+  kmyth_clear(buf, bytes_read);
+
   kmyth_log(LOG_DEBUG, "received KMIP Request: 0x%02X%02X ... %02X%02X "
                        "(%d bytes)",
                        (*req_bytes)[0], (*req_bytes)[1],
@@ -342,21 +338,10 @@ int send_kmip_get_key_response(DemoServer *server,
 {
   struct TLSMessageHeader tls_hdr;
 
-  // first send length of KMIP 'get key' response
-  tls_hdr.msg_size = htobe16((uint16_t) kmip_key_resp_len);
+  // send the KMIP 'get key' response bytes
   int bytes_written = BIO_write(server->tlsconn.bio,
-                            (void *) &tls_hdr,
-                            sizeof(tls_hdr));
-  if (bytes_written != sizeof(tls_hdr))
-  {
-    kmyth_log(LOG_ERR, "TLS write error");
-    return EXIT_FAILURE;
-  }
-
-  // then send the KMIP 'get key' response bytes
-  bytes_written = BIO_write(server->tlsconn.bio,
-                            kmip_key_resp_bytes,
-                            kmip_key_resp_len);
+                                kmip_key_resp_bytes,
+                                kmip_key_resp_len);
   if (bytes_written != kmip_key_resp_len)
   {
     kmyth_log(LOG_ERR, "error sending 'get key' response");
