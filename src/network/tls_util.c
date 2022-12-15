@@ -434,7 +434,7 @@ int get_resp_from_tls_server(BIO * bio,
   {
     kmyth_log(LOG_ERR, "receive buffer full (%d bytes) ... exiting", recv);
     free(buf);
-    return 1;t s
+    return 1;
   }
 
   *resp_size = recv;
