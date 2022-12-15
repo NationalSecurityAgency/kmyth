@@ -192,6 +192,7 @@ Common_Enclave_Include_Paths += -I/usr/local/include
 Common_Enclave_Include_Paths += -I../include
 Common_Enclave_Include_Paths += -I../include/cipher
 Common_Enclave_Include_Paths += -I../include/protocol
+Common_Enclave_include_paths += -I../include/network
 Common_Enclave_Include_Paths += -I../utils/include/kmyth
 
 Test_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)

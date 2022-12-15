@@ -309,12 +309,6 @@ static int proxy_get_client_key_request(TLSProxy * proxy)
 
   demo_ecdh_recv_key_request_msg(ecdh_svr);
 
-  kmyth_log(LOG_DEBUG, "KMIP Request: 0x%02X%02x ... %02X%02X (%d bytes)",
-                       kmip_req->buffer[0], kmip_req->buffer[1],
-                       kmip_req->buffer[kmip_req->size - 2],
-                       kmip_req->buffer[kmip_req->size - 1],
-                       kmip_req->size);
-  
   return EXIT_SUCCESS;
 }
 
@@ -323,6 +317,7 @@ static int proxy_get_client_key_request(TLSProxy * proxy)
  ****************************************************************************/
 static int proxy_get_kmip_response(TLSProxy * proxy)
 {
+  // create TLS connection with server
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   TLSPeer *tls_clnt = &(proxy->tlsconn);
 
@@ -332,67 +327,26 @@ static int proxy_get_kmip_response(TLSProxy * proxy)
     return EXIT_FAILURE;
   }
 
-  // send length of KMIP 'get key' request to server
-  TLSMessageHeader tls_hdr;
+  // send KMIP request then receive KMIP response from server
   ByteBuffer *kmip_req = &(ecdh_svr->session.proto.kmip_request);
-
-  tls_hdr.msg_size = htobe16((uint16_t) kmip_req->size);
-  int num_bytes = BIO_write(tls_clnt->bio,
-                            (void *) &tls_hdr,
-                            sizeof(tls_hdr));
-  if (num_bytes != sizeof(tls_hdr))
-  {
-    kmyth_log(LOG_ERR, "TLS write error");
-    return EXIT_FAILURE;
-  }
-
-  // send KMIP 'get key' request bytes to server
-  num_bytes = BIO_write(tls_clnt->bio,
-                        (void *) kmip_req->buffer,
-                        kmip_req->size);
-  if (num_bytes != kmip_req->size)
-  {
-    kmyth_log(LOG_ERR, "TLS write error");
-    return EXIT_FAILURE;
-  }
-
-  // blocking read to get KMIP 'get key' response size from server
   ByteBuffer *kmip_resp = &(ecdh_svr->session.proto.kmip_response);
-  unsigned char buf[KMYTH_TLS_MAX_MSG_SIZE];
 
-  num_bytes = BIO_read(tls_clnt->bio, buf, sizeof(tls_hdr));
-  if (num_bytes != sizeof(tls_hdr))
+  if (get_resp_from_tls_server(tls_clnt->bio,
+                               kmip_req->buffer,
+                               kmip_req->size,
+                               &(kmip_resp->buffer),
+                               &(kmip_resp->size)))
   {
-    kmyth_log(LOG_ERR, "error reading size of 'get key' response");
-    return EXIT_FAILURE;
-  }
-  kmip_resp->size = buf[0] << 8;
-  kmip_resp->size += buf[1];
-
-  // allocate buffer to hold received KMIP 'get key' request bytes
-  kmip_resp->buffer = malloc(kmip_resp->size);
-  if (kmip_resp->buffer == NULL)
-  {
-    kmyth_log(LOG_ERR, "error allocating buffer for KMIP 'get key' response");
+    kmyth_log(LOG_ERR, "KMIP 'get key' failed");
     return EXIT_FAILURE;
   }
 
-  num_bytes = BIO_read(tls_clnt->bio, kmip_resp->buffer, kmip_resp->size);
-  if (num_bytes == 0)
-  {
-    kmyth_log(LOG_INFO, "TLS connection is closed");
-    return EXIT_FAILURE;
-  }
-  else if (num_bytes < 0)
-  {
-    kmyth_log(LOG_ERR, "TLS read error");
-    return EXIT_FAILURE;
-  }
   kmyth_log(LOG_DEBUG, "Received KMIP response: 0x%02X%02X ... %02X%02X "
                        "(%zu bytes)",
                        kmip_resp->buffer[0], kmip_resp->buffer[1],
-                       kmip_resp->buffer[num_bytes - 2],
-                       kmip_resp->buffer[num_bytes - 1], num_bytes);
+                       kmip_resp->buffer[kmip_resp->size - 2],
+                       kmip_resp->buffer[kmip_resp->size - 1],
+                       kmip_resp->size);
 
   return EXIT_SUCCESS;
 }

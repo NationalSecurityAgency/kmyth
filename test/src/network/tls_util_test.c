@@ -29,8 +29,8 @@ int tls_util_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "get_key_from_tls_server() Tests",
-                          test_get_key_from_tls_server))
+  if (NULL == CU_add_test(suite, "get_resp_from_tls_server() Tests",
+                          test_get_resp_from_tls_server))
   {
     return 1;
   }
@@ -132,9 +132,9 @@ void test_tls_set_context(void)
 }
 
 //----------------------------------------------------------------------------
-// test_get_key_from_tls_server()
+// test_get_resp_from_tls_server()
 //----------------------------------------------------------------------------
-void test_get_key_from_tls_server(void)
+void test_get_resp_from_tls_server(void)
 {
   BIO *bio = BIO_new(BIO_s_mem());
   char *message = "1";
@@ -143,8 +143,8 @@ void test_get_key_from_tls_server(void)
   size_t key_size = 0;
 
   // A null BIO should produce an error
-  CU_ASSERT(get_key_from_tls_server((BIO *) NULL,
-                                    message, message_length, &key, &key_size));
+  CU_ASSERT(get_resp_from_tls_server((BIO *) NULL,
+                                     message, message_length, &key, &key_size));
 
   // Cleanup
   BIO_free_all(bio);

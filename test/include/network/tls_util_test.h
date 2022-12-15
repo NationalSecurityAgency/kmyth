@@ -37,7 +37,7 @@ void test_tls_set_context(void);
 /**
  * Tests for getting a key from a TLS server in get_key_from_tls_server()
  */
-void test_get_key_from_tls_server(void);
+void test_get_resp_from_tls_server(void);
 
 /**
  * Tests for getting a key from a KMIP server in get_key_from_kmip_server()

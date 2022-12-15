@@ -95,21 +95,23 @@ int tls_cleanup(void);
  * @param[in]  bio             OpenSSL BIO structure with the connection
  *                             already instantiated
  *
- * @param[in]  message         optional message to send the server, can be null
+ * @param[in]  req             optional message to send the server, can be null
  *
- * @param[in]  message_length  length of the message (0 if no message is given)
+ * @param[in]  req_size        length of the message (0 if no message is given)
  *
- * @param[out] key             return message from server, expected to be a key
+ * @param[out] resp            return message from server, expected to be a key
  *
- * @param[out] key_size        size of the returned message
+ * @param[out] resp_size       size of the returned message
  *
  * @param[in]  verbose         if true, extra debug messages displayed
  * 
  * @return 0 if success, 1 if error
  */
-int get_key_from_tls_server(BIO * bio,
-                            char *message, size_t message_length,
-                            unsigned char **key, size_t * key_size);
+int get_resp_from_tls_server(BIO * bio,
+                             char *req,
+                             size_t req_size,
+                             unsigned char **resp,
+                             size_t * resp_size);
 
 /**
  * <pre>
