@@ -774,7 +774,6 @@ void test_unseal_apply_policy(void)
   init_tpm2_connection(&sapi_ctx);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
 
-
   TPM2B_DIGEST policy1;
   TPM2B_DIGEST policy2;
 
