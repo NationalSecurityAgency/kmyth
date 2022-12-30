@@ -801,7 +801,7 @@ void test_unseal_apply_policy(void)
   printf("\n");
   system("tpm2_pcrread sha256:23");
 
-  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") == -1)
+  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
   {
     init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
@@ -866,7 +866,7 @@ void test_apply_policy_or(void)
   printf("\n");
   system("tpm2_pcrread sha256:23");
 
-  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") == -1)
+  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
   {
     init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
