@@ -792,26 +792,32 @@ void test_unseal_apply_policy(void)
   printf("\n");
   system("tpm2_pcrread sha256:23");
 
-  system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001");
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
-  CU_ASSERT(policy2.size != 0);
-  //Remove printf and tpm2_pcrread after review
-  printf("\nPolicy2: 0x");
-  for (int i = 0; i < policy2.size; i++)
+  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") == -1)
   {
-    printf("%02X", policy2.buffer[i]);
-  }
-  printf("\n");
-  system("tpm2_pcrread sha256:23");
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
+    CU_ASSERT(policy2.size != 0);
+    //Remove printf and tpm2_pcrread after review
+    printf("\nPolicy2: 0x");
+    for (int i = 0; i < policy2.size; i++)
+    {
+      printf("%02X", policy2.buffer[i]);
+    }
+    printf("\n");
+    system("tpm2_pcrread sha256:23");
 
-  SESSION unsealData_session;
-  CU_ASSERT(create_auth_session(sapi_ctx, &unsealData_session, TPM2_SE_POLICY) == 0);
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-  CU_ASSERT(unseal_apply_policy(sapi_ctx, unsealData_session.sessionHandle, pcrs_struct, policy1, policy2) == 0);
-  system("tpm2_pcrreset 23");
-  //Remove tpm2_pcrread after review
-  system("tpm2_pcrread sha256:23");
+    SESSION unsealData_session;
+    CU_ASSERT(create_auth_session(sapi_ctx, &unsealData_session, TPM2_SE_POLICY) == 0);
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    CU_ASSERT(unseal_apply_policy(sapi_ctx, unsealData_session.sessionHandle, pcrs_struct, policy1, policy2) == 0);
+    system("tpm2_pcrreset 23");
+    //Remove tpm2_pcrread after review
+    system("tpm2_pcrread sha256:23");
+  }
+  else
+  {
+    CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+  }
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -851,36 +857,43 @@ void test_apply_policy_or(void)
   printf("\n");
   system("tpm2_pcrread sha256:23");
 
-  system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001");
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
-  CU_ASSERT(policy2.size != 0);
-  //Remove printf and tpm2_pcrread after review
-  printf("\nPolicy2: 0x");
-  for (int i = 0; i < policy2.size; i++)
+  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") == -1)
   {
-    printf("%02X", policy2.buffer[i]);
-  }
-  printf("\n");
-  system("tpm2_pcrread sha256:23");
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
+    CU_ASSERT(policy2.size != 0);
+    //Remove printf and tpm2_pcrread after review
+    printf("\nPolicy2: 0x");
+    for (int i = 0; i < policy2.size; i++)
+    {
+      printf("%02X", policy2.buffer[i]);
+    }
+    printf("\n");
+    system("tpm2_pcrread sha256:23");
 
-  TPML_DIGEST pHashList;
-  SESSION policySessionOR;
-  create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
-  CU_ASSERT(apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy1,
+    TPML_DIGEST pHashList;
+    SESSION policySessionOR;
+    create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
+    CU_ASSERT(apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy1,
                     &policy2, &pHashList) == 0);
-  CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
                              nullCmdAuths, &policyOR, nullRspAuths) == 0);
-  CU_ASSERT(policyOR.size != 0);
-  //Remove printf after review
-  printf("\nPolicyOR: 0x");
-  for (int i = 0; i < policyOR.size; i++)
-  {
-    printf("%02X", policyOR.buffer[i]);
-  }
-  printf("\n");
-  Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
+    CU_ASSERT(policyOR.size != 0);
+    //Remove printf after review
+    printf("\nPolicyOR: 0x");
+    for (int i = 0; i < policyOR.size; i++)
+    {
+      printf("%02X", policyOR.buffer[i]);
+    }
+    printf("\n");
+    Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
 
-  system("tpm2_pcrreset 23");
+    system("tpm2_pcrreset 23");
+  }
+  else
+  {
+    CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+  }    
+
   free_tpm2_resources(&sapi_ctx);
 }
