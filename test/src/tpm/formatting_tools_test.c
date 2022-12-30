@@ -2231,5 +2231,7 @@ void test_verifyPackUnpackDigest(void)
   CU_ASSERT(unpack_digest(&digest_out, packed_data, packed_data_size, packed_data_offset) == 0);
   CU_ASSERT(digest_out.size != 0);
   CU_ASSERT(digest_out.size = digest.size);
+
+  free(packed_data);
 }
 
