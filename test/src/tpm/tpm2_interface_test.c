@@ -13,6 +13,7 @@
 #include "tpm2_interface_test.h"
 #include "pcrs.h"
 #include "defines.h"
+#include "kmyth_log.h"
 
 //----------------------------------------------------------------------------
 // tpm2_interface_add_tests()
@@ -159,14 +160,22 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "unseal_apply_policy() Tests", test_unseal_apply_policy))
+  //These tests requireTPM2_ALG_SHA256 so we don't want to run them if this changes
+  if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
   {
-    return 1;
-  }
+    if (NULL == CU_add_test(suite, "unseal_apply_policy() Tests", test_unseal_apply_policy))
+    {
+      return 1;
+    }
 
-  if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
+    if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
+    {
+      return 1;
+    }
+  }
+  else
   {
-    return 1;
+    kmyth_log(LOG_WARNING, "KMYTH_HASH_ALG changed from TPM2_ALG_SHA256. unseal_apply_policy() Tests and apply_policy_or() Tests need to be updated for the new TPM2_ALG."); 
   }
 
   return 0;

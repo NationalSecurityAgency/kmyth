@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
+#include <openssl/rand.h>
 
 #include "tpm2_interface.h"
 #include "formatting_tools_test.h"
