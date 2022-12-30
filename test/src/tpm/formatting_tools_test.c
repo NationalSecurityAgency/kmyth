@@ -159,8 +159,8 @@ int formatting_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "verifyConvertionStringDigest() Tests",
-                          test_verifyConvertionStringDigest))
+  if (NULL == CU_add_test(suite, "verifyStringDigestConversion() Tests",
+                          test_verifyStringDigestConversion))
   {
     return 1;
   }
@@ -2151,9 +2151,9 @@ void test_concat(void)
 }
 
 //----------------------------------------------------------------------------
-// test_verifyConvertionStringDigest()
+// test_verifyStringDigestConversion()
 //----------------------------------------------------------------------------
-void test_verifyConvertionStringDigest(void)
+void test_verifyStringDigestConversion(void)
 {
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
