@@ -9,6 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <malloc.h>
 
 #include "defines.h"
 #include "file_io.h"
@@ -18,7 +19,6 @@
 
 #include "cipher/cipher.h"
 
-#include <malloc.h>
 /**
  * @brief The external list of valid (implemented and configured) symmetric
  *        cipher options (see src/util/kmyth_cipher.c)

@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
+#include <openssl/rand.h>
 
+#include "tpm2_interface.h"
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
 #include "marshalling_tools.h"
@@ -154,6 +156,18 @@ int formatting_tools_add_tests(CU_pSuite suite)
   }
 
   if (NULL == CU_add_test(suite, "concat() Tests", test_concat))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "verifyStringDigestConversion() Tests",
+                          test_verifyStringDigestConversion))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "verifyPackUnpackDigest() Tests",
+                          test_verifyPackUnpackDigest))
   {
     return 1;
   }
@@ -2136,3 +2150,83 @@ void test_concat(void)
   CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
   free(dest);
 }
+
+//----------------------------------------------------------------------------
+// test_verifyStringDigestConversion()
+//----------------------------------------------------------------------------
+void test_verifyStringDigestConversion(void)
+{
+  // create matched digest and string test values
+  TPM2B_DIGEST test_digest;
+  char test_string[(KMYTH_DIGEST_SIZE * 2) + 1];
+
+  test_digest.size = KMYTH_DIGEST_SIZE;
+  RAND_bytes((unsigned char *) &(test_digest.buffer), test_digest.size);
+  for (int i = 0; i < test_digest.size; i++)
+  {
+    char byte_hex_value_string[3];
+
+    snprintf(byte_hex_value_string, 3, "%02x", test_digest.buffer[i]);
+    if (i == 0)
+    {
+      snprintf(test_string, 3, "%s", byte_hex_value_string);
+    }
+    else
+    {
+      strncat(test_string, byte_hex_value_string, 2);
+    }
+  }
+
+  // test digest to string conversion functionality
+  char converted_string[(KMYTH_DIGEST_SIZE * 2) + 1];
+
+  CU_ASSERT(convert_digest_to_string(&test_digest, converted_string) == 0);
+  CU_ASSERT(strcmp(test_string, converted_string) == 0);
+
+  // test string to digest conversion functionality
+  TPM2B_DIGEST converted_digest;
+
+  CU_ASSERT(convert_string_to_digest(test_string, &converted_digest) == 0);
+  CU_ASSERT(test_digest.size == converted_digest.size);
+  for (int i = 0; i < test_digest.size; i++)
+  {
+    CU_ASSERT(test_digest.buffer[i] == converted_digest.buffer[i]);
+  }
+}
+
+//----------------------------------------------------------------------------
+// test_verifyPackUnpackDigest()
+//----------------------------------------------------------------------------
+void test_verifyPackUnpackDigest(void)
+{
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  init_tpm2_connection(&sapi_ctx);
+  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+
+  TPM2B_DIGEST digest;
+  TPM2B_DIGEST digest_out;
+
+  uint8_t * packed_data;
+  size_t packed_data_size = 0;
+  size_t packed_data_offset = 0;
+
+  create_policy_digest(sapi_ctx, pcrs_struct, &digest);
+  CU_ASSERT(digest.size != 0);
+
+  packed_data_size = (digest.size * 2) + 1;
+  packed_data = (uint8_t *) malloc(packed_data_size);
+
+  CU_ASSERT(pack_digest(&digest, packed_data, packed_data_size, packed_data_offset) == 0);
+  CU_ASSERT(packed_data != NULL);
+  CU_ASSERT(unpack_digest(&digest_out, packed_data, packed_data_size, packed_data_offset) == 0);
+  CU_ASSERT(digest_out.size != 0);
+  CU_ASSERT(digest_out.size = digest.size);
+  for (int i = 0; i < digest_out.size; i++)
+  {
+    CU_ASSERT(digest_out.buffer[i] == digest.buffer[i]);
+  }
+
+  free(packed_data);
+}
+

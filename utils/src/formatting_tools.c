@@ -8,6 +8,7 @@
 #include "tpm2_interface.h"
 
 #include <string.h>
+#include <malloc.h>
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
