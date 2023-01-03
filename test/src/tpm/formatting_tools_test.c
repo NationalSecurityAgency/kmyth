@@ -2162,11 +2162,8 @@ void test_verifyStringDigestConversion(void)
 
   test_digest.size = KMYTH_DIGEST_SIZE;
   RAND_bytes((unsigned char *) &(test_digest.buffer), test_digest.size);
-  printf("test digest:      0x");
   for (int i = 0; i < test_digest.size; i++)
   {
-    printf("%02x", test_digest.buffer[i]);
-
     char byte_hex_value_string[3];
 
     snprintf(byte_hex_value_string, 3, "%02x", test_digest.buffer[i]);
@@ -2179,29 +2176,23 @@ void test_verifyStringDigestConversion(void)
       strncat(test_string, byte_hex_value_string, 2);
     }
   }
-  printf("\n");
 
   // test digest to string conversion functionality
   char converted_string[(KMYTH_DIGEST_SIZE * 2) + 1];
 
   CU_ASSERT(convert_digest_to_string(&test_digest, converted_string) == 0);
   CU_ASSERT(strcmp(test_string, converted_string) == 0);
-  printf("test_string:      0x%s\n", test_string);
-  printf("converted_string: 0x%s\n", converted_string);
 
   // test string to digest conversion functionality
   TPM2B_DIGEST converted_digest;
 
   CU_ASSERT(convert_string_to_digest(test_string, &converted_digest) == 0);
   CU_ASSERT(test_digest.size == converted_digest.size);
-  printf("converted_digest: 0x");
   for (int i = 0; i < test_digest.size; i++)
   {
     CU_ASSERT(test_digest.buffer[i] == converted_digest.buffer[i]);
-    printf("%02x", converted_digest.buffer[i]);
   }
-  printf("\n");
-  }
+}
 
 //----------------------------------------------------------------------------
 // test_verifyPackUnpackDigest()
