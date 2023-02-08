@@ -262,6 +262,7 @@ CFLAGS += -c#                            compile, but do not link
 CFLAGS += $(DEBUG)#                      debugging options (above)
 CFLAGS += -D_GNU_SOURCE#                 GNU/LINUX platform
 CFLAGS += -fPIC#                         Generate position independent code
+CFLAGS += -Wconversion
 
 # Specify compiler flags for building kmyth applications that use logger library
 KMYTH_CFLAGS = $(CFLAGS)

@@ -325,7 +325,11 @@ int main(int argc, char **argv)
     else
     {
       // input fileame extension delimiter found, null everything after it
-      memset(ext_ptr + 1, '\0', sizeof(default_fn) - (ext_ptr - default_fn));
+      // The type conversion here is safe assuming inPath is not too pathological,
+      // so that's something we should think about.
+      ptrdiff_t filename_portion = ext_ptr - default_fn;
+      size_t tail_length = sizeof(default_fn) - (size_t)filename_portion;
+      memset(ext_ptr + 1, '\0', tail_length);
     }
 
     // concatenate default filename root and extension
@@ -357,7 +361,7 @@ int main(int argc, char **argv)
   int *pcrs = NULL;
   int pcrs_len = 0;
 
-  if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0)
+  if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
     free(outPath);
@@ -369,7 +373,7 @@ int main(int argc, char **argv)
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, pcrs_len, cipherString, expected_policy,
+                           pcrs, (size_t)pcrs_len, cipherString, expected_policy,
                            bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
