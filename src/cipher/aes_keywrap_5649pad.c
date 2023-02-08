@@ -31,7 +31,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   {
     return 1;
   }
-  if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN)
+  if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN || inData_len > INT_MAX)
   {
     return 1;
   }
@@ -40,7 +40,12 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   //   1. determine how many 8-byte blocks are required to hold the data
   //   2. add 8 to account for the 4 byte IV and 4 byte counter
   //   3. allocate memory based on the size calculation
-  *outData_len = ((inData_len + 7) & ~7) + 8;
+  size_t offset = 8;
+  if(inData_len % 8 != 0)
+  {
+    offset += 8 - (inData_len % 8);
+  }
+  *outData_len = inData_len + offset;
   if (*outData == NULL)
   {
     *outData = malloc(*outData_len);
@@ -107,7 +112,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   int tmp_len = 0;
 
   // encrypt (wrap) the input PT, put result in the output CT buffer
-  if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
+  if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len))
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
@@ -175,7 +180,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   {
     return 1;
   }
-  if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN)
+  if (inData_len > AES_KEYWRAP_5649PAD_MAX_DATA_LEN || inData_len > INT_MAX)
   {
     return 1;
   }
@@ -243,7 +248,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   int tmp_len = 0;
 
-  if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
+  if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len) || tmp_len < 0)
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
@@ -251,8 +256,8 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
     return 1;
   }
 
-  *outData_len = tmp_len;
-  if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
+  *outData_len = (size_t)tmp_len;
+  if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len) || tmp_len < 0)
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
@@ -260,7 +265,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
     return 1;
   }
 
-  *outData_len += tmp_len;
+  *outData_len += (size_t)tmp_len;
 
   EVP_CIPHER_CTX_free(ctx);
 
