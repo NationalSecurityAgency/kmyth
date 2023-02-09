@@ -43,9 +43,13 @@ int tpm2_kmyth_seal(uint8_t * input,
                     char *cipher_string, char *expected_policy,
                     uint8_t bool_trial_only)
 {
-
+  if(oa_bytes_len > UINT16_MAX)
+  {
+    kmyth_log(LOG_ERR, "unable to start TPM2 session, oa_bytes_len too large");
+    return 1;
+  }
+  
   //init connection to the resource manager
-
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
   if (init_tpm2_connection(&sapi_ctx))
@@ -76,7 +80,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   // Create owner (storage) hierarchy authorization structure
   TPM2B_AUTH ownerAuth;
 
-  ownerAuth.size = oa_bytes_len;
+  ownerAuth.size = (uint16_t)oa_bytes_len;
   if (owner_auth_bytes != NULL && oa_bytes_len > 0)
   {
     memcpy(ownerAuth.buffer, owner_auth_bytes, ownerAuth.size);
@@ -367,6 +371,12 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                       uint8_t bool_policy_or)
 {
+  if(oa_bytes_len > UINT16_MAX)
+  {
+    kmyth_log(LOG_ERR, "unable to start TPM2 session, oa_bytes_len too large");
+    return 1;
+  }
+  
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
@@ -384,7 +394,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
   //   - Storage Primary Seed (SPS), if necessary to re-derive SRK
   TPM2B_AUTH ownerAuth;
 
-  ownerAuth.size = oa_bytes_len;
+  ownerAuth.size = (uint16_t)oa_bytes_len;
   if (owner_auth_bytes != NULL && oa_bytes_len > 0)
   {
     memcpy(ownerAuth.buffer, owner_auth_bytes, ownerAuth.size);
