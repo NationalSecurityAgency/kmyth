@@ -126,7 +126,7 @@ int verifyOutputFilePath(char *path)
 int read_bytes_from_file(char *input_path, uint8_t ** data,
                          size_t * data_length)
 {
-
+  
   // Create a BIO for the input file
   BIO *bio = NULL;
 
@@ -161,9 +161,8 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     }
     return 1;
   }
-  int input_size = st.st_size;
 
-  if (input_size == 0)
+  if (st.st_size <= 0 || st.st_size > INT_MAX)
   {
     if (!BIO_free(bio))
     {
@@ -173,6 +172,7 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     *data = NULL;
     return 0;
   }
+  size_t input_size = (size_t)st.st_size;
 
   // Create data buffer and read file into it
   *data = (uint8_t *) malloc(input_size);
@@ -185,8 +185,8 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     }
     return 1;
   }
-  *data_length = BIO_read(bio, *data, input_size);
-  if (*data_length <= 0)
+  int length_read = BIO_read(bio, *data, (int)input_size);
+  if (length_read <= 0)
   {
     kmyth_log(LOG_ERR, "no data read from input file ... exiting");
     if (!BIO_free(bio))
@@ -195,8 +195,9 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     }
     return 1;
   }
+  
 
-  if (*data_length != input_size)
+  if ((size_t)length_read != input_size)
   {
     kmyth_log(LOG_ERR, "file size = %d bytes, buffer size = %d bytes "
               "... exiting", input_size, *data_length);
@@ -206,13 +207,12 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     }
     return 1;
   }
-
   if (!BIO_free(bio))
   {
     kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
     return 1;
   }
-
+  *data_length = (size_t)length_read;
   return 0;
 }
 
@@ -253,6 +253,11 @@ int write_bytes_to_file(char *output_path, uint8_t * bytes, size_t bytes_length)
 //############################################################################
 int print_to_stdout(unsigned char *data, size_t data_size)
 {
+  if(data_size > INT_MAX)
+  {
+    kmyth_log(LOG_ERR, "data size exceeds INT_MAX ... exiting");
+    return 1;
+  }
   BIO *bdata;
 
   // Create unbuffered file BIO attached to stdout
@@ -264,7 +269,7 @@ int print_to_stdout(unsigned char *data, size_t data_size)
   }
 
   // Write out data
-  if (BIO_write(bdata, data, data_size) != data_size)
+  if (BIO_write(bdata, data, (int)data_size) != (int)data_size)
   {
     kmyth_log(LOG_ERR, "error writing data to file BIO ... exiting");
     BIO_free_all(bdata);
