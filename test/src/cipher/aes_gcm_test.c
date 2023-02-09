@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 #include <CUnit/CUnit.h>
 
 #include "aes_gcm_test.h"
@@ -121,15 +122,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process 'Key' component of this test vector
         char *key_str = buffer + 6; // strip preceding 'Key = ' sub-string
-        int key_str_len = strlen(key_str);
-
+        size_t key_str_len = strlen(key_str);
+	if(key_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((key_str_len > 0) &&
                ((key_str[key_str_len - 1] == '\n') ||
                 (key_str[key_str_len - 1] == '\r')))
         {
           key_str[--key_str_len] = '\0';  // strip any trailing '\n' or 'r'
         }
-        convert_HexString_to_ByteArray((char **) &Key, key_str, key_str_len);
+        convert_HexString_to_ByteArray((char **) &Key, key_str, (int)key_str_len);
         Key_len = key_str_len / 2;  // 2 hex chars map to a byte of key
         step = 2;
       }
@@ -138,15 +142,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process IV component of test vector
         char *iv_str = buffer + 5;  // strip preceding 'IV = ' sub-string
-        int iv_str_len = strlen(iv_str);
-
+        size_t iv_str_len = strlen(iv_str);
+	if(iv_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((iv_str_len > 0) &&
                ((iv_str[iv_str_len - 1] == '\n') ||
                 (iv_str[iv_str_len - 1] == '\r')))
         {
           iv_str[--iv_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &IV, iv_str, iv_str_len);
+        convert_HexString_to_ByteArray((char **) &IV, iv_str, (int)iv_str_len);
         IV_len = iv_str_len / 2;  // 2 hex chars map to a byte of key
         step = 3;
       }
@@ -155,15 +162,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process 'CT' component of test vector
         char *ct_str = buffer + 5;  // strip preceding 'CT = ' sub-string
-        int ct_str_len = strlen(ct_str);
-
+        size_t ct_str_len = strlen(ct_str);
+	if(ct_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((ct_str_len > 0) &&
                ((ct_str[ct_str_len - 1] == '\n') ||
                 (ct_str[ct_str_len - 1] == '\r')))
         {
           ct_str[--ct_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &CT, ct_str, ct_str_len);
+        convert_HexString_to_ByteArray((char **) &CT, ct_str, (int)ct_str_len);
         CT_len = ct_str_len / 2;  // 2 hex chars map to a byte of CT
         step = 4;
       }
@@ -172,15 +182,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process 'AAD' component of test vector
         char *aad_str = buffer + 6; // strip preceding 'AAD = ' sub-string
-        int aad_str_len = strlen(aad_str);
-
+        size_t aad_str_len = strlen(aad_str);
+	if(aad_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((aad_str_len > 0) &&
                ((aad_str[aad_str_len - 1] == '\n') ||
                 (aad_str[aad_str_len - 1] == '\r')))
         {
           aad_str[--aad_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &AAD, aad_str, aad_str_len);
+        convert_HexString_to_ByteArray((char **) &AAD, aad_str, (int)aad_str_len);
         AAD_len = aad_str_len / 2;  // 2 hex chars map to a byte of AAD
         step = 5;
       }
@@ -189,15 +202,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process 'Tag' component of test vector
         char *tag_str = buffer + 6; // strip preceding 'Tag = ' sub-string
-        int tag_str_len = strlen(tag_str);
-
+        size_t tag_str_len = strlen(tag_str);
+	if(tag_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((tag_str_len > 0) &&
                ((tag_str[tag_str_len - 1] == '\n') ||
                 (tag_str[tag_str_len - 1] == '\r')))
         {
           tag_str[--tag_str_len] = '\0';  // strip any trailing '\n' or '\r'
         }
-        convert_HexString_to_ByteArray((char **) &Tag, tag_str, tag_str_len);
+        convert_HexString_to_ByteArray((char **) &Tag, tag_str, (int)tag_str_len);
         Tag_len = tag_str_len / 2;  // 2 hex chars map to a byte of Tag
         step = 6;
       }
@@ -206,15 +222,18 @@ int get_aes_gcm_vector_from_file(FILE * fid,
       {
         // process 'PT' component of test vector
         char *pt_str = buffer + 5;  // strip preceding 'PT = ' sub-string
-        int pt_str_len = strlen(pt_str);
-
+	size_t pt_str_len = strlen(pt_str);
+	if(pt_str_len > INT_MAX)
+	{
+	  return 1;
+	}
         while ((pt_str_len > 0) &&
                ((pt_str[pt_str_len - 1] == '\n') ||
                 (pt_str[pt_str_len - 1] == '\r')))
         {
           pt_str[--pt_str_len] = '\0';  // strip any trailing '\n' of '\r'
         }
-        convert_HexString_to_ByteArray((char **) &PT, pt_str, pt_str_len);
+        convert_HexString_to_ByteArray((char **) &PT, pt_str, (int)pt_str_len);
         PT_len = pt_str_len / 2;  // 2 hex chars map to a byte of PT
         pass_result = true;
 
@@ -345,7 +364,7 @@ void test_aes_gcm_decrypt_vectors(void)
     if (test_vector_fd[i] != NULL)
     {
       // counter to track number of test vectors applied from a file
-      int test_vector_count = 0;
+      size_t test_vector_count = 0;
 
       // flag used to signal stop processing test vector file, set true if:
       //   - invalid kmyth "function to test" associated with vector set
@@ -483,7 +502,7 @@ void test_gcm_encrypt_decrypt(void)
   unsigned char *ciphertext = NULL;
   unsigned char *decrypt = NULL;
 
-  int key_len = 16;
+  size_t key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
@@ -514,7 +533,7 @@ void test_gcm_key_modification(void)
   unsigned char *ciphertext = NULL;
   unsigned char *decrypt = NULL;
 
-  int key_len = 16;
+  size_t key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
@@ -551,7 +570,7 @@ void test_gcm_tag_modification(void)
   unsigned char *ciphertext = NULL;
   unsigned char *decrypt = NULL;
 
-  int key_len = 16;
+  size_t key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
@@ -594,7 +613,7 @@ void test_gcm_iv_modification(void)
   unsigned char *ciphertext = NULL;
   unsigned char *decrypt = NULL;
 
-  int key_len = 16;
+  size_t key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
@@ -639,7 +658,7 @@ void test_gcm_cipher_modification(void)
   unsigned char *ciphertext = NULL;
   unsigned char *decrypt = NULL;
 
-  int key_len = 16;
+  size_t key_len = 16;
   size_t plaintext_len = 16;
   size_t ciphertext_len = 0;
   size_t decrypt_len = 0;
@@ -675,7 +694,7 @@ void test_gcm_parameter_limits(void)
   unsigned char *outData = NULL;
 
   // check that null keys produce an error
-  int key_len = 16;
+  size_t key_len = 16;
   size_t inData_len = 16;
   size_t outData_len = 0;
 
