@@ -720,7 +720,7 @@ int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
 
   for (size_t i = 0; i < size; i++)
   {
-    *index = rand();
+    *index = (unsigned int)rand();
     index += 1;
   }
 
@@ -814,8 +814,10 @@ int negotiate_client_session_key(int socket_fd,
   unsigned char *received_id = NULL;
   size_t received_id_len = 0;
 
+  // read_result can safely be cast to a size_t since we've already
+  // dealt with the possibility it's negative
   result = parse_nonce_response(private_key_ctx,
-                                response, read_result,
+                                response, (size_t)read_result,
                                 &received_nonce_a, &received_nonce_a_len,
                                 &nonce_b, &nonce_b_len,
                                 &received_id, &received_id_len);
@@ -965,8 +967,10 @@ int negotiate_server_session_key(int socket_fd,
   unsigned char *received_id = NULL;
   size_t received_id_len = 0;
 
+  // read_result can safely be cast to size_t because we've already
+  // dealt with the case that it's negative.
   result = parse_nonce_request(private_key_ctx,
-                               response, read_result,
+                               response, (size_t)read_result,
                                &received_nonce_a, &received_nonce_a_len,
                                &received_id, &received_id_len);
 
@@ -1027,8 +1031,10 @@ int negotiate_server_session_key(int socket_fd,
   unsigned char *received_nonce_b = NULL;
   size_t received_nonce_b_len = 0;
 
+  // read_result can safely be cast to a size_t because we've already
+  // dealt with the case it's negative.
   result = parse_nonce_confirmation(private_key_ctx,
-                                    response, read_result,
+                                    response, (size_t)read_result,
                                     &received_nonce_b, &received_nonce_b_len);
   kmyth_clear_and_free(response, response_len);
   if (result)

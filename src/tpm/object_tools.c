@@ -26,7 +26,11 @@ int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
     kmyth_log(LOG_ERR, "no sensitiveArea data ... exiting");
     return 1;
   }
-
+  if (object_dataSize > UINT16_MAX)
+  {
+    kmyth_log(LOG_ERR, "object data size exceeds UINT16_MAX ... existing");
+    return 1;
+  }
   // The userAuth field in a TPM2B_SENSITIVE_CREATE struct is used to hold
   // the authorization value (authVal) for the object to be created.
   sensitiveArea->sensitive.userAuth.size = object_auth.size;
@@ -37,14 +41,14 @@ int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
 
   // For data, the data buffer size cannot be zero - we must populate the
   // buffer with data to be sealed and set the size to its length in bytes.
-  sensitiveArea->sensitive.data.size = object_dataSize;
+  sensitiveArea->sensitive.data.size = (uint16_t)object_dataSize;
   if ((object_dataSize == 0) || (object_data == NULL))
   {
     sensitiveArea->sensitive.data.size = 0;
   }
   else
   {
-    sensitiveArea->sensitive.data.size = object_dataSize;
+    sensitiveArea->sensitive.data.size = (uint16_t)object_dataSize;
     memcpy(&sensitiveArea->sensitive.data.buffer, object_data,
            sensitiveArea->sensitive.data.size);
     kmyth_log(LOG_DEBUG, "put %d-byte data field in sensitive area",
@@ -55,9 +59,13 @@ int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
   // buffer may both be zero length, the overall size cannot be.
   // (constant 4 accounts for space taken by the two 16-bit unsigned integer
   // size values)
-  sensitiveArea->size =
-    sensitiveArea->sensitive.userAuth.size +
-    sensitiveArea->sensitive.data.size + 4;
+  int tmp_size = sensitiveArea->sensitive.userAuth.size + sensitiveArea->sensitive.data.size + 4;
+  if(tmp_size < 0 || tmp_size > UINT16_MAX)
+  {
+    kmyth_log(LOG_ERR, "error building sensitive area.");
+    return 1;
+  }
+  sensitiveArea->size = (uint16_t)tmp_size;
   kmyth_log(LOG_DEBUG, "set size of sensitive area = %d", sensitiveArea->size);
 
   return 0;

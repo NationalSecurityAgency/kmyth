@@ -298,7 +298,7 @@ void log_event(const char *src_file,
   va_list args;
 
   va_start(args, message);
-  vsnprintf(out, log_settings.applog_max_msg_len + 1, message, args);
+  vsnprintf(out, (size_t)log_settings.applog_max_msg_len + 1, message, args);
   va_end(args);
 
   // force severity to a valid value by masking (only use three lowest bits)

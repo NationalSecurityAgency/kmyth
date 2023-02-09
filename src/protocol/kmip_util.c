@@ -86,7 +86,9 @@ int build_kmip_get_request(KMIP * ctx,
   }
 
   // Set up the official request buffer and clean up.
-  *request_len = ctx->index - ctx->buffer;
+  // This type conversion should be safe assuming libkmip hasn't done
+  // something odd.
+  *request_len = (size_t)(ctx->index - ctx->buffer);
   *request = calloc(*request_len, sizeof(unsigned char));
   if (request == NULL)
   {
@@ -242,7 +244,9 @@ int build_kmip_get_response(KMIP * ctx,
   }
 
   // Set up the official response buffer and clean up.
-  *response_len = ctx->index - ctx->buffer;
+  // This type conversion should be safe unless libkmip has done
+  // something odd.
+  *response_len = (size_t)(ctx->index - ctx->buffer);
   *response = calloc(*response_len, sizeof(unsigned char));
   if (response == NULL)
   {

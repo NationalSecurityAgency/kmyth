@@ -158,9 +158,12 @@ int kmyth_encrypt_data(unsigned char *data,
   {
     return 1;
   }
-
+  if(*enc_key_size * sizeof(unsigned char) > INT_MAX)
+  {
+    return 1;
+  }
   // create symmetric key (wrapping key) of the desired size
-  if (!RAND_bytes(*enc_key, *enc_key_size * sizeof(unsigned char)))
+  if (!RAND_bytes(*enc_key, (int)(*enc_key_size) * (int)sizeof(unsigned char)))
   {
     return 1;
   }

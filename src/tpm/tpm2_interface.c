@@ -750,7 +750,7 @@ int compute_cpHash(TPM2_CC cmdCode,
             cpHash_result[cpHash_result_size - 1]);
 
   // copy result to output parameter
-  cpHash_out->size = cpHash_result_size;
+  cpHash_out->size = (uint16_t) cpHash_result_size;
   memcpy(cpHash_out->buffer, cpHash_result, cpHash_result_size);
 
   return 0;
@@ -822,7 +822,7 @@ int compute_rpHash(TPM2_RC rspCode,
             rpHash_result[rpHash_result_size - 1]);
 
   // copy result to output parameter
-  rpHash_out->size = rpHash_result_size;
+  rpHash_out->size = (uint16_t)rpHash_result_size;
   memcpy(rpHash_out->buffer, rpHash_result, rpHash_result_size);
 
   return 0;
@@ -906,7 +906,7 @@ int compute_authHMAC(SESSION auth_session,
             authHMAC_result[authHMAC_result_size - 1]);
 
   // return result in TPM2B_AUTH struct passed in
-  auth_HMAC->size = authHMAC_result_size;
+  auth_HMAC->size = (uint16_t)authHMAC_result_size;
   memcpy(auth_HMAC->buffer, authHMAC_result, auth_HMAC->size);
 
   return 0;

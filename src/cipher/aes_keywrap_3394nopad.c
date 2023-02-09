@@ -35,7 +35,11 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   {
     return 1;
   }
-
+  if (inData_len > INT_MAX)
+  {
+    return 1;
+  }
+  
   // setup output ciphertext data buffer (outData):
   //   - an 8-byte integrity check value is prepended to input plaintext
   //   - the ciphertext output is the same length as the expanded plaintext
@@ -99,7 +103,7 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   int tmp_len = 0;
 
   // encrypt (wrap) the input PT, put result in the output CT buffer
-  if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
+  if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len))
   {
     free(*outData);
     *outData = NULL;
@@ -167,7 +171,10 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   {
     return 1;
   }
-
+  if (inData_len > INT_MAX)
+  {
+    return 1;
+  }
   // output data buffer (outData) will contain the decrypted plaintext, which
   // should be the same size as the input ciphertext data (original plaintext
   // plus prepended 8-byte integrity check value)
@@ -229,24 +236,24 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
 
   // decrypt the input ciphertext, put result (with the prepended integrity
   // check value validated and removed) in the output plaintext buffer
-  if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, inData_len))
+  if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len) || tmp_len < 0)
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  *outData_len = tmp_len;
+  *outData_len = (size_t)tmp_len;
 
   // "finalize" decryption
-  if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len))
+  if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len) || tmp_len < 0)
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  *outData_len += tmp_len;
+  *outData_len += (size_t)tmp_len;
 
   // verify that the resultant PT length matches the input CT length minus
   // the length of the 8-byte integrity check value

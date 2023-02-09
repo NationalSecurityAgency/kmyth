@@ -174,6 +174,11 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
                              unsigned char ** key2_out_bytes,
                              size_t * key2_out_len)
 {
+  if(secret_in_len > INT_MAX)
+  {
+    kmyth_sgx_log(LOG_ERR, "secret too long for HKDF context");
+    return EXIT_FAILURE;
+  }
   char msg[MAX_LOG_MSG_LEN] = { 0 };
 
   EVP_PKEY_CTX *pctx;
@@ -211,7 +216,7 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   }
 
   // set input key value for HKDF
-  if (EVP_PKEY_CTX_set1_hkdf_key(pctx, secret_in_bytes, secret_in_len) != 1)
+  if (EVP_PKEY_CTX_set1_hkdf_key(pctx, secret_in_bytes, (int)secret_in_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF input key bytes");
     EVP_PKEY_CTX_free(pctx);
@@ -220,10 +225,16 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
 
   // set additional information input for HKDF - use concatenated msg inputs
   size_t addl_info_len = msg1_in_len + msg2_in_len;
+  if(addl_info_len > INT_MAX)
+  {
+    kmyth_sgx_log(LOG_ERR, "HKDF additional info too long");
+    EVP_PKEY_CTX_free(pctx);
+    return EXIT_FAILURE;
+  }
   unsigned char *addl_info = calloc(addl_info_len, sizeof(unsigned char));
   memcpy(addl_info, msg1_in_bytes, msg1_in_len);
   memcpy(addl_info+msg1_in_len, msg2_in_bytes, msg2_in_len);
-  if (EVP_PKEY_CTX_add1_hkdf_info(pctx, addl_info, addl_info_len) != 1)
+  if (EVP_PKEY_CTX_add1_hkdf_info(pctx, addl_info, (int)addl_info_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF additional information input");
     free(addl_info);
@@ -324,7 +335,7 @@ int ec_sign_buffer(EVP_PKEY * ec_sign_pkey,
     EVP_MD_CTX_free(mdctx);
     return EXIT_FAILURE;
   }
-  *sig_out = calloc(max_sig_len, sizeof(unsigned char));
+  *sig_out = calloc((size_t)max_sig_len, sizeof(unsigned char));
   if (*sig_out == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "malloc of signature buffer failed");

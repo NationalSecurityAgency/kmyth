@@ -147,6 +147,11 @@ int encodeBase64Data(uint8_t * raw_data,
     kmyth_log(LOG_ERR, "no input data ... exiting");
     return 1;
   }
+  if(raw_data_size > INT_MAX)
+  {
+    kmyth_log(LOG_ERR, "raw data too large ... exiting");
+    return 1;
+  }
 
   BIO *bio_mem = NULL;
   BIO *bio64 = NULL;
@@ -171,7 +176,7 @@ int encodeBase64Data(uint8_t * raw_data,
   bio64 = BIO_push(bio64, bio_mem);
 
   // write the input 'raw data' to the BIO chain
-  if (BIO_write(bio64, raw_data, raw_data_size) != raw_data_size)
+  if (BIO_write(bio64, raw_data, (int)raw_data_size) != (int)raw_data_size)
   {
     kmyth_log(LOG_ERR, "BIO_write() error ... exiting");
     BIO_free_all(bio64);
@@ -264,7 +269,7 @@ int decodeBase64Data(uint8_t * base64_data,
   // create a 'source' BIO to read from memory
   BIO *bio_mem = NULL;
 
-  if ((bio_mem = BIO_new_mem_buf(base64_data, base64_data_size)) == NULL)
+  if ((bio_mem = BIO_new_mem_buf(base64_data, (int)base64_data_size)) == NULL)
   {
     kmyth_log(LOG_ERR, "create source BIO error ... exiting");
     BIO_free_all(bio64);
@@ -275,7 +280,7 @@ int decodeBase64Data(uint8_t * base64_data,
   bio64 = BIO_push(bio64, bio_mem);
   // read encoded data through chain, into 'raw_data' decoded output parameter
   // and terminate with newline
-  int bytes_read = BIO_read(bio64, *raw_data, base64_data_size);
+  int bytes_read = BIO_read(bio64, *raw_data, (int)base64_data_size);
 
   if (bytes_read < 0)
   {
@@ -285,7 +290,7 @@ int decodeBase64Data(uint8_t * base64_data,
   }
 
   (*raw_data)[bytes_read] = '\0';
-  *raw_data_size = bytes_read;
+  *raw_data_size = (size_t)bytes_read;
   // clean-up
   BIO_free_all(bio64);
   return 0;
@@ -362,7 +367,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
   {
     strncpy(substr, &str[i<<1], 2);
     ul = strtoul(substr, NULL, 16);
-    expectedPolicyBuffer[i] = ul;
+    expectedPolicyBuffer[i] = (unsigned char)ul;
   }
 
   // converts the byte array into a TPM2B_DIGEST struct

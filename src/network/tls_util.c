@@ -398,11 +398,15 @@ int get_resp_from_tls_server(BIO * bio,
     kmyth_log(LOG_ERR, "no valid BIO object ... exiting");
     return 1;
   }
-
+  if(req_size > INT_MAX)
+  {
+    kmyth_log(LOG_ERR, "message exceeds INT_MAX in size ... exiting");
+    return 1;
+  }
   // write message to server
   if (req_size > 0)
   {
-    if (BIO_write(bio, req, req_size) <= 0)
+    if (BIO_write(bio, req, (int)req_size) <= 0)
     {
       kmyth_log(LOG_ERR, "error writing message to server ... exiting");
       return 1;
@@ -410,6 +414,7 @@ int get_resp_from_tls_server(BIO * bio,
     if (BIO_flush(bio) != 1)
       kmyth_log(LOG_ERR, "error flushing server message BIO");
   }
+  // This size is known not to exceed INT_MAX.
   size_t buf_size = KMYTH_GETKEY_RX_BUFFER_SIZE;
   char *buf = calloc(buf_size, sizeof(char));
 
@@ -420,7 +425,7 @@ int get_resp_from_tls_server(BIO * bio,
     return 1;
   }
 
-  int recv = BIO_read(bio, buf, buf_size);
+  int recv = BIO_read(bio, buf, (int)buf_size);
 
   if (0 >= recv)
   {
@@ -437,7 +442,8 @@ int get_resp_from_tls_server(BIO * bio,
     return 1;
   }
 
-  *resp_size = recv;
+  // recv must be non-negative, as we've already errored out if it's negative.
+  *resp_size = (size_t)recv;
   (*resp) = malloc(*resp_size);
   if (*resp == NULL)
   {
@@ -446,7 +452,7 @@ int get_resp_from_tls_server(BIO * bio,
     free(buf);
     return 1;
   }
-  memcpy((*resp), buf, recv);
+  memcpy((*resp), buf, *resp_size);
 
   buf = secure_memset(buf, 0, buf_size);
   free(buf);

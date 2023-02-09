@@ -346,7 +346,12 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   // The only parent/ancestor of the storage root key is the storage seed. 
   // The TPM2_RH_OWNER handle (0x40000001) references the Storage Primary
   // Seed (SPS), the ownerAuth, and the ownerPolicy
-  int name_buf_len = nameOut.size + sizeof(TPM2_HANDLE);
+  if(nameOut.size > SIZE_MAX - sizeof(TPM2_HANDLE))
+  {
+    kmyth_log(LOG_ERR, "Output filename too long.");
+    return 1;
+  }
+  size_t name_buf_len = nameOut.size + sizeof(TPM2_HANDLE);
   unsigned char name_buf[name_buf_len];
   TPM2_HANDLE srk_parent_handle = htonl(TPM2_RH_OWNER);
 

@@ -41,7 +41,7 @@ void *kmyth_enclave_secure_memset(void *v, int c, size_t n)
   volatile unsigned char *p = v;
 
   while (n--)
-    *p++ = c;
+    *p++ = (unsigned char)c;
 
   return v;
 }

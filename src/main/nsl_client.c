@@ -118,7 +118,7 @@ int retrieve_key_with_session_key(int socket_fd,
 
   size_t encrypted_response_len = 8192 * sizeof(unsigned char);
 
-  int read_result = read(socket_fd, encrypted_response, encrypted_response_len);
+  ssize_t read_result = read(socket_fd, encrypted_response, encrypted_response_len);
 
   if (read_result <= 0)
   {
@@ -133,8 +133,10 @@ int retrieve_key_with_session_key(int socket_fd,
   unsigned char *response = NULL;
   size_t response_len = 0;
 
+  // We've already dealt with the possibility that read_result is negative,
+  // so the type conversion here is safe.
   result = aes_gcm_decrypt(session_key, session_key_len,
-                           encrypted_response, read_result,
+                           encrypted_response, (size_t)read_result,
                            &response, &response_len);
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   encrypted_response = NULL;

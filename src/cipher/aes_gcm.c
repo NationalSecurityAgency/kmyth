@@ -32,6 +32,11 @@ int aes_gcm_encrypt(unsigned char *key,
     return 1;
   }
 
+  // Validate inData isn't too long
+  if (inData_len > INT_MAX)
+  {
+    return 1;
+  }
   // output data buffer (outData) will contain the concatenation of:
   //   - GCM_IV_LEN (12) byte IV
   //   - resultant ciphertext (same length as the input plaintext)
@@ -111,7 +116,7 @@ int aes_gcm_encrypt(unsigned char *key,
   }
 
   // encrypt the input plaintext, put result in the output ciphertext buffer
-  if (!EVP_EncryptUpdate(ctx, ciphertext, &ciphertext_len, inData, inData_len))
+  if (!EVP_EncryptUpdate(ctx, ciphertext, &ciphertext_len, inData, (int)inData_len))
   {
     if (*outData != NULL) free(*outData);
     *outData = NULL;
@@ -175,16 +180,18 @@ int aes_gcm_decrypt(unsigned char *key,
   {
     return 1;
   }
-
-  // output data buffer (outData) will contain only the plaintext, which
-  // should be sized as the input minus the lengths of the IV and tag fields
-  *outData_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
-  if (*outData == NULL) free(*outData);
-  *outData = malloc(*outData_len);
-  if (*outData == NULL) // failed malloc
+  if (inData_len > INT_MAX)
   {
     return 1;
   }
+  
+  // Setting here to save some cleanup on error conditions.
+  *outData_len = 0;
+  *outData = NULL;
+  
+  size_t expected_out_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
+  // output data buffer (outData) will contain only the plaintext, which
+  // should be sized as the input minus the lengths of the IV and tag fields
 
   // input data buffer (inData) will contain the concatenation of:
   //   - GCM_IV_LEN (12) byte IV
@@ -192,7 +199,7 @@ int aes_gcm_decrypt(unsigned char *key,
   //   - GCM_TAG_LEN (16) byte tag
   unsigned char *iv = inData;
   unsigned char *ciphertext = inData + GCM_IV_LEN;
-  unsigned char *tag = ciphertext + *outData_len;
+  unsigned char *tag = ciphertext + expected_out_len;
 
   // variables to hold/accumulate length returned by EVP library calls
   //   - OpenSSL insists this be an int
@@ -225,7 +232,6 @@ int aes_gcm_decrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -233,7 +239,6 @@ int aes_gcm_decrypt(unsigned char *key,
   // set tag to expected tag passed in with input data
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_LEN, tag))
   {
-    free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -241,7 +246,6 @@ int aes_gcm_decrypt(unsigned char *key,
   // set the IV length in the cipher context
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, GCM_IV_LEN, NULL))
   {
-    free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -249,35 +253,41 @@ int aes_gcm_decrypt(unsigned char *key,
   // set the key and IV in the cipher context
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv))
   {
-    free(*outData);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
 
-  // decrypt the input ciphertext, put result in the output plaintext buffer
-  if (!EVP_DecryptUpdate(ctx, *outData, &len, ciphertext, *outData_len))
+  *outData = malloc(expected_out_len);
+  if(*outData == NULL)
   {
-    kmyth_clear_and_free(*outData, *outData_len);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  plaintext_len += len;
+    
+  // decrypt the input ciphertext, put result in the output plaintext buffer
+  if (!EVP_DecryptUpdate(ctx, *outData, &len, ciphertext, (int)expected_out_len) || len < 0)
+  {
+    kmyth_clear_and_free(*outData, expected_out_len);
+    EVP_CIPHER_CTX_free(ctx);
+    return 1;
+  }
+  plaintext_len += (size_t)len;
 
   // 'Finalize' Decrypt:
   //   - validate that resultant tag matches the expected tag passed in
   //   - should produce no more plaintext bytes in our case
-  if (EVP_DecryptFinal_ex(ctx, *outData + plaintext_len, &len) <= 0)
+  if (EVP_DecryptFinal_ex(ctx, *outData + plaintext_len, &len) <= 0 || len < 0)
   {
-    kmyth_clear_and_free(*outData, *outData_len);
+    kmyth_clear_and_free(*outData, expected_out_len);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
-  plaintext_len += len;
+  plaintext_len += (size_t)len;
 
   // verify that the resultant PT length matches the input CT length
-  if (plaintext_len != *outData_len)
+  if ((size_t)plaintext_len != expected_out_len)
   {
-    kmyth_clear_and_free(*outData, *outData_len);
+    kmyth_clear_and_free(*outData, expected_out_len);
     EVP_CIPHER_CTX_free(ctx);
     return 1;
   }
@@ -285,5 +295,6 @@ int aes_gcm_decrypt(unsigned char *key,
   // now that the decryption is complete, clean-up cipher context used
   EVP_CIPHER_CTX_free(ctx);
 
+  *outData_len = expected_out_len;
   return 0;
 }

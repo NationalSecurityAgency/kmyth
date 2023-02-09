@@ -136,10 +136,10 @@ enclave {
                                                       size_t server_cert_bytes_len,
                                                       [in, count=server_host_len]
                                                         const char * server_host,
-                                                      int server_host_len,
+                                                      size_t server_host_len,
                                                       [in, count=server_port_len]
                                                         const char * server_port,
-                                                      int server_port_len,
+                                                      size_t server_port_len,
                                                       [in, count=key_id_len]
                                                         unsigned char * key_id,
                                                       size_t key_id_len);
@@ -203,10 +203,10 @@ enclave {
      */
     int setup_socket_ocall([in, count=server_host_len]
                              const char *server_host,
-                           int server_host_len,
+                           size_t server_host_len,
                            [in, count=server_port_len]
                              const char *server_port,
-                           int server_port_len,
+                           size_t server_port_len,
                            [out] int *socket_fd);
 
     /**
