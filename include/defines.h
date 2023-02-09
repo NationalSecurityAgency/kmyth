@@ -141,7 +141,7 @@
  *
  * Note: must be consistent with KMYTH_HASH_ALG selection
  *
- * @brief Kmyth hash digest size
+ * @brief Kmyth hash digest size. Must be less than UINT16_MAX.
  */
 #define KMYTH_DIGEST_SIZE TPM2_SHA256_DIGEST_SIZE
 
