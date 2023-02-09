@@ -252,21 +252,20 @@ bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
   //   - in.pcrSelections needs:
   //       * in.count * (2 bytes for hash alg ID + 1 bytee for sizeofSelect)
   //       * sum of sizeofSelect values bytes for actual PCR mask(s)
-  int pcr_mask_byte_count = 0;
+  size_t pcr_mask_byte_count = 0;
 
   for (int i = 0; i < in.count; i++)
   {
     pcr_mask_byte_count += in.pcrSelections[i].sizeofSelect;
   }
-  if (packed_size < (sizeof(uint32_t) +
-                     (in.count * (sizeof(uint16_t) + sizeof(uint8_t))) +
-                     pcr_mask_byte_count))
+  size_t packed_size_limit = (size_t)(sizeof(uint32_t) + (in.count * (sizeof(uint16_t) + sizeof(uint8_t))) + pcr_mask_byte_count);
+  if (packed_size < packed_size_limit)
   {
     return false;
   }
 
   // account for specified offset
-  int index = packed_offset;
+  size_t index = packed_offset;
 
   uint32_t packed_count_val = 0;
 
@@ -335,24 +334,30 @@ size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset)
   test_public->publicArea.unique.rsa.size = (uint16_t) KMYTH_RSA_KEY_LEN / 8;
   for (int i = 0; i < test_public->publicArea.unique.rsa.size; i++)
   {
-    test_public->publicArea.unique.rsa.buffer[i] = i % 256;
+    test_public->publicArea.unique.rsa.buffer[i] = (uint8_t)(i % 256);
   }
 
-  // compute test_public->buffer size (contains a TPMT_PUBLIC struct)
-  test_public->size = 0;
-  test_public->size += sizeof(TPMI_ALG_PUBLIC); // type
-  test_public->size += sizeof(TPMI_ALG_HASH); // nameAlg
-  test_public->size += sizeof(TPMA_OBJECT); // objectAttributes
-  test_public->size += sizeof(uint16_t);  // authPolicy.size = 0 (empty buffer)
-  test_public->size += sizeof(TPM2_ALG_ID); // parameters.symmetric.algorithm
-  test_public->size += sizeof(TPM2_KEY_BITS); // parameters.symmetric.keyBits.aes
-  test_public->size += sizeof(TPM2_ALG_ID); // parameters.symmetric.mode.aes
-  test_public->size += sizeof(TPM2_ALG_ID); // parameters.rsaDetail.scheme
-  test_public->size += sizeof(TPM2_KEY_BITS); // parameters.rsaDetail.keyBits
-  test_public->size += sizeof(uint32_t);  // parameters.rsaDetail.exponent
-  test_public->size += sizeof(uint16_t);  // unique.rsa.size
-  test_public->size += test_public->publicArea.unique.rsa.size; // unique.rsa
 
+  // compute test_public->buffer size (contains a TPMT_PUBLIC struct)
+  size_t test_public_size = 0;
+  test_public_size += sizeof(TPMI_ALG_PUBLIC); // type
+  test_public_size += sizeof(TPMI_ALG_HASH); // nameAlg
+  test_public_size += sizeof(TPMA_OBJECT); // objectAttributes
+  test_public_size += sizeof(uint16_t);  // authPolicy.size = 0 (empty buffer)
+  test_public_size += sizeof(TPM2_ALG_ID); // parameters.symmetric.algorithm
+  test_public_size += sizeof(TPM2_KEY_BITS); // parameters.symmetric.keyBits.aes
+  test_public_size += sizeof(TPM2_ALG_ID); // parameters.symmetric.mode.aes
+  test_public_size += sizeof(TPM2_ALG_ID); // parameters.rsaDetail.scheme
+  test_public_size += sizeof(TPM2_KEY_BITS); // parameters.rsaDetail.keyBits
+  test_public_size += sizeof(uint32_t);  // parameters.rsaDetail.exponent
+  test_public_size += sizeof(uint16_t);  // unique.rsa.size
+  test_public_size += test_public->publicArea.unique.rsa.size; // unique.rsa
+
+  if(test_public_size > UINT16_MAX)
+  {
+    CU_FAIL("test public object computed size too large");
+  }
+  test_public->size = (uint16_t)test_public_size;
   // required byte array size for packed test TPM2B_PUBLIC struct includes:
   //   - test_public->size member: UINT16 (2 bytes)
   //   - test_public->buffer: test_public->size bytes
@@ -400,13 +405,13 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   }
 
   // account for any offset passed as a pack_public() parameter
-  int index = packed_offset;
+  size_t index = packed_offset;
 
   uint16_t packed_struct_size = 0;
 
   // check packed 'size' bytes
-  packed_struct_size |= (packed_data[index++] << 8);
-  packed_struct_size |= packed_data[index++];
+  packed_struct_size = (uint16_t)(packed_data[index++] << 8);
+  packed_struct_size = (uint16_t)(packed_struct_size + packed_data[index++]);
   if (packed_struct_size != in.size)
   {
     return false;
@@ -415,8 +420,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_type = 0;
 
   // check packed 'publicArea.type' bytes
-  packed_type |= (packed_data[index++] << 8);
-  packed_type |= packed_data[index++];
+  packed_type = (uint16_t)(packed_data[index++] << 8);
+  packed_type = (uint16_t)(packed_type + packed_data[index++]);
   if (packed_type != in.publicArea.type)
   {
     return false;
@@ -425,8 +430,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_nameAlg = 0;
 
   // check packed 'publicArea.nameAlg' bytes
-  packed_nameAlg |= (packed_data[index++] << 8);
-  packed_nameAlg |= packed_data[index++];
+  packed_nameAlg = (uint16_t)(packed_data[index++] << 8);
+  packed_nameAlg = (uint16_t)(packed_nameAlg + packed_data[index++]);
   if (packed_nameAlg != in.publicArea.nameAlg)
   {
     return false;
@@ -435,21 +440,22 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint32_t packed_objectAttributes = 0;
 
   // check packed 'publicArea.objectAttributes' bytes
-  packed_objectAttributes |= (packed_data[index++] << 24);
-  packed_objectAttributes |= (packed_data[index++] << 16);
-  packed_objectAttributes |= (packed_data[index++] << 8);
-  packed_objectAttributes |= packed_data[index++];
+  uint64_t packed_objectAttributes64 = (((uint64_t)packed_data[index] << 24) +
+					((uint64_t)packed_data[index+1] << 16) +
+					((uint64_t)packed_data[index+2] << 8) +
+					((uint64_t)packed_data[index+3]));
+  index += 4;
+  packed_objectAttributes = (uint32_t)packed_objectAttributes64;
   if (packed_objectAttributes != in.publicArea.objectAttributes)
   {
     return false;
   }
-
   uint16_t packed_authPolicy_size = 0;
 
   // check packed 'publicArea.authPolicy' bytes
   // (passed in empty authPolicy so 'size' should be zero and 'buffer' empty)
-  packed_authPolicy_size |= (packed_data[index++] << 8);
-  packed_authPolicy_size |= packed_data[index++];
+  packed_authPolicy_size = (uint16_t)(packed_data[index++] << 8);
+  packed_authPolicy_size = (uint16_t)(packed_authPolicy_size + packed_data[index++]);
   if (packed_authPolicy_size != in.publicArea.authPolicy.size)
   {
     return false;
@@ -458,8 +464,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_sym_alg = 0;
 
   // check packed 'publicArea.parameters.rsaDetail.symmetric.algorithm' bytes
-  packed_sym_alg |= (packed_data[index++] << 8);
-  packed_sym_alg |= packed_data[index++];
+  packed_sym_alg = (uint16_t)(packed_data[index++] << 8);
+  packed_sym_alg = (uint16_t)(packed_sym_alg + packed_data[index++]);
   if (packed_sym_alg != in.publicArea.parameters.rsaDetail.symmetric.algorithm)
   {
     return false;
@@ -468,8 +474,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_sym_keyBits = 0;
 
   // check packed 'publicArea.parameters.rsaDetail.symmetric.keyBits.aes' bytes
-  packed_sym_keyBits |= (packed_data[index++] << 8);
-  packed_sym_keyBits |= packed_data[index++];
+  packed_sym_keyBits = (uint16_t)(packed_data[index++] << 8);
+  packed_sym_keyBits = (uint16_t)(packed_sym_keyBits + packed_data[index++]);
   if (packed_sym_keyBits !=
       in.publicArea.parameters.rsaDetail.symmetric.keyBits.aes)
   {
@@ -479,8 +485,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_sym_mode = 0;
 
   // check packed 'publicArea.parameters.rsaDetail.symmetric.mode.aes' bytes
-  packed_sym_mode |= (packed_data[index++] << 8);
-  packed_sym_mode |= packed_data[index++];
+  packed_sym_mode = (uint16_t)(packed_data[index++] << 8);
+  packed_sym_mode = (uint16_t)(packed_sym_mode + packed_data[index++]);
   if (packed_sym_mode != in.publicArea.parameters.rsaDetail.symmetric.mode.aes)
   {
     return false;
@@ -489,8 +495,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_rsa_scheme = 0;
 
   // check packed 'publicArea.parameters.rsaDetail.scheme.scheme' bytes
-  packed_rsa_scheme |= (packed_data[index++] << 8);
-  packed_rsa_scheme |= packed_data[index++];
+  packed_rsa_scheme = (uint16_t)(packed_data[index++] << 8);
+  packed_rsa_scheme = (uint16_t)(packed_rsa_scheme + packed_data[index++]);
   if (packed_rsa_scheme != in.publicArea.parameters.rsaDetail.scheme.scheme)
   {
     return false;
@@ -499,20 +505,20 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_rsa_keyBits = 0;
 
   // check packed 'publicArea.parameters.rsaDetail.keyBits' bytes
-  packed_rsa_keyBits |= (packed_data[index++] << 8);
-  packed_rsa_keyBits |= packed_data[index++];
+  packed_rsa_keyBits = (uint16_t)(packed_data[index++] << 8);
+  packed_rsa_keyBits = (uint16_t)(packed_rsa_keyBits + packed_data[index++]);
   if (packed_rsa_keyBits != in.publicArea.parameters.rsaDetail.keyBits)
   {
     return false;
   }
 
   uint32_t packed_rsa_exponent = 0;
-
-  // check packed 'publicArea.parameters.rsaDetail.exponent' bytes
-  packed_rsa_exponent |= (packed_data[index++] << 24);
-  packed_rsa_exponent |= (packed_data[index++] << 16);
-  packed_rsa_exponent |= (packed_data[index++] << 8);
-  packed_rsa_exponent |= packed_data[index++];
+  size_t rsa_exponent = (((uint64_t)packed_data[index] << 24) +
+			 ((uint64_t)packed_data[index+1] << 16) +
+			 ((uint64_t)packed_data[index+2] << 8) +
+			 ((uint64_t)packed_data[index+3]));
+  index += 4;
+  packed_rsa_exponent = (uint32_t)rsa_exponent;
   if (packed_rsa_exponent != in.publicArea.parameters.rsaDetail.exponent)
   {
     return false;
@@ -521,8 +527,8 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
   uint16_t packed_rsa_unique_size = 0;
 
   // check packed 'publicArea.unique.rsa.size' bytes
-  packed_rsa_unique_size |= (packed_data[index++] << 8);
-  packed_rsa_unique_size |= packed_data[index++];
+  packed_rsa_unique_size = (uint16_t)(packed_data[index++] << 8);
+  packed_rsa_unique_size = (uint16_t)(packed_rsa_unique_size + packed_data[index++]);
   if (packed_rsa_unique_size != in.publicArea.unique.rsa.size)
   {
     return false;
@@ -557,10 +563,10 @@ bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
 size_t init_test_private(TPM2B_PRIVATE * test_private,
                          size_t buffer_size, size_t offset)
 {
-  test_private->size = buffer_size;
+  test_private->size = (uint16_t)buffer_size;
   for (int i = 0; i < buffer_size; i++)
   {
-    test_private->buffer[i] = 255 - (i % 256);
+    test_private->buffer[i] = (uint8_t)(255 - (i % 256));
   }
 
   // required byte array size for packed test TPM2B_PRIVATE struct includes:
@@ -593,13 +599,13 @@ bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
   }
 
   // account for any offset passed as a pack_private() parameter
-  int index = packed_offset;
+  size_t index = packed_offset;
 
   uint16_t packed_struct_size = 0;
 
   // check packed 'size' bytes
-  packed_struct_size |= (packed_data[index++] << 8);
-  packed_struct_size |= packed_data[index++];
+  packed_struct_size = (uint16_t)((packed_data[index++] << 8));
+  packed_struct_size = (uint16_t)(packed_struct_size + packed_data[index++]);
   if (packed_struct_size != in.size)
   {
     return false;
@@ -1728,13 +1734,13 @@ void test_create_ski_bytes(void)
   sb_len = 0;
 
   //Modify internals of ski to find failures
-  int orig = ski.sk_pub.size;
+  size_t orig = ski.sk_pub.size;
 
   ski.sk_pub.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.sk_pub.size = orig;
+  ski.sk_pub.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -1745,7 +1751,7 @@ void test_create_ski_bytes(void)
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.sk_priv.size = orig;
+  ski.sk_priv.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -1756,7 +1762,7 @@ void test_create_ski_bytes(void)
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.wk_pub.size = orig;
+  ski.wk_pub.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -1767,7 +1773,7 @@ void test_create_ski_bytes(void)
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.wk_priv.size = orig;
+  ski.wk_priv.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -2081,7 +2087,7 @@ void test_decodeBase64Data(void)
 
   //INT_MAX+1
   CU_ASSERT(decodeBase64Data
-            ((uint8_t *) RAW_PCR64, -2147483648, &pcr, &pcr_len) == 1);
+            ((uint8_t *) RAW_PCR64, INT_MAX+(size_t)1, &pcr, &pcr_len) == 1);
   CU_ASSERT(pcr == NULL);
   CU_ASSERT(pcr_len == 0);
 
@@ -2147,7 +2153,7 @@ void test_concat(void)
 
   //Test invalid input
   //The -1 should trigger overflows here:    if (new_dest_len < *dest_length)
-  CU_ASSERT(concat(&dest, &dest_len, chile, -1) == 1);
+  CU_ASSERT(concat(&dest, &dest_len, chile, SIZE_MAX-1) == 1);
   free(dest);
 }
 
@@ -2212,9 +2218,9 @@ void test_verifyPackUnpackDigest(void)
   size_t packed_data_offset = 0;
 
   create_policy_digest(sapi_ctx, pcrs_struct, &digest);
-  CU_ASSERT(digest.size != 0);
+  CU_ASSERT(digest.size > 0);
 
-  packed_data_size = (digest.size * 2) + 1;
+  packed_data_size = ((size_t)digest.size * 2) + 1;
   packed_data = (uint8_t *) malloc(packed_data_size);
 
   CU_ASSERT(pack_digest(&digest, packed_data, packed_data_size, packed_data_offset) == 0);
