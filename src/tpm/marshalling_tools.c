@@ -458,6 +458,11 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
 //############################################################################
 int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 {
+  if(input.sk_pub.size < 0 || input.sk_priv.size < 0 || input.wk_pub.size < 0 || input.wk_priv.size < 0 || input.policyBranch1.size < 0 || input.policyBranch2.size < 0)
+  {
+    kmyth_log(LOG_ERR, "ski file should not have negative field sizes.");
+    return 1;
+  }
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
   // Note: must account for two extra bytes to include the buffer's size value
@@ -478,7 +483,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t sk_pub_size = input.sk_pub.size + 2;
+  size_t sk_pub_size = (size_t)input.sk_pub.size + 2;
   size_t sk_pub_offset = 0;
   uint8_t *sk_pub_data = (uint8_t *) malloc(sk_pub_size);
 
@@ -490,7 +495,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t sk_priv_size = input.sk_priv.size + 2;
+  size_t sk_priv_size = (size_t)input.sk_priv.size + 2;
   size_t sk_priv_offset = 0;
   uint8_t *sk_priv_data = (uint8_t *) malloc(sk_priv_size);
 
@@ -503,7 +508,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t wk_pub_size = input.wk_pub.size + 2;
+  size_t wk_pub_size = (size_t)input.wk_pub.size + 2;
   size_t wk_pub_offset = 0;
   uint8_t *wk_pub_data = (uint8_t *) malloc(wk_pub_size);
 
@@ -517,7 +522,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t wk_priv_size = input.wk_priv.size + 2;
+  size_t wk_priv_size = (size_t)input.wk_priv.size + 2;
   size_t wk_priv_offset = 0;
   uint8_t *wk_priv_data = (uint8_t *) malloc(wk_priv_size);
 
@@ -546,7 +551,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   {
     bool_policy_or = 1;
 
-    p_branch_1_size = input.policyBranch1.size + 2;
+    p_branch_1_size = (size_t)input.policyBranch1.size + 2;
     p_branch_1_data = (uint8_t *) malloc(p_branch_1_size);
 
     if (p_branch_1_data == NULL)
@@ -561,7 +566,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
       return 1;
     }
 
-    p_branch_2_size = input.policyBranch2.size + 2;
+    p_branch_2_size = (size_t)input.policyBranch2.size + 2;
     p_branch_2_data = (uint8_t *) malloc(p_branch_2_size);
 
     if (p_branch_2_data == NULL)
