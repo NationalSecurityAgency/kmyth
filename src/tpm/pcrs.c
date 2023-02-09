@@ -26,7 +26,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
   // Get the total number of PCRs from the TPM
   int numPCRs = -1;
 
-  if (get_pcr_count(sapi_ctx, &numPCRs))
+  if (get_pcr_count(sapi_ctx, &numPCRs) || numPCRs < 0 || numPCRs > UINT8_MAX)
   {
     kmyth_log(LOG_ERR, "unable to retrieve PCR count ... exiting");
     return 1;
@@ -37,7 +37,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
   // Each selection "mask" is 8 bits)
   pcrs_struct->count = 1;
   pcrs_struct->pcrSelections[0].hash = KMYTH_HASH_ALG;
-  pcrs_struct->pcrSelections[0].sizeofSelect = numPCRs / 8;
+  pcrs_struct->pcrSelections[0].sizeofSelect = (uint8_t)numPCRs / 8;
   for (int i = 0; i < pcrs_struct->pcrSelections[0].sizeofSelect; i++)
   {
     pcrs_struct->pcrSelections[0].pcrSelect[i] = 0;
@@ -66,7 +66,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
         kmyth_log(LOG_ERR, "invalid PCR value specified (%d) ... exiting", pcr);
         return 1;
       }
-      pcrs_struct->pcrSelections[0].pcrSelect[pcr / 8] |= (1 << (pcr % 8));
+      pcrs_struct->pcrSelections[0].pcrSelect[pcr / 8] |= (uint8_t)(1 << (pcr % 8));
     }
 
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
