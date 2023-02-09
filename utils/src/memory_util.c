@@ -40,10 +40,11 @@ void kmyth_clear_and_free(void *v, size_t size)
 //############################################################################
 void *secure_memset(void *v, int c, size_t n)
 {
+  // It's the caller's responsibility to pass a useful value for c
   volatile unsigned char *p = v;
 
   while (n--)
-    *p++ = c;
+    *p++ = (unsigned char)c;
 
   return v;
 }
