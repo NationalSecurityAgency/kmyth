@@ -18,9 +18,9 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                            uint8_t * server_cert_bytes,
                                            size_t server_cert_bytes_len,
                                            const char * server_host,
-                                           int server_host_len,
+                                           size_t server_host_len,
                                            const char * server_port,
-                                           int server_port_len,
+                                           size_t server_port_len,
                                            unsigned char *key_id,
                                            size_t key_id_len)
 {

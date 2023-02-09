@@ -29,13 +29,18 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
   size_t data_size = 0;
   int ret;
 
-  enc_get_sealed_size(eid, &ret, input_len, (uint32_t *) & data_size);
+  if(input_len > UINT32_MAX)
+  {
+    return 1;
+  }
+
+  enc_get_sealed_size(eid, &ret, (uint32_t)input_len, (uint32_t *) & data_size);
   if (ret == 0)
   {
     data = (uint8_t *) malloc(data_size);
     if (data == NULL) return 1;
 
-    enc_seal_data(eid, &ret, input, input_len, data, data_size, key_policy,
+    enc_seal_data(eid, &ret, input, (uint32_t)input_len, data, (uint32_t)data_size, key_policy,
                   attribute_mask);
     if (ret == 1)
     {

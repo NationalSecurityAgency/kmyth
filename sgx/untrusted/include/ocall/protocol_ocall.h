@@ -53,9 +53,9 @@ extern "C"
  * @return 0 on success, 1 on failure
  */
   int setup_socket_ocall(const char *server_host,
-                         int server_host_len,
+                         size_t server_host_len,
                          const char *server_port,
-                         int server_port_len,
+                         size_t server_port_len,
                          int *socket_fd);
 
 /**
