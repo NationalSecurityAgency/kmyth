@@ -57,8 +57,15 @@ int append_msg_signature(EVP_PKEY * sign_key,
   //   - signature size (2 byte unsigned integer)
   //   - signature value (byte array)
   size_t orig_buf_len = msg->hdr.msg_size;
-  size_t new_buf_len = msg->hdr.msg_size + 2 + signature_len;
-
+  size_t new_buf_len = msg->hdr.msg_size + (size_t)2 + signature_len;
+  if(new_buf_len > UINT16_MAX)
+  {
+    kmyth_sgx_log(LOG_ERR, "new buffer length exceeds UINT16_MAX");
+    msg->hdr.msg_size = 0;
+    free(signature_bytes);
+    return EXIT_FAILURE;
+  }
+  
   msg->body = realloc(msg->body, new_buf_len);
   if (msg->body == NULL)
   {
@@ -68,7 +75,7 @@ int append_msg_signature(EVP_PKEY * sign_key,
     return EXIT_FAILURE;
   }
   
-  msg->hdr.msg_size = new_buf_len;
+  msg->hdr.msg_size = (uint16_t)new_buf_len;
   unsigned char *buf_ptr = msg->body + orig_buf_len;
   
   // append signature size bytes
@@ -154,7 +161,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
   //  - Client ephemeral public key value (byte array)
-  msg_out->hdr.msg_size  = 2 + client_id_len + 2 + client_eph_pubkey_len;
+  msg_out->hdr.msg_size  = (uint16_t)(2 + client_id_len + 2 + client_eph_pubkey_len);
 
   msg_out->body = calloc(msg_out->hdr.msg_size, sizeof(unsigned char));
   if (msg_out->body == NULL)
@@ -169,7 +176,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   //   - 2-byte unsigned integer to facilitate length value format conversions
   //   - index to newly allocated, empty message buffer
   uint16_t temp_val = 0;
-  int index = 0;
+  size_t index = 0;
 
   // insert client identity length bytes
   temp_val = htobe16((uint16_t) client_id_len);
@@ -210,11 +217,11 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
                            EVP_PKEY ** client_eph_pubkey)
 {
   // parse out fields in 'Client Hello' message buffer
-  int buf_index = 0;
+  size_t buf_index = 0;
 
   // get client identity field size
-  uint16_t client_id_len = msg_in->body[buf_index] << 8;
-  client_id_len += msg_in->body[buf_index+1];
+  uint16_t client_id_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  client_id_len = (uint16_t)(client_id_len + msg_in->body[buf_index+1]);
   buf_index += 2;
   
   // get client identity field bytes
@@ -228,8 +235,8 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   buf_index += client_id_len;
 
   // get client ephemeral contribution field size
-  uint16_t client_eph_pub_len = msg_in->body[buf_index] << 8;
-  client_eph_pub_len += msg_in->body[buf_index+1];
+  uint16_t client_eph_pub_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  client_eph_pub_len = (uint16_t)(client_eph_pub_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get client ephemeral contribution field bytes
@@ -248,8 +255,8 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   size_t msg_body_size = buf_index;
 
   // get message signature size
-  uint16_t msg_sig_len = msg_in->body[buf_index] << 8;
-  msg_sig_len += msg_in->body[buf_index+1];
+  uint16_t msg_sig_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  msg_sig_len = (uint16_t)(msg_sig_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get message signature bytes
@@ -475,9 +482,17 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   //  - Client ephemeral value (DER formatted EC_KEY byte array) 
   //  - Server ephemeral size (two-byte unsigned integer)
   //  - Server ephemeral value (DER formatted EC_KEY byte array)
-  msg_out->hdr.msg_size = 2 + server_id_len +
-                          2 + client_eph_pubkey_len +
-                          2 + server_eph_pubkey_len;
+  // TODO: Check for overflow
+  size_t msg_out_size = 2 + server_id_len + 2 + client_eph_pubkey_len + 2 + server_eph_pubkey_len;
+  if(msg_out_size > UINT16_MAX)
+  {
+    kmyth_sgx_log(LOG_ERR, "computed output message size too large");
+    kmyth_clear_and_free(server_id_bytes, server_id_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+    return EXIT_FAILURE;
+  }
+  msg_out->hdr.msg_size = (uint16_t)msg_out_size;
 
   msg_out->body = malloc(msg_out->hdr.msg_size);
   if (msg_out->body == NULL)
@@ -543,11 +558,11 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
                            EVP_PKEY ** server_eph_pubkey)
 {
   // parse message body fields into variables
-  int buf_index = 0;
+  size_t buf_index = 0;
 
   // get size of server identity field (server_id_len)
-  uint16_t server_id_len = msg_in->body[buf_index] << 8;
-  server_id_len += msg_in->body[buf_index+1];
+  uint16_t server_id_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  server_id_len = (uint16_t)(server_id_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get server identity field bytes (server_id)
@@ -561,8 +576,8 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   buf_index += server_id_len;
 
   // get size of client ephemeral contribution field (client_eph_pub_len)
-  uint16_t client_eph_pub_len = msg_in->body[buf_index] << 8;
-  client_eph_pub_len += msg_in->body[buf_index+1];
+  uint16_t client_eph_pub_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  client_eph_pub_len = (uint16_t)(client_eph_pub_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get client ephemeral contribution field bytes (client_eph_pub_bytes)
@@ -577,8 +592,8 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   buf_index += client_eph_pub_len;
 
   // get size of server ephemeral contribution field (server_eph_pub_len)
-  uint16_t server_eph_pub_len = msg_in->body[buf_index] << 8;
-  server_eph_pub_len += msg_in->body[buf_index+1];
+  uint16_t server_eph_pub_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  server_eph_pub_len = (uint16_t)(server_eph_pub_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get server ephemeral contribution field bytes (server_eph_pub_bytes)
@@ -598,8 +613,8 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   size_t msg_body_size = buf_index;
 
   // get size of message signature
-  uint16_t msg_sig_len = msg_in->body[buf_index] << 8;
-  msg_sig_len += msg_in->body[buf_index+1];
+  uint16_t msg_sig_len = (uint16_t)(msg_in->body[buf_index] << 8);
+  msg_sig_len = (uint16_t)(msg_sig_len + msg_in->body[buf_index+1]);
   buf_index += 2;
 
   // get message signature bytes
@@ -840,8 +855,9 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   //  - Server ephemeral size (two-byte unsigned integer)
   //  - Server ephemeral value (DER formatted EC_KEY byte array)
   ECDHMessage pt_msg = { 0 };
-  pt_msg.hdr.msg_size = 2 + kmip_key_request_len +
-                        2 + server_eph_pubkey_len;
+  // TODO: Check for overflow
+  pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_key_request_len +
+				   2 + server_eph_pubkey_len);
   pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
   if (pt_msg.body == NULL)
   {
@@ -936,11 +952,11 @@ int parse_key_request_msg(X509 * client_sign_cert,
   }
 
   // parse message body fields into variables
-  int buf_index = 0;
+  size_t buf_index = 0;
 
   // get size (in bytes) of KMIP 'get key' request field
-  kmip_request->size = pt_msg.body[buf_index] << 8;
-  kmip_request->size += pt_msg.body[buf_index+1];
+  kmip_request->size = (uint16_t)(pt_msg.body[buf_index] << 8);
+  kmip_request->size = (uint16_t)(kmip_request->size + pt_msg.body[buf_index+1]);
   buf_index += 2;
 
   // get KMIP 'get key' request bytes
@@ -954,8 +970,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   buf_index += kmip_request->size;
 
   // get size of server-side ephemeral public key field
-  uint16_t server_eph_pub_len = pt_msg.body[buf_index] << 8;
-  server_eph_pub_len += pt_msg.body[buf_index+1];
+  uint16_t server_eph_pub_len = (uint16_t)(pt_msg.body[buf_index] << 8);
+  server_eph_pub_len = (uint16_t)(server_eph_pub_len + pt_msg.body[buf_index+1]);
   buf_index += 2;
 
   // get server-side ephemeral public key field bytes
@@ -975,8 +991,8 @@ int parse_key_request_msg(X509 * client_sign_cert,
   size_t msg_body_size = buf_index;
 
   // get size of message signature
-  uint16_t msg_sig_len = pt_msg.body[buf_index] << 8;
-  msg_sig_len += pt_msg.body[buf_index+1];
+  uint16_t msg_sig_len = (uint16_t)(pt_msg.body[buf_index] << 8);
+  msg_sig_len = (uint16_t)(msg_sig_len + pt_msg.body[buf_index+1]);
   buf_index += 2;
 
   // get message signature bytes
@@ -1098,7 +1114,8 @@ int compose_key_response_msg(EVP_PKEY * server_sign_key,
   //  - KMIP 'get key' response size (two-byte unsigned integer)
   //  - KMIP 'get key' response bytes (byte array)
   ECDHMessage pt_msg = { { 0 }, NULL };
-  pt_msg.hdr.msg_size = 2 + kmip_response->size;
+  // TODO: Confirm this doesn't overflow
+  pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_response->size);
 
   pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
   if (pt_msg.body == NULL)
@@ -1181,11 +1198,11 @@ int parse_key_response_msg(X509 * server_sign_cert,
   }
 
   // parse message body fields into variables
-  int buf_index = 0;
+  size_t buf_index = 0;
 
   // get size (in bytes) of KMIP 'get key' request field
-  kmip_response->size = (pt_msg.body)[buf_index] << 8;
-  kmip_response->size += (pt_msg.body)[buf_index+1];
+  kmip_response->size = (uint16_t)((pt_msg.body)[buf_index] << 8);
+  kmip_response->size = (uint16_t)(kmip_response->size + (pt_msg.body)[buf_index+1]);
   buf_index += 2;
 
   // get KMIP 'get key' response bytes
@@ -1203,8 +1220,8 @@ int parse_key_response_msg(X509 * server_sign_cert,
   size_t msg_body_size = buf_index;
 
   // get size of message signature
-  uint16_t msg_sig_len = (pt_msg.body)[buf_index] << 8;
-  msg_sig_len += (pt_msg.body)[buf_index+1];
+  uint16_t msg_sig_len = (uint16_t)((pt_msg.body)[buf_index] << 8);
+  msg_sig_len = (uint16_t)(msg_sig_len + (pt_msg.body)[buf_index+1]);
   buf_index += 2;
 
   // get message signature bytes
