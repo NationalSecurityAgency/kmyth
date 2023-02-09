@@ -19,13 +19,13 @@
 //----------------------------------------------------------------------------
 int convert_HexString_to_ByteArray(char **result, char *hex_str, int str_size)
 {
-  if ((str_size % 2) != 0)
+  if ((str_size % 2) != 0 || str_size < 0)
   {
     fprintf(stderr, "ERROR: Invalid hex string size, must be even.\n");
     return 1;
   }
 
-  size_t bufSize = ((str_size) / 2);
+  size_t bufSize = ((size_t)(str_size) / 2);
   char *buf = (char *) calloc(bufSize + 1, sizeof(char));
 
   for (int i = 0; i < bufSize; i++)
