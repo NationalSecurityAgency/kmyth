@@ -75,8 +75,10 @@ int send_key_with_session_key(int socket_fd,
   unsigned char *request = NULL;
   size_t request_len = 0;
 
+  // We've already dealt with the possibility that read_result is
+  // negative, so the cast here is safe.
   int result = aes_gcm_decrypt(session_key, session_key_len,
-                               encrypted_request, read_result,
+                               encrypted_request, (size_t)read_result,
                                &request, &request_len);
 
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
