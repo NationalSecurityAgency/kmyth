@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
+#include <limits.h>
 
 #include "aes_keywrap_test.h"
 #include "cipher_test.h"
@@ -63,11 +64,11 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
 
   // create variables to buffer the components in a single test vector
   char *K_str = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
-  int K_str_len = 0;
+  size_t K_str_len = 0;
   char *P_str = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
-  int P_str_len = 0;
+  size_t P_str_len = 0;
   char *C_str = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
-  int C_str_len = 0;
+  size_t C_str_len = 0;
   bool pass_result = true;      // unless vector has a 'FAIL' line, should pass
 
   // create/initialize a counter to track progress (ensure that test vector
@@ -97,7 +98,11 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
         //       the parsing process into step 2 (having 'K' but nothing else)
         step = 2;
         K_str_len = strlen(buffer) - 4; // strip leading 'K = ' sub-string
-        memcpy(K_str, buffer + 4, K_str_len * sizeof(char));
+	if(K_str_len > INT_MAX)
+	{
+	  return 1;
+	}
+	memcpy(K_str, buffer + 4, K_str_len * sizeof(char));
         while ((K_str_len > 0) &&
                ((K_str[K_str_len - 1] == '\n') ||
                 (K_str[K_str_len - 1] == '\r')))
@@ -121,6 +126,10 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
         {
           step++;
           P_str_len = strlen(buffer) - 4; // strip leading 'P = ' sub-string
+	  if(P_str_len > INT_MAX)
+	  {
+	    return 1;
+	  }
           memcpy(P_str, buffer + 4, P_str_len * sizeof(char));
           while ((P_str_len > 0) &&
                  ((P_str[P_str_len - 1] == '\n') ||
@@ -146,6 +155,11 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
         {
           step++;
           C_str_len = strlen(buffer) - 4; // strip leading 'C = ' sub-string
+	  if(C_str_len > INT_MAX)
+	  {
+	    return 1;
+	  }
+	    
           memcpy(C_str, buffer + 4, C_str_len * sizeof(char));
           while ((C_str_len > 0) &&
                  ((C_str[C_str_len - 1] == '\n') ||
@@ -189,11 +203,11 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
   if (step == 4)
   {
     // use parsed results to populate output parameters
-    convert_HexString_to_ByteArray((char **) K_vec, K_str, K_str_len);
+    convert_HexString_to_ByteArray((char **) K_vec, K_str, (int)K_str_len);
     *K_vec_len = K_str_len / 2; // 2 hex chars map to a byte of key
-    convert_HexString_to_ByteArray((char **) P_vec, P_str, P_str_len);
+    convert_HexString_to_ByteArray((char **) P_vec, P_str, (int)P_str_len);
     *P_vec_len = P_str_len / 2; // 2 hex chars map to a byte of key
-    convert_HexString_to_ByteArray((char **) C_vec, C_str, C_str_len);
+    convert_HexString_to_ByteArray((char **) C_vec, C_str, (int)C_str_len);
     *C_vec_len = C_str_len / 2; // 2 hex chars map to a byte of key
     *expect_pass = pass_result;
   }
@@ -221,7 +235,7 @@ int get_aes_keywrap_vector_from_file(FILE * fid,
 void test_aes_keywrap_parameters(void)
 {
   unsigned char *key = NULL;
-  int key_len = 0;
+  size_t key_len = 0;
 
   unsigned char *inData = NULL;
   size_t inData_len = 0;
@@ -368,14 +382,14 @@ void test_aes_keywrap_vectors(void)
   unsigned char *out = NULL;
   size_t out_len;
 
-  for (int i = 0; i < aes_keywrap_vectors.count; i++)
+  for (size_t i = 0; i < aes_keywrap_vectors.count; i++)
   {
     // open test vector file
     test_vector_fd[i] = fopen(aes_keywrap_vectors.sets[i].path, "r");
     if (test_vector_fd[i] != NULL)
     {
       // counter to track number of test vectors applied from this file
-      int test_vector_count = 0;
+      size_t test_vector_count = 0;
 
       // flag used to signal stop processing test vector file
       //   - invalid kmyth "function to test" associated with vector set
