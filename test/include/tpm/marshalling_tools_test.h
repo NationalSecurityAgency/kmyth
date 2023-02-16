@@ -1,12 +1,12 @@
 /**
- * @file  formatting_tools_test.h
+ * @file  marshalling_tools_test.h
  *
  * Provides unit tests for the TPM 2.0 object tools utility functions
- * implemented in tpm2/src/tpm/formatting_tools.c
+ * implemented in tpm2/src/tpm/marshalling_tools.c
  */
 
-#ifndef FORMATTING_TOOLS_TEST_H
-#define FORMATTING_TOOLS_TEST_H
+#ifndef MARSHALLING_TOOLS_TEST_H
+#define MARSHALLING_TOOLS_TEST_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,7 +14,7 @@
 #include <tss2/tss2_sys.h>
 
 /**
- * This function adds all of the tests contained in formatting_tools_test.c to a
+ * This function adds all of the tests contained in marshalling_tools_test.c to a
  * test suite parameter passed in by the caller. This allows a top-level
  * 'test-runner' application to include them in the set of tests that it runs.
  *
@@ -22,7 +22,7 @@
  *
  * @return     0 on success, 1 on failure
  */
-int formatting_tools_add_tests(CU_pSuite suite);
+int marshalling_tools_add_tests(CU_pSuite suite);
 
 /**
  * These utilities are used to initialize test structs and compute required
@@ -94,7 +94,7 @@ bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
                           size_t packed_size, size_t packed_offset);
 
 //****************************************************************************
-// Tests - validate functionality in tpm2/src/tpm/formatting_tools.c
+// Tests - validate functionality in tpm2/src/tpm/marshalling_tools.c
 //
 // format for test names is test_<function_name>()
 //****************************************************************************
@@ -107,12 +107,6 @@ void test_parse_ski_bytes(void);
 void test_create_ski_bytes(void);
 void test_free_ski(void);
 void test_get_default_ski(void);
-void test_get_block_bytes(void);
-void test_create_nkl_bytes(void);
-void test_encodeBase64Data(void);
-void test_decodeBase64Data(void);
-void test_concat(void);
-void test_verifyStringDigestConversion(void);
 void test_verifyPackUnpackDigest(void);
 
 #endif

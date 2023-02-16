@@ -16,6 +16,7 @@
 #include "file_io_test.h"
 #include "memory_util_test.h"
 #include "object_tools_test.h"
+#include "marshalling_tools_test.h"
 #include "formatting_tools_test.h"
 #include "tls_util_test.h"
 #include "aes_gcm_test.h"
@@ -115,10 +116,26 @@ int main(int argc, char **argv)
     return CU_get_error();
   }
 
-  // Create and configure TPM formatting tools test suite
+  // Create and configure TPM marshalling tools test suite
+  CU_pSuite marshalling_tools_test_suite = NULL;
+
+  marshalling_tools_test_suite = CU_add_suite("TPM Marshalling Tools Test Suite",
+                                             init_suite, clean_suite);
+  if (NULL == marshalling_tools_test_suite)
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (marshalling_tools_add_tests(marshalling_tools_test_suite))
+  {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  // Create and configure utility formatting tools test suite
   CU_pSuite formatting_tools_test_suite = NULL;
 
-  formatting_tools_test_suite = CU_add_suite("TPM Formatting Tools Test Suite",
+  formatting_tools_test_suite = CU_add_suite("Utility Formatting Tools Test Suite",
                                              init_suite, clean_suite);
   if (NULL == formatting_tools_test_suite)
   {
