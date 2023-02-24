@@ -388,13 +388,17 @@ int main(int argc, char **argv)
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
-  if (write_bytes_to_file(outPath, output, output_length))
+  // only create output file if -g option is NOT passed
+  if (bool_trial_only == 0)
   {
-    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    free(outPath);
-    free(output);
-    free(pcrs);
-    return 1;
+    if (write_bytes_to_file(outPath, output, output_length))
+    {
+      kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+      free(outPath);
+      free(output);
+      free(pcrs);
+      return 1;
+    }
   }
 
   free(pcrs);
