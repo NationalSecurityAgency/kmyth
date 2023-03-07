@@ -283,6 +283,19 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  // Check that the -e 'expected policy' was specified
+  if (expected_policy == NULL)
+  {
+    kmyth_log(LOG_ERR, "no expected policy specified ... exiting");
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, auth_string_len);
+    }
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    free(outPath);
+    return 1;
+  }
+
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL)
