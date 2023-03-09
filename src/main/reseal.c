@@ -236,13 +236,13 @@ int main(int argc, char **argv)
     case 'f':
       forceOverwrite = true;
       break;
-    //case 'g':
+    //case 'g':       ********** 
     //  bool_trial_only = 1;
     //  break;
     case 'e':
       expected_policy = optarg;
       break;
-    case 'p':
+    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file. *****************************************
       pcrsString = optarg;
       break;
     case 'w':
@@ -383,6 +383,7 @@ int main(int argc, char **argv)
   }
 
   // Call top-level "kmyth-reseal" function
+  // disable the -g option that is run by default
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
