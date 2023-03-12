@@ -280,7 +280,7 @@ int main(int argc, char **argv)
     (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
 
   // Check that input path (file to be sealed) was specified
-  if (inPath == NULL)
+  if (inPath == NULL && !boolTrialOnly)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
     if (authString != NULL)
