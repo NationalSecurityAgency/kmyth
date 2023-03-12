@@ -41,7 +41,7 @@ int tpm2_kmyth_seal(uint8_t * input,
                     uint8_t * owner_auth_bytes,
                     size_t oa_bytes_len, int *pcrs, size_t pcrs_len,
                     char *cipher_string, char *expected_policy,
-                    uint8_t bool_trial_only)
+                    bool bool_trial_only)
 {
   if(oa_bytes_len > UINT16_MAX)
   {
@@ -160,7 +160,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   // optional argument allowing user to receive a hex dump of the policy digest,
   // to be used to calculate a second policy for policyOR authorization
-  if (bool_trial_only == 1)
+  if (bool_trial_only == true)
   {
     // size of string is 2x chars for the size of the TPM2B_DIGEST buffer + 4
     // for TPM2B struct which encodes size in memory + 1 byte for null termination.
@@ -531,7 +531,7 @@ int tpm2_kmyth_seal_file(char *input_path,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
                          int *pcrs, size_t pcrs_len, char *cipher_string,
-                         char *expected_policy, uint8_t bool_trial_only)
+                         char *expected_policy, bool bool_trial_only)
 {
 
   // Verify input path exists with read permissions

@@ -202,7 +202,7 @@ int main(int argc, char **argv)
   char *cipherString = NULL;
   bool forceOverwrite = false;
   char *expected_policy = NULL;
-  uint8_t bool_trial_only = 0;
+  bool boolTrialOnly = false;
 
   // Parse and apply command line options
   int options;
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
       forceOverwrite = true;
       break;
     case 'g':
-      bool_trial_only = 1;
+      boolTrialOnly = true;
       break;
     case 'e':
       expected_policy = optarg;
@@ -266,6 +266,14 @@ int main(int argc, char **argv)
     }
   }
 
+  // Some options don't do anything with -g, so warn about that now.
+  if(boolTrialOnly)
+  {
+    if(outPath != NULL || forceOverwrite || expected_policy != NULL)
+    {
+      kmyth_log(LOG_WARNING, "-i, -o, -f, and -e have no effect when combined with -g");
+    }
+  }
   //Since these originate in main() we know they are null terminated
   size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
   size_t oa_passwd_len =
@@ -286,7 +294,7 @@ int main(int argc, char **argv)
 
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
-  if (outPath == NULL)
+  if (outPath == NULL && !boolTrialOnly)
   {
     // create buffer to hold default filename derived from input filename
     char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
@@ -374,7 +382,7 @@ int main(int argc, char **argv)
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                            pcrs, (size_t)pcrs_len, cipherString, expected_policy,
-                           bool_trial_only))
+                           boolTrialOnly))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
@@ -389,7 +397,7 @@ int main(int argc, char **argv)
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
   // only create output file if -g option is NOT passed
-  if (bool_trial_only == 0)
+  if (boolTrialOnly == 0)
   {
     if (write_bytes_to_file(outPath, output, output_length))
     {

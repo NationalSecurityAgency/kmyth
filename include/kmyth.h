@@ -9,6 +9,7 @@
 #define KMYTH_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -56,6 +57,10 @@ extern "C"
  *                               policy digest to be used for authorizing
  *                               actions
  *
+ * @param[in]  bool_trail_only   Option indicating kmyth should only compute
+ *                               and display the PolicyPCR digest associated
+ *                               with the current value of the PCR registers.
+ *                               No actual sealed data is needed.
  *
  * @return 0 on success, 1 on error
  */
@@ -64,7 +69,7 @@ extern "C"
                       uint8_t * auth_bytes, size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                       int *pcrs, size_t pcrs_len, char *cipher_string,
-                      char *expected_policy, uint8_t bool_trial_only);
+                      char *expected_policy, bool bool_trial_only);
 
 /**
  * @brief High-level function implementing kmyth-unseal using TPM 2.0.
@@ -139,6 +144,11 @@ extern "C"
  *                               policy digest to be used for authorizing
  *                               actions
  *
+ * @param[in]  bool_trail_only   Option indicating kmyth should only compute
+ *                               and display the PolicyPCR digest associated
+ *                               with the current value of the PCR registers.
+ *                               No actual sealed data is needed.
+ *
  * @return 0 on success, 1 on error
  */
   int tpm2_kmyth_seal_file(char *input_path,
@@ -146,7 +156,7 @@ extern "C"
                            uint8_t * auth_bytes, size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes, size_t oa_bytes_len,
                            int *pcrs, size_t pcrs_len, char *cipher_string,
-                           char *expected_policy, uint8_t bool_trial_only);
+                           char *expected_policy, bool bool_trial_only);
 
 /**
  * @brief High-level function implementing kmyth-unseal for files using TPM 2.0.
