@@ -269,9 +269,9 @@ int main(int argc, char **argv)
   // Some options don't do anything with -g, so warn about that now.
   if(boolTrialOnly)
   {
-    if(outPath != NULL || forceOverwrite || expected_policy != NULL)
+    if(outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
     {
-      kmyth_log(LOG_WARNING, "-i, -o, -f, and -e have no effect when combined with -g");
+      kmyth_log(LOG_WARNING, "-i, -o, -c,-f, and -e have no effect when combined with -g");
     }
   }
   //Since these originate in main() we know they are null terminated
