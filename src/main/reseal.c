@@ -133,8 +133,8 @@ static void usage(const char *prog)
           " -i or --input           Path to file containing the data to be sealed.\n"
           " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
-          " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
-          "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
+//          " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
+//          "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
@@ -167,7 +167,7 @@ const struct option longopts[] = {
   {"input", required_argument, 0, 'i'},
   {"output", required_argument, 0, 'o'},
   {"force", no_argument, 0, 'f'},
-  {"pcrs_list", required_argument, 0, 'p'},
+ // {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
   {"expected_policy", required_argument, 0, 'e'},
@@ -242,8 +242,8 @@ int main(int argc, char **argv)
     case 'e':
       expected_policy = optarg;
       break;
-    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file. *****************************************
-      pcrsString = optarg;
+//    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file. *****************************************
+//      pcrsString = optarg;
       break;
     case 'w':
       ownerAuthPasswd = optarg;
@@ -382,15 +382,14 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  // Call top-level "kmyth-reseal" function
-  // disable the -g option that is run by default
+  // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                            pcrs, (size_t)pcrs_len, cipherString, expected_policy,
                            bool_trial_only))
   {
-    kmyth_log(LOG_ERR, "kmyth-reseal error ... exiting");
+    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(pcrs);
