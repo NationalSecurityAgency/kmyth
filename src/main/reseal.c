@@ -133,6 +133,7 @@ static void usage(const char *prog)
           " -i or --input           Path to file containing the data to be sealed.\n"
           " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
+          " -s or --stdout          Output unencrypted result to stdout instead of file.\n" // possibly remove later
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
@@ -169,6 +170,7 @@ const struct option longopts[] = {
   {"force", no_argument, 0, 'f'},
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
+  {"standard", no_argument, 0, 's'}, // possibly remove later
   {"cipher", required_argument, 0, 'c'},
   {"expected_policy", required_argument, 0, 'e'},
   {"verbose", no_argument, 0, 'v'},
@@ -194,6 +196,7 @@ int main(int argc, char **argv)
   // Initialize parameters that might be modified by command line options
   char *inPath = NULL;
   char *outPath = NULL;
+  bool stdout_flag = false;
   size_t outPath_size = 0;
   char *authString = NULL;
   char *ownerAuthPasswd = "";
@@ -202,6 +205,7 @@ int main(int argc, char **argv)
   bool forceOverwrite = false;
   char *expected_policy = NULL;
   uint8_t bool_trial_only = 1; // reseal forces this
+  uint8_t bool_policy_or = 0;
 
   // Parse and apply command line options
   int options;
@@ -243,7 +247,8 @@ int main(int argc, char **argv)
       expected_policy = optarg;
       break;
     case 'p': // cut this option. always use the set of pcrs that are specified in the ski file. *****************************************
-    pcrsString = optarg;
+      pcrsString = optarg;
+      bool_policy_or = 1;
       break;
     case 'w':
       ownerAuthPasswd = optarg;
@@ -253,6 +258,9 @@ int main(int argc, char **argv)
       // to stdout or stderr (output mode = 0)
       set_applog_severity_threshold(LOG_DEBUG);
       set_applog_output_mode(0);
+      break;
+    case 's':   // possibly remove later
+      stdout_flag = true;
       break;
     case 'h':
       usage(argv[0]);
@@ -283,6 +291,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  /*
   // Check that the -e 'expected policy' was specified
   if (expected_policy == NULL)
   {
@@ -295,6 +304,7 @@ int main(int argc, char **argv)
     free(outPath);
     return 1;
   }
+  */
 
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
@@ -382,6 +392,51 @@ int main(int argc, char **argv)
     return 1;
   }
 
+ // Call top-level "kmyth-unseal" function
+  if (tpm2_kmyth_unseal_file(inPath, &output, &output_length,
+                             (uint8_t *) authString, auth_string_len,
+                             (uint8_t *) ownerAuthPasswd, oa_passwd_len,
+                             bool_policy_or))
+  {
+    kmyth_clear_and_free(output, output_length);
+    kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
+    kmyth_clear(authString, auth_string_len);
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    return 1;
+  }
+  // We are done with authString and ownerAuthPasswd, so clear them
+  //kmyth_clear(authString, auth_string_len);
+  //kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+
+  if (stdout_flag == true)
+  {
+    if (print_to_stdout(output, output_length))
+    {
+      kmyth_log(LOG_ERR, "error printing to stdout");
+    }
+  }
+  else
+  {
+    if (write_bytes_to_file(outPath, output, output_length))
+    {
+      kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
+    }
+    else
+    {
+      kmyth_log(LOG_DEBUG, "unsealed contents of %s to %s", inPath, outPath);
+    }
+  }
+
+  char temporary = inPath;
+  inPath = outPath;
+  outPath = temporary;
+
+  
+
+  kmyth_log(LOG_ERR, "uint8_t output = %s", &output);
+
+
+/*
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
@@ -392,9 +447,9 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(pcrs);
-    free(outPath);
-    free(output);
+    //free(pcrs);
+    //free(outPath);
+    //free(output);
     return 1;
   }
 
@@ -409,9 +464,21 @@ int main(int argc, char **argv)
     free(pcrs);
     return 1;
   }
+  */
+
+
+  //char temporary = inPath;
+  //inPath = outPath;
+  //outPath = temporary;
+
+  temporary = outPath;
+  outPath = inPath;
+  inPath = temporary;
 
   free(pcrs);
   free(outPath);
   free(output);
+
+
   return 0;
 }
