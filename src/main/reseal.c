@@ -204,7 +204,7 @@ int main(int argc, char **argv)
   char *cipherString = NULL;
   bool forceOverwrite = false;
   char *expected_policy = NULL;
-  uint8_t bool_trial_only = 1; // reseal forces this
+  uint8_t bool_trial_only = 0; // reseal forces this
   uint8_t bool_policy_or = 0;
 
   // Parse and apply command line options
@@ -310,6 +310,9 @@ int main(int argc, char **argv)
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL)
   {
+    char *fileExtension = "txt";
+    size_t fileExtensionSize = sizeof(fileExtension);
+
     // create buffer to hold default filename derived from input filename
     char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
     memset(default_fn, '\0', sizeof(default_fn));
@@ -319,7 +322,7 @@ int main(int argc, char **argv)
     // to add a '.' delimiter (1 byte) and the default extension
     // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
     size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
-    max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
+    max_root_len -= fileExtensionSize + 1;
     strncpy(default_fn, basename(inPath), max_root_len);
 
     // remove any leading '.'s
@@ -355,8 +358,8 @@ int main(int argc, char **argv)
     }
 
     // concatenate default filename root and extension
-    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
-                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
+    strncat(default_fn, fileExtension,
+                        fileExtensionSize);
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
@@ -427,18 +430,27 @@ int main(int argc, char **argv)
     }
   }
 
-  char temporary = inPath;
-  inPath = outPath;
-  outPath = temporary;
-
-  
-
-  kmyth_log(LOG_ERR, "uint8_t output = %s", &output);
 
 
-/*
+
+////////////////////////
+char *tempIn = outPath;
+char *tempOut = inPath;
+
+// always allocate memory
+// so we can always free it
+outPath_size = strlen(tempOut) + 1;
+if (outPath_size > 1)
+{
+  tempOut = malloc(outPath_size * sizeof(char));
+  memcpy(tempOut, inPath, outPath_size);
+}
+ /////////////////// 
+
+
+
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
+  if (tpm2_kmyth_seal_file(tempIn, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                            pcrs, (size_t)pcrs_len, cipherString, expected_policy,
@@ -447,16 +459,17 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    //free(pcrs);
-    //free(outPath);
-    //free(output);
+    free(pcrs);
+    free(outPath);
+    free(output);
     return 1;
   }
 
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
-  if (write_bytes_to_file(outPath, output, output_length))
+
+  if (write_bytes_to_file(tempOut, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
     free(outPath);
@@ -464,20 +477,21 @@ int main(int argc, char **argv)
     free(pcrs);
     return 1;
   }
-  */
+
+  // removes the unsealed file
+  if(remove(tempIn) == 0){
+    kmyth_log(LOG_DEBUG, "%s successfully deleted", tempIn);
+  }
+  else{
+    kmyth_log(LOG_ERR, "unsealed file failed to be deleted..");
+  }
 
 
-  //char temporary = inPath;
-  //inPath = outPath;
-  //outPath = temporary;
-
-  temporary = outPath;
-  outPath = inPath;
-  inPath = temporary;
 
   free(pcrs);
   free(outPath);
   free(output);
+  free(tempOut);
 
 
   return 0;
