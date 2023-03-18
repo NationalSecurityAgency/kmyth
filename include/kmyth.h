@@ -57,7 +57,7 @@ extern "C"
  *                               policy digest to be used for authorizing
  *                               actions
  *
- * @param[in]  bool_trail_only   Option indicating kmyth should only compute
+ * @param[in]  bool_trial_only   Option indicating kmyth should only compute
  *                               and display the PolicyPCR digest associated
  *                               with the current value of the PCR registers.
  *                               No actual sealed data is needed.
@@ -144,7 +144,7 @@ extern "C"
  *                               policy digest to be used for authorizing
  *                               actions
  *
- * @param[in]  bool_trail_only   Option indicating kmyth should only compute
+ * @param[in]  bool_trial_only   Option indicating kmyth should only compute
  *                               and display the PolicyPCR digest associated
  *                               with the current value of the PCR registers.
  *                               No actual sealed data is needed.

@@ -171,7 +171,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     char output_string[string_size];
 
     convert_digest_to_string(&objAuthPolicy, output_string);
-    printf("%s", output_string);
+    printf("policy digest: %s\n", output_string);
     return 0;
   }
 
