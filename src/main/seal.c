@@ -271,7 +271,7 @@ int main(int argc, char **argv)
   {
     if(outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
     {
-      kmyth_log(LOG_WARNING, "-i, -o, -c,-f, and -e have no effect when combined with -g");
+      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
     }
   }
   //Since these originate in main() we know they are null terminated
