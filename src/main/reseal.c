@@ -131,7 +131,7 @@ static void usage(const char *prog)
           "options are: \n\n"
           " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
           " -i or --input           Path to file containing the data to be sealed.\n"
-          " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
+          " -o or --output          Destination path for the temporary unsealed file. Defaults to <filename>.txt in the CWD.\n"
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
           " -s or --stdout          Output unencrypted result to stdout instead of file.\n" // possibly remove later
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
@@ -240,13 +240,13 @@ int main(int argc, char **argv)
     case 'f':
       forceOverwrite = true;
       break;
-    //case 'g':       ********** 
+    //case 'g':
     //  bool_trial_only = 1;
     //  break;
     case 'e':
       expected_policy = optarg;
       break;
-    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file. *****************************************
+    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file.
       pcrsString = optarg;
       bool_policy_or = 1;
       break;
@@ -433,21 +433,17 @@ int main(int argc, char **argv)
 
 
 
-////////////////////////
+// swaps the inPath and outPath before calling seal
 char *tempIn = outPath;
 char *tempOut = inPath;
 
-// always allocate memory
-// so we can always free it
+// allocates the updated outPath_size memory after the swap
 outPath_size = strlen(tempOut) + 1;
 if (outPath_size > 1)
 {
   tempOut = malloc(outPath_size * sizeof(char));
   memcpy(tempOut, inPath, outPath_size);
 }
- /////////////////// 
-
-
 
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(tempIn, &output, &output_length,
