@@ -269,7 +269,7 @@ int main(int argc, char **argv)
   // Some options don't do anything with -g, so warn about that now.
   if(boolTrialOnly)
   {
-    if(authString != NULL || ownerAuthPasswd != NULL || outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
+    if(authString != NULL || ownerAuthPasswd != "" || outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
     {
       kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
     }
