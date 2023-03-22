@@ -131,9 +131,8 @@ static void usage(const char *prog)
           "options are: \n\n"
           " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
           " -i or --input           Path to file containing the data to be sealed.\n"
-          " -o or --output          Destination path for the temporary unsealed file. Defaults to <filename>.txt in the CWD.\n"
+          " -o or --output          Destination path for the resealed file. Defaults to input filename (input is renamed) in the CWD.\n"
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
-          " -s or --stdout          Output unencrypted result to stdout instead of file.\n" // possibly remove later
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
@@ -170,7 +169,6 @@ const struct option longopts[] = {
   {"force", no_argument, 0, 'f'},
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
-  {"standard", no_argument, 0, 's'}, // possibly remove later
   {"cipher", required_argument, 0, 'c'},
   {"expected_policy", required_argument, 0, 'e'},
   {"verbose", no_argument, 0, 'v'},
@@ -259,9 +257,6 @@ int main(int argc, char **argv)
       set_applog_severity_threshold(LOG_DEBUG);
       set_applog_output_mode(0);
       break;
-    case 's':   // possibly remove later
-      stdout_flag = true;
-      break;
     case 'h':
       usage(argv[0]);
       return 0;
@@ -310,7 +305,7 @@ int main(int argc, char **argv)
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL)
   {
-    char *fileExtension = "txt";
+    char *fileExtension = "ski";
     size_t fileExtensionSize = sizeof(fileExtension);
 
     // create buffer to hold default filename derived from input filename
@@ -363,6 +358,7 @@ int main(int argc, char **argv)
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
+    /*
     if (!stat(default_fn, &st) && !forceOverwrite)
     {
       kmyth_log(LOG_ERR,
@@ -372,6 +368,7 @@ int main(int argc, char **argv)
       kmyth_clear(ownerAuthPasswd, oa_passwd_len);
       return 1;
     }
+    */
 
     // Go ahead and make the default value the output path
     outPath_size = strlen(default_fn);
@@ -407,31 +404,38 @@ int main(int argc, char **argv)
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     return 1;
   }
-  // We are done with authString and ownerAuthPasswd, so clear them
-  //kmyth_clear(authString, auth_string_len);
-  //kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
-  if (stdout_flag == true)
+  // rename the input file **** This is temporary. Needs to be changed slightly
+  int worked;
+  char *newFileName = "orginalFile.ski";
+  worked = rename(inPath, newFileName);
+  // error checking for the rename
+  if (worked == 0){
+    kmyth_log(LOG_ERR, "Input file renamed succesfully");
+  }
+  else{
+    kmyth_log(LOG_ERR, "Failed to rename the input file.. exiting..");
+    return 1;
+  }
+  //
+
+  uint8_t *input = output;
+  size_t input_length = output_length;
+
+
+/*
+  if (write_bytes_to_file(outPath, output, output_length))
   {
-    if (print_to_stdout(output, output_length))
-    {
-      kmyth_log(LOG_ERR, "error printing to stdout");
-    }
+    kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
   }
   else
   {
-    if (write_bytes_to_file(outPath, output, output_length))
-    {
-      kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
-    }
-    else
-    {
-      kmyth_log(LOG_DEBUG, "unsealed contents of %s to %s", inPath, outPath);
-    }
+    kmyth_log(LOG_DEBUG, "unsealed contents of %s to %s", inPath, outPath);
   }
+*/
 
 
-
+/*
 
 // swaps the inPath and outPath before calling seal
 char *tempIn = outPath;
@@ -445,8 +449,10 @@ if (outPath_size > 1)
   memcpy(tempOut, inPath, outPath_size);
 }
 
+*/
+
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(tempIn, &output, &output_length,
+  if (tpm2_kmyth_seal(input, input_length, &output, &output_length,
                            (uint8_t *) authString, auth_string_len,
                            (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                            pcrs, (size_t)pcrs_len, cipherString, expected_policy,
@@ -465,7 +471,7 @@ if (outPath_size > 1)
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
 
-  if (write_bytes_to_file(tempOut, output, output_length))
+  if (write_bytes_to_file(outPath, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
     free(outPath);
@@ -474,6 +480,7 @@ if (outPath_size > 1)
     return 1;
   }
 
+/*
   // removes the unsealed file
   if(remove(tempIn) == 0){
     kmyth_log(LOG_DEBUG, "%s successfully deleted", tempIn);
@@ -481,13 +488,14 @@ if (outPath_size > 1)
   else{
     kmyth_log(LOG_ERR, "unsealed file failed to be deleted..");
   }
+*/
 
 
 
   free(pcrs);
   free(outPath);
   free(output);
-  free(tempOut);
+  //free(tempOut);
 
 
   return 0;
