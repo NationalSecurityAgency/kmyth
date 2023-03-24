@@ -135,6 +135,7 @@ static void usage(const char *prog)
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
+          " -g                      Used when resealing a file that already contains a policy OR\n" // may change later
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
@@ -167,6 +168,7 @@ const struct option longopts[] = {
   {"input", required_argument, 0, 'i'},
   {"output", required_argument, 0, 'o'},
   {"force", no_argument, 0, 'f'},
+  {"previous_policy_or", no_argument, 0, 'g'},
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
@@ -210,7 +212,7 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:e:i:o:c:p:w:fhlv", longopts,
+          getopt_long(argc, argv, "a:e:g:i:o:c:p:w:fhlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -238,15 +240,16 @@ int main(int argc, char **argv)
     case 'f':
       forceOverwrite = true;
       break;
-    //case 'g':
-    //  bool_trial_only = 1;
-    //  break;
+    case 'g': // used when resealing a .ski file with policy OR
+      //bool_trial_only = 1;
+      bool_policy_or = 1;
+      break;
     case 'e':
       expected_policy = optarg;
       break;
     case 'p': // cut this option. always use the set of pcrs that are specified in the ski file.
       pcrsString = optarg;
-      bool_policy_or = 1;
+      //bool_policy_or = 1;
       break;
     case 'w':
       ownerAuthPasswd = optarg;
@@ -407,11 +410,11 @@ int main(int argc, char **argv)
 
   // rename the input file **** This is temporary. Needs to be changed slightly
   int worked;
-  char *newFileName = "orginalFile.ski";
+  char *newFileName = "originalFile.ski";
   worked = rename(inPath, newFileName);
   // error checking for the rename
   if (worked == 0){
-    kmyth_log(LOG_ERR, "Input file renamed succesfully");
+    kmyth_log(LOG_DEBUG, "Input file renamed succesfully");
   }
   else{
     kmyth_log(LOG_ERR, "Failed to rename the input file.. exiting..");
