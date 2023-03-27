@@ -196,7 +196,6 @@ int main(int argc, char **argv)
   // Initialize parameters that might be modified by command line options
   char *inPath = NULL;
   char *outPath = NULL;
-  bool stdout_flag = false;
   size_t outPath_size = 0;
   char *authString = NULL;
   char *ownerAuthPasswd = "";
@@ -212,7 +211,7 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:e:g:i:o:c:p:w:fhlv", longopts,
+          getopt_long(argc, argv, "a:e:i:o:c:p:w:fhlvgs", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -241,15 +240,13 @@ int main(int argc, char **argv)
       forceOverwrite = true;
       break;
     case 'g': // used when resealing a .ski file with policy OR
-      //bool_trial_only = 1;
       bool_policy_or = 1;
       break;
     case 'e':
       expected_policy = optarg;
       break;
-    case 'p': // cut this option. always use the set of pcrs that are specified in the ski file.
+    case 'p':
       pcrsString = optarg;
-      //bool_policy_or = 1;
       break;
     case 'w':
       ownerAuthPasswd = optarg;
@@ -285,11 +282,10 @@ int main(int argc, char **argv)
       kmyth_clear(authString, auth_string_len);
     }
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(outPath);
     return 1;
   }
 
-  /*
+
   // Check that the -e 'expected policy' was specified
   if (expected_policy == NULL)
   {
@@ -299,89 +295,49 @@ int main(int argc, char **argv)
       kmyth_clear(authString, auth_string_len);
     }
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(outPath);
     return 1;
   }
-  */
+
+  // Check that the -p 'pcrsString' was specified
+  if (pcrsString == NULL)
+  {
+    kmyth_log(LOG_ERR, "no pcrsString specified ... exiting");
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, auth_string_len);
+    }
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    return 1;
+  }
 
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
+  struct stat st = { 0 };
   if (outPath == NULL)
   {
-    char *fileExtension = "ski";
-    size_t fileExtensionSize = sizeof(fileExtension);
-
-    // create buffer to hold default filename derived from input filename
-    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
-    memset(default_fn, '\0', sizeof(default_fn));
-
-    // Initialize default filename to basename() of input path, truncating if
-    // necessary. The maximum size of this "root" value is the must allow space
-    // to add a '.' delimiter (1 byte) and the default extension
-    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
-    size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
-    max_root_len -= fileExtensionSize + 1;
-    strncpy(default_fn, basename(inPath), max_root_len);
-
-    // remove any leading '.'s
-    while (*default_fn == '.')
+    // default output filename is input filename
+    outPath = inPath;
+  }
+  else
+  {
+    // if user specified output filename does not match default
+    if (strcmp(outPath, inPath) != 0)
     {
-      memmove(default_fn, default_fn + 1, sizeof(default_fn) - 1);
+      // check if file exists - if so, stop unless user wants overwrite
+      if (!stat(outPath, &st) && !forceOverwrite)
+      {
+        kmyth_log(LOG_ERR,
+                  "output filename (%s) already exists ... exiting",
+                   outPath);
+        kmyth_clear(authString, auth_string_len);
+        kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+        return 1;
+      }
     }
-
-    // ensure that this intermediate result is not an empty string
-    if (strlen(default_fn) == 0)
-    {
-      kmyth_log(LOG_ERR, "invalid/empty default filename root ... exiting");
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-      return 1;
-    }
-
-    // everything beyond first non-leading '.' is treated as extension
-    char *ext_ptr = strstr(default_fn, ".");
-    if (ext_ptr == NULL)
-    {
-      // no filename extension found - just add trailing '.'
-      strncat(default_fn, ".", 1);
-    }
-    else
-    {
-      // input fileame extension delimiter found, null everything after it
-      // The type conversion here is safe assuming inPath is not too pathological,
-      // so that's something we should think about.
-      ptrdiff_t filename_portion = ext_ptr - default_fn;
-      size_t tail_length = sizeof(default_fn) - (size_t)filename_portion;
-      memset(ext_ptr + 1, '\0', tail_length);
-    }
-
-    // concatenate default filename root and extension
-    strncat(default_fn, fileExtension,
-                        fileExtensionSize);
-
-    // Make sure default filename we constructed doesn't already exist
-    struct stat st = { 0 };
-    /*
-    if (!stat(default_fn, &st) && !forceOverwrite)
-    {
-      kmyth_log(LOG_ERR,
-                "default output filename (%s) already exists ... exiting",
-                default_fn);
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-      return 1;
-    }
-    */
-
-    // Go ahead and make the default value the output path
-    outPath_size = strlen(default_fn);
-    outPath = malloc(outPath_size * sizeof(char));
-    memcpy(outPath, default_fn, outPath_size);
-    kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
-  uint8_t *output = NULL;
-  size_t output_length = 0;
+  uint8_t *unseal_output = NULL;
+  size_t unseal_output_len = 0;
 
   int *pcrs = NULL;
   int pcrs_len = 0;
@@ -389,84 +345,45 @@ int main(int argc, char **argv)
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    free(outPath);
-    free(output);
+    free(unseal_output);
     free(pcrs);
     return 1;
   }
 
  // Call top-level "kmyth-unseal" function
-  if (tpm2_kmyth_unseal_file(inPath, &output, &output_length,
+  if (tpm2_kmyth_unseal_file(inPath, &unseal_output, &unseal_output_len,
                              (uint8_t *) authString, auth_string_len,
                              (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                              bool_policy_or))
   {
-    kmyth_clear_and_free(output, output_length);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     return 1;
   }
-
-  // rename the input file **** This is temporary. Needs to be changed slightly
-  int worked;
-  char *newFileName = "originalFile.ski";
-  worked = rename(inPath, newFileName);
-  // error checking for the rename
-  if (worked == 0){
-    kmyth_log(LOG_DEBUG, "Input file renamed succesfully");
-  }
-  else{
-    kmyth_log(LOG_ERR, "Failed to rename the input file.. exiting..");
-    return 1;
-  }
-  //
-
-  uint8_t *input = output;
-  size_t input_length = output_length;
-
-
-/*
-  if (write_bytes_to_file(outPath, output, output_length))
-  {
-    kmyth_log(LOG_ERR, "Error writing file: %s", outPath);
-  }
-  else
-  {
-    kmyth_log(LOG_DEBUG, "unsealed contents of %s to %s", inPath, outPath);
-  }
-*/
-
-
-/*
-
-// swaps the inPath and outPath before calling seal
-char *tempIn = outPath;
-char *tempOut = inPath;
-
-// allocates the updated outPath_size memory after the swap
-outPath_size = strlen(tempOut) + 1;
-if (outPath_size > 1)
-{
-  tempOut = malloc(outPath_size * sizeof(char));
-  memcpy(tempOut, inPath, outPath_size);
-}
-
-*/
+  
+  uint8_t *seal_output = NULL;
+  size_t seal_output_len = 0;
 
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal(input, input_length, &output, &output_length,
-                           (uint8_t *) authString, auth_string_len,
-                           (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, (size_t)pcrs_len, cipherString, expected_policy,
-                           bool_trial_only))
+if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output_len,
+                      (uint8_t *) authString,
+                      auth_string_len,
+                      (uint8_t *) ownerAuthPasswd,
+                      oa_passwd_len,
+                      pcrs,
+                      (size_t) pcrs_len,
+                      cipherString,
+                      expected_policy,
+                      bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
     free(pcrs);
-    free(outPath);
-    free(output);
+    free(unseal_output);
     return 1;
   }
 
@@ -474,32 +391,34 @@ if (outPath_size > 1)
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
 
-  if (write_bytes_to_file(outPath, output, output_length))
+   // rename input file to <input filename>.orig to preserve it
+  char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
+  strncpy(renamePath, inPath, strlen(inPath));
+  strncat(renamePath, ".orig", 5);
+  if (!stat(renamePath, &st) && !forceOverwrite)
   {
-    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    free(outPath);
-    free(output);
-    free(pcrs);
+    kmyth_log(LOG_ERR,
+              "output filename (%s) already exists ... exiting",
+              renamePath);
     return 1;
   }
-
-/*
-  // removes the unsealed file
-  if(remove(tempIn) == 0){
-    kmyth_log(LOG_DEBUG, "%s successfully deleted", tempIn);
+  
+  if (rename((const char *) inPath, (const char *) renamePath) != 0)
+  {
+    kmyth_log(LOG_ERR, "renaming of input file failed ... exiting");
+    free(seal_output);
+    free(renamePath);
+    return 1;
   }
-  else{
-    kmyth_log(LOG_ERR, "unsealed file failed to be deleted..");
+  free(renamePath);
+  if (write_bytes_to_file(outPath, seal_output, seal_output_len))
+  {
+    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+    free(seal_output);
   }
-*/
 
-
-
-  free(pcrs);
-  free(outPath);
-  free(output);
-  //free(tempOut);
-
+  kmyth_clear_and_free(unseal_output, unseal_output_len);
+  free(seal_output);
 
   return 0;
 }
