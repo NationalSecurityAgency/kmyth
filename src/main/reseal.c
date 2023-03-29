@@ -383,13 +383,12 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     kmyth_clear_and_free(unseal_output, unseal_output_len);
     free(pcrs);
-    free(unseal_output);
     return 1;
   }
 
+  kmyth_clear_and_free(unseal_output, unseal_output_len);
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-
 
    // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
@@ -417,8 +416,7 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
     free(seal_output);
   }
 
-  kmyth_clear_and_free(unseal_output, unseal_output_len);
-  free(seal_output);
+  kmyth_clear_and_free(seal_output, seal_output_len);
 
   return 0;
 }
