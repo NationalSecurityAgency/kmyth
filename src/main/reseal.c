@@ -336,19 +336,18 @@ int main(int argc, char **argv)
     }
   }
 
-  uint8_t *unseal_output = NULL;
-  size_t unseal_output_len = 0;
-
   int *pcrs = NULL;
   int pcrs_len = 0;
 
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    free(unseal_output);
     free(pcrs);
     return 1;
   }
+
+  uint8_t *unseal_output = NULL;
+  size_t unseal_output_len = 0;
 
  // Call top-level "kmyth-unseal" function
   if (tpm2_kmyth_unseal_file(inPath, &unseal_output, &unseal_output_len,
@@ -356,10 +355,11 @@ int main(int argc, char **argv)
                              (uint8_t *) ownerAuthPasswd, oa_passwd_len,
                              bool_policy_or))
   {
+    kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
     kmyth_clear_and_free(unseal_output, unseal_output_len);
-    kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    free(pcrs);
     return 1;
   }
   
@@ -387,6 +387,7 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
   }
 
   kmyth_clear_and_free(unseal_output, unseal_output_len);
+  free(pcrs);
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
@@ -396,6 +397,8 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
   strncat(renamePath, ".orig", 5);
   if (!stat(renamePath, &st) && !forceOverwrite)
   {
+    free(seal_output);
+    free(renamePath);
     kmyth_log(LOG_ERR,
               "output filename (%s) already exists ... exiting",
               renamePath);
