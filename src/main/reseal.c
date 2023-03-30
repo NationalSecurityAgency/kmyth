@@ -196,7 +196,6 @@ int main(int argc, char **argv)
   // Initialize parameters that might be modified by command line options
   char *inPath = NULL;
   char *outPath = NULL;
-  size_t outPath_size = 0;
   char *authString = NULL;
   char *ownerAuthPasswd = "";
   char *pcrsString = NULL;
@@ -226,15 +225,7 @@ int main(int argc, char **argv)
       inPath = optarg;
       break;
     case 'o':
-      // make outPath a copy of the argument for consistency with case
-      // where we assign a default outPath value - always allocate memory
-      // so we can always free it
-      outPath_size = strlen(optarg) + 1;
-      if (outPath_size > 1)
-      {
-        outPath = malloc(outPath_size * sizeof(char));
-        memcpy(outPath, optarg, outPath_size);
-      }
+      outPath = optarg;
       break;
     case 'f':
       forceOverwrite = true;
@@ -349,7 +340,7 @@ int main(int argc, char **argv)
   uint8_t *unseal_output = NULL;
   size_t unseal_output_len = 0;
 
- // Call top-level "kmyth-unseal" function
+// Call top-level "kmyth-unseal" function
   if (tpm2_kmyth_unseal_file(inPath, &unseal_output, &unseal_output_len,
                              (uint8_t *) authString, auth_string_len,
                              (uint8_t *) ownerAuthPasswd, oa_passwd_len,
@@ -366,7 +357,7 @@ int main(int argc, char **argv)
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
 
-  // Call top-level "kmyth-seal" function
+// Call top-level "kmyth-seal" function
 if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output_len,
                       (uint8_t *) authString,
                       auth_string_len,
@@ -391,7 +382,7 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
-   // rename input file to <input filename>.orig to preserve it
+  // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
   strncpy(renamePath, inPath, strlen(inPath));
   strncat(renamePath, ".orig", 5);
