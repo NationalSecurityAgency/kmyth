@@ -388,11 +388,11 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
   strncat(renamePath, ".orig", 5);
   if (!stat(renamePath, &st) && !forceOverwrite)
   {
+    kmyth_log(LOG_ERR,
+          "output filename (%s) already exists ... exiting",
+          renamePath);
     free(seal_output);
     free(renamePath);
-    kmyth_log(LOG_ERR,
-              "output filename (%s) already exists ... exiting",
-              renamePath);
     return 1;
   }
   
