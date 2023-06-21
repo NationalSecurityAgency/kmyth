@@ -63,6 +63,7 @@ size_t init_test_private(TPM2B_PRIVATE * test_private,
  * @return     boolean result:  true if a == b, false if a != b
  */
 bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b);
+bool match_policyDigestList(TPML_DIGEST a, TPML_DIGEST b);
 bool match_public(TPM2B_PUBLIC a, TPM2B_PUBLIC b);
 bool match_private(TPM2B_PRIVATE a, TPM2B_PRIVATE b);
 
@@ -88,6 +89,8 @@ bool match_private(TPM2B_PRIVATE a, TPM2B_PRIVATE b);
  */
 bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
                             size_t packed_size, size_t packed_offset);
+bool check_packed_policyDigestList(TPML_DIGEST in, uint8_t * packed_data,
+                                   size_t packed_size, size_t packed_offset);
 bool check_packed_public(TPM2B_PUBLIC in, uint8_t * packed_data,
                          size_t packed_size, size_t packed_offset);
 bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,

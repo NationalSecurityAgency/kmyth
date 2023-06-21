@@ -287,6 +287,105 @@ bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
 }
 
 //----------------------------------------------------------------------------
+// match_policyDigestList
+//----------------------------------------------------------------------------
+bool match_policyDigestList(TPML_DIGEST a, TPML_DIGEST b)
+{
+  if (a.count != b.count)
+  {
+    return false;
+  }
+
+  for (int i = 0; i < a.count; i++)
+  {
+    if (a.digests[i].size != b.digests[i].size)
+    {
+      return false;
+    }
+
+    for (int j = 0; j < a.digests[i].size; j++)
+    {
+      if (a.digests[i].buffer[j] != b.digests[i].buffer[j])
+      {
+        return false;
+      }
+    }
+  }
+
+  // if execution reaches here, check passed
+  return true;
+}
+
+//----------------------------------------------------------------------------
+// check_packed_policyDigestList
+//----------------------------------------------------------------------------
+bool check_packed_policyDigestList(TPML_DIGEST in, uint8_t * packed_data,
+                                   size_t packed_size, size_t packed_offset)
+{
+  // make sure packed byte array is large enough to hold packed struct
+  //   - in.count is a UINT32 and needs four bytes
+  //   - in.digests needs:
+  //       * (in.count * 2 bytes) for digest "size" (UINT16)
+  //       * sum of digest "size" values for actual digest values
+  size_t digest_byte_count = 0;
+
+  for (int i = 0; i < in.count; i++)
+  {
+    digest_byte_count += in.digests[i].size;
+  }
+
+  size_t packed_size_limit = (size_t) sizeof(uint32_t) +
+                             (in.count * sizeof(uint16_t)) +
+                             digest_byte_count;
+
+  if (packed_size < packed_size_limit)
+  {
+    return false;
+  }
+
+  // account for specified offset
+  size_t index = packed_offset;
+
+  uint32_t packed_count_val = 0;
+
+  // check that the count portion of the packed value matches original count
+  packed_count_val |= (uint32_t) (packed_data[index++] << 24);
+  packed_count_val |= (uint32_t) (packed_data[index++] << 16);
+  packed_count_val |= (uint32_t) (packed_data[index++] << 8);
+  packed_count_val |= (uint32_t) packed_data[index++];
+  if (packed_count_val != in.count)
+  {
+    return false;
+  }
+
+  // for all digests in list
+  for (int i = 0; i < in.count; i++)
+  {
+    uint16_t packed_digest_size = 0;
+
+    // check that the size value of the packed digest matches input struct
+    packed_digest_size |= (uint16_t) (packed_data[index++] << 8);
+    packed_digest_size |= (uint16_t) packed_data[index++];
+    if (packed_digest_size != in.digests[i].size)
+    {
+      return false;
+    }
+
+    // check that the packed digest bytes match
+    for (int j = 0; j < in.digests[i].size; j++)
+    {
+      if (packed_data[index++] != in.digests[i].buffer[j])
+      {
+        return false;
+      }
+    }
+  }
+
+  // if execution reaches here, the check passed
+  return true;
+}
+
+//----------------------------------------------------------------------------
 // init_test_public
 //----------------------------------------------------------------------------
 size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset)
@@ -1115,7 +1214,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                    pcr_selection_data,
                                    pcr_selection_size,
                                    pcr_selection_offset));
-  // TODO: check_policy_or_digest_list()
+  CU_ASSERT(check_packed_policyDigestList(policy_or_digest_list_in,
+                                          policy_or_digest_list_data,
+                                          policy_or_digest_list_size,
+                                          policy_or_digest_list_offset));
   CU_ASSERT(check_packed_public(sk_public_in,
                                 sk_public_data,
                                 sk_public_size,
@@ -1168,7 +1270,7 @@ void test_marshal_unmarshal_skiObjects(void)
                                  sym_key_private_size,
                                  sym_key_private_offset);
   CU_ASSERT(match_pcrSelect(pcr_selection_out, pcr_selection_in));
-  // TODO: match_policy_or_digest_list()
+  CU_ASSERT(match_policyDigestList(policy_or_digest_list_out, policy_or_digest_list_in));
   CU_ASSERT(match_public(sk_public_out, sk_public_in));
   CU_ASSERT(match_private(sk_private_out, sk_private_in));
   CU_ASSERT(match_public(sym_key_public_out, sym_key_public_in));
