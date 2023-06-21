@@ -21,6 +21,19 @@ const char *CONST_SKI_BYTES = "\
 AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+-----POLICY OR-----\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+AAAAAAA=\n\
 -----STORAGE KEY PUBLIC-----\n\
 AToAAQALAAMAcgAgcnAGdT2tfu/ZnZHE4WPOMJSz3gJgW40hgL+QrfFxCYsABgCA\n\
 AEMAEAgAAAAAAAEArdcEDo+56w/VbgFyKes4ckyuenee13iZ8v1XKgdqPdtwST4m\n\
@@ -127,8 +140,8 @@ int marshalling_tools_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL == CU_add_test(suite, "verifyPackUnpackDigest() Tests",
-                          test_verifyPackUnpackDigest))
+  if (NULL == CU_add_test(suite, "verifyPackUnpackDigestList() Tests",
+                          test_verifyPackUnpackDigestList))
   {
     return 1;
   }
@@ -593,67 +606,68 @@ void test_marshal_unmarshal_skiObjects(void)
   // test input/output struct parameters
   TPML_PCR_SELECTION pcr_selection_in = { 0 };
   TPML_PCR_SELECTION pcr_selection_out = { 0 };
+  TPML_DIGEST policy_or_digest_list_in = { 0 };
+  TPML_DIGEST policy_or_digest_list_out = { 0 };
   TPM2B_PUBLIC sk_public_in = { 0 };
   TPM2B_PUBLIC sk_public_out = { 0 };
   TPM2B_PRIVATE sk_private_in = { 0 };
   TPM2B_PRIVATE sk_private_out = { 0 };
-  TPM2B_PUBLIC sealed_key_public_in = { 0 };
-  TPM2B_PUBLIC sealed_key_public_out = { 0 };
-  TPM2B_PRIVATE sealed_key_private_in = { 0 };
-  TPM2B_PRIVATE sealed_key_private_out = { 0 };
-  TPM2B_DIGEST p_branch_1 = { 0 };
-  TPM2B_DIGEST p_branch_2 = { 0 };
+  TPM2B_PUBLIC sym_key_public_in = { 0 };
+  TPM2B_PUBLIC sym_key_public_out = { 0 };
+  TPM2B_PRIVATE sym_key_private_in = { 0 };
+  TPM2B_PRIVATE sym_key_private_out = { 0 };
 
   // support saving/restoring a structs '.size' value
   uint16_t temp_size = 0;
 
   // support testing case where pointer to packed data array is NULL
   uint8_t *null_data_ptr = NULL;
-  uint8_t *p_branch_1_data = NULL;
-  uint8_t *p_branch_2_data = NULL;
 
   // variable to capture function return values
   int ret_val = -1;
 
   // define test offset values for output byte arrays
-  size_t pcr_selection_offset = 7;
-  size_t sk_public_offset = 6;
-  size_t sk_private_offset = 5;
-  size_t sealed_key_public_offset = 4;
-  size_t sealed_key_private_offset = 3;
-  size_t p_branch_1_offset = 2;
-  size_t p_branch_2_offset = 1;
+  size_t pcr_selection_offset = 6;
+  size_t policy_or_digest_list_offset = 5;
+  size_t sk_public_offset = 4;
+  size_t sk_private_offset = 3;
+  size_t sym_key_public_offset = 2;
+  size_t sym_key_private_offset = 1;
 
   // define lengths of test private key values
   size_t sk_private_len = 32;
-  size_t sealed_key_private_len = 64;
-  size_t p_branch_1_size = 32;
-  size_t p_branch_2_size = 32;
+  size_t sym_key_private_len = 64;
 
   // initialize test structs, get required byte array sizes
   size_t pcr_selection_size = init_test_pcrSelect(&pcr_selection_in,
                                                   pcr_selection_offset);
+  size_t policy_or_digest_list_size = 1024;
   size_t sk_public_size = init_test_public(&sk_public_in, sk_public_offset);
   size_t sk_private_size = init_test_private(&sk_private_in, sk_private_len,
                                              sk_private_offset);
-  size_t sealed_key_public_size = init_test_public(&sealed_key_public_in,
-                                                   sealed_key_public_offset);
-  size_t sealed_key_private_size = init_test_private(&sealed_key_private_in,
-                                                     sealed_key_private_len,
-                                                     sealed_key_private_offset);
+  size_t sym_key_public_size = init_test_public(&sym_key_public_in,
+                                                sym_key_public_offset);
+  size_t sym_key_private_size = init_test_private(&sym_key_private_in,
+                                                  sym_key_private_len,
+                                                  sym_key_private_offset);
 
   // allocate memory for byte arrays to hold marshalled data
-  uint8_t *pcr_selection_data = calloc(pcr_selection_size, 1);
-  uint8_t *sk_public_data = calloc(sk_public_size, 1);
-  uint8_t *sk_private_data = calloc(sk_private_size, 1);
-  uint8_t *sealed_key_public_data = calloc(sealed_key_public_size, 1);
-  uint8_t *sealed_key_private_data = calloc(sealed_key_private_size, 1);
+  uint8_t * pcr_selection_data = calloc(pcr_selection_size, 1);
+  uint8_t * policy_or_digest_list_data = calloc(policy_or_digest_list_size, 1);
+  uint8_t * sk_public_data = calloc(sk_public_size, 1);
+  uint8_t * sk_private_data = calloc(sk_private_size, 1);
+  uint8_t * sym_key_public_data = calloc(sym_key_public_size, 1);
+  uint8_t * sym_key_private_data = calloc(sym_key_private_size, 1);
 
   // check that NULL PCR selection struct input errors
   ret_val = marshal_skiObjects(NULL,
                                &pcr_selection_data,
-                               &pcr_selection_size,
+                              &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -662,22 +676,41 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
+  CU_ASSERT(ret_val != 0);
+
+  // check that NULL policy-OR digest list struct input errors
+  ret_val = marshal_skiObjects(&pcr_selection_in,
+                               &pcr_selection_data,
+                               &pcr_selection_size,
+                               pcr_selection_offset,
+                               NULL,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
+                               &sk_public_in,
+                               &sk_public_data,
+                               &sk_public_size,
+                               sk_public_offset,
+                               &sk_private_in,
+                               &sk_private_data,
+                               &sk_private_size,
+                               sk_private_offset,
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that NULL storage key public struct input errors
@@ -685,6 +718,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                NULL,
                                &sk_public_data,
                                &sk_public_size,
@@ -693,22 +730,14 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that NULL storage key private struct input errors
@@ -716,6 +745,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -724,29 +757,25 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that NULL sealed key public struct input errors
+  // check that NULL symmetric key public struct input errors
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -756,28 +785,24 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_size,
                                sk_private_offset,
                                NULL,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that NULL sealed key private struct input errors
+  // check that NULL symmetric key private struct input errors
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -786,22 +811,14 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
                                NULL,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that empty (zero size) storage key public struct input errors
@@ -811,6 +828,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -819,22 +840,14 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
   sk_public_in.size = temp_size;
 
@@ -845,6 +858,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -853,32 +870,28 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
   sk_private_in.size = temp_size;
 
-  // check that empty (zero size) sealed key public struct input errors
-  temp_size = sealed_key_public_in.size;
-  sealed_key_public_in.size = 0;
+  // check that empty (zero size) symmetric key public struct input errors
+  temp_size = sym_key_public_in.size;
+  sym_key_public_in.size = 0;
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -887,32 +900,28 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
-  sealed_key_public_in.size = temp_size;
+  sym_key_public_in.size = temp_size;
 
-  // check that empty (zero size) sealed key private struct input errors
-  temp_size = sealed_key_private_in.size;
-  sealed_key_private_in.size = 0;
+  // check that empty (zero size) symmetric key private struct input errors
+  temp_size = sym_key_private_in.size;
+  sym_key_private_in.size = 0;
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -921,30 +930,26 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
-  sealed_key_private_in.size = temp_size;
+  sym_key_private_in.size = temp_size;
 
   // check that NULL pcr_selection_data output byte array pointer errors
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &null_data_ptr,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -953,22 +958,14 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that NULL sk_public_data output byte array pointer errors
@@ -976,6 +973,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &null_data_ptr,
                                &sk_public_size,
@@ -984,22 +985,14 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that NULL sk_private_data output byte array pointer errors
@@ -1007,6 +1000,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -1015,29 +1012,25 @@ void test_marshal_unmarshal_skiObjects(void)
                                &null_data_ptr,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that NULL sealed_key_public_data array pointer errors
+  // check that NULL sym_key_public_data output byte array pointer errors
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -1046,29 +1039,25 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
+                               &sym_key_public_in,
                                &null_data_ptr,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that NULL sealed_key_private output byte array pointer errors
+  // check that NULL sym_key_private_data output byte array pointer errors
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -1077,37 +1066,34 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
                                &null_data_ptr,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val != 0);
 
-  // now check the results for a valid set of inputs
+// now check the results for a valid set of inputs
   //   - initialize output arrays to all-zero (wrong result)
   //   - check for a successful return value
   //   - check that the output packed byte arrays match expected results
   memset(pcr_selection_data, 0, pcr_selection_size);
+  memset(policy_or_digest_list_data, 0, policy_or_digest_list_size);
   memset(sk_public_data, 0, sk_public_size);
   memset(sk_private_data, 0, sk_private_size);
-  memset(sealed_key_public_data, 0, sealed_key_public_size);
-  memset(sealed_key_private_data, 0, sealed_key_private_size);
+  memset(sym_key_public_data, 0, sym_key_public_size);
+  memset(sym_key_private_data, 0, sym_key_private_size);
   ret_val = marshal_skiObjects(&pcr_selection_in,
                                &pcr_selection_data,
                                &pcr_selection_size,
                                pcr_selection_offset,
+                               &policy_or_digest_list_in,
+                               &policy_or_digest_list_data,
+                               &policy_or_digest_list_size,
+                               policy_or_digest_list_offset,
                                &sk_public_in,
                                &sk_public_data,
                                &sk_public_size,
@@ -1116,54 +1102,55 @@ void test_marshal_unmarshal_skiObjects(void)
                                &sk_private_data,
                                &sk_private_size,
                                sk_private_offset,
-                               &sealed_key_public_in,
-                               &sealed_key_public_data,
-                               &sealed_key_public_size,
-                               sealed_key_public_offset,
-                               &sealed_key_private_in,
-                               &sealed_key_private_data,
-                               &sealed_key_private_size,
-                               sealed_key_private_offset,
-                               &p_branch_1,
-                               &p_branch_1_data,
-                               &p_branch_1_size,
-                               p_branch_1_offset,
-                               &p_branch_2,
-                               &p_branch_2_data,
-                               &p_branch_2_size,
-                               p_branch_2_offset);
+                               &sym_key_public_in,
+                               &sym_key_public_data,
+                               &sym_key_public_size,
+                               sym_key_public_offset,
+                               &sym_key_private_in,
+                               &sym_key_private_data,
+                               &sym_key_private_size,
+                               sym_key_private_offset);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(check_packed_pcrSelect(pcr_selection_in,
                                    pcr_selection_data,
-                                   pcr_selection_size, pcr_selection_offset));
+                                   pcr_selection_size,
+                                   pcr_selection_offset));
+  // TODO: check_policy_or_digest_list()
   CU_ASSERT(check_packed_public(sk_public_in,
                                 sk_public_data,
-                                sk_public_size, sk_public_offset));
+                                sk_public_size,
+                                sk_public_offset));
   CU_ASSERT(check_packed_private(sk_private_in,
                                  sk_private_data,
-                                 sk_private_size, sk_private_offset));
-  CU_ASSERT(check_packed_public(sealed_key_public_in,
-                                sealed_key_public_data,
-                                sealed_key_public_size,
-                                sealed_key_public_offset));
-  CU_ASSERT(check_packed_private(sealed_key_private_in,
-                                 sealed_key_private_data,
-                                 sealed_key_private_size,
-                                 sealed_key_private_offset));
+                                 sk_private_size,
+                                 sk_private_offset));
+  CU_ASSERT(check_packed_public(sym_key_public_in,
+                                sym_key_public_data,
+                                sym_key_public_size,
+                                sym_key_public_offset));
+  CU_ASSERT(check_packed_private(sym_key_private_in,
+                                 sym_key_private_data,
+                                 sym_key_private_size,
+                                 sym_key_private_offset));
 
   // check that 'unmarshal_skiObjects()':
   //   - starts with output struct parameters that are not initially correct
   //   - returns a successful response code (zero)
   //   - returns the original input struct values
   CU_ASSERT(pcr_selection_out.count == 0);
+  CU_ASSERT(policy_or_digest_list_out.count == 0);
   CU_ASSERT(sk_public_out.size == 0);
   CU_ASSERT(sk_private_out.size == 0);
-  CU_ASSERT(sealed_key_public_out.size == 0);
-  CU_ASSERT(sealed_key_private_out.size == 0);
+  CU_ASSERT(sym_key_public_out.size == 0);
+  CU_ASSERT(sym_key_private_out.size == 0);
   ret_val = unmarshal_skiObjects(&pcr_selection_out,
                                  pcr_selection_data,
                                  pcr_selection_size,
                                  pcr_selection_offset,
+                                 &policy_or_digest_list_out,
+                                 policy_or_digest_list_data,
+                                 policy_or_digest_list_size,
+                                 policy_or_digest_list_offset,
                                  &sk_public_out,
                                  sk_public_data,
                                  sk_public_size,
@@ -1172,34 +1159,28 @@ void test_marshal_unmarshal_skiObjects(void)
                                  sk_private_data,
                                  sk_private_size,
                                  sk_private_offset,
-                                 &sealed_key_public_out,
-                                 sealed_key_public_data,
-                                 sealed_key_public_size,
-                                 sealed_key_public_offset,
-                                 &sealed_key_private_out,
-                                 sealed_key_private_data,
-                                 sealed_key_private_size,
-                                 sealed_key_private_offset,
-                                 &p_branch_1,
-                                 p_branch_1_data,
-                                 p_branch_1_size,
-                                 p_branch_1_offset,
-                                 &p_branch_2,
-                                 p_branch_2_data,
-                                 p_branch_2_size,
-                                 p_branch_2_offset);
+                                 &sym_key_public_out,
+                                 sym_key_public_data,
+                                 sym_key_public_size,
+                                 sym_key_public_offset,
+                                 &sym_key_private_out,
+                                 sym_key_private_data,
+                                 sym_key_private_size,
+                                 sym_key_private_offset);
   CU_ASSERT(match_pcrSelect(pcr_selection_out, pcr_selection_in));
+  // TODO: match_policy_or_digest_list()
   CU_ASSERT(match_public(sk_public_out, sk_public_in));
   CU_ASSERT(match_private(sk_private_out, sk_private_in));
-  CU_ASSERT(match_public(sealed_key_public_out, sealed_key_public_in));
-  CU_ASSERT(match_private(sealed_key_private_out, sealed_key_private_in));
+  CU_ASSERT(match_public(sym_key_public_out, sym_key_public_in));
+  CU_ASSERT(match_private(sym_key_private_out, sym_key_private_in));
 
   // clean-up - free allocated memory
   free(pcr_selection_data);
+  free(policy_or_digest_list_data);
   free(sk_public_data);
   free(sk_private_data);
-  free(sealed_key_public_data);
-  free(sealed_key_private_data);
+  free(sym_key_public_data);
+  free(sym_key_private_data);
 }
 
 //----------------------------------------------------------------------------
@@ -1583,7 +1564,7 @@ void test_unpack_uint32_to_str(void)
   CU_ASSERT(strlen(test_str) == 4);
   CU_ASSERT(strncmp(test_str, "\xfc\xfd\xfe\xff", 4) == 0);
 
-  // check when output variable passed in as unallocated, non-NULL pointer
+// check when output variable passed in as unallocated, non-NULL pointer
   free(test_str);
   CU_ASSERT(test_str != NULL);
   ret_val = unpack_uint32_to_str(0x54504D32, &test_str);
@@ -1600,7 +1581,6 @@ void test_unpack_uint32_to_str(void)
 //----------------------------------------------------------------------------
 void test_parse_ski_bytes(void)
 {
-  uint8_t bool_policy_or = 0;
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
 
   uint8_t *ski_bytes = malloc(ski_bytes_len * sizeof(char));
@@ -1610,64 +1590,64 @@ void test_parse_ski_bytes(void)
   Ski output = get_default_ski();
 
   //Valid ski test  
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
   //NULL or invalid input
-  CU_ASSERT(parse_ski_bytes(NULL, ski_bytes_len, &output, bool_policy_or) == 1);
-  CU_ASSERT(parse_ski_bytes(ski_bytes, 0, &output, bool_policy_or) == 1);
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len - 1, &output, bool_policy_or) == 1);
+  CU_ASSERT(parse_ski_bytes(NULL, ski_bytes_len, &output) == 1);
+  CU_ASSERT(parse_ski_bytes(ski_bytes, 0, &output) == 1);
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len - 1, &output) == 1);
 
   /////////
   //Invalid delims:
   ////////
 
-  //PCR_SELECTION_LIST, indices 0-28
+  // "-----PCR SELECTION LIST-----"", indices 0-28
   ski_bytes[0] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[0] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //STORAGE_KEY_PUBLIC, indices 208-236
-  ski_bytes[208] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[208] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----STORAGE KEY PUBLIC-----", indices 952-979
+  ski_bytes[952] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[952] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //STORAGE_KEY_PRIVATE, indices 668-701
-  ski_bytes[668] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[668] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----STORAGE KEY ENC PRIVATE-----", indices 1412-1444
+  ski_bytes[1412] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1412] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //CIPHER_SUITE, indices 1052-1074
-  ski_bytes[1052] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[1052] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----CIPHER_SUITE-----", indices 1796-1817
+  ski_bytes[1796] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1796] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //SYM_KEY_PUBLIC, indices 1097-1121
-  ski_bytes[1097] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[1097] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----SYM_KEY_PUBLIC-----", indices 1841-1864
+  ski_bytes[1841] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1841] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //SYM_KEY_PRIVATE, indices 1232-1261
-  ski_bytes[1232] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[1232] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----SYM KEY ENC PRIVATE-----", indices 1976-2004
+  ski_bytes[1976] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[1976] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //ENC_DATA, indices 1482-1500
-  ski_bytes[1482] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[1482] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----ENC_DATA-----", indices 2226-2243
+  ski_bytes[2226] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[2226] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  //END_FILE, indices 1566-1584
-  ski_bytes[1566] = '!';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 1);
-  ski_bytes[1566] = '-';
-  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output, bool_policy_or) == 0);
+  // "-----END_FILE-----", indices 2310-2327
+  ski_bytes[2310] = '!';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[2310] = '-';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
   free(ski_bytes);
 }
 
@@ -1676,14 +1656,14 @@ void test_parse_ski_bytes(void)
 //----------------------------------------------------------------------------
 void test_create_ski_bytes(void)
 {
-  uint8_t bool_policy_or = 0;
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
 
   Ski ski = get_default_ski();
 
-  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski, bool_policy_or);  //get valid ski struct
+  // Get valid ski struct
+  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);
 
-  //Valid ski struct test
+  // Valid ski struct test
   uint8_t *sb = NULL;
   size_t sb_len = 0;
 
@@ -1694,7 +1674,7 @@ void test_create_ski_bytes(void)
   sb = NULL;
   sb_len = 0;
 
-  //Modify internals of ski to find failures
+  // Modify internals of ski to find failures
   size_t orig = ski.sk_pub.size;
 
   ski.sk_pub.size = 0;
@@ -1718,23 +1698,23 @@ void test_create_ski_bytes(void)
   sb = NULL;
   sb_len = 0;
 
-  orig = ski.wk_pub.size;
-  ski.wk_pub.size = 0;
+  orig = ski.sym_key_pub.size;
+  ski.sym_key_pub.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.wk_pub.size = (uint16_t)orig;
+  ski.sym_key_pub.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
   sb_len = 0;
 
-  orig = ski.wk_priv.size;
-  ski.wk_priv.size = 0;
+  orig = ski.sym_key_priv.size;
+  ski.sym_key_priv.size = 0;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-  ski.wk_priv.size = (uint16_t)orig;
+  ski.sym_key_priv.size = (uint16_t)orig;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -1765,7 +1745,7 @@ void test_create_ski_bytes(void)
   sb_len = 0;
   free_ski(&ski);
 
-  //Valid ski that has empty/NULL cannot be used
+  // Valid ski that has empty/NULL cannot be used
   CU_ASSERT(create_ski_bytes(get_default_ski(), &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
@@ -1776,11 +1756,11 @@ void test_create_ski_bytes(void)
 //----------------------------------------------------------------------------
 void test_free_ski(void)
 {
-  uint8_t policy_or_bool = 0;
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
   Ski ski = get_default_ski();
 
-  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski, policy_or_bool);  //get valid ski struct
+  // Get valid Ski struct
+  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);
 
   CU_ASSERT(ski.enc_data != NULL);
   CU_ASSERT(ski.enc_data_size > 0);
@@ -1799,8 +1779,8 @@ void test_get_default_ski(void)
   CU_ASSERT(ski.pcr_list.count == 0);
   CU_ASSERT(ski.sk_pub.size == 0);
   CU_ASSERT(ski.sk_priv.size == 0);
-  CU_ASSERT(ski.wk_pub.size == 0);
-  CU_ASSERT(ski.wk_priv.size == 0);
+  CU_ASSERT(ski.sym_key_pub.size == 0);
+  CU_ASSERT(ski.sym_key_priv.size == 0);
   CU_ASSERT(ski.enc_data == NULL);
   CU_ASSERT(ski.enc_data_size == 0);
 }
@@ -1808,36 +1788,61 @@ void test_get_default_ski(void)
 //----------------------------------------------------------------------------
 // test_verifyPackUnpackDigest()
 //----------------------------------------------------------------------------
-void test_verifyPackUnpackDigest(void)
+void test_verifyPackUnpackDigestList(void)
 {
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  int i = 0;
 
-  init_tpm2_connection(&sapi_ctx);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  TPML_DIGEST digest_list_in = {.count = 2, };
+  TPML_DIGEST digest_list_out = {.count = 0, };
 
-  TPM2B_DIGEST digest;
-  TPM2B_DIGEST digest_out;
-
+  // test value digest1 = 0x555555...555555
+  TPM2B_DIGEST digest1;
+  digest1.size = 32;
+  for (i = 0; i < digest1.size; i++)
+  {
+    digest1.buffer[i] = 0x55;
+  }
+  digest_list_in.digests[0] = digest1;
+  
+  // test value digest2 = 0xAAAAAA...AAAAAA
+  TPM2B_DIGEST digest2;
+  digest2.size = 32;
+  for (i = 0; i < digest2.size; i++)
+  {
+    digest1.buffer[i] = 0xaa;
+  }
+  digest_list_in.digests[1] = digest2;
+  
   uint8_t * packed_data;
   size_t packed_data_size = 0;
   size_t packed_data_offset = 0;
 
-  create_policy_digest(sapi_ctx, pcrs_struct, &digest);
-  CU_ASSERT(digest.size > 0);
-
-  packed_data_size = ((size_t)digest.size * 2) + 1;
+  packed_data_size = (sizeof(digest_list_in) + 1);
   packed_data = (uint8_t *) malloc(packed_data_size);
 
-  CU_ASSERT(pack_digest(&digest, packed_data, packed_data_size, packed_data_offset) == 0);
+  CU_ASSERT(pack_digest_list(&digest_list_in,
+                             packed_data,
+                             packed_data_size,
+                             packed_data_offset) == 0);
   CU_ASSERT(packed_data != NULL);
-  CU_ASSERT(unpack_digest(&digest_out, packed_data, packed_data_size, packed_data_offset) == 0);
-  CU_ASSERT(digest_out.size != 0);
-  CU_ASSERT(digest_out.size = digest.size);
-  for (int i = 0; i < digest_out.size; i++)
+  CU_ASSERT(unpack_digest_list(&digest_list_out,
+                               packed_data,
+                               packed_data_size,
+                               packed_data_offset) == 0);
+  CU_ASSERT(digest_list_out.count != 0);
+  CU_ASSERT(digest_list_out.count == digest_list_in.count);
+  CU_ASSERT(digest_list_out.digests[0].size == digest_list_in.digests[0].size);
+  for (i = 0; i < digest_list_out.digests[0].size; i++)
   {
-    CU_ASSERT(digest_out.buffer[i] == digest.buffer[i]);
+    CU_ASSERT(digest_list_out.digests[0].buffer[i] ==
+                                         digest_list_in.digests[0].buffer[i]);
+  }
+  CU_ASSERT(digest_list_out.digests[1].size == digest_list_in.digests[1].size);
+  for (i = 0; i < digest_list_out.digests[1].size; i++)
+  {
+    CU_ASSERT(digest_list_out.digests[1].buffer[i] ==
+                                         digest_list_in.digests[1].buffer[i]);
   }
 
   free(packed_data);
 }
-

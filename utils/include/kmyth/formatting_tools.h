@@ -33,16 +33,9 @@ extern "C" {
 /**
  * @ingroup block_delim
  *
- * @brief   Indicates the one of two policy branches used in a compound policy, PolicyOR
+ * @brief   Indicates the start of the Policy-OR digest list block
  */
-#define KMYTH_DELIM_POLICY_BRANCH_1 "-----POLICY BRANCH 1-----\n"
-
-/**
- * @ingroup block_delim
- *
- * @brief   Indicates the second of two policy branches used in a compound policy, PolicyOR
- */
-#define KMYTH_DELIM_POLICY_BRANCH_2 "-----POLICY BRANCH 2-----\n"
+#define KMYTH_DELIM_POLICY_OR "-----POLICY OR-----\n"
 
 /** 
  * @ingroup block_delim

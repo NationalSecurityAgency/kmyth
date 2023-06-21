@@ -281,35 +281,35 @@ void test_tpm2_kmyth_seal_data(void)
             (sapi_ctx, data, data_len, sk_handle, authVal, ski.pcr_list,
              authVal, ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
-	     &ski.wk_pub, &ski.wk_priv) == 0);
+	     &ski.sym_key_pub, &ski.sym_key_priv) == 0);
 
   // Check failure with NULL context.
   CU_ASSERT(tpm2_kmyth_seal_data
             (NULL, data, data_len, sk_handle, authVal, ski.pcr_list, authVal,
              ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
-	     &ski.wk_pub, &ski.wk_priv) == 1);
+	     &ski.sym_key_pub, &ski.sym_key_priv) == 1);
 
   // Failure with NULL data.
   CU_ASSERT(tpm2_kmyth_seal_data
             (sapi_ctx, NULL, data_len, sk_handle, authVal, ski.pcr_list,
              authVal, ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
-	     &ski.wk_pub, &ski.wk_priv) == 1);
+	     &ski.sym_key_pub, &ski.sym_key_priv) == 1);
 
   // Failure with length 0 data
   CU_ASSERT(tpm2_kmyth_seal_data
             (sapi_ctx, data, 0, sk_handle, authVal, ski.pcr_list, authVal,
              ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
-	     &ski.wk_pub, &ski.wk_priv) == 1);
+	     &ski.sym_key_pub, &ski.sym_key_priv) == 1);
 
   // Failure with NULL length 0 data
   CU_ASSERT(tpm2_kmyth_seal_data
             (sapi_ctx, NULL, 0, sk_handle, authVal, ski.pcr_list, authVal,
              ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
-	     &ski.wk_pub, &ski.wk_priv) == 1);
+	     &ski.sym_key_pub, &ski.sym_key_priv) == 1);
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -349,14 +349,14 @@ void test_tpm2_kmyth_unseal_data(void)
   tpm2_kmyth_seal_data(sapi_ctx, input_data, input_data_len, sk_handle, authVal,
                        ski.pcr_list, authVal, ski.pcr_list,
 		       authPolicy, policyBranch1, policyBranch2,
-                       &ski.wk_pub, &ski.wk_priv);
+                       &ski.sym_key_pub, &ski.sym_key_priv);
 
   uint8_t *output_data = NULL;
   size_t output_data_len = 0;
 
   // Check that unseal works as it should.
   CU_ASSERT(tpm2_kmyth_unseal_data
-            (sapi_ctx, sk_handle, ski.wk_pub, ski.wk_priv, authVal,
+            (sapi_ctx, sk_handle, ski.sym_key_pub, ski.sym_key_priv, authVal,
              ski.pcr_list,
 	     authPolicy, policyBranch1, policyBranch2,
 	     &output_data, &output_data_len) == 0);
@@ -369,7 +369,7 @@ void test_tpm2_kmyth_unseal_data(void)
 
   // Check failure with NULL context.
   CU_ASSERT(tpm2_kmyth_unseal_data
-            (NULL, sk_handle, ski.wk_pub, ski.wk_priv, authVal, ski.pcr_list,
+            (NULL, sk_handle, ski.sym_key_pub, ski.sym_key_priv, authVal, ski.pcr_list,
              authPolicy, policyBranch1, policyBranch2,
 	     &output_data, &output_data_len) == 1);
   CU_ASSERT(output_data_len == 0);

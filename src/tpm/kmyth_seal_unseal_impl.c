@@ -227,8 +227,8 @@ int tpm2_kmyth_seal(uint8_t * input,
 
     // stores the 2 policy branches in the ski file, they will be needed for future calculations
     // specifies the policyOR digest as the primary policy used for authorizing actions
-    ski.policyBranch1 = policy_branch_1;
-    ski.policyBranch2 = policy_branch_2;
+    //ski.policyBranch1 = policy_branch_1;
+    //ski.policyBranch2 = policy_branch_2;
     objAuthPolicy = policyOR;
   }
 
@@ -319,6 +319,9 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   kmyth_log(LOG_DEBUG, "input data wrapped");
 
+  // TEMPORARY
+  TPM2B_DIGEST temp1, temp2;
+
   // Seal the wrapping key to the TPM using the Storage Key (SK)
   if (tpm2_kmyth_seal_data(sapi_ctx,
                            wrapKey,
@@ -329,8 +332,10 @@ int tpm2_kmyth_seal(uint8_t * input,
                            objAuthVal,
                            ski.pcr_list,
                            objAuthPolicy,
-                           ski.policyBranch1,
-                           ski.policyBranch2, &ski.wk_pub, &ski.wk_priv))
+                           temp1,
+                           temp2,
+                           &ski.sym_key_pub,
+                           &ski.sym_key_priv))
   {
     kmyth_log(LOG_ERR, "unable to seal data ... exiting");
     kmyth_clear_and_free(wrapKey, wrapKey_size);
@@ -368,7 +373,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       size_t *output_len,
                       uint8_t * auth_bytes,
                       size_t auth_bytes_len,
-                      uint8_t * owner_auth_bytes, size_t oa_bytes_len,
+                      uint8_t * owner_auth_bytes,
+                      size_t oa_bytes_len,
                       uint8_t bool_policy_or)
 {
   if(oa_bytes_len > UINT16_MAX)
@@ -442,7 +448,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
 
   Ski ski = get_default_ski();
 
-  if (parse_ski_bytes(input, input_len, &ski, bool_policy_or))
+  if (parse_ski_bytes(input, input_len, &ski))
   {
     kmyth_log(LOG_ERR, "error parsing ski string ... exiting");
     free_ski(&ski);
@@ -484,14 +490,21 @@ int tpm2_kmyth_unseal(uint8_t * input,
   uint8_t *key = NULL;
   size_t key_len;
 
+  // TEMPORARY
+  TPM2B_DIGEST temp1, temp2;
+
   // Perform "unseal" to recover data
   if (tpm2_kmyth_unseal_data(sapi_ctx,
                              storageKey_handle,
-                             ski.wk_pub,
-                             ski.wk_priv,
+                             ski.sym_key_pub,
+                             ski.sym_key_priv,
                              objAuthValue,
-                             ski.pcr_list, objAuthPolicy, ski.policyBranch1,
-                             ski.policyBranch2, &key, &key_len))
+                             ski.pcr_list,
+                             objAuthPolicy,
+                             temp1,
+                             temp2,
+                             &key,
+                             &key_len))
   {
     kmyth_log(LOG_ERR, "error unsealing data ... exiting");
     free_ski(&ski);

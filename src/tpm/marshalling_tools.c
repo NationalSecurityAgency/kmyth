@@ -19,8 +19,7 @@
 //############################################################################
 // parse_ski_bytes
 //############################################################################
-int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
-                    uint8_t bool_policy_or)
+int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 {
 
   if (input == NULL)
@@ -37,74 +36,37 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   uint8_t *raw_pcr_select_list_data = NULL;
   size_t raw_pcr_select_list_size = 0;
 
-  uint8_t *raw_pb_1_data = NULL;
-  size_t raw_pb_1_size = 0;
-  uint8_t *raw_pb_2_data = NULL;
-  size_t raw_pb_2_size = 0;
-
-  if (bool_policy_or == 1)
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_pcr_select_list_data,
+                      &raw_pcr_select_list_size,
+                      KMYTH_DELIM_PCR_SELECTION_LIST,
+                      strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                      KMYTH_DELIM_POLICY_OR,
+                      strlen(KMYTH_DELIM_POLICY_OR)))
   {
-    if (get_block_bytes((char **) &position,
-                        &remaining,
-                        &raw_pcr_select_list_data,
-                        &raw_pcr_select_list_size,
-                        KMYTH_DELIM_PCR_SELECTION_LIST,
-                        strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                        KMYTH_DELIM_POLICY_BRANCH_1,
-                        strlen(KMYTH_DELIM_POLICY_BRANCH_1)))
-    {
-      kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
-      free(raw_pcr_select_list_data);
-      return 1;
-    }
-
-    if (get_block_bytes((char **) &position,
-                        &remaining,
-                        &raw_pb_1_data,
-                        &raw_pb_1_size,
-                        KMYTH_DELIM_POLICY_BRANCH_1,
-                        strlen(KMYTH_DELIM_POLICY_BRANCH_1),
-                        KMYTH_DELIM_POLICY_BRANCH_2,
-                        strlen(KMYTH_DELIM_POLICY_BRANCH_2)))
-    {
-      kmyth_log(LOG_ERR, "get policy branch 1 error ... exiting");
-      free(raw_pcr_select_list_data);
-      free(raw_pb_1_data);
-      return 1;
-    }
-
-    if (get_block_bytes((char **) &position,
-                        &remaining,
-                        &raw_pb_2_data,
-                        &raw_pb_2_size,
-                        KMYTH_DELIM_POLICY_BRANCH_2,
-                        strlen(KMYTH_DELIM_POLICY_BRANCH_2),
-                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                        strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
-    {
-      kmyth_log(LOG_ERR, "get policy branch 2 error ... exiting");
-      free(raw_pcr_select_list_data);
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-      return 1;
-    }
-
+    kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
+    free(raw_pcr_select_list_data);
+    return 1;
   }
-  else
+
+  // read in (parse out) 'raw' (encoded) POLICY OR digest list block
+  uint8_t *raw_policy_digest_list_data = NULL;
+  size_t raw_policy_digest_list_size = 0;
+
+  if (get_block_bytes((char **) &position,
+                      &remaining,
+                      &raw_policy_digest_list_data,
+                      &raw_policy_digest_list_size,
+                      KMYTH_DELIM_POLICY_OR,
+                      strlen(KMYTH_DELIM_POLICY_OR),
+                      KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                      strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
   {
-    if (get_block_bytes((char **) &position,
-                        &remaining,
-                        &raw_pcr_select_list_data,
-                        &raw_pcr_select_list_size,
-                        KMYTH_DELIM_PCR_SELECTION_LIST,
-                        strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                        KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                        strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
-    {
-      kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
-      free(raw_pcr_select_list_data);
-      return 1;
-    }
+    kmyth_log(LOG_ERR, "get policy digest list error ... exiting");
+    free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
+    return 1;
   }
 
   // read in (parse out) 'raw' (encoded) public data block for the storage key
@@ -122,12 +84,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -146,13 +104,9 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -171,14 +125,10 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -191,19 +141,15 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
     kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
     free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
-
     return 1;
   }
   free(raw_cipher_str_data);
   raw_cipher_str_data = NULL;
+
   // read in (parse out) 'raw' (encoded) public data block for the wrapping key
   uint8_t *raw_sym_pub_data = NULL;
   size_t raw_sym_pub_size = 0;
@@ -220,14 +166,10 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -246,15 +188,11 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -272,16 +210,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -292,16 +226,12 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
     kmyth_log(LOG_ERR, "unable to find the end delimiter ... exiting");
     free_ski(&temp_ski);
     free(raw_pcr_select_list_data);
+    free(raw_policy_digest_list_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
     free(raw_sym_priv_data);
     free(raw_enc_data);
-    if (bool_policy_or == 1)
-    {
-      free(raw_pb_1_data);
-      free(raw_pb_2_data);
-    }
     return 1;
   }
 
@@ -310,7 +240,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
 
   int retval = 0;
 
-  // decode PCR selection list struct
+  // base64 decode PCR selection list data
   uint8_t *decoded_pcr_select_list_data = NULL;
   size_t decoded_pcr_select_list_size = 0;
   size_t decoded_pcr_select_list_offset = 0;
@@ -322,79 +252,71 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   free(raw_pcr_select_list_data);
   raw_pcr_select_list_data = NULL;
 
-  uint8_t *decoded_policy_branch_1_data = NULL;
-  size_t decoded_policy_branch_1_size = 0;
-  size_t decoded_policy_branch_1_offset = 0;
-  uint8_t *decoded_policy_branch_2_data = NULL;
-  size_t decoded_policy_branch_2_size = 0;
-  size_t decoded_policy_branch_2_offset = 0;
+  uint8_t *decoded_policy_digest_list_data = NULL;
+  size_t decoded_policy_digest_list_size = 0;
+  size_t decoded_policy_digest_list_offset = 0;
 
-  if (bool_policy_or == 1)
-  {
-    // decode policy 1 branch struct
-    retval |= decodeBase64Data(raw_pb_1_data,
-                               raw_pb_1_size,
-                               &decoded_policy_branch_1_data,
-                               &decoded_policy_branch_1_size);
+  // base64 decode policy digest list data
+  retval |= decodeBase64Data(raw_policy_digest_list_data,
+                             raw_policy_digest_list_size,
+                             &decoded_policy_digest_list_data,
+                             &decoded_policy_digest_list_size);
 
-    // decode policy 2 branch struct
-    retval |= decodeBase64Data(raw_pb_2_data,
-                               raw_pb_2_size,
-                               &decoded_policy_branch_2_data,
-                               &decoded_policy_branch_2_size);
-  }
-  free(raw_pb_1_data);
-  raw_pb_1_data = NULL;
-  free(raw_pb_2_data);
-  raw_pb_2_data = NULL;
+  free(raw_policy_digest_list_data);
+  raw_policy_digest_list_data = NULL;
 
-  // decode public data block for storage key
+  // base64 decode public data block for storage key
   uint8_t *decoded_sk_pub_data = NULL;
   size_t decoded_sk_pub_size = 0;
   size_t decoded_sk_pub_offset = 0;
 
   retval |= decodeBase64Data(raw_sk_pub_data,
                              raw_sk_pub_size,
-                             &decoded_sk_pub_data, &decoded_sk_pub_size);
+                             &decoded_sk_pub_data,
+                             &decoded_sk_pub_size);
   free(raw_sk_pub_data);
   raw_sk_pub_data = NULL;
 
-  // decode encrypted private data block for storage key
+  // base64 decode encrypted private data block for storage key
   uint8_t *decoded_sk_priv_data = NULL;
   size_t decoded_sk_priv_size = 0;
   size_t decoded_sk_priv_offset = 0;
 
   retval |= decodeBase64Data(raw_sk_priv_data,
                              raw_sk_priv_size,
-                             &decoded_sk_priv_data, &decoded_sk_priv_size);
+                             &decoded_sk_priv_data,
+                             &decoded_sk_priv_size);
   free(raw_sk_priv_data);
   raw_sk_priv_data = NULL;
 
-  // decode public data block for symmetric wrapping key
+  // base64 decode public data block for symmetric wrapping key
   uint8_t *decoded_sym_pub_data = NULL;
   size_t decoded_sym_pub_size = 0;
   size_t decoded_sym_pub_offset = 0;
 
   retval |= decodeBase64Data(raw_sym_pub_data,
                              raw_sym_pub_size,
-                             &decoded_sym_pub_data, &decoded_sym_pub_size);
+                             &decoded_sym_pub_data,
+                             &decoded_sym_pub_size);
   free(raw_sym_pub_data);
   raw_sym_pub_data = NULL;
 
-  // decode encrypted private data block for symmetric wrapping key
+  // base64 decode encrypted private data block for symmetric wrapping key
   uint8_t *decoded_sym_priv_data = NULL;
   size_t decoded_sym_priv_size = 0;
   size_t decoded_sym_priv_offset = 0;
 
   retval |= decodeBase64Data(raw_sym_priv_data,
                              raw_sym_priv_size,
-                             &decoded_sym_priv_data, &decoded_sym_priv_size);
+                             &decoded_sym_priv_data,
+                             &decoded_sym_priv_size);
   free(raw_sym_priv_data);
   raw_sym_priv_data = NULL;
 
   // decode the encrypted data block
   retval |= decodeBase64Data(raw_enc_data,
-                             raw_enc_size, &temp_ski.enc_data,
+                             raw_enc_size,
+                             &temp_ski.enc_data,
                              &temp_ski.enc_data_size);
   free(raw_enc_data);
   raw_enc_data = NULL;
@@ -409,6 +331,10 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
                                   decoded_pcr_select_list_data,
                                   decoded_pcr_select_list_size,
                                   decoded_pcr_select_list_offset,
+                                  &temp_ski.policy_or_digest_list,
+                                  decoded_policy_digest_list_data,
+                                  decoded_policy_digest_list_size,
+                                  decoded_policy_digest_list_offset,
                                   &temp_ski.sk_pub,
                                   decoded_sk_pub_data,
                                   decoded_sk_pub_size,
@@ -417,22 +343,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
                                   decoded_sk_priv_data,
                                   decoded_sk_priv_size,
                                   decoded_sk_priv_offset,
-                                  &temp_ski.wk_pub,
+                                  &temp_ski.sym_key_pub,
                                   decoded_sym_pub_data,
                                   decoded_sym_pub_size,
                                   decoded_sym_pub_offset,
-                                  &temp_ski.wk_priv,
+                                  &temp_ski.sym_key_priv,
                                   decoded_sym_priv_data,
                                   decoded_sym_priv_size,
-                                  decoded_sym_priv_offset,
-                                  &temp_ski.policyBranch1,
-                                  decoded_policy_branch_1_data,
-                                  decoded_policy_branch_1_size,
-                                  decoded_policy_branch_1_offset,
-                                  &temp_ski.policyBranch2,
-                                  decoded_policy_branch_2_data,
-                                  decoded_policy_branch_2_size,
-                                  decoded_policy_branch_2_offset);
+                                  decoded_sym_priv_offset);
     if (retval)
     {
       kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
@@ -440,15 +358,11 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
   }
 
   free(decoded_pcr_select_list_data);
+  free(decoded_policy_digest_list_data);
   free(decoded_sk_pub_data);
   free(decoded_sk_priv_data);
   free(decoded_sym_pub_data);
   free(decoded_sym_priv_data);
-  if (bool_policy_or == 1)
-  {
-    free(decoded_policy_branch_1_data);
-    free(decoded_policy_branch_2_data);
-  }
   *output = temp_ski;
   return retval;
 }
@@ -458,23 +372,23 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output,
 //############################################################################
 int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 {
-  if(input.sk_pub.size < 0 || input.sk_priv.size < 0 || input.wk_pub.size < 0 || input.wk_priv.size < 0 || input.policyBranch1.size < 0 || input.policyBranch2.size < 0)
+  if(input.sk_pub.size < 0 ||
+     input.sk_priv.size < 0 ||
+     input.sym_key_pub.size < 0 ||
+     input.sym_key_priv.size < 0)
   {
     kmyth_log(LOG_ERR, "ski file should not have negative field sizes.");
     return 1;
   }
+
   // marshal data contained in TPM sized buffers (TPM2B_PUBLIC / TPM2B_PRIVATE)
   // and structs (TPML_PCR_SELECTION)
   // Note: must account for two extra bytes to include the buffer's size value
   //       in the TPM2B_* sized buffer cases
   size_t pcr_select_size = sizeof(input.pcr_list);
   size_t pcr_select_offset = 0;
-  uint8_t *pcr_select_data =
-    (uint8_t *) calloc(pcr_select_size, sizeof(uint8_t));
-
-  // boolean to indicate whether the user has elected to use policyOR which
-  // requires writing both policy digests to the ski file for future calculations
-  uint8_t bool_policy_or = 0;
+  uint8_t *pcr_select_data = (uint8_t *) calloc(pcr_select_size,
+                                                sizeof(uint8_t));
 
   if (pcr_select_data == NULL)
   {
@@ -483,111 +397,85 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t sk_pub_size = (size_t)input.sk_pub.size + 2;
+  size_t policy_digest_list_size = (size_t) sizeof(input.policy_or_digest_list) + 1;
+  size_t policy_digest_list_offset = 0;
+  uint8_t * policy_digest_list_data = calloc(policy_digest_list_size,
+                                             sizeof(uint8_t));
+
+  // if both policy branches are present, includes
+  // policy branch info to be marshalled to ski file
+  if (policy_digest_list_data == NULL)
+  {
+    kmyth_log(LOG_ERR, "policy digest list data malloc failed ... exiting");
+    free(pcr_select_data);
+    return 1;
+  }
+
+  size_t sk_pub_size = (size_t) (input.sk_pub.size + 2);
   size_t sk_pub_offset = 0;
-  uint8_t *sk_pub_data = (uint8_t *) malloc(sk_pub_size);
+  uint8_t * sk_pub_data = malloc(sk_pub_size);
 
   if (sk_pub_data == NULL)
   {
     kmyth_log(LOG_ERR,
               "unable to allocate memory for storage key public data ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     return 1;
   }
 
-  size_t sk_priv_size = (size_t)input.sk_priv.size + 2;
+  size_t sk_priv_size = (size_t) (input.sk_priv.size + 2);
   size_t sk_priv_offset = 0;
-  uint8_t *sk_priv_data = (uint8_t *) malloc(sk_priv_size);
+  uint8_t *sk_priv_data = malloc(sk_priv_size);
 
   if (sk_priv_data == NULL)
   {
-    kmyth_log(LOG_ERR,
-              "unable to allocate memory for storage key private data ... exiting");
+    kmyth_log(LOG_ERR, "storage key private data malloc failed ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     free(sk_pub_data);
     return 1;
   }
 
-  size_t wk_pub_size = (size_t)input.wk_pub.size + 2;
-  size_t wk_pub_offset = 0;
-  uint8_t *wk_pub_data = (uint8_t *) malloc(wk_pub_size);
+  size_t sym_key_pub_size = (size_t) (input.sym_key_pub.size + 2);
+  size_t sym_key_pub_offset = 0;
+  uint8_t * sym_key_pub_data = malloc(sym_key_pub_size);
 
-  if (wk_pub_data == NULL)
+  if (sym_key_pub_data == NULL)
   {
     kmyth_log(LOG_ERR,
               "unable to allocate memory for wrapping key public data ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     free(sk_pub_data);
     free(sk_priv_data);
     return 1;
   }
 
-  size_t wk_priv_size = (size_t)input.wk_priv.size + 2;
-  size_t wk_priv_offset = 0;
-  uint8_t *wk_priv_data = (uint8_t *) malloc(wk_priv_size);
+  size_t sym_key_priv_size = (size_t) (input.sym_key_priv.size + 2);
+  size_t sym_key_priv_offset = 0;
+  uint8_t * sym_key_priv_data = malloc(sym_key_priv_size);
 
-  if (wk_priv_data == NULL)
+  if (sym_key_priv_data == NULL)
   {
     kmyth_log(LOG_ERR,
               "unable to allocate memory for wrapping key private data ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     free(sk_pub_data);
     free(sk_priv_data);
-    free(wk_pub_data);
+    free(sym_key_pub_data);
     return 1;
-  }
-
-  size_t p_branch_1_size = 0;
-  size_t p_branch_1_offset = 0;
-  uint8_t *p_branch_1_data = NULL;
-
-  size_t p_branch_2_size = 0;
-  size_t p_branch_2_offset = 0;
-  uint8_t *p_branch_2_data = NULL;
-
-  // if both policy branches are present, includes
-  // policy branch info to be marshalled to ski file
-  if (input.policyBranch1.size > 0 && input.policyBranch2.size > 0)
-  {
-    bool_policy_or = 1;
-
-    p_branch_1_size = (size_t)input.policyBranch1.size + 2;
-    p_branch_1_data = (uint8_t *) malloc(p_branch_1_size);
-
-    if (p_branch_1_data == NULL)
-    {
-      kmyth_log(LOG_ERR,
-                "unable to allocate memory for policy data ... exiting");
-      free(pcr_select_data);
-      free(sk_pub_data);
-      free(sk_priv_data);
-      free(wk_pub_data);
-      free(wk_priv_data);
-      return 1;
-    }
-
-    p_branch_2_size = (size_t)input.policyBranch2.size + 2;
-    p_branch_2_data = (uint8_t *) malloc(p_branch_2_size);
-
-    if (p_branch_2_data == NULL)
-    {
-      kmyth_log(LOG_ERR,
-                "unable to allocate memory for policy data ... exiting");
-      free(pcr_select_data);
-      free(sk_pub_data);
-      free(sk_priv_data);
-      free(wk_pub_data);
-      free(wk_priv_data);
-      free(p_branch_1_data);
-      return 1;
-    }
-
   }
 
   if (marshal_skiObjects(&input.pcr_list,
                          &pcr_select_data,
                          &pcr_select_size,
                          pcr_select_offset,
+                         &(input.policy_or_digest_list),
+                         &policy_digest_list_data,
+                         &policy_digest_list_size,
+                         policy_digest_list_offset,
                          &input.sk_pub,
                          &sk_pub_data,
                          &sk_pub_size,
@@ -596,165 +484,126 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
                          &sk_priv_data,
                          &sk_priv_size,
                          sk_priv_offset,
-                         &input.wk_pub,
-                         &wk_pub_data,
-                         &wk_pub_size,
-                         wk_pub_offset,
-                         &input.wk_priv,
-                         &wk_priv_data,
-                         &wk_priv_size,
-                         wk_priv_offset,
-                         &input.policyBranch1,
-                         &p_branch_1_data,
-                         &p_branch_1_size,
-                         p_branch_1_offset,
-                         &input.policyBranch2,
-                         &p_branch_2_data, &p_branch_2_size, p_branch_2_offset))
+                         &(input.sym_key_pub),
+                         &sym_key_pub_data,
+                         &sym_key_pub_size,
+                         sym_key_pub_offset,
+                         &(input.sym_key_priv),
+                         &sym_key_priv_data,
+                         &sym_key_priv_size,
+                         sym_key_priv_offset))
   {
     kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     free(sk_pub_data);
     free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(p_branch_1_data);
-    free(p_branch_2_data);
+    free(sym_key_pub_data);
+    free(sym_key_priv_data);
     return 1;
   }
 
   // validate that all data to be written is non-NULL and non-empty
   if (pcr_select_data == NULL ||
       pcr_select_size == 0 ||
+      policy_digest_list_data == NULL ||
+      policy_digest_list_size == 0 ||
       sk_pub_data == NULL ||
       sk_pub_size == 0 ||
       sk_priv_data == NULL ||
       sk_priv_size == 0 ||
-      wk_pub_data == NULL ||
-      wk_pub_size == 0 ||
-      wk_priv_data == NULL ||
-      wk_priv_size == 0 ||
+      sym_key_pub_data == NULL ||
+      sym_key_pub_size == 0 ||
+      sym_key_priv_data == NULL ||
+      sym_key_priv_size == 0 ||
       input.cipher.cipher_name == NULL ||
       strlen(input.cipher.cipher_name) == 0 ||
-      input.enc_data == NULL || input.enc_data_size == 0)
+      input.enc_data == NULL ||
+      input.enc_data_size == 0)
   {
     kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
     free(pcr_select_data);
+    free(policy_digest_list_data);
     free(sk_pub_data);
     free(sk_priv_data);
-    free(wk_pub_data);
-    free(wk_priv_data);
-    free(p_branch_1_data);
-    free(p_branch_2_data);
+    free(sym_key_pub_data);
+    free(sym_key_priv_data);
     return 1;
   }
 
-  //Encode each portion of the file in base64
-  uint8_t *pcr64_select_data = NULL;
+  // encode each portion of the file in base64
+  uint8_t * pcr64_select_data = NULL;
   size_t pcr64_select_size = 0;
-  uint8_t *sk64_pub_data = NULL;
+  uint8_t * policy64_data = NULL;
+  size_t policy64_data_size = 0;
+  uint8_t * sk64_pub_data = NULL;
   size_t sk64_pub_size = 0;
-  uint8_t *sk64_priv_data = NULL;
+  uint8_t * sk64_priv_data = NULL;
   size_t sk64_priv_size = 0;
-  uint8_t *wk64_pub_data = NULL;
-  size_t wk64_pub_size = 0;
-  uint8_t *wk64_priv_data = NULL;
-  size_t wk64_priv_size = 0;
-  uint8_t *enc64_data = NULL;
+  uint8_t * sym64_pub_data = NULL;
+  size_t sym64_pub_size = 0;
+  uint8_t * sym64_priv_data = NULL;
+  size_t sym64_priv_size = 0;
+  uint8_t * enc64_data = NULL;
   size_t enc64_data_size = 0;
-  //uint8_t *policy64_data = NULL;
-  //size_t policy64_data_size = 0;
-  uint8_t *p_branch_1_64_data = NULL;
-  size_t p_branch_1_64_data_size = 0;
-  uint8_t *p_branch_2_64_data = NULL;
-  size_t p_branch_2_64_data_size = 0;
 
-  // only used if policy branches are present for compound policyOR
-  if (p_branch_1_data != NULL && p_branch_2_data != NULL)
+  if (encodeBase64Data(pcr_select_data,
+                       pcr_select_size,
+                       &pcr64_select_data,
+                       &pcr64_select_size) ||
+      encodeBase64Data(policy_digest_list_data,
+                       policy_digest_list_size,
+                       &policy64_data,
+                       &policy64_data_size) ||
+      encodeBase64Data(sk_pub_data,
+                       sk_pub_size,
+                       &sk64_pub_data,
+                       &sk64_pub_size) ||
+      encodeBase64Data(sk_priv_data,
+                       sk_priv_size,
+                       &sk64_priv_data,
+                       &sk64_priv_size) ||
+      encodeBase64Data(sym_key_pub_data,
+                       sym_key_pub_size,
+                       &sym64_pub_data,
+                       &sym64_pub_size) ||
+      encodeBase64Data(sym_key_priv_data,
+                       sym_key_priv_size,
+                       &sym64_priv_data,
+                       &sym64_priv_size) ||
+      encodeBase64Data(input.enc_data,
+                       input.enc_data_size,
+                       &enc64_data,
+                       &enc64_data_size))
   {
-    if (encodeBase64Data
-        (pcr_select_data, pcr_select_size, &pcr64_select_data,
-         &pcr64_select_size)
-        || encodeBase64Data(sk_pub_data, sk_pub_size, &sk64_pub_data,
-                            &sk64_pub_size)
-        || encodeBase64Data(sk_priv_data, sk_priv_size, &sk64_priv_data,
-                            &sk64_priv_size)
-        || encodeBase64Data(wk_pub_data, wk_pub_size, &wk64_pub_data,
-                            &wk64_pub_size)
-        || encodeBase64Data(wk_priv_data, wk_priv_size, &wk64_priv_data,
-                            &wk64_priv_size)
-        || encodeBase64Data(input.enc_data, input.enc_data_size, &enc64_data,
-                            &enc64_data_size)
-        || encodeBase64Data(p_branch_1_data, p_branch_1_size,
-                            &p_branch_1_64_data, &p_branch_1_64_data_size)
-        || encodeBase64Data(p_branch_2_data, p_branch_2_size,
-                            &p_branch_2_64_data, &p_branch_2_64_data_size))
-    {
-      kmyth_log(LOG_ERR, "error base64 encoding ski string ... exiting");
-      free(pcr_select_data);
-      free(sk_pub_data);
-      free(sk_priv_data);
-      free(wk_pub_data);
-      free(wk_priv_data);
-      free(pcr64_select_data);
-      free(sk64_pub_data);
-      free(sk64_priv_data);
-      free(wk64_pub_data);
-      free(wk64_priv_data);
-      free(enc64_data);
-      free(p_branch_1_data);
-      free(p_branch_2_data);
-      return 1;
-    }
-  }
-  // else condition: policy branches are not written to ski file
-  else
-  {
-    if (encodeBase64Data
-        (pcr_select_data, pcr_select_size, &pcr64_select_data,
-         &pcr64_select_size)
-        || encodeBase64Data(sk_pub_data, sk_pub_size, &sk64_pub_data,
-                            &sk64_pub_size)
-        || encodeBase64Data(sk_priv_data, sk_priv_size, &sk64_priv_data,
-                            &sk64_priv_size)
-        || encodeBase64Data(wk_pub_data, wk_pub_size, &wk64_pub_data,
-                            &wk64_pub_size)
-        || encodeBase64Data(wk_priv_data, wk_priv_size, &wk64_priv_data,
-                            &wk64_priv_size)
-        || encodeBase64Data(input.enc_data, input.enc_data_size, &enc64_data,
-                            &enc64_data_size))
-    {
-      kmyth_log(LOG_ERR, "error base64 encoding ski string ... exiting");
-      free(pcr_select_data);
-      free(sk_pub_data);
-      free(sk_priv_data);
-      free(wk_pub_data);
-      free(wk_priv_data);
-      free(pcr64_select_data);
-      free(sk64_pub_data);
-      free(sk64_priv_data);
-      free(wk64_pub_data);
-      free(wk64_priv_data);
-      free(enc64_data);
-      free(p_branch_1_data);
-      free(p_branch_2_data);
-      return 1;
-    }
+    kmyth_log(LOG_ERR, "error base64 encoding ski string ... exiting");
+    free(pcr_select_data);
+    free(policy_digest_list_data);
+    free(sk_pub_data);
+    free(sk_priv_data);
+    free(sym_key_pub_data);
+    free(sym_key_priv_data);
+    free(pcr64_select_data);
+    free(sk64_pub_data);
+    free(sk64_priv_data);
+    free(sym64_pub_data);
+    free(sym64_priv_data);
+    free(enc64_data);
+    return 1;
   }
 
   free(pcr_select_data);
   pcr_select_data = NULL;
+  free(policy_digest_list_data);
+  policy_digest_list_data = NULL;
   free(sk_pub_data);
   sk_pub_data = NULL;
   free(sk_priv_data);
   sk_priv_data = NULL;
-  free(wk_pub_data);
-  wk_pub_data = NULL;
-  free(wk_priv_data);
-  wk_priv_data = NULL;
-  free(p_branch_1_data);
-  p_branch_1_data = NULL;
-  free(p_branch_2_data);
-  p_branch_2_data = NULL;
+  free(sym_key_pub_data);
+  sym_key_pub_data = NULL;
+  free(sym_key_priv_data);
+  sym_key_priv_data = NULL;
 
   //At this point the data is all formatted, it's time to create the string
   uint8_t *out = NULL;
@@ -766,21 +615,11 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   free(pcr64_select_data);
   pcr64_select_data = NULL;
 
-  // if policyOR is used, includes policy branch information in ski file
-  if (bool_policy_or == 1)
-  {
-    concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY_BRANCH_1,
-           strlen(KMYTH_DELIM_POLICY_BRANCH_1));
-    concat(&out, &out_length, p_branch_1_64_data, p_branch_1_64_data_size);
-    free(p_branch_1_64_data);
-    p_branch_1_64_data = NULL;
-
-    concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY_BRANCH_2,
-           strlen(KMYTH_DELIM_POLICY_BRANCH_2));
-    concat(&out, &out_length, p_branch_2_64_data, p_branch_2_64_data_size);
-    free(p_branch_2_64_data);
-    p_branch_2_64_data = NULL;
-  }
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY_OR,
+         strlen(KMYTH_DELIM_POLICY_OR));
+  concat(&out, &out_length, policy64_data, policy64_data_size);
+  free(policy64_data);
+  policy64_data = NULL;
 
   concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_STORAGE_KEY_PUBLIC,
          strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC));
@@ -802,15 +641,15 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_SYM_KEY_PUBLIC,
          strlen(KMYTH_DELIM_SYM_KEY_PUBLIC));
-  concat(&out, &out_length, wk64_pub_data, wk64_pub_size);
-  free(wk64_pub_data);
-  wk64_pub_data = NULL;
+  concat(&out, &out_length, sym64_pub_data, sym64_pub_size);
+  free(sym64_pub_data);
+  sym64_pub_data = NULL;
 
   concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_SYM_KEY_PRIVATE,
          strlen(KMYTH_DELIM_SYM_KEY_PRIVATE));
-  concat(&out, &out_length, wk64_priv_data, wk64_priv_size);
-  free(wk64_priv_data);
-  wk64_priv_data = NULL;
+  concat(&out, &out_length, sym64_priv_data, sym64_priv_size);
+  free(sym64_priv_data);
+  sym64_priv_data = NULL;
 
   concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_ENC_DATA,
          strlen(KMYTH_DELIM_ENC_DATA));
@@ -838,17 +677,15 @@ Ski get_default_ski(void)
 {
   Ski ret = {
     .pcr_list = {.count = 0,},
-    .policyBranch1 = {.size = 0,},
-    .policyBranch2 = {.size = 0,},
+    .policy_or_digest_list = {.count = 0,},
     .sk_priv = {.size = 0,},
     .cipher = {.cipher_name = NULL,},
-    .wk_pub = {.size = 0},
-    .wk_priv = {.size = 0},
+    .sym_key_pub = {.size = 0},
+    .sym_key_priv = {.size = 0},
     .enc_data = NULL,
     .enc_data_size = 0
   };
   return (ret);
-
 }
 
 //############################################################################
@@ -856,52 +693,53 @@ Ski get_default_ski(void)
 //############################################################################
 int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
-                       size_t *pcr_selection_struct_data_size,
+                       size_t * pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
+                       TPML_DIGEST * policy_or_digest_list,
+                       uint8_t ** policy_or_data,
+                       size_t * policy_or_data_size,
+                       size_t policy_or_data_offset,
                        TPM2B_PUBLIC * storage_key_public_blob,
                        uint8_t ** storage_key_public_data,
-                       size_t *storage_key_public_data_size,
+                       size_t * storage_key_public_data_size,
                        size_t storage_key_public_data_offset,
                        TPM2B_PRIVATE * storage_key_private_blob,
                        uint8_t ** storage_key_private_data,
-                       size_t *storage_key_private_data_size,
+                       size_t * storage_key_private_data_size,
                        size_t storage_key_private_data_offset,
-                       TPM2B_PUBLIC * sealed_key_public_blob,
-                       uint8_t ** sealed_key_public_data,
-                       size_t *sealed_key_public_data_size,
-                       size_t sealed_key_public_data_offset,
-                       TPM2B_PRIVATE * sealed_key_private_blob,
-                       uint8_t ** sealed_key_private_data,
-                       size_t *sealed_key_private_data_size,
-                       size_t sealed_key_private_data_offset,
-                       TPM2B_DIGEST * p_branch_1,
-                       uint8_t ** p_branch_1_data,
-                       size_t *p_branch_1_data_size,
-                       size_t p_branch_1_data_offset,
-                       TPM2B_DIGEST * p_branch_2,
-                       uint8_t ** p_branch_2_data,
-                       size_t *p_branch_2_data_size,
-                       size_t p_branch_2_data_offset)
+                       TPM2B_PUBLIC * sym_key_public_blob,
+                       uint8_t ** sym_key_public_data,
+                       size_t * sym_key_public_data_size,
+                       size_t sym_key_public_data_offset,
+                       TPM2B_PRIVATE * sym_key_private_blob,
+                       uint8_t ** sym_key_private_data,
+                       size_t * sym_key_private_data_size,
+                       size_t sym_key_private_data_offset)
 {
   // Validate that all input data structures to be packed in preparation
-  // for writing to a .ski file are both non-NULL and non-empty.
+  // for writing to a .ski file are non-NULL and that TPM object struct
+  // (i.e., TPM sealed storage and symmetric keys) public/private blobs
+  // are non-empty.
   if (pcr_selection_struct == NULL ||
+      policy_or_digest_list == NULL ||
       storage_key_public_blob == NULL ||
-      storage_key_private_blob == NULL ||
-      sealed_key_public_blob == NULL ||
-      sealed_key_private_blob == NULL ||
       storage_key_public_blob->size == 0 ||
+      storage_key_private_blob == NULL ||
       storage_key_private_blob->size == 0 ||
-      sealed_key_public_blob->size == 0 || sealed_key_private_blob->size == 0)
+      sym_key_public_blob == NULL ||
+      sym_key_public_blob->size == 0 ||
+      sym_key_private_blob == NULL ||
+      sym_key_private_blob->size == 0)
   {
-    kmyth_log(LOG_ERR, "input structs to be packed NULL or empty ... exiting");
+    kmyth_log(LOG_ERR, "input struct(s) to be packed invalid ... exiting");
     return 1;
   }
 
   // Marshal (pack) TPM PCR selection list struct
-  if (*pcr_selection_struct_data == NULL)
+  if (*pcr_selection_struct_data == NULL ||
+      pcr_selection_struct_data_size == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated PCR select list data ... exiting");
+    kmyth_log(LOG_ERR, "NULL PCR select list data pointer ... exiting");
     return 1;
   }
   if (pack_pcr(pcr_selection_struct,
@@ -913,10 +751,28 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     return 1;
   }
 
-  // Marshal (pack) public data buffer for storage key (SK)
-  if (*storage_key_public_data == NULL)
+  // Marshal (pack) optional policy-OR digest list
+  if (*policy_or_data != NULL || policy_or_data_size == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated SK public byte array ... exiting");
+    if (pack_digest_list(policy_or_digest_list,
+                         *policy_or_data,
+                         *policy_or_data_size,
+                         policy_or_data_offset))
+    {
+      kmyth_log(LOG_ERR, "error packing policy-OR digest list ... exiting");
+      return 1;
+    }
+  }
+  // For scenario not employing policy-OR, ensure digest list is empty
+  else
+  {
+    policy_or_digest_list->count = 0;
+  }
+
+  // Marshal (pack) public data buffer for storage key (SK)
+  if (*storage_key_public_data == NULL || storage_key_public_data_size == NULL)
+  {
+    kmyth_log(LOG_ERR, "invalid SK public byte array ... exiting");
     return 1;
   }
   if (pack_public(storage_key_public_blob,
@@ -943,56 +799,34 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
     return 1;
   }
 
-  // Marshal (pack) public data buffer for sealed wrapping key
-  if (*sealed_key_public_data == NULL)
+  // Marshal (pack) public data buffer for symmetric key
+  if (*sym_key_public_data == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated sealed key public byte array ... exiting");
+    kmyth_log(LOG_ERR, "unallocated symmetric key public buffer ... exiting");
     return 1;
   }
-  if (pack_public(sealed_key_public_blob,
-                  *sealed_key_public_data,
-                  *sealed_key_public_data_size, sealed_key_public_data_offset))
+  if (pack_public(sym_key_public_blob,
+                  *sym_key_public_data,
+                  *sym_key_public_data_size,
+                  sym_key_public_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing sealed key public blob ... exiting");
-    return 1;
-  }
-
-  // Marshal (pack) private data buffer for sealed wrapping key
-  if (*sealed_key_private_data == NULL)
-  {
-    kmyth_log(LOG_ERR, "unalloc'd sealed key private byte array ... exiting");
+    kmyth_log(LOG_ERR, "error packing symmetric key public blob ... exiting");
     return 1;
   }
 
-  if (pack_private(sealed_key_private_blob,
-                   *sealed_key_private_data,
-                   *sealed_key_private_data_size,
-                   sealed_key_private_data_offset))
+  // Marshal (pack) private data buffer for symmetric key
+  if (*sym_key_private_data == NULL)
+  {
+    kmyth_log(LOG_ERR, "unalloc'd symmetric key private buffer ... exiting");
+    return 1;
+  }
+  if (pack_private(sym_key_private_blob,
+                   *sym_key_private_data,
+                   *sym_key_private_data_size,
+                   sym_key_private_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing sealed key private blob ... exiting");
     return 1;
-  }
-
-  // if policyOR is selected, policy branch information to be included in ski file
-  if (p_branch_1_data != NULL && p_branch_2_data != NULL)
-  {
-    // Marshal (pack) TPM digest struct for policy branch 1
-    if (pack_digest
-        (p_branch_1, *p_branch_1_data, *p_branch_1_data_size,
-         p_branch_1_data_offset))
-    {
-      kmyth_log(LOG_ERR, "error packing first policy branch ... exiting");
-      return 1;
-    }
-
-    // Marshal (pack) TPM digest struct for policy branch 2
-    if (pack_digest
-        (p_branch_2, *p_branch_2_data, *p_branch_2_data_size,
-         p_branch_2_data_offset))
-    {
-      kmyth_log(LOG_ERR, "error packing first policy branch ... exiting");
-      return 1;
-    }
   }
 
   return 0;
@@ -1005,6 +839,10 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          uint8_t * pcr_selection_struct_data,
                          size_t pcr_selection_struct_data_size,
                          size_t pcr_selection_struct_data_offset,
+                         TPML_DIGEST * policy_or_digest_list,
+                         uint8_t * policy_or_data,
+                         size_t policy_or_data_size,
+                         size_t policy_or_data_offset,
                          TPM2B_PUBLIC * storage_key_public_blob,
                          uint8_t * storage_key_public_data,
                          size_t storage_key_public_data_size,
@@ -1013,22 +851,14 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                          uint8_t * storage_key_private_data,
                          size_t storage_key_private_data_size,
                          size_t storage_key_private_data_offset,
-                         TPM2B_PUBLIC * sealed_key_public_blob,
-                         uint8_t * sealed_key_public_data,
-                         size_t sealed_key_public_data_size,
-                         size_t sealed_key_public_data_offset,
-                         TPM2B_PRIVATE * sealed_key_private_blob,
-                         uint8_t * sealed_key_private_data,
-                         size_t sealed_key_private_data_size,
-                         size_t sealed_key_private_data_offset,
-                         TPM2B_DIGEST * p_branch_1,
-                         uint8_t * p_branch_1_data,
-                         size_t p_branch_1_data_size,
-                         size_t p_branch_1_data_offset,
-                         TPM2B_DIGEST * p_branch_2,
-                         uint8_t * p_branch_2_data,
-                         size_t p_branch_2_data_size,
-                         size_t p_branch_2_data_offset)
+                         TPM2B_PUBLIC * sym_key_public_blob,
+                         uint8_t * sym_key_public_data,
+                         size_t sym_key_public_data_size,
+                         size_t sym_key_public_data_offset,
+                         TPM2B_PRIVATE * sym_key_private_blob,
+                         uint8_t * sym_key_private_data,
+                         size_t sym_key_private_data_size,
+                         size_t sym_key_private_data_offset)
 {
   int retval = 0;
 
@@ -1038,19 +868,11 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                        pcr_selection_struct_data_size,
                        pcr_selection_struct_data_offset);
 
-  // if policyOR is selected, policy branch information was included in ski file
-  if (p_branch_1_data != NULL && p_branch_2_data != NULL)
-  {
-    // Unmarshal TPM Digest struct for policy branch 1
-    retval |= unpack_digest(p_branch_1,
-                            p_branch_1_data,
-                            p_branch_1_data_size, p_branch_1_data_offset);
-
-    // Unmarshal TPM Digest struct for policy branch 2
-    retval |= unpack_digest(p_branch_2,
-                            p_branch_2_data,
-                            p_branch_2_data_size, p_branch_2_data_offset);
-  }
+  // Unmarshal TPM Digest list struct
+  retval |= unpack_digest_list(policy_or_digest_list,
+                               policy_or_data,
+                               policy_or_data_size,
+                               policy_or_data_offset);
 
   // Unmarshal public data for Kmyth storage key (SK)
   retval |= unpack_public(storage_key_public_blob,
@@ -1065,16 +887,16 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
                            storage_key_private_data_offset);
 
   // Unmarshal public data for Kmyth sealed data object (sealed wrapping key)
-  retval |= unpack_public(sealed_key_public_blob,
-                          sealed_key_public_data,
-                          sealed_key_public_data_size,
-                          sealed_key_public_data_offset);
+  retval |= unpack_public(sym_key_public_blob,
+                          sym_key_public_data,
+                          sym_key_public_data_size,
+                          sym_key_public_data_offset);
 
   // Unmarshal encrypted private data for Kmyth sealed data object
-  retval |= unpack_private(sealed_key_private_blob,
-                           sealed_key_private_data,
-                           sealed_key_private_data_size,
-                           sealed_key_private_data_offset);
+  retval |= unpack_private(sym_key_private_blob,
+                           sym_key_private_data,
+                           sym_key_private_data_size,
+                           sym_key_private_data_offset);
 
   return retval;
 }
@@ -1084,9 +906,9 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
 //############################################################################
 int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
              uint8_t * packed_data_out,
-             size_t packed_data_out_size, size_t packed_data_out_offset)
+             size_t packed_data_out_size,
+             size_t packed_data_out_offset)
 {
-  // "Marshal" input PCR selections into packed, platform independent format
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPML_PCR_SELECTION_Marshal(pcr_select_in,
@@ -1107,9 +929,9 @@ int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
 //############################################################################
 int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
                uint8_t * packed_data_in,
-               size_t packed_data_in_size, size_t packed_data_in_offset)
+               size_t packed_data_in_size,
+               size_t packed_data_in_offset)
 {
-  // "Unmarshal" input packed (.ski) format into a TPML_PCR_SELECTION struct
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
@@ -1132,7 +954,6 @@ int pack_public(TPM2B_PUBLIC * public_blob_in,
                 uint8_t * packed_data_out,
                 size_t packed_data_out_size, size_t packed_data_out_offset)
 {
-  // "Marshal" input public blob into packed, platform independent format
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPM2B_PUBLIC_Marshal(public_blob_in,
@@ -1153,9 +974,9 @@ int pack_public(TPM2B_PUBLIC * public_blob_in,
 //############################################################################
 int unpack_public(TPM2B_PUBLIC * public_blob_out,
                   uint8_t * packed_data_in,
-                  size_t packed_data_in_size, size_t packed_data_in_offset)
+                  size_t packed_data_in_size,
+                  size_t packed_data_in_offset)
 {
-  // "Unmarshal" input packed (.ski file) format into a TPM2B_PUBLIC struct
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPM2B_PUBLIC_Unmarshal(packed_data_in,
@@ -1176,9 +997,9 @@ int unpack_public(TPM2B_PUBLIC * public_blob_out,
 //############################################################################
 int pack_private(TPM2B_PRIVATE * private_blob_in,
                  uint8_t * packed_data_out,
-                 size_t packed_data_out_size, size_t packed_data_out_offset)
+                 size_t packed_data_out_size,
+                 size_t packed_data_out_offset)
 {
-  // "Marshal" input private blob into packed, platform independent format
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPM2B_PRIVATE_Marshal(private_blob_in,
@@ -1199,9 +1020,9 @@ int pack_private(TPM2B_PRIVATE * private_blob_in,
 //############################################################################
 int unpack_private(TPM2B_PRIVATE * private_blob_out,
                    uint8_t * packed_data_in,
-                   size_t packed_data_in_size, size_t packed_data_in_offset)
+                   size_t packed_data_in_size,
+                   size_t packed_data_in_offset)
 {
-  // "Unmarshal" input packed (.ski file) format into a TPM2B_PRIVATE struct
   TSS2_RC rc = 0;
 
   if ((rc = Tss2_MU_TPM2B_PRIVATE_Unmarshal(packed_data_in,
@@ -1218,22 +1039,22 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
 }
 
 //############################################################################
-// pack_digest()
+// pack_digest_list()
 //############################################################################
-int pack_digest(TPM2B_DIGEST * digest_in,
-                uint8_t * digest_data_out,
-                size_t packed_data_out_size, size_t packed_data_out_offset)
+int pack_digest_list(TPML_DIGEST * digest_list_in,
+                     uint8_t * packed_data_out,
+                     size_t packed_data_out_size,
+                     size_t packed_data_out_offset)
 {
-  // "Marshal" input digest into packed, platform independent format
   TSS2_RC rc = 0;
 
-  if ((rc = Tss2_MU_TPM2B_DIGEST_Marshal(digest_in,
-                                         digest_data_out,
-                                         packed_data_out_size,
-                                         &packed_data_out_offset)))
+  if ((rc = Tss2_MU_TPML_DIGEST_Marshal(digest_list_in,
+                                        packed_data_out,
+                                        packed_data_out_size,
+                                        &packed_data_out_offset)))
   {
     kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_DIGEST_Marshal(): 0x%08X ... exiting", rc);
+              "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X ... exiting", rc);
     return 1;
   }
 
@@ -1241,18 +1062,19 @@ int pack_digest(TPM2B_DIGEST * digest_in,
 }
 
 //############################################################################
-// unpack_digest()
+// unpack_digest_list()
 //############################################################################
-int unpack_digest(TPM2B_DIGEST * digest_out,
-                  uint8_t * packed_data_in,
-                  size_t packed_data_in_size, size_t packed_data_in_offset)
+int unpack_digest_list(TPML_DIGEST * digest_out,
+                       uint8_t * packed_data_in,
+                       size_t packed_data_in_size,
+                       size_t packed_data_in_offset)
 {
-  // "Unmarshal" input packed (.ski file) format into a TPM2B_DIGEST struct
   TSS2_RC rc = 0;
 
-  if ((rc = Tss2_MU_TPM2B_DIGEST_Unmarshal(packed_data_in,
-                                           packed_data_in_size,
-                                           &packed_data_in_offset, digest_out)))
+  if ((rc = Tss2_MU_TPML_DIGEST_Unmarshal(packed_data_in,
+                                          packed_data_in_size,
+                                          &packed_data_in_offset,
+                                          digest_out)))
   {
     kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_DIGEST_Unmarshal(): 0x%08x ... exiting", rc);
