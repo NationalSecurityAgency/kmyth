@@ -39,8 +39,11 @@ int tpm2_kmyth_seal(uint8_t * input,
                     uint8_t * auth_bytes,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
-                    size_t oa_bytes_len, int *pcrs, size_t pcrs_len,
-                    char *cipher_string, char *expected_policy,
+                    size_t oa_bytes_len,
+                    int *pcrs,
+                    size_t pcrs_len,
+                    char *cipher_string,
+                    char *expected_policy,
                     bool bool_trial_only)
 {
   if(oa_bytes_len > UINT16_MAX)
@@ -49,7 +52,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
   
-  //init connection to the resource manager
+  // init connection to the resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
   if (init_tpm2_connection(&sapi_ctx))
@@ -62,7 +65,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   Ski ski = get_default_ski();
 
-  //obtain cipher function
+  // obtain cipher function
   if (cipher_string == NULL)
   {
     cipher_string = KMYTH_DEFAULT_CIPHER;
@@ -77,7 +80,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "cipher: %s", ski.cipher.cipher_name);
 
-  // Create owner (storage) hierarchy authorization structure
+  // create owner (storage) hierarchy authorization structure
   TPM2B_AUTH ownerAuth;
 
   ownerAuth.size = (uint16_t)oa_bytes_len;
@@ -145,8 +148,10 @@ int tpm2_kmyth_seal(uint8_t * input,
   // use of these objects.
   TPM2B_DIGEST objAuthPolicy;
 
+  TPML_DIGEST temp = { 0 };
+
   objAuthPolicy.size = 0;
-  if (create_policy_digest(sapi_ctx, ski.pcr_list, &objAuthPolicy))
+  if (create_policy_digest(sapi_ctx, &ski.pcr_list, &temp, &objAuthPolicy))
   {
     kmyth_log(LOG_ERR,
               "error creating policy digest for new Kmyth object ... exiting");
@@ -175,20 +180,23 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 0;
   }
 
+  // TPML_DIGEST struct to hold the 2 policy branches per TPM specifications
+  // (will remain empty if no policy-OR criteria specified)
+  TPML_DIGEST policyOrDigestList = {.count=0,};
+
   // if the user has passed in secondary policy, this indicates that they wish to use
   // the compound policy, PolicyOR and the argument they've passed in as an alternative
   // policy digest that can be used to satisfy the policy of the sealed data object
   if (expected_policy != NULL)
   {
-    // digest that will hold the second auth policy branch
-    TPM2B_DIGEST policy_branch_1;
-    TPM2B_DIGEST policy_branch_2;
-
-    // assigns the previously calculated objAuthPolicy to policy branch 1
-    policy_branch_1 = objAuthPolicy;
+    // assigns the previously calculated objAuthPolicy to first policy branch
+    policyOrDigestList.count++;
+    policyOrDigestList.digests[0] = objAuthPolicy;
 
     // fills the second policy branch with a policy specified by the user
-    if (convert_string_to_digest(expected_policy, &policy_branch_2))
+    policyOrDigestList.count++;
+    if (convert_string_to_digest(expected_policy,
+                                 &policyOrDigestList.digests[1]))
     {
       kmyth_log(LOG_ERR,
                 "failed to convert secondary policy %s to digest ... exiting",
@@ -203,9 +211,6 @@ int tpm2_kmyth_seal(uint8_t * input,
 
     policyOR.size = 0;
 
-    // TPML_DIGEST struct to hold the 2 policy branches per TPM specifications
-    TPML_DIGEST pHashList;
-
     // initializing a new session for the policyOR
     SESSION policySessionOR;
 
@@ -215,20 +220,21 @@ int tpm2_kmyth_seal(uint8_t * input,
     // applies policy_or to the session 2 policy branches:
     // objAuthPolicy = results from current pcr readings
     // objAuthPolicy2 = a user-supplied policy for a known future state of pcrs
-    apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy_branch_1,
-                    &policy_branch_2, &pHashList);
+    apply_policy_or(sapi_ctx,
+                    policySessionOR.sessionHandle,
+                    &policyOrDigestList);
 
     // obtains the policy digest from the policyOR calculation
-    Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
-                             nullCmdAuths, &policyOR, nullRspAuths);
+    Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                             policySessionOR.sessionHandle,
+                             nullCmdAuths,
+                             &policyOR,
+                             nullRspAuths);
 
     // flushes the session from the TPM
     Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
 
-    // stores the 2 policy branches in the ski file, they will be needed for future calculations
     // specifies the policyOR digest as the primary policy used for authorizing actions
-    //ski.policyBranch1 = policy_branch_1;
-    //ski.policyBranch2 = policy_branch_2;
     objAuthPolicy = policyOR;
   }
 
@@ -265,7 +271,9 @@ int tpm2_kmyth_seal(uint8_t * input,
                          objAuthVal,
                          ski.pcr_list,
                          objAuthPolicy,
-                         &storageKey_handle, &ski.sk_priv, &ski.sk_pub))
+                         &storageKey_handle,
+                         &ski.sk_priv,
+                         &ski.sk_pub))
   {
     kmyth_log(LOG_ERR, "failed to create and load a storage key ... exiting");
 
@@ -307,8 +315,10 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
 
   // encrypt (wrap) input data read in (e.g., client certificate private .pem)
-  if (kmyth_encrypt_data(input, input_len,
-                         ski.cipher, &ski.enc_data, &ski.enc_data_size,
+  if (kmyth_encrypt_data(input,
+                         input_len,
+                         ski.cipher,
+                         &ski.enc_data, &ski.enc_data_size,
                          &wrapKey, &wrapKey_size))
   {
     kmyth_log(LOG_ERR, "unable to encrypt (wrap) data ... exiting");
@@ -319,21 +329,15 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   kmyth_log(LOG_DEBUG, "input data wrapped");
 
-  // TEMPORARY
-  TPM2B_DIGEST temp1, temp2;
-
   // Seal the wrapping key to the TPM using the Storage Key (SK)
   if (tpm2_kmyth_seal_data(sapi_ctx,
+                           &objAuthVal,
+                           &(ski.pcr_list),
+                           &policyOrDigestList,
+                           &objAuthPolicy,
+                           storageKey_handle,
                            wrapKey,
                            wrapKey_size,
-                           storageKey_handle,
-                           objAuthVal,
-                           ski.pcr_list,
-                           objAuthVal,
-                           ski.pcr_list,
-                           objAuthPolicy,
-                           temp1,
-                           temp2,
                            &ski.sym_key_pub,
                            &ski.sym_key_priv))
   {
@@ -456,17 +460,17 @@ int tpm2_kmyth_unseal(uint8_t * input,
     return 1;
   }
 
-  // The Storage Key (SK) will be used by the TPM to unseal the wrapping key.
-  // We have obtained its public and encrypted private blobs from
-  // the input .ski file and will now load the SK into the TPM.
+  // The Storage Key (SK) will be used by the TPM to unseal the symmetric
+  // wrapping key. We have obtained its public and encrypted private blobs
+  //from the input .ski file and will now load the SK into the TPM.
   TPM2_HANDLE storageKey_handle = 0;
-  TPML_PCR_SELECTION emptyPcrList = {.count = 0, };
   if (load_kmyth_object(sapi_ctx,
                         (SESSION *) NULL,
                         storageRootKey_handle,
-                        ownerAuth,
-                        emptyPcrList,
-                        &ski.sk_priv, &ski.sk_pub, &storageKey_handle))
+                        &ownerAuth,
+                        &ski.sk_priv,
+                        &ski.sk_pub,
+                        &storageKey_handle))
   {
     kmyth_log(LOG_ERR, "error loading storage key ... exiting");
     free_ski(&ski);
@@ -475,34 +479,19 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "loaded SK at handle = 0x%08X", storageKey_handle);
 
-  // Authorization for the use of all non-primary (other than SRK), Kmyth
-  // TPM 2.0 objects utilizes policy-based enhanced authorization critera.
-  // Therefore, we will calculate the authorization policy digest that
-  // results from applying the steps of our selected authorization policy.
-  // We pass this result to the kmyth_unseal_data() function where it is
-  // used in theinto the objects we create as the
-  // authorization policy digest value that must be regenerated to authorize
-  // use of these objects.
-  TPM2B_DIGEST objAuthPolicy;
-
-  objAuthPolicy.size = 0;
-
+  // A symmetric wrapping key is used to encrypt kmyth-sealed data.
+  // We unseal the sealed symmetric wrapping key using an enhanced
+  // (policy based) authorization criteria.
   uint8_t *key = NULL;
   size_t key_len;
 
-  // TEMPORARY
-  TPM2B_DIGEST temp1, temp2;
-
-  // Perform "unseal" to recover data
   if (tpm2_kmyth_unseal_data(sapi_ctx,
                              storageKey_handle,
-                             ski.sym_key_pub,
-                             ski.sym_key_priv,
-                             objAuthValue,
-                             ski.pcr_list,
-                             objAuthPolicy,
-                             temp1,
-                             temp2,
+                             &(ski.sym_key_pub),
+                             &(ski.sym_key_priv),
+                             &objAuthValue,
+                             &(ski.pcr_list),
+                             &(ski.policy_or_digest_list),
                              &key,
                              &key_len))
   {
@@ -513,10 +502,14 @@ int tpm2_kmyth_unseal(uint8_t * input,
     return 1;
   }
 
+  // We then use the unsealed symmetric key to decrypt the kmyth-sealed data
   if (kmyth_decrypt_data((unsigned char *) ski.enc_data,
                          ski.enc_data_size,
                          ski.cipher,
-                         (unsigned char *) key, key_len, output, output_len))
+                         (unsigned char *) key,
+                         key_len,
+                         output,
+                         output_len))
   {
     kmyth_log(LOG_ERR, "error decrypting data ... exiting");
     free_ski(&ski);
@@ -543,8 +536,10 @@ int tpm2_kmyth_seal_file(char *input_path,
                          size_t auth_bytes_len,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
-                         int *pcrs, size_t pcrs_len, char *cipher_string,
-                         char *expected_policy, bool bool_trial_only)
+                         int *pcrs, size_t pcrs_len,
+                         char *cipher_string,
+                         char *expected_policy,
+                         bool bool_trial_only)
 {
   uint8_t* data = NULL;
   size_t data_len = 0;
@@ -565,7 +560,7 @@ int tpm2_kmyth_seal_file(char *input_path,
       kmyth_log(LOG_ERR, "seal input data file read error ... exiting");
       if (data != NULL)
       {
-	free(data);
+	      free(data);
       }
       return 1;
     }
@@ -621,12 +616,18 @@ int tpm2_kmyth_unseal_file(char *input_path,
     kmyth_log(LOG_ERR, "Unable to read file %s ... exiting", input_path);
     return (1);
   }
-  if (tpm2_kmyth_unseal(data, data_length,
-                        output, output_length, auth_bytes, auth_bytes_len,
-                        owner_auth_bytes, oa_bytes_len, bool_policy_or))
+  if (tpm2_kmyth_unseal(data,
+                        data_length,
+                        output,
+                        output_length,
+                        auth_bytes,
+                        auth_bytes_len,
+                        owner_auth_bytes,
+                        oa_bytes_len,
+                        bool_policy_or))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
-    if (data != NULL) free(data);
+    free(data);
     return (1);
   }
 
@@ -638,31 +639,32 @@ int tpm2_kmyth_unseal_file(char *input_path,
 // tpm2_kmyth_seal_data
 //############################################################################
 int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
-                         uint8_t * sdo_data,
-                         size_t sdo_dataSize,
+                         TPM2B_AUTH * authVal,
+                         TPML_PCR_SELECTION * pcrList,
+                         TPML_DIGEST * pDigestList,
+                         TPM2B_DIGEST * authPolicy,
                          TPM2_HANDLE sk_handle,
-                         TPM2B_AUTH sk_authVal,
-                         TPML_PCR_SELECTION sk_pcrList,
-                         TPM2B_AUTH sdo_authVal,
-                         TPML_PCR_SELECTION sdo_pcrList,
-                         TPM2B_DIGEST sdo_authPolicy,
-                         TPM2B_DIGEST sdo_policyBranch1,
-                         TPM2B_DIGEST sdo_policyBranch2,
-                         TPM2B_PUBLIC * sdo_public, TPM2B_PRIVATE * sdo_private)
+                         uint8_t * sym_key_data,
+                         size_t sym_key_dataSize,
+                         TPM2B_PUBLIC * sym_key_public,
+                         TPM2B_PRIVATE * sym_key_private)
 {
-  // Create and set up sensitive data input for new sealed data object:
+  // Create and set up sensitive data input for new sealed symmetric key data
+  // object:
   //   - The authVal (hash of user specifed authorization string or default
   //     all-zero hash) is passed into this function by the caller
   //   - Although we initialize it to zero, for a sealed data object, the data
   //     buffer size cannot be zero
-  TPM2B_SENSITIVE_CREATE sdo_sensitive;
+  TPM2B_SENSITIVE_CREATE sym_key_sensitive;
 
-  sdo_sensitive.sensitive.data.size = 0;  // start with empty data
-  sdo_sensitive.sensitive.userAuth.size = 0;  // and empty userAuth buffers
+  sym_key_sensitive.sensitive.data.size = 0;  // start with empty data
+  sym_key_sensitive.sensitive.userAuth.size = 0;  // and empty userAuth buffers
 
   // Populate buffer with data to be sealed and set size to its length in bytes
-  if (init_kmyth_object_sensitive(sdo_authVal,
-                                  sdo_data, sdo_dataSize, &sdo_sensitive))
+  if (init_kmyth_object_sensitive(authVal,
+                                  sym_key_data,
+                                  sym_key_dataSize,
+                                  &sym_key_sensitive))
   {
     kmyth_log(LOG_ERR, "error populating data to be sealed ... exiting");
     return 1;
@@ -673,7 +675,8 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sdo_template.size = 0;
   if (init_kmyth_object_template(false,
-                                 sdo_authPolicy, &(sdo_template.publicArea)))
+                                 authPolicy,
+                                 &(sdo_template.publicArea)))
   {
     kmyth_log(LOG_ERR,
               "error populating public template for data object ... exiting");
@@ -691,36 +694,26 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // Apply policy to session context, in preparation for the "create" command
-  if (apply_policy(sapi_ctx, sealData_session.sessionHandle, sk_pcrList))
+  if (apply_policy(sapi_ctx,
+                   sealData_session.sessionHandle,
+                   pcrList,
+                   pDigestList))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;
   }
 
-  // if both policy branches have a size, policyor digest should be calculated
-  if (sdo_policyBranch1.size != 0 && sdo_policyBranch2.size != 0)
-  {
-    TPML_DIGEST pHashList;
-
-    for (size_t i = 0; i < 8; i++)
-    {
-      pHashList.digests[i].size = 0;
-    }
-
-    apply_policy_or(sapi_ctx, sealData_session.sessionHandle,
-                    &sdo_policyBranch1, &sdo_policyBranch2, &pHashList);
-  }
-
-  // create sealed data object
+  // create sealed symmetric key data object
   if (create_kmyth_object(sapi_ctx,
                           &sealData_session,
                           sk_handle,
-                          sk_authVal,
-                          sk_pcrList,
-                          sdo_sensitive,
-                          sdo_template,
-                          sdo_pcrList,
-                          (TPM2_HANDLE) 0, sdo_private, sdo_public))
+                          authVal,
+                          &sym_key_sensitive,
+                          &sdo_template,
+                          pcrList,
+                          (TPM2_HANDLE) 0,
+                          sym_key_private,
+                          sym_key_public))
   {
     kmyth_log(LOG_ERR, "could not seal data ... exiting");
     return 1;
@@ -752,14 +745,13 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2_HANDLE sk_handle,
-                           TPM2B_PUBLIC sdo_public,
-                           TPM2B_PRIVATE sdo_private,
-                           TPM2B_AUTH authVal,
-                           TPML_PCR_SELECTION pcrList,
-                           TPM2B_DIGEST authPolicy,
-                           TPM2B_DIGEST policyBranch1,
-                           TPM2B_DIGEST policyBranch2,
-                           uint8_t ** result, size_t *result_size)
+                           TPM2B_PUBLIC * sdo_public,
+                           TPM2B_PRIVATE * sdo_private,
+                           TPM2B_AUTH * authVal,
+                           TPML_PCR_SELECTION * pcrList,
+                           TPML_DIGEST * policyOR_digestList,
+                           uint8_t ** result,
+                           size_t * result_size)
 {
   // Start a TPM 2.0 policy session that we will use to authorize the use of
   // storage key (SK) to:
@@ -774,9 +766,10 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // Apply policy to session context, in preparation for the "load" command
-  if (unseal_apply_policy
-      (sapi_ctx, unsealData_session.sessionHandle, pcrList,
-       policyBranch1, policyBranch2))
+  if (apply_policy(sapi_ctx,
+                   unsealData_session.sessionHandle,
+                   pcrList,
+                   policyOR_digestList))
   {
     kmyth_log(LOG_ERR, "apply policy to session context error ... exiting");
     return 1;
@@ -790,7 +783,9 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                         &unsealData_session,
                         sk_handle,
                         authVal,
-                        pcrList, &sdo_private, &sdo_public, &sdo_handle))
+                        sdo_private,
+                        sdo_public,
+                        &sdo_handle))
   {
     kmyth_log(LOG_ERR, "load error: sealed data object ... exiting");
     Tss2_Sys_FlushContext(sapi_ctx, unsealData_session.sessionHandle);
@@ -803,8 +798,11 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   TPM2B_SENSITIVE_DATA unseal_sensitive = {.size = 0, };
   if (unseal_kmyth_object(sapi_ctx,
                           &unsealData_session,
-                          sdo_handle, authVal, policyBranch1, policyBranch2,
-                          pcrList, &unseal_sensitive))
+                          sdo_handle,
+                          authVal,
+                          policyOR_digestList,
+                          pcrList,
+                          &unseal_sensitive))
   {
     kmyth_log(LOG_ERR, "error unsealing ... exiting");
 

@@ -119,9 +119,13 @@ void test_check_if_srk(void)
   TPM2B_AUTH obj_auth = {.size = 0, };
   create_authVal(NULL, 0, &obj_auth);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  TPML_DIGEST pOR_digests_struct ={.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };
   init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct);
-  create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy);
+  create_policy_digest(sapi_ctx,
+                       &pcrs_struct,
+                       &pOR_digests_struct,
+                       &auth_policy);
   TPM2B_PRIVATE sk_priv = {.size = 0, };
   TPM2B_PUBLIC sk_pub = {.size = 0, };
   TPM2_HANDLE sk_handle = 0;
@@ -151,7 +155,7 @@ void test_put_srk_into_persistent_storage(void)
   TPM2B_AUTH auth = {.size = 0, };
 
   //NULL context
-  CU_ASSERT(put_srk_into_persistent_storage(NULL, 0, auth) != 0);
+  CU_ASSERT(put_srk_into_persistent_storage(NULL, 0, &auth) != 0);
 
   //Valid test - load SRK into next available persistent handle, clear TPM
   TPM2_HANDLE next = 0;
@@ -163,9 +167,9 @@ void test_put_srk_into_persistent_storage(void)
 
   srk_handle = next;
   //Test for failure if we try to load at a location that is already in use
-  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, old_srk, auth) != 0);
+  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, old_srk, &auth) != 0);
   //Loading second copy of SRK at next available persistent handle should work
-  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, auth) == 0);
+  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, &auth) == 0);
   TPM2B_AUTH emptyAuth = {.size = 0 };
   TPM2B_NONCE emptyNonce = {.size = 0 };
   TSS2L_SYS_AUTH_RESPONSE cmdRsp;
@@ -186,7 +190,7 @@ void test_put_srk_into_persistent_storage(void)
   get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
   CU_ASSERT(srk_handle == 0) srk_handle = next;
   //Load the srk
-  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, auth) == 0);
+  CU_ASSERT(put_srk_into_persistent_storage(sapi_ctx, srk_handle, &auth) == 0);
   get_existing_srk_handle(sapi_ctx, &srk_handle, &next);
   //Verify it has loaded correctly
   CU_ASSERT(srk_handle == TPM2_PERSISTENT_FIRST);
@@ -211,10 +215,14 @@ void test_create_and_load_sk(void)
   TPM2B_AUTH obj_auth = {.size = 0, };
   create_authVal(NULL, 0, &obj_auth);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  TPML_DIGEST pOR_digests_struct = {.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };
   init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct);
 
-  create_policy_digest(sapi_ctx, pcrs_struct, &auth_policy);
+  create_policy_digest(sapi_ctx,
+                       &pcrs_struct,
+                       &pOR_digests_struct,
+                       &auth_policy);
   TPM2B_PRIVATE sk_priv = {.size = 0, };
   TPM2B_PUBLIC sk_pub = {.size = 0, };
   TPM2_HANDLE sk_handle = 0;

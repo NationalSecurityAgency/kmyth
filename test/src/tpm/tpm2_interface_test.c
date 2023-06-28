@@ -148,9 +148,13 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "create_caller_nonce() Tests",
-                  test_create_caller_nonce))
+  if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "create_caller_nonce() Tests",
+                                        test_create_caller_nonce))
   {
     return 1;
   }
@@ -158,24 +162,6 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   if (NULL == CU_add_test(suite, "rollNonces() Tests", test_rollNonces))
   {
     return 1;
-  }
-
-  //These tests requireTPM2_ALG_SHA256 so we don't want to run them if this changes
-  if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
-  {
-    if (NULL == CU_add_test(suite, "unseal_apply_policy() Tests", test_unseal_apply_policy))
-    {
-      return 1;
-    }
-
-    if (NULL == CU_add_test(suite, "apply_policy_or() Tests", test_apply_policy_or))
-    {
-      return 1;
-    }
-  }
-  else
-  {
-    kmyth_log(LOG_WARNING, "KMYTH_HASH_ALG changed from TPM2_ALG_SHA256. unseal_apply_policy() Tests and apply_policy_or() Tests need to be updated for the new TPM2_ALG."); 
   }
 
   return 0;
@@ -347,14 +333,14 @@ void test_init_password_cmd_auth(void)
 
   //Valid test for NULL auth
   TPM2B_AUTH auth = {.size = 0, };
-  CU_ASSERT(init_password_cmd_auth(auth, &cmd_out, &res_out) == 0);
+  CU_ASSERT(init_password_cmd_auth(&auth, &cmd_out, &res_out) == 0);
 
   //Valid test non-null auth
   uint8_t *auth_bytes = (uint8_t *) "0123";
 
   create_authVal(auth_bytes, 4, &auth);
   CU_ASSERT(auth.size > 0);
-  CU_ASSERT(init_password_cmd_auth(auth, &cmd_out, &res_out) == 0);
+  CU_ASSERT(init_password_cmd_auth(&auth, &cmd_out, &res_out) == 0);
 }
 
 //----------------------------------------------------------------------------
@@ -366,7 +352,6 @@ void test_init_policy_cmd_auth(void)
   TPM2B_AUTH auth = {.size = 0, };
   TSS2L_SYS_AUTH_COMMAND cmd_out;
   TSS2L_SYS_AUTH_RESPONSE res_out;
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
   TPM2_CC cc = 0;
   TPM2B_NAME auth_name = {.size = 0, };
@@ -375,16 +360,17 @@ void test_init_policy_cmd_auth(void)
 
   init_tpm2_connection(&sapi_ctx);
   create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
-  init_password_cmd_auth(auth, &cmd_out, &res_out);
+  init_password_cmd_auth(&auth, &cmd_out, &res_out);
 
-  //Valid test
+  // Valid test
   CU_ASSERT(init_policy_cmd_auth(&session,
                                  cc,
                                  auth_name,
-                                 auth,
+                                 &auth,
                                  cmdParams,
                                  cmdParams_size,
-                                 pcrs_struct, &cmd_out, &res_out) == 0);
+                                 &cmd_out,
+                                 &res_out) == 0);
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -409,8 +395,12 @@ void test_check_response_auth(void)
   res_out.auths[0].nonce.size = KMYTH_DIGEST_SIZE;
 
   //Valid failure before hashes are set
-  CU_ASSERT(check_response_auth
-            (&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+  CU_ASSERT(check_response_auth(&session,
+                                cc,
+                                cmdParams,
+                                cmdParams_size,
+                                &auth,
+                                &res_out) != 0);
 
   //Specify empty nonces for hash comparisons
   //Calculate the expected hash
@@ -424,7 +414,10 @@ void test_check_response_auth(void)
   TPM2B_DIGEST checkHMAC;
 
   checkHMAC.size = 0;
-  compute_authHMAC(session, rpHash, auth, res_out.auths[0].sessionAttributes,
+  compute_authHMAC(session,
+                   rpHash,
+                   &auth,
+                   res_out.auths[0].sessionAttributes,
                    &checkHMAC);
   res_out.auths[0].hmac.size = checkHMAC.size;
   for (int i = 0; i < checkHMAC.size; i++)
@@ -433,17 +426,29 @@ void test_check_response_auth(void)
   }
 
   //Valid test
-  CU_ASSERT(check_response_auth
-            (&session, cc, cmdParams, cmdParams_size, auth, &res_out) == 0);
+  CU_ASSERT(check_response_auth(&session,
+                                cc,
+                                cmdParams,
+                                cmdParams_size,
+                                &auth,
+                                &res_out) == 0);
 
   session.nonceNewer.size = 1;
   //Valid failure
-  CU_ASSERT(check_response_auth
-            (&session, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+  CU_ASSERT(check_response_auth(&session,
+                                cc,
+                                cmdParams,
+                                cmdParams_size,
+                                &auth,
+                                &res_out) != 0);
 
   //NULL session
-  CU_ASSERT(check_response_auth
-            (NULL, cc, cmdParams, cmdParams_size, auth, &res_out) != 0);
+  CU_ASSERT(check_response_auth(NULL,
+                                cc,
+                                cmdParams,
+                                cmdParams_size,
+                                &auth,
+                                &res_out) != 0);
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -569,11 +574,11 @@ void test_compute_authHMAC(void)
   TPMA_SESSION session_attr = 0;
   TPM2B_AUTH auth = {.size = 0, };
   TPM2B_AUTH hmac = {.size = 0, };
-  CU_ASSERT(compute_authHMAC(session, hash, auth, session_attr, &hmac) == 0);
+  CU_ASSERT(compute_authHMAC(session, hash, &auth, session_attr, &hmac) == 0);
   CU_ASSERT(hmac.size != 0);
 
   //NULL output
-  CU_ASSERT(compute_authHMAC(session, hash, auth, session_attr, NULL) != 0);
+  CU_ASSERT(compute_authHMAC(session, hash, &auth, session_attr, NULL) != 0);
   free_tpm2_resources(&sapi_ctx);
 }
 
@@ -586,11 +591,15 @@ void test_create_policy_digest(void)
 
   init_tpm2_connection(&sapi_ctx);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  TPML_DIGEST pOR_digests_struct = {.count = 0, };
 
   //Valid test with no PCRs selected
   TPM2B_DIGEST out;
 
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+  CU_ASSERT(create_policy_digest(sapi_ctx,
+                                 &pcrs_struct,
+                                 &pOR_digests_struct,
+                                 &out) == 0);
   CU_ASSERT(out.size != 0);
   BYTE pcr0_buf[KMYTH_DIGEST_SIZE];
 
@@ -601,7 +610,10 @@ void test_create_policy_digest(void)
   pcrs[0] = 5;
   init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
   out.size = 0;
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+  CU_ASSERT(create_policy_digest(sapi_ctx,
+                                 &pcrs_struct,
+                                 &pOR_digests_struct,
+                                 &out) == 0);
   CU_ASSERT(out.size != 0);
   BYTE pcr1_buf[KMYTH_DIGEST_SIZE];
 
@@ -611,7 +623,10 @@ void test_create_policy_digest(void)
   out.size = 0;
   pcrs[1] = 3;
   init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &out) == 0);
+  CU_ASSERT(create_policy_digest(sapi_ctx,
+                                 &pcrs_struct,
+                                 &pOR_digests_struct,
+                                 &out) == 0);
   CU_ASSERT(out.size != 0);
   BYTE pcr2_buf[KMYTH_DIGEST_SIZE];
 
@@ -623,7 +638,10 @@ void test_create_policy_digest(void)
   CU_ASSERT(memcmp(pcr1_buf, pcr2_buf, KMYTH_DIGEST_SIZE) != 0);
 
   //Failure with null sapi_ctx
-  CU_ASSERT(create_policy_digest(NULL, pcrs_struct, &out) != 0);
+  CU_ASSERT(create_policy_digest(NULL,
+                                 &pcrs_struct,
+                                 &pOR_digests_struct,
+                                 &out) != 0);
 
   free_tpm2_resources(&sapi_ctx);
 }
@@ -697,22 +715,166 @@ void test_apply_policy(void)
   //Valid test
   create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
-  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+  TPML_DIGEST pOR_digests_struct = {.count = 0, };
+
+  CU_ASSERT(apply_policy(sapi_ctx,
+                         session.sessionHandle,
+                         &pcrs_struct,
+                         &pOR_digests_struct) == 0);
 
   //NULL context
-  CU_ASSERT(apply_policy(NULL, session.sessionHandle, pcrs_struct) != 0);
+  CU_ASSERT(apply_policy(NULL,
+                         session.sessionHandle,
+                         &pcrs_struct,
+                         &pOR_digests_struct) != 0);
 
   //Invalid Handle
-  CU_ASSERT(apply_policy(sapi_ctx, 0, pcrs_struct) != 0);
+  CU_ASSERT(apply_policy(sapi_ctx,
+                         0,
+                         &pcrs_struct,
+                         &pOR_digests_struct) != 0);
 
   //Multiple pcrs
   int pcrs[2] = { };
   pcrs[0] = 5;
   pcrs[1] = 3;
   init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
-  CU_ASSERT(apply_policy(sapi_ctx, session.sessionHandle, pcrs_struct) == 0);
+  CU_ASSERT(apply_policy(sapi_ctx,
+                         session.sessionHandle,
+                         &pcrs_struct,
+                         &pOR_digests_struct) == 0);
+
+  //Policy-OR policy
+  //  - these tests require TPM2_ALG_SHA256 so we don't want to run them
+  //    if this changes
+  if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
+  {
+    TPM2B_DIGEST policy1;
+    TPM2B_DIGEST policy2;
+    policy1.size = 0;
+    policy2.size = 0;
+    int pcrs[1] = { };
+    pcrs[0] = 23;
+
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    CU_ASSERT(create_policy_digest(sapi_ctx,
+                                   &pcrs_struct,
+                                   &pOR_digests_struct,
+                                   &policy1) == 0);
+    CU_ASSERT(policy1.size != 0);
+
+    if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
+    {
+      pcrs[0] = 23;
+      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+      CU_ASSERT(create_policy_digest(sapi_ctx,
+                                     &pcrs_struct,
+                                     &pOR_digests_struct,
+                                     &policy2) == 0);
+      CU_ASSERT(policy2.size != 0);
+
+      //pOR_digests_struct.digests[0] = policy1;
+      //pOR_digests_struct.count++;
+      //pOR_digests_struct.digests[1] = policy2;
+      //pOR_digests_struct.count++;
+
+      //printf("pOR_digests_struct.count = %d\n", pOR_digests_struct.count);
+
+      system("tpm2_pcrreset 23");
+
+      //pcrs[0] = 23;
+      //init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+      //CU_ASSERT(apply_policy(sapi_ctx,
+      //                       session.sessionHandle,
+      //                       &pcrs_struct,
+      //                       &pOR_digests_struct) == 0);
+    }
+    else
+    {
+      CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+    }
+  }
+  else
+  {
+    kmyth_log(LOG_WARNING, "KMYTH_HASH_ALG changed from TPM2_ALG_SHA256. ",
+              "apply_policy() Tests need to be updated for new TPM2_ALG."); 
+  }
 
   free_tpm2_resources(&sapi_ctx);
+}
+
+//----------------------------------------------------------------------------
+// test_apply_policy_or
+//----------------------------------------------------------------------------
+void test_apply_policy_or(void)
+{
+  //These tests require TPM2_ALG_SHA256 so we don't want to run them
+  //if this changes
+  if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
+  {
+    TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+    SESSION policySessionOR;
+
+    init_tpm2_connection(&sapi_ctx);
+    TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+
+    TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
+    TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+
+    TPML_DIGEST pHashList = {.count = 0, };
+    TPM2B_DIGEST policy1 = {.size = 0, };
+    TPM2B_DIGEST policy2 = {.size = 0, };
+    TPM2B_DIGEST policyOR = {.size = 0, };
+
+    int pcrs[1] = { };
+    pcrs[0] = 23;
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    CU_ASSERT(create_policy_digest(sapi_ctx,
+                                   &pcrs_struct,
+                                   &pHashList,
+                                   &policy1) == 0);
+    CU_ASSERT(policy1.size != 0);
+
+    if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
+    {
+      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+      CU_ASSERT(create_policy_digest(sapi_ctx,
+                                     &pcrs_struct,
+                                     &pHashList,
+                                     &policy2) == 0);
+      CU_ASSERT(policy2.size != 0);
+
+      pHashList.digests[0] = policy1;
+      pHashList.count++;
+      pHashList.digests[1] = policy2;
+      pHashList.count++;
+
+      create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
+      CU_ASSERT(apply_policy_or(sapi_ctx,
+                                policySessionOR.sessionHandle,
+                                &pHashList) == 0);
+      CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                         policySessionOR.sessionHandle,
+                                         nullCmdAuths,
+                                         &policyOR,
+                                         nullRspAuths) == 0);
+      CU_ASSERT(policyOR.size != 0);
+      Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
+
+      system("tpm2_pcrreset 23");
+    }
+    else
+    {
+      CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+    }
+
+    free_tpm2_resources(&sapi_ctx);
+  }
+  else
+  {
+    kmyth_log(LOG_WARNING, "KMYTH_HASH_ALG changed from TPM2_ALG_SHA256. ",
+              "apply_policy_or() Tests need to be updated for new TPM2_ALG.");
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -769,99 +931,4 @@ void test_rollNonces(void)
   new.size = 0;
   CU_ASSERT(rollNonces(&session, new) != 0);
 
-}
-
-//----------------------------------------------------------------------------
-// test_unseal_apply_policy
-//----------------------------------------------------------------------------
-void test_unseal_apply_policy(void)
-{
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
-  init_tpm2_connection(&sapi_ctx);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
-
-  TPM2B_DIGEST policy1;
-  TPM2B_DIGEST policy2;
-
-  policy1.size = 0;
-  policy2.size = 0;
-
-  int pcrs[1] = { };
-  pcrs[0] = 23;
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy1) == 0);
-  CU_ASSERT(policy1.size != 0);
-
-  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
-  {
-    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-    CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
-    CU_ASSERT(policy2.size != 0);
-
-    SESSION unsealData_session;
-    CU_ASSERT(create_auth_session(sapi_ctx, &unsealData_session, TPM2_SE_POLICY) == 0);
-    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-    CU_ASSERT(unseal_apply_policy(sapi_ctx, unsealData_session.sessionHandle, pcrs_struct, policy1, policy2) == 0);
-    system("tpm2_pcrreset 23");
-  }
-  else
-  {
-    CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
-  }
-
-  free_tpm2_resources(&sapi_ctx);
-}
-
-//----------------------------------------------------------------------------
-// test_apply_policy_or
-//----------------------------------------------------------------------------
-void test_apply_policy_or(void)
-{
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
-  init_tpm2_connection(&sapi_ctx);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
-
-  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
-  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
-
-  TPM2B_DIGEST policy1;
-  TPM2B_DIGEST policy2;
-  TPM2B_DIGEST policyOR;
-
-  policy1.size = 0;
-  policy2.size = 0;
-  policyOR.size = 0;
-
-  int pcrs[1] = { };
-  pcrs[0] = 23;
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-  CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy1) == 0);
-  CU_ASSERT(policy1.size != 0);
-
-  if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
-  {
-    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-    CU_ASSERT(create_policy_digest(sapi_ctx, pcrs_struct, &policy2) == 0);
-    CU_ASSERT(policy2.size != 0);
-
-    TPML_DIGEST pHashList;
-    SESSION policySessionOR;
-    create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
-    CU_ASSERT(apply_policy_or(sapi_ctx, policySessionOR.sessionHandle, &policy1,
-                    &policy2, &pHashList) == 0);
-    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx, policySessionOR.sessionHandle,
-                             nullCmdAuths, &policyOR, nullRspAuths) == 0);
-    CU_ASSERT(policyOR.size != 0);
-    Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
-
-    system("tpm2_pcrreset 23");
-  }
-  else
-  {
-    CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
-  }    
-
-  free_tpm2_resources(&sapi_ctx);
 }

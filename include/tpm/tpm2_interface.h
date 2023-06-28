@@ -194,8 +194,9 @@ const char *getErrorString(TSS2_RC err);
  *        for the upcoming TPM interaction (TSS2 library call) using
  *        a password authorization session
  * 
- * @param[in]  authEntityAuthVal   Authorization value (hash of authorization
- *                                 string) for authorization entity of command.
+ * @param[in]  authEntityAuthVal   Pointer to authorization value (hash of
+ *                                 authorization string) for authorization
+ *                                 entity of command.
  *
  * @param[out] commandAuths        Pointer to the resulting (initialized)
  *                                 command authorization struct (to be passed
@@ -209,7 +210,7 @@ const char *getErrorString(TSS2_RC err);
  *
  * @return 0 if success, 1 if error
  */
-int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
+int init_password_cmd_auth(TPM2B_AUTH * authEntityAuthVal,
                            TSS2L_SYS_AUTH_COMMAND * commandAuths,
                            TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
@@ -235,8 +236,9 @@ int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
  *                                 Tss2_Sys_ReadPublic() API call can be used
  *                                 to retrieve it for the appropriate object.
  *
- * @param[in]  authEntityAuthVal   Authorization value (hash of authorization
- *                                 string) for authorization entity of command.
+ * @param[in]  authEntityAuthVal   Pointer to authorization value (hash of
+ *                                 authorization string) for authorization
+ *                                 entity of command.
  *
  * @param[in]  authCmdParams       Pointer to command parameter buffer. This
  *                                 can be created using the appropriate
@@ -269,10 +271,9 @@ int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
 int init_policy_cmd_auth(SESSION * authSession,
                          TPM2_CC authCmdCode,
                          TPM2B_NAME authEntityName,
-                         TPM2B_AUTH authEntityAuthVal,
+                         TPM2B_AUTH * authEntityAuthVal,
                          uint8_t * authCmdParams,
                          size_t authCmdParams_size,
-                         TPML_PCR_SELECTION authSession_pcrList,
                          TSS2L_SYS_AUTH_COMMAND * commandAuths,
                          TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
@@ -304,8 +305,9 @@ int init_policy_cmd_auth(SESSION * authSession,
  *                                Tss2_Sys_GetCpBuffer() API call used
  *                                to obtain the buffer contents.
  *
- * @param[in]  authEntityAuthVal  Authorization value (hash of authorization
- *                                string) for authorization entity of command.
+ * @param[in]  authEntityAuthVal  Pointer to authorization value (hash of
+ *                                authorization string) for authorization
+ *                                entity of command.
  *
  * @param[in]  responseAuths      Pointer to the response authorization struct
  *                                received in the TPM's response for an API
@@ -317,7 +319,7 @@ int check_response_auth(SESSION * authSession,
                         TPM2_CC authCommandCode,
                         uint8_t * authCmdParams,
                         size_t authCmdParams_size,
-                        TPM2B_AUTH authEntityAuthVal,
+                        TPM2B_AUTH * authEntityAuthVal,
                         TSS2L_SYS_AUTH_RESPONSE * responseAuths);
 
 /**
@@ -433,7 +435,7 @@ int compute_rpHash(TPM2_RC rspCode,
  *
  * @param[in]  auth_pHash             Command or response parameter hash
  *
- * @param[in]  auth_authValue         Authorization value (hash of
+ * @param[in]  auth_authValue         Pointer to authorization value (hash of
  *                                    authorization bytes) for authorization
  *                                    entity of command.
  *
@@ -447,7 +449,7 @@ int compute_rpHash(TPM2_RC rspCode,
  */
 int compute_authHMAC(SESSION auth_session,
                      TPM2B_DIGEST auth_pHash,
-                     TPM2B_AUTH auth_authValue,
+                     TPM2B_AUTH * auth_authValue,
                      TPMA_SESSION auth_sessionAttributes,
                      TPM2B_AUTH * auth_HMAC);
 
@@ -462,19 +464,26 @@ int compute_authHMAC(SESSION auth_session,
  *        criteria) to match the state they are in when the authPolicy digest
  *        is created by this function.
  *
- * @param[in]  sapi_ctx          System API (SAPI) context, must be initialized
- *                               and passed in as pointer to the SAPI context
+ * @param[in]  sapi_ctx               System API (SAPI) context, must be
+ *                                    initialized and passed in as pointer
+ *                                    to the SAPI context
  * 
- * @param[in]  tp_pcrList        PCR Selection List structure specifying
- *                               which PCRs to apply to authorization policy
+ * @param[in]  tp_pcrList             Pointer to PCR Selection List structure
+ *                                    specifying which PCRs to apply to
+ *                                    authorization policy
  *
- * @param[out] policyDigest_out  Authorization policy digest result -
- *                               passed as a pointer to the hash value
+ * @param[in]  tp_policyOR_digestList  Pointer to PCR Selection List structure
+ *                                     specifying which PCRs to apply to
+ *                                     authorization policy
+ *
+ * @param[out] policyDigest_out        Authorization policy digest result -
+ *                                     passed as a pointer to the hash value
  *
  * @return 0 if success, 1 if error. 
  */
 int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
-                         TPML_PCR_SELECTION tp_pcrList,
+                         TPML_PCR_SELECTION * tp_pcrList,
+                         TPML_DIGEST * tp_policyOR_digestList,
                          TPM2B_DIGEST * policyDigest_out);
 
 /**
@@ -525,41 +534,21 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   session whose context will be updated
  *                                   by applying these policy commands.
  * 
- * @param[in]  policySession_pcrList PCR Selection structure for session to
- *                                   be updated
+ * @param[in]  policySession_pcrList Pointer to PCR Selection structure for
+ *                                   session to be updated
  *
+ * @param[in]  policyOR_digestList   Pointer to digest list containing two
+ *                                   policy digests if a policy-OR criteria
+ *                                   is to be applied to the session or
+ *                                   an empty digest list if no policy-OR
+ *                                   criteria is specified
+ * 
  * @return 0 if success, 1 if error. 
  */
 int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPM2_HANDLE policySessionHandle,
-                 TPML_PCR_SELECTION policySession_pcrList);
-
-/**
- * @brief Extension of apply_policy for unsealing. Only calls apply policy
- * if the user has not elected to use a "policy or". If the user has elected
- * to use "policy or" it performs the calculations necessary to authorize an action
- *
- * @param[in]  sapi_ctx              Pointer to the System API (SAPI) context
- *
- * @param[in]  policySessionHandle   Handle referencing authorization policy
- *                                   session whose context will be updated
- *                                   by applying these policy commands.
- *
- * @param[in]  policySession_pcrList PCR Selection structure for session to
- *                                   be updated
- *
- * @param[in]  policy1               one of two policy branches capable of
- *                                   satisfying the compound policy
- *
- * @param[in]  policy2               The second of two policy branches capable
- *                                   of satisfying the compound policy
- *
- * @return 0 if success, 1 if error.
- */
-int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
-                        TPM2_HANDLE policySessionHandle,
-                        TPML_PCR_SELECTION policySession_pcrList,
-                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2);
+                 TPML_PCR_SELECTION * policySession_pcrList,
+                 TPML_DIGEST * policyOR_digestList);
 
 /**
  * @brief Executes the Kmyth-specific authorization policy steps and updates
@@ -572,20 +561,17 @@ int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   session whose context will be updated
  *                                   by applying these policy commands.
  *
- * @param[in]  policy1               one of two policy branches capable of
- *                                   satisfying the compound policy
- *
- * @param[in]  policy2               The second of two policy branches capable
- *                                   of satisfying the compound policy
- *
- * @param[out] pHashList            Pointer to a structure containing each policy
- *                                  hash branch. 2 supported, 8 possible.
+ * @param[in] policyDigestList       Pointer to a structure containing the
+ *                                   list of policy digests for the policy-OR
+ *                                   criteria to be applied (currently only 2
+ *                                   digests values are supported but the
+ *                                   struct can hold up to eight digests)
  *
  * @return 0 if success, 1 if error.
  */
 int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
-                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
-                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList);
+                    TPM2_HANDLE policySessionHandle,
+                    TPML_DIGEST * policyDigestList);
 
 /**
  * @brief Creates a random initial nonce value that the caller can send to the

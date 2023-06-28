@@ -398,7 +398,8 @@ size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset)
   //   - RSA key value is set to an incrementing byte pattern.
   //   - 'size' member of the struct is calculated by adding
   //     up the sizes for each field in the 'publicArea' member.
-  if (init_kmyth_object_template(true, empty_authPolicy,
+  if (init_kmyth_object_template(true,
+                                 &empty_authPolicy,
                                  &test_public->publicArea))
   {
     CU_FAIL("test public object template struct initialization error");

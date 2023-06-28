@@ -442,7 +442,7 @@ const char *getErrorString(TSS2_RC err)
 //############################################################################
 // init_password_cmd_auth()
 //############################################################################
-int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
+int init_password_cmd_auth(TPM2B_AUTH * authEntityAuthVal,
                            TSS2L_SYS_AUTH_COMMAND * commandAuths,
                            TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
@@ -477,9 +477,9 @@ int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
   // digest so cannot be used. For now, we will employ a simple password
   // authorization using either a password specified by the user on the
   // command line or, if none supplied, the default EmptyAuth password value.
-  commandAuths->auths[0].hmac.size = authEntityAuthVal.size;
-  memcpy(commandAuths->auths[0].hmac.buffer, authEntityAuthVal.buffer,
-         authEntityAuthVal.size);
+  commandAuths->auths[0].hmac.size = authEntityAuthVal->size;
+  memcpy(commandAuths->auths[0].hmac.buffer, authEntityAuthVal->buffer,
+         authEntityAuthVal->size);
 
   // initialize lengths of values returned by TPM to zero in response
   // authorization structure sent with command to TPM
@@ -495,10 +495,9 @@ int init_password_cmd_auth(TPM2B_AUTH authEntityAuthVal,
 int init_policy_cmd_auth(SESSION * authSession,
                          TPM2_CC authCmdCode,
                          TPM2B_NAME authEntityName,
-                         TPM2B_AUTH authEntityAuthVal,
+                         TPM2B_AUTH * authEntityAuthVal,
                          uint8_t * authCmdParams,
                          size_t authCmdParams_len,
-                         TPML_PCR_SELECTION authSession_pcrList,
                          TSS2L_SYS_AUTH_COMMAND * commandAuths,
                          TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
@@ -527,7 +526,8 @@ int init_policy_cmd_auth(SESSION * authSession,
   }
   kmyth_log(LOG_DEBUG, "rolled nonces - nonceCaller is now nonceNewer");
   commandAuths->auths[0].nonce.size = callerNonce.size;
-  memcpy(commandAuths->auths[0].nonce.buffer, callerNonce.buffer,
+  memcpy(commandAuths->auths[0].nonce.buffer,
+         callerNonce.buffer,
          commandAuths->auths[0].nonce.size);
 
   // Define session attributes and put them into authorization structure
@@ -545,8 +545,11 @@ int init_policy_cmd_auth(SESSION * authSession,
   // create the authorized command hash - part of the HMAC calculation
   TPM2B_DIGEST cpHash;
 
-  if (compute_cpHash(authCmdCode, authEntityName,
-                     authCmdParams, authCmdParams_len, &cpHash))
+  if (compute_cpHash(authCmdCode,
+                     authEntityName,
+                     authCmdParams,
+                     authCmdParams_len,
+                     &cpHash))
   {
     kmyth_log(LOG_ERR, "error creating the command hash ... exiting");
     return 1;
@@ -557,7 +560,8 @@ int init_policy_cmd_auth(SESSION * authSession,
   if (compute_authHMAC(*authSession,
                        cpHash,
                        authEntityAuthVal,
-                       sessionAttr, &commandAuths->auths[0].hmac))
+                       sessionAttr,
+                       &commandAuths->auths[0].hmac))
   {
     kmyth_log(LOG_ERR, "error computing authorization HMAC ... exiting");
     return 1;
@@ -578,7 +582,7 @@ int check_response_auth(SESSION * authSession,
                         TPM2_CC authCommandCode,
                         uint8_t * authCmdParams,
                         size_t authCmdParams_size,
-                        TPM2B_AUTH authEntityAuthVal,
+                        TPM2B_AUTH * authEntityAuthVal,
                         TSS2L_SYS_AUTH_RESPONSE * responseAuths)
 {
   if (responseAuths->auths[0].hmac.size == 0)
@@ -603,8 +607,11 @@ int check_response_auth(SESSION * authSession,
   //        so the response code must be TPM2_RC_SUCCESS
   TPM2B_DIGEST rpHash;
 
-  if (compute_rpHash(TPM2_RC_SUCCESS, authCommandCode,
-                     authCmdParams, authCmdParams_size, &rpHash))
+  if (compute_rpHash(TPM2_RC_SUCCESS,
+                     authCommandCode,
+                     authCmdParams,
+                     authCmdParams_size,
+                     &rpHash))
   {
     kmyth_log(LOG_ERR,
               "error creating the response parameter hash ... exiting");
@@ -616,8 +623,10 @@ int check_response_auth(SESSION * authSession,
 
   checkHMAC.size = 0;           // start with empty hash
   if (compute_authHMAC(*authSession,
-                       rpHash, authEntityAuthVal,
-                       responseAuths->auths[0].sessionAttributes, &checkHMAC))
+                       rpHash,
+                       authEntityAuthVal,
+                       responseAuths->auths[0].sessionAttributes,
+                       &checkHMAC))
   {
     kmyth_log(LOG_ERR, "error computing HMAC ... exiting");
     return 1;
@@ -650,7 +659,8 @@ int check_response_auth(SESSION * authSession,
 // create_authVal()
 //############################################################################
 int create_authVal(uint8_t * auth_bytes,
-                   size_t auth_bytes_len, TPM2B_AUTH * authValOut)
+                   size_t auth_bytes_len,
+                   TPM2B_AUTH * authValOut)
 {
   if (authValOut == NULL)
   {
@@ -762,7 +772,8 @@ int compute_cpHash(TPM2_CC cmdCode,
 int compute_rpHash(TPM2_RC rspCode,
                    TPM2_CC cmdCode,
                    uint8_t * cmdParams,
-                   size_t cmdParams_size, TPM2B_DIGEST * rpHash_out)
+                   size_t cmdParams_size,
+                   TPM2B_DIGEST * rpHash_out)
 {
   if (rpHash_out == NULL)
   {
@@ -833,7 +844,7 @@ int compute_rpHash(TPM2_RC rspCode,
 //############################################################################
 int compute_authHMAC(SESSION auth_session,
                      TPM2B_DIGEST auth_pHash,
-                     TPM2B_AUTH auth_authValue,
+                     TPM2B_AUTH * auth_authValue,
                      TPMA_SESSION auth_sessionAttributes,
                      TPM2B_AUTH * auth_HMAC)
 {
@@ -846,8 +857,11 @@ int compute_authHMAC(SESSION auth_session,
   // initialize authHMAC (authValue is key for computing the keyed hash)
   HMAC_CTX *hmac_ctx = HMAC_CTX_new();
 
-  if (!HMAC_Init_ex(hmac_ctx, auth_authValue.buffer, auth_authValue.size,
-                    KMYTH_OPENSSL_HASH, NULL))
+  if (!HMAC_Init_ex(hmac_ctx,
+                    auth_authValue->buffer,
+                    auth_authValue->size,
+                    KMYTH_OPENSSL_HASH,
+                    NULL))
   {
     kmyth_log(LOG_ERR, "error initializing HMAC ... exiting");
     HMAC_CTX_free(hmac_ctx);
@@ -916,7 +930,8 @@ int compute_authHMAC(SESSION auth_session,
 // create_policy_digest
 //############################################################################
 int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
-                         TPML_PCR_SELECTION tp_pcrList,
+                         TPML_PCR_SELECTION * tp_pcrList,
+                         TPML_DIGEST * tp_policyOR_digestList,
                          TPM2B_DIGEST * policyDigest_out)
 {
   // declare a session structure variable for the trial policy session
@@ -929,15 +944,18 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // Apply policy to trial session context
-  if (apply_policy(sapi_ctx, trialPolicySession.sessionHandle, tp_pcrList))
+  if (apply_policy(sapi_ctx,
+                   trialPolicySession.sessionHandle,
+                   tp_pcrList,
+                   tp_policyOR_digestList))
   {
     kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
     return 1;
   }
 
   // get the policy digest - no authorization is needed for this call
-  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
-  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+  TSS2L_SYS_AUTH_COMMAND const * nullCmdAuths = NULL;
+  TSS2L_SYS_AUTH_RESPONSE * nullRspAuths = NULL;
   TPM2_RC rc = Tss2_Sys_PolicyGetDigest(sapi_ctx,
                                         trialPolicySession.sessionHandle,
                                         nullCmdAuths,
@@ -973,7 +991,8 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 // create_auth_session
 //############################################################################
 int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                        SESSION * policySession, TPM2_SE session_type)
+                        SESSION * policySession,
+                        TPM2_SE session_type)
 {
   // create initial callerNonce
   TPM2B_NONCE initialNonce;
@@ -1021,7 +1040,8 @@ int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 // start_policy_auth_session()
 //############################################################################
 int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                              SESSION * session, TPM2_SE session_type)
+                              SESSION * session,
+                              TPM2_SE session_type)
 {
   // assign session "type" passed in - Kmyth sessions are either:
   //   - trial (used to compute policy digest value) - TPM2_SE_TRIAL
@@ -1102,14 +1122,16 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 //############################################################################
 int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                  TPM2_HANDLE policySessionHandle,
-                 TPML_PCR_SELECTION policySession_pcrList)
+                 TPML_PCR_SELECTION * policySession_pcrList,
+                 TPML_DIGEST * policyOR_digestList)
 {
   // Apply authorization value (AuthValue) policy command
   TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
   TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
   TPM2_RC rc = Tss2_Sys_PolicyAuthValue(sapi_ctx,
                                         policySessionHandle,
-                                        nullCmdAuths, nullRspAuths);
+                                        nullCmdAuths,
+                                        nullRspAuths);
 
   if (rc != TPM2_RC_SUCCESS)
   {
@@ -1119,9 +1141,10 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
   kmyth_log(LOG_DEBUG, "applied AuthVal policy to session context");
+
   // If the supplied PCR Selection List is not empty, supply PCR policy command
   // (if empty, PCR criteria will not be included in the authorization policy)
-  if (policySession_pcrList.count > 0)
+  if (policySession_pcrList->count > 0)
   {
     // policySession→policyDigest is extended by a call to Tss2_Sys_PolicyPCR()
     //   - an empty (zero length) PCR digest must be passed in
@@ -1133,7 +1156,8 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
                             policySessionHandle,
                             nullCmdAuths,
                             &pcrEmptyDigest,
-                            &policySession_pcrList, nullRspAuths);
+                            policySession_pcrList,
+                            nullRspAuths);
     if (rc != TPM2_RC_SUCCESS)
     {
       kmyth_log(LOG_ERR, "Tss2_Sys_PolicyPCR(): rc = 0x%08X, %s", rc,
@@ -1142,34 +1166,16 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     }
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
   }
-  return 0;
-}
 
-//############################################################################
-// unseal_apply_policy()
-//############################################################################
-int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
-                        TPM2_HANDLE policySessionHandle,
-                        TPML_PCR_SELECTION policySession_pcrList,
-                        TPM2B_DIGEST policy1, TPM2B_DIGEST policy2)
-{
-
-  if (apply_policy(sapi_ctx, policySessionHandle, policySession_pcrList))
+  if (policyOR_digestList->count == 2)
   {
-    return 1;
+    printf("Calling apply_policy_or() ...\n");
+
+    apply_policy_or(sapi_ctx,
+                    policySessionHandle,
+                    policyOR_digestList);
   }
 
-  TPML_DIGEST pHashList = {.count = 0 };
-  for (size_t i = 0; i < 8; i++)
-  {
-    pHashList.digests[i].size = 0;
-  }
-
-  if (policy1.size != 0 && policy2.size != 0)
-  {
-    apply_policy_or(sapi_ctx, policySessionHandle, &policy1, &policy2,
-                    &pHashList);
-  }
   return 0;
 }
 
@@ -1177,26 +1183,27 @@ int unseal_apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
 // apply_policy_or()
 //############################################################################
 int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
-                    TPM2_HANDLE policySessionHandle, TPM2B_DIGEST * policy1,
-                    TPM2B_DIGEST * policy2, TPML_DIGEST * pHashList)
+                    TPM2_HANDLE policySessionHandle,
+                    TPML_DIGEST * policyDigestList)
 {
+  // policy-OR criteria requires minimum of 2 digest values
+  // (for now, we will enforce that it must be only 2 digest values)
+  if (policyDigestList->count != 2)
+  {
+    kmyth_log(LOG_ERR, "invalid policy-OR digest list (count = %lu)",
+              policyDigestList->count);
+    return 1;
+  }
+
   // Apply authorization value (AuthValue) policy command
   TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
   TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
 
-  // initializing all digests to empty buffers
-  for (size_t i; i < 8; i++)
-  {
-    pHashList->digests[0].size = 0;
-  }
-
-  pHashList->count = 2;
-  pHashList->digests[0] = *policy1;
-  pHashList->digests[1] = *policy2;
-
-  TPM2_RC rc =
-    Tss2_Sys_PolicyOR(sapi_ctx, policySessionHandle, nullCmdAuths, pHashList,
-                      nullRspAuths);
+  TPM2_RC rc = Tss2_Sys_PolicyOR(sapi_ctx,
+                                 policySessionHandle,
+                                 nullCmdAuths,
+                                 policyDigestList,
+                                 nullRspAuths);
 
   if (rc != TPM2_RC_SUCCESS)
   {
@@ -1205,6 +1212,7 @@ int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
   kmyth_log(LOG_DEBUG, "applied PCR policyOR to session context");
+
   return 0;
 }
 
