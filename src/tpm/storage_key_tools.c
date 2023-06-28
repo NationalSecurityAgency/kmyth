@@ -504,7 +504,8 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                        TPML_PCR_SELECTION sk_pcrList,
                        TPM2B_DIGEST sk_authPolicy,
                        TPM2_HANDLE * sk_handle,
-                       TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
+                       TPM2B_PRIVATE * sk_private,
+                       TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
   //   - The authVal (hash of user specified authorization string or default
