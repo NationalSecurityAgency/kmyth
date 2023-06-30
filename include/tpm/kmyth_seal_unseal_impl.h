@@ -11,12 +11,235 @@
 #define KMYTH_SEAL_UNSEAL_IMPL_H
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <tss2/tss2_sys.h>
 
 /**
- * @brief Seal data using TPM 2.0.
+ * @brief 'kmyth-seal' wrapper function
+ *
+ * @param[in]  input_path        Filename for file containing data to be
+ *                               kmyth-sealed (string value)
+ * 
+ * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
+ *                               result (.ski formatted data)
+ *
+ * @param[out] output_length     Pointer to length (in bytes) of output
+ *                               buffer containing 'kmyth-unseal' result
+ * 
+ * @param[in]  auth_bytes        Byte array containing user specified
+ *                               authorization value needed to satisfy
+ *                               the authorization policy.
+ *
+ * @param[in]  auth_bytes_len    Length (in bytes) of the user specified
+ *                               authorization value byte buffer.
+ *
+ * @param[in]  owner_auth_bytes  Byte array containing the user specified
+ *                               authorization value for the TPM's 'owner'
+ *                               (storage) hierarchy.
+ *
+ * @param[in]  oa_bytes_len      Length (in bytes) fpr the user specified
+ *                               TPM 'owner' (storage) hierarchy authorization
+ *                               value byte buffer.
+ *
+ * @param[in]  pcrs              Array of integers corresponding to the user
+ *                               specified PCR selection string (used to
+ *                               set the criteria for which, if any, PCRs
+ *                               should be applied to authorization policy)
+ * 
+ * @param[in]  pcrs_len          Length (in bytes) of 'PCR Selection'
+ *                               integer array
+ * 
+ * @param[in]  cipher_string     User specified string that identifies the
+ *                               symmetric cipher to be used by kmyth-seal
+ * 
+ * @param[in]  expected_policy   If the "-e" (expected policy digest) option
+ *                               was invoked by the user, this parameter is
+ *                               used to pass the specified hexadecimal
+ *                               string so that it can be used for one of
+ *                               the policy digests for a policy-OR
+ *                               authorization criteria. If not needed
+ *                               (i.e., policy-OR criteria not specified),
+ *                               a NULL pointer value should be provided.
+ *
+ * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
+ *                               "-g" option (get expected policy digest) was
+ *                               invoked by the user. In this case, no data is
+ *                               kmyth-sealed, but, instead, the policy digest
+ *                               resulting from the specified authorization
+ *                               criteria and the current system state is
+ *                               simply printed to the console.
+ *
+ * @return 0 on success, 1 on error
+ */
+int tpm2_kmyth_seal(uint8_t * input,
+                    size_t input_len,
+                    uint8_t ** output,
+                    size_t *output_len,
+                    uint8_t * auth_bytes,
+                    size_t auth_bytes_len,
+                    uint8_t * owner_auth_bytes,
+                    size_t oa_bytes_len,
+                    int * pcrs,
+                    size_t pcrs_len,
+                    char * cipher_string,
+                    char * expected_policy,
+                    bool bool_trial_only);
+
+/**
+ * @brief 'kmyth-unseal' wrapper function
+ *
+ * @param[in]  input_path        Filename for file containing data to be
+ *                               kmyth-sealed (string value)
+ * 
+ * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
+ *                               result.
+ *
+ * @param[out] output_length     Pointer to length (in bytes) of output
+ *                               buffer containing 'kmyth-unseal' result
+ * 
+ * @param[in]  auth_bytes        Byte array containing user specified
+ *                               authorization value needed to satisfy
+ *                               the authorization policy.
+ *
+ * @param[in]  auth_bytes_len    Length (in bytes) fpr the user specified
+ *                               authorization value byte buffer.
+ *
+ * @param[in]  owner_auth_bytes  Byte array containing the user specified
+ *                               authorization value for the TPM's 'owner'
+ *                               hierarchy.
+ *
+ * @param[in]  oa_bytes_len      Length (in bytes) for the buffer containing
+ *                               the user specified authorization value for
+ *                               the TPM's 'owner' hierarchy.
+ *
+ * @param[in]  bool_policy_or    TODO: remove (should no longer be needed)
+ *
+ * @return 0 on success, 1 on error
+ */
+int tpm2_kmyth_unseal(uint8_t * input,
+                      size_t input_len,
+                      uint8_t ** output,
+                      size_t *output_len,
+                      uint8_t * auth_bytes,
+                      size_t auth_bytes_len,
+                      uint8_t * owner_auth_bytes,
+                      size_t oa_bytes_len,
+                      uint8_t bool_policy_or);
+
+/**
+ * @brief 'kmyth-seal' file using TPM 2.0.
+ *
+ * @param[in]  input_path        Filename for file containing data to be
+ *                               kmyth-sealed (string value)
+ * 
+ * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
+ *                               result (.ski formatted data)
+ *
+ * @param[out] output_length     Pointer to length (in bytes) of output
+ *                               buffer containing 'kmyth-unseal' result
+ * 
+ * @param[in]  auth_bytes        Byte array containing user specified
+ *                               authorization value needed to satisfy
+ *                               the authorization policy.
+ *
+ * @param[in]  auth_bytes_len    Length (in bytes) of the user specified
+ *                               authorization value byte buffer.
+ *
+ * @param[in]  owner_auth_bytes  Byte array containing the user specified
+ *                               authorization value for the TPM's 'owner'
+ *                               (storage) hierarchy.
+ *
+ * @param[in]  oa_bytes_len      Length (in bytes) fpr the user specified
+ *                               TPM 'owner' (storage) hierarchy authorization
+ *                               value byte buffer.
+ *
+ * @param[in]  pcrs              Array of integers corresponding to the user
+ *                               specified PCR selection string (used to
+ *                               set the criteria for which, if any, PCRs
+ *                               should be applied to authorization policy)
+ * 
+ * @param[in]  pcrs_len          Length (in bytes) of 'PCR Selection'
+ *                               integer array
+ * 
+ * @param[in]  cipher_string     User specified string that identifies the
+ *                               symmetric cipher to be used by kmyth-seal
+ * 
+ * @param[in]  expected_policy   If the "-e" (expected policy digest) option
+ *                               was invoked by the user, this parameter is
+ *                               used to pass the specified hexadecimal
+ *                               string so that it can be used for one of
+ *                               the policy digests for a policy-OR
+ *                               authorization criteria. If not needed
+ *                               (i.e., policy-OR criteria not specified),
+ *                               a NULL pointer value should be provided.
+ *
+ * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
+ *                               "-g" option (get expected policy digest) was
+ *                               invoked by the user. In this case, no data is
+ *                               kmyth-sealed, but, instead, the policy digest
+ *                               resulting from the specified authorization
+ *                               criteria and the current system state is
+ *                               simply printed to the console.
+ *
+ * @return 0 on success, 1 on error
+ */
+int tpm2_kmyth_seal_file(char * input_path,
+                         uint8_t ** output,
+                         size_t * output_len,
+                         uint8_t * auth_bytes,
+                         size_t auth_bytes_len,
+                         uint8_t * owner_auth_bytes,
+                         size_t oa_bytes_len,
+                         int * pcrs,
+                         size_t pcrs_len,
+                         char * cipher_string,
+                         char * expected_policy,
+                         bool bool_trial_only);
+
+/**
+ * @brief 'kmyth-unseal' file (.ski formatted) using TPM 2.0.
+ *
+ * @param[in]  input_path        Filename for file containing data to be
+ *                               kmyth-sealed (string value)
+ * 
+ * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
+ *                               result.
+ *
+ * @param[out] output_length     Pointer to length (in bytes) of output
+ *                               buffer containing 'kmyth-unseal' result
+ * 
+ * @param[in]  auth_bytes        Byte array containing user specified
+ *                               authorization value needed to satisfy
+ *                               the authorization policy.
+ *
+ * @param[in]  auth_bytes_len    Length (in bytes) fpr the user specified
+ *                               authorization value byte buffer.
+ *
+ * @param[in]  owner_auth_bytes  Byte array containing the user specified
+ *                               authorization value for the TPM's 'owner'
+ *                               hierarchy.
+ *
+ * @param[in]  oa_bytes_len      Length (in bytes) for the buffer containing
+ *                               the user specified authorization value for
+ *                               the TPM's 'owner' hierarchy.
+ *
+ * @param[in]  bool_policy_or    TODO: remove (should no longer be needed)
+ *
+ * @return 0 on success, 1 on error
+ */
+int tpm2_kmyth_unseal_file(char * input_path,
+                           uint8_t ** output,
+                           size_t * output_length,
+                           uint8_t * auth_bytes,
+                           size_t auth_bytes_len,
+                           uint8_t * owner_auth_bytes,
+                           size_t oa_bytes_len,
+                           uint8_t bool_policy_or);
+
+/**
+ * @brief 'kmyth-seal' data using TPM 2.0.
  *
  * Sealing both encrypts the data and binds the ability to later unseal it
  * to a "policy" consistent with user-specified criteria (e.g., PCR state).
@@ -68,7 +291,7 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                          TPM2B_PRIVATE * sym_key_private);
 
 /**
- * @brief Unseal data using TPM 2.0.
+ * @brief 'kmyth-unseal' data using TPM 2.0.
  *
  * This function takes in all of the parameters needed to unseal a data blob.
  * It does not handle file I/O.
