@@ -121,7 +121,7 @@ void test_check_if_srk(void)
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   TPML_DIGEST pOR_digests_struct ={.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };
-  init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct);
+  init_pcr_selection(sapi_ctx, NULL, 0, NULL, 0, &pcrs_struct);
   create_policy_digest(sapi_ctx,
                        &pcrs_struct,
                        &pOR_digests_struct,
@@ -217,7 +217,7 @@ void test_create_and_load_sk(void)
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   TPML_DIGEST pOR_digests_struct = {.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };
-  init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct);
+  init_pcr_selection(sapi_ctx, NULL, 0, NULL, 0, &pcrs_struct);
 
   create_policy_digest(sapi_ctx,
                        &pcrs_struct,

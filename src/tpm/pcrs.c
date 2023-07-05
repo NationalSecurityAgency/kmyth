@@ -117,8 +117,11 @@ int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
 // init_pcr_selection()
 //############################################################################
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
-                       int *pcrs,
-                       size_t pcrs_len, TPML_PCR_SELECTION * pcrs_struct)
+                       int *pcrs1,
+                       size_t pcrs1_len,
+                       int * pcrs2,
+                       size_t pcrs2_len,
+                       TPML_PCR_SELECTION * pcrs_struct)
 {
   kmyth_log(LOG_DEBUG, "creating PCR select struct from user input string");
 
@@ -131,7 +134,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     return 1;
   }
 
-  // initialize pcrs_struct to a "no PCRs selected" state
+  // initialize 1st PCR selection in struct to a "no PCRs selected" state
   // One set of PCR registers for our TPM
   // Each selection "mask" is 8 bits)
   pcrs_struct->count = 1;
@@ -145,20 +148,20 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
 
   // If the user specified PCRs, update the empty PCR Selection
   // structure appropriately
-  if (pcrs)
+  if (pcrs1)
   {
-    kmyth_log(LOG_DEBUG, "applying user-specified PCRs ...");
+    kmyth_log(LOG_DEBUG, "applying first set of user-specified PCRs ...");
 
-    if (pcrs_len == 0)
+    if (pcrs1_len == 0)
     {
       kmyth_log(LOG_ERR,
                 "non-NULL PCRs array supplied, but length is 0 ... exiting");
       return 1;
     }
 
-    for (size_t i = 0; i < pcrs_len; i++)
+    for (size_t i = 0; i < pcrs1_len; i++)
     {
-      int pcr = pcrs[i];
+      int pcr = pcrs1[i];
 
       if (pcr < 0 || pcr >= numPCRs)
       {
@@ -171,10 +174,61 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
     {
       kmyth_log(LOG_DEBUG,
-                "PCR Selection List Mask (msb->lsb): 0x%02X%02X%02X",
+                "PCR Selection List #1 Mask (msb->lsb): 0x%02X%02X%02X",
                 pcrs_struct->pcrSelections[0].pcrSelect[2],
                 pcrs_struct->pcrSelections[0].pcrSelect[1],
                 pcrs_struct->pcrSelections[0].pcrSelect[0]);
+    }
+
+    // If a policy-OR criteria is specified, the second PCR selection list
+    // integer array should be non-NULL (might be and empty list, but will
+    // be non-NULL)
+    if (pcrs2)
+    {
+      // initialize 2nd PCR selection in struct to a "no PCRs selected" state
+      // One set of PCR registers for our TPM
+      // Each selection "mask" is 8 bits)
+      pcrs_struct->count++;
+      pcrs_struct->pcrSelections[1].hash = KMYTH_HASH_ALG;
+      pcrs_struct->pcrSelections[1].sizeofSelect = (uint8_t)numPCRs / 8;
+      for (int i = 0; i < pcrs_struct->pcrSelections[1].sizeofSelect; i++)
+      {
+        pcrs_struct->pcrSelections[1].pcrSelect[i] = 0;
+      }
+      kmyth_log(LOG_DEBUG, "initialized PCR struct with no PCRs selected");
+
+      if (pcrs2_len == 0)
+      {
+        kmyth_log(LOG_DEBUG, "no PCRs selected for 2nd branch of policy-OR");
+      }
+
+      else
+      {
+        kmyth_log(LOG_DEBUG, "applying second set of user-specified PCRs...");
+  
+        for (size_t i = 0; i < pcrs2_len; i++)
+        {
+          int pcr = pcrs2[i];
+  
+          if (pcr < 0 || pcr >= numPCRs)
+          {
+            kmyth_log(LOG_ERR,
+                      "invalid PCR value specified (%d) ... exiting", pcr);
+            return 1;
+          }
+          pcrs_struct->pcrSelections[1].pcrSelect[pcr / 8] |=
+                                                    (uint8_t)(1 << (pcr % 8));
+        }
+  
+        if (pcrs_struct->pcrSelections[1].sizeofSelect == 3)
+        {
+          kmyth_log(LOG_DEBUG,
+                    "PCR Selection List #2 Mask (msb->lsb): 0x%02X%02X%02X",
+                    pcrs_struct->pcrSelections[1].pcrSelect[2],
+                    pcrs_struct->pcrSelections[1].pcrSelect[1],
+                    pcrs_struct->pcrSelections[1].pcrSelect[0]);
+        }
+      }
     }
   }
 

@@ -128,7 +128,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   // will specify that no PCRs were selected by the user - all-zero mask)
   // This PCR Selection struct will be used in the authorization policy for
   // new, non-primary Kmyth objects.
-  if (init_pcr_selection(sapi_ctx, pcrs, pcrs_len, &(ski.pcr_list)))
+  if (init_pcr_selection(sapi_ctx, pcrs, pcrs_len, NULL, 0, &(ski.pcr_list)))
   {
     kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");
 

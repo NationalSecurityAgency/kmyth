@@ -17,7 +17,7 @@
 
 #include "cipher/cipher.h"
 
-typedef struct Ski_s
+typedef struct Ski
 {
   // List of PCRs chosen to use when kmyth-sealing
   TPML_PCR_SELECTION pcr_list;
