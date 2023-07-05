@@ -11,7 +11,7 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "kmyth.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
 
@@ -26,7 +26,6 @@ static void usage(const char *prog)
           "                       existing files unless the 'force' option is selected.\n"
           " -f or --force         Force the overwrite of an existing output file\n"
           " -s or --stdout        Output unencrypted result to stdout instead of file.\n"
-          " -p or --policy_or     Unseals a file sealed using a compound \"policy or\".\n"
           " -w or --owner_auth    TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
           " -v or --verbose       Enable detailed logging.\n"
           " -h or --help          Help (displays this usage).\n", prog);
@@ -37,7 +36,6 @@ const struct option longopts[] = {
   {"input", required_argument, 0, 'i'},
   {"output", required_argument, 0, 'o'},
   {"force", no_argument, 0, 'f'},
-  {"policy_or", no_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"standard", no_argument, 0, 's'},
   {"verbose", no_argument, 0, 'v'},
@@ -66,7 +64,6 @@ int main(int argc, char **argv)
   char *authString = NULL;
   char *ownerAuthPasswd = "";
   bool forceOverwrite = false;
-  uint8_t bool_policy_or = 0;
   int options;
   int option_index;
 
@@ -81,9 +78,6 @@ int main(int argc, char **argv)
       break;
     case 'f':
       forceOverwrite = true;
-      break;
-    case 'p':
-      bool_policy_or = 1;
       break;
     case 'i':
       inPath = optarg;
@@ -166,10 +160,13 @@ int main(int argc, char **argv)
   uint8_t *output = NULL;
   size_t output_length = 0;
 
-  if (tpm2_kmyth_unseal_file(inPath, &output, &output_length,
-                             (uint8_t *) authString, auth_string_len,
-                             (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                             bool_policy_or))
+  if (tpm2_kmyth_unseal_file(inPath,
+                             &output,
+                             &output_length,
+                             (uint8_t *) authString,
+                             auth_string_len,
+                             (uint8_t *) ownerAuthPasswd,
+                             oa_passwd_len))
   {
     kmyth_clear_and_free(output, output_length);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");

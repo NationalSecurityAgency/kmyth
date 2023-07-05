@@ -12,7 +12,7 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "kmyth.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
 

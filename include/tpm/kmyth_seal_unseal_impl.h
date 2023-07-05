@@ -114,8 +114,6 @@ int tpm2_kmyth_seal(uint8_t * input,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
- * @param[in]  bool_policy_or    TODO: remove (should no longer be needed)
- *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal(uint8_t * input,
@@ -125,8 +123,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       uint8_t * auth_bytes,
                       size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes,
-                      size_t oa_bytes_len,
-                      uint8_t bool_policy_or);
+                      size_t oa_bytes_len);
 
 /**
  * @brief 'kmyth-seal' file using TPM 2.0.
@@ -225,8 +222,6 @@ int tpm2_kmyth_seal_file(char * input_path,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
- * @param[in]  bool_policy_or    TODO: remove (should no longer be needed)
- *
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal_file(char * input_path,
@@ -235,8 +230,7 @@ int tpm2_kmyth_unseal_file(char * input_path,
                            uint8_t * auth_bytes,
                            size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes,
-                           size_t oa_bytes_len,
-                           uint8_t bool_policy_or);
+                           size_t oa_bytes_len);
 
 /**
  * @brief 'kmyth-seal' data using TPM 2.0.

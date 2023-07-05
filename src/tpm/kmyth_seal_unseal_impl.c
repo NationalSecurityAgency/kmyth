@@ -371,8 +371,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       uint8_t * auth_bytes,
                       size_t auth_bytes_len,
                       uint8_t * owner_auth_bytes,
-                      size_t oa_bytes_len,
-                      uint8_t bool_policy_or)
+                      size_t oa_bytes_len)
 {
   if(oa_bytes_len > UINT16_MAX)
   {
@@ -602,12 +601,11 @@ int tpm2_kmyth_seal_file(char *input_path,
 //############################################################################
 int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output,
-                           size_t *output_length,
+                           size_t * output_length,
                            uint8_t * auth_bytes,
                            size_t auth_bytes_len,
                            uint8_t * owner_auth_bytes,
-                           size_t oa_bytes_len,
-                           uint8_t bool_policy_or)
+                           size_t oa_bytes_len)
 {
 
   uint8_t *data = NULL;
@@ -625,8 +623,7 @@ int tpm2_kmyth_unseal_file(char *input_path,
                         auth_bytes,
                         auth_bytes_len,
                         owner_auth_bytes,
-                        oa_bytes_len,
-                        bool_policy_or))
+                        oa_bytes_len))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents ... exiting");
     free(data);
