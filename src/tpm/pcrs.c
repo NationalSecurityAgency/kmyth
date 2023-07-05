@@ -15,6 +15,105 @@
 #include "tpm2_interface.h"
 
 //############################################################################
+// parse_pcrs_string()
+//############################################################################
+int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
+{
+  *pcrs_len = 0;
+
+  if (pcrs_string == NULL)
+  {
+    return 0;
+  }
+
+  kmyth_log(LOG_DEBUG, "parsing PCR selection string");
+
+  *pcrs = NULL;
+  *pcrs = malloc(24 * sizeof(int));
+  size_t pcrs_array_size = 24;
+
+  if (pcrs == NULL)
+  {
+    kmyth_log(LOG_ERR,
+              "failed to allocate memory to parse PCR string ... exiting");
+    return 1;
+  }
+
+  char *pcrs_string_cur = pcrs_string;
+  char *pcrs_string_next = NULL;
+
+  long pcrIndex;
+
+  while (*pcrs_string_cur != '\0')
+  {
+    pcrIndex = strtol(pcrs_string_cur, &pcrs_string_next, 10);
+
+    // Check for overflow or underflow on the strtol call. There
+    // really shouldn't be, because the number of PCRs is small.
+    if ((pcrIndex == LONG_MIN) || (pcrIndex == LONG_MAX))
+    {
+      kmyth_log(LOG_ERR, "invalid PCR value specified ... exiting");
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Check that strtol didn't fail to parse an integer, which is the only
+    // condition that would cause the pointers to match.
+    if (pcrs_string_cur == pcrs_string_next)
+    {
+      kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Look at the first invalid character from the last call to strtol
+    // and confirm it's a blank, a comma, or '\0'. If not there's a disallowed
+    // character in the PCR string.
+    if (!isblank(*pcrs_string_next) && (*pcrs_string_next != ',')
+        && (*pcrs_string_next != '\0'))
+    {
+      kmyth_log(LOG_ERR, "invalid character (%c) in PCR string ... exiting",
+                *pcrs_string_next);
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Step past the invalid characters, checking not to skip past the
+    // end of the string.
+    while ((*pcrs_string_next != '\0')
+           && (isblank(*pcrs_string_next) || (*pcrs_string_next == ',')))
+    {
+      pcrs_string_next++;
+    }
+
+    if (*pcrs_len == pcrs_array_size)
+    {
+      int *new_pcrs = NULL;
+
+      new_pcrs = realloc(*pcrs, pcrs_array_size * 2);
+      if (new_pcrs == NULL)
+      {
+        kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
+        free(*pcrs);
+        *pcrs_len = 0;
+        return 1;
+      }
+      *pcrs = new_pcrs;
+      pcrs_array_size *= 2;
+    }
+    (*pcrs)[*pcrs_len] = (int) pcrIndex;
+    (*pcrs_len)++;
+    pcrs_string_cur = pcrs_string_next;
+    pcrs_string_next = NULL;
+  }
+
+  return 0;
+}
+
+//############################################################################
 // init_pcr_selection()
 //############################################################################
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,

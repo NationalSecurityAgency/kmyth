@@ -13,10 +13,26 @@
 #include <tss2/tss2_sys.h>
 
 /**
- * @brief Converts a PCR selection input string, from the user, into the
- *        TPM 2.0 struct used to specify which PCRs to use in a sealing
- *        (or other) operation.  Also verifies that the user's PCR 
- *        selections are valid. 
+ * @brief Converts a user specified (command-line parameter) PCR selection
+ *        string into an integer array.
+ *
+ * @param[in]  pcrs_string A string specifying comma separated integers that
+ *                         will be used to select which TPM 2.0 PCRs should
+ *                         be applied to the authorization policy.
+ * 
+ * @param[out] pcrs        An array containing integers specifying which 
+ *                         PCRs to apply.
+ *
+ * @param[out] pcrs_len    The length of the PCR selection integer array.
+ *
+ * @return 0 if success, 1 if error
+ */
+int parse_pcrs_string(char * pcrs_string, int ** pcrs, int * pcrs_len);
+
+/**
+ * @brief Converts a PCR selection integer array into the TPM 2.0 struct used
+ *        to specify which PCRs to use in a sealing (or other) operation.
+ *        Also verifies that the user's PCR selections are valid. 
  *
  * @param[in]  sapi_ctx    System API (SAPI) context, must be initialized
  *                         and passed in as pointer to the SAPI context
