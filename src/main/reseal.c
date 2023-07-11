@@ -39,6 +39,9 @@ static void usage(const char *prog)
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
+          " -x or --expected_pcrs   Specifies PCR selection list for expected policy digestp value.\n"
+          "                         Defaults to no PCRs specified (if not specified with this option).\n"
+          "                         Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
           " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
           " -v or --verbose         Enable detailed logging.\n"
@@ -73,6 +76,7 @@ const struct option longopts[] = {
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
   {"expected_policy", required_argument, 0, 'e'},
+  {"expected_pcrs", required_argument, 0, 'x'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
   {"list_ciphers", no_argument, 0, 'l'},
@@ -102,7 +106,9 @@ int main(int argc, char **argv)
   char *pcrsString = NULL;
   char *cipherString = NULL;
   bool forceOverwrite = false;
-  char *expected_policy = NULL;
+  char *expPolicyDigestString = NULL;
+  char *emptyPcrsString = "";
+  char *expPcrsString = NULL;
   uint8_t bool_trial_only = 1; // reseal forces this
 
   // Parse and apply command line options
@@ -121,9 +127,20 @@ int main(int argc, char **argv)
     case 'c':
       cipherString = optarg;
       break;
+    case 'e':
+      expPolicyDigestString = optarg;
+      break;
+    case 'f':
+      forceOverwrite = true;
+      break;
+    case 'h':
+      usage(argv[0]);
+      return 0;
     case 'i':
       inPath = optarg;
       break;
+    case 'l':
+      list_ciphers();
     case 'o':
       // make outPath a copy of the argument for consistency with case
       // where we assign a default outPath value - always allocate memory
@@ -135,20 +152,8 @@ int main(int argc, char **argv)
         memcpy(outPath, optarg, outPath_size);
       }
       break;
-    case 'f':
-      forceOverwrite = true;
-      break;
-    //case 'g':
-    //  bool_trial_only = 1;
-    //  break;
-    case 'e':
-      expected_policy = optarg;
-      break;
     case 'p':
       pcrsString = optarg;
-      break;
-    case 'w':
-      ownerAuthPasswd = optarg;
       break;
     case 'v':
       // always display all log messages (severity threshold = LOG_DEBUG)
@@ -156,18 +161,41 @@ int main(int argc, char **argv)
       set_applog_severity_threshold(LOG_DEBUG);
       set_applog_output_mode(0);
       break;
-    case 'h':
-      usage(argv[0]);
       return 0;
-    case 'l':
-      list_ciphers();
-      return 0;
+    case 'w':
+      ownerAuthPasswd = optarg;
+      break;
+    case 'x':
+      expPcrsString = optarg;
+      break;
     default:
       return 1;
     }
   }
 
-  //Since these originate in main() we know they are null terminated
+  // If the user specifies a PCR selection list for an expected policy,
+  // an expected policy digest must be specified. For the reverse, if an
+  // expected policy digest is specified without an expected policy PCR
+  // selection list, it is assumed that an empty PCR selection list
+  // (no PCRs selected) is desired.
+  if (expPolicyDigestString == NULL)
+  { 
+    if (expPcrsString != NULL)
+    { 
+      kmyth_log(LOG_ERR, "Expected policy PCR selections without digest",
+                         "... exiting");
+      return 1;
+    }
+  }
+  else
+  {
+    if (expPcrsString == NULL)
+    {
+      expPcrsString = emptyPcrsString;
+    }
+  }
+
+  // Since these originate in main() we know they are null terminated
   size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
   size_t oa_passwd_len =
     (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
@@ -259,7 +287,7 @@ int main(int argc, char **argv)
   uint8_t *output = NULL;
   size_t output_length = 0;
 
-  int *pcrs = NULL;
+  int * pcrs = NULL;
   int pcrs_len = 0;
 
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
@@ -271,17 +299,42 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  int * exp_pcrs = NULL;
+  int exp_pcrs_len = 0;
+
+  if (parse_pcrs_string(expPcrsString, &exp_pcrs, &exp_pcrs_len) != 0 ||
+      exp_pcrs_len < 0)
+  {
+    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", expPcrsString);
+    free(outPath);
+    free(output);
+    free(pcrs);
+    free(exp_pcrs);
+    return 1;
+  }
+
+  // Call top-level "kmyth-seal" function
   // Call top-level "kmyth-reseal" function
-  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
-                           (uint8_t *) authString, auth_string_len,
-                           (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, (size_t)pcrs_len, cipherString, expected_policy,
+  if (tpm2_kmyth_seal_file(inPath,
+                           &output,
+                           &output_length,
+                           (uint8_t *) authString,
+                           auth_string_len,
+                           (uint8_t *) ownerAuthPasswd,
+                           oa_passwd_len,
+                           pcrs,
+                           (size_t) pcrs_len,
+                           cipherString,
+                           expPolicyDigestString,
+                           exp_pcrs,
+                           (size_t) exp_pcrs_len,
                            bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-reseal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(pcrs);
+    free(exp_pcrs);
     free(outPath);
     free(output);
     return 1;
@@ -289,18 +342,19 @@ int main(int argc, char **argv)
 
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+  free(pcrs);
+  free(exp_pcrs);
 
   if (write_bytes_to_file(outPath, output, output_length))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
     free(outPath);
     free(output);
-    free(pcrs);
     return 1;
   }
 
-  free(pcrs);
   free(outPath);
   free(output);
+
   return 0;
 }

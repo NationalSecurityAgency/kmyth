@@ -40,10 +40,12 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t auth_bytes_len,
                     uint8_t * owner_auth_bytes,
                     size_t oa_bytes_len,
-                    int *pcrs,
+                    int * pcrs,
                     size_t pcrs_len,
                     char *cipher_string,
                     char *expected_policy,
+                    int * exp_pcrs,
+                    size_t exp_pcrs_len,
                     bool bool_trial_only)
 {
   if(oa_bytes_len > UINT16_MAX)
@@ -128,7 +130,12 @@ int tpm2_kmyth_seal(uint8_t * input,
   // will specify that no PCRs were selected by the user - all-zero mask)
   // This PCR Selection struct will be used in the authorization policy for
   // new, non-primary Kmyth objects.
-  if (init_pcr_selection(sapi_ctx, pcrs, pcrs_len, NULL, 0, &(ski.pcr_list)))
+  if (init_pcr_selection(sapi_ctx,
+                         pcrs,
+                         pcrs_len,
+                         exp_pcrs,
+                         exp_pcrs_len,
+                         &(ski.pcr_list)))
   {
     kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");
 
@@ -183,7 +190,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   // TPML_DIGEST struct to hold the 2 policy branches per TPM specifications
   // (will remain empty if no policy-OR criteria specified)
-  TPML_DIGEST policyOrDigestList = {.count = 0, };
+  TPML_DIGEST policyOrDigestList = { .count = 0, };
 
   // if the user has passed in secondary policy, this indicates that they wish
   // to use a compound policy-OR criteria and the argument they've passed in
@@ -528,10 +535,12 @@ int tpm2_kmyth_seal_file(char *input_path,
                          size_t auth_bytes_len,
                          uint8_t * owner_auth_bytes,
                          size_t oa_bytes_len,
-                         int *pcrs,
+                         int * pcrs,
                          size_t pcrs_len,
                          char *cipher_string,
-                         char *expected_policy,
+                         char *exp_digest,
+                         int * exp_pcrs,
+                         size_t exp_pcrs_len,
                          bool bool_trial_only)
 {
   uint8_t* data = NULL;
@@ -579,7 +588,9 @@ int tpm2_kmyth_seal_file(char *input_path,
                       pcrs,
                       pcrs_len,
                       cipher_string,
-                      expected_policy,
+                      exp_digest,
+                      exp_pcrs,
+                      exp_pcrs_len,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");

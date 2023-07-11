@@ -39,6 +39,9 @@ static void usage(const char *prog)
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
           " -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers \n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
+          " -x or --expected_pcrs   Specifies PCR selection list for expected policy digestp value.\n"
+          "                         Defaults to no PCRs specified (if not specified with this option).\n"
+          "                         Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
           " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
           " -v or --verbose         Enable detailed logging.\n"
@@ -74,6 +77,7 @@ const struct option longopts[] = {
   {"cipher", required_argument, 0, 'c'},
   {"get_exp_policy", no_argument, 0, 'g'},
   {"expected_policy", required_argument, 0, 'e'},
+  {"expected_pcrs", required_argument, 0, 'x'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
   {"list_ciphers", no_argument, 0, 'l'},
@@ -103,7 +107,9 @@ int main(int argc, char **argv)
   char *pcrsString = NULL;
   char *cipherString = NULL;
   bool forceOverwrite = false;
-  char *expected_policy = NULL;
+  char *expPolicyDigestString = NULL;
+  char *emptyPcrsString = "";
+  char *expPcrsString = NULL;
   bool boolTrialOnly = false;
 
   // Parse and apply command line options
@@ -111,7 +117,7 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:e:i:o:c:p:w:fghlv", longopts,
+          getopt_long(argc, argv, "a:c:e:i:o:p:w:x:fghlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -122,9 +128,24 @@ int main(int argc, char **argv)
     case 'c':
       cipherString = optarg;
       break;
+    case 'e':
+      expPolicyDigestString = optarg;
+      break;
+    case 'f':
+      forceOverwrite = true;
+      break;
+    case 'g':
+      boolTrialOnly = true;
+      break;
+    case 'h':
+      usage(argv[0]);
+      return 0;
     case 'i':
       inPath = optarg;
       break;
+    case 'l':
+      list_ciphers();
+      return 0;
     case 'o':
       // make outPath a copy of the argument for consistency with case
       // where we assign a default outPath value - always allocate memory
@@ -136,20 +157,8 @@ int main(int argc, char **argv)
         memcpy(outPath, optarg, outPath_size);
       }
       break;
-    case 'f':
-      forceOverwrite = true;
-      break;
-    case 'g':
-      boolTrialOnly = true;
-      break;
-    case 'e':
-      expected_policy = optarg;
-      break;
     case 'p':
       pcrsString = optarg;
-      break;
-    case 'w':
-      ownerAuthPasswd = optarg;
       break;
     case 'v':
       // always display all log messages (severity threshold = LOG_DEBUG)
@@ -157,12 +166,12 @@ int main(int argc, char **argv)
       set_applog_severity_threshold(LOG_DEBUG);
       set_applog_output_mode(0);
       break;
-    case 'h':
-      usage(argv[0]);
-      return 0;
-    case 'l':
-      list_ciphers();
-      return 0;
+    case 'w':
+      ownerAuthPasswd = optarg;
+      break;
+    case 'x':
+      expPcrsString = optarg;
+      break;
     default:
       return 1;
     }
@@ -177,12 +186,37 @@ int main(int argc, char **argv)
        inPath != NULL ||
        cipherString != NULL ||
        forceOverwrite ||
-       expected_policy != NULL)
+       expPolicyDigestString != NULL ||
+       expPcrsString != NULL)
     {
-      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
+      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, -w , and -x ",
+                             "have no effect when combined with -g");
     }
   }
-  //Since these originate in main() we know they are null terminated
+
+  // If the user specifies a PCR selection list for an expected policy,
+  // an expected policy digest must be specified. For the reverse, if an
+  // expected policy digest is specified without an expected policy PCR
+  // selection list, it is assumed that an empty PCR selection list
+  // (no PCRs selected) is desired.
+  if (expPolicyDigestString == NULL)
+  { 
+    if (expPcrsString != NULL)
+    { 
+      kmyth_log(LOG_ERR, "Expected policy PCR selections without digest",
+                         "... exiting");
+      return 1;
+    }
+  }
+  else
+  {
+    if (expPcrsString == NULL)
+    {
+      expPcrsString = emptyPcrsString;
+    }
+  }
+
+  // Since these originate in main() we know they are null terminated
   size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
   size_t oa_passwd_len =
     (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
@@ -282,20 +316,45 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
     free(outPath);
     free(output);
+    free(pcrs);
+    return 1;
+  }
+
+  int *exp_pcrs = NULL;
+  int exp_pcrs_len = 0;
+
+  if (parse_pcrs_string(expPcrsString, &exp_pcrs, &exp_pcrs_len) != 0 ||
+      exp_pcrs_len < 0)
+  {
+    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", expPcrsString);
+    free(outPath);
+    free(output);
+    free(pcrs);
+    free(exp_pcrs);
     return 1;
   }
 
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
-                           (uint8_t *) authString, auth_string_len,
-                           (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, (size_t)pcrs_len, cipherString, expected_policy,
+  if (tpm2_kmyth_seal_file(inPath,
+                           &output,
+                           &output_length,
+                           (uint8_t *) authString,
+                           auth_string_len,
+                           (uint8_t *) ownerAuthPasswd,
+                           oa_passwd_len,
+                           pcrs,
+                           (size_t) pcrs_len,
+                           cipherString,
+                           expPolicyDigestString,
+                           exp_pcrs,
+                           (size_t) exp_pcrs_len,
                            boolTrialOnly))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(pcrs);
+    free(exp_pcrs);
     free(outPath);
     free(output);
     return 1;
@@ -303,6 +362,8 @@ int main(int argc, char **argv)
 
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+  free(pcrs);
+  free(exp_pcrs);
 
   // only create output file if -g option is NOT passed
   if (boolTrialOnly == 0)
@@ -312,12 +373,10 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
       free(outPath);
       free(output);
-      free(pcrs);
       return 1;
     }
   }
 
-  free(pcrs);
   free(outPath);
   free(output);
   return 0;
