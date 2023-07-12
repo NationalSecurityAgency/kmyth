@@ -109,14 +109,14 @@ int main(int argc, char **argv)
   char *expPolicyDigestString = NULL;
   char *emptyPcrsString = "";
   char *expPcrsString = NULL;
-  uint8_t bool_trial_only = 1; // reseal forces this
+  uint8_t bool_trial_only = 0; // reseal forces this
 
   // Parse and apply command line options
   int options;
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:e:i:o:c:p:w:fhlv", longopts,
+          getopt_long(argc, argv, "a:c:e:i:o:p:w:x:fhlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
