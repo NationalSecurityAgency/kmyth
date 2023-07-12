@@ -308,13 +308,11 @@ if (tpm2_kmyth_seal(unseal_output,
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     kmyth_clear_and_free(unseal_output, unseal_output_len);
+    free(seal_output);
     free(pcrs);
     free(exp_pcrs);
-    kmyth_clear_and_free(unseal_output, unseal_output_len);
-    free(seal_output);
     return 1;
   }
-  kmyth_log(LOG_DEBUG, "after kmyth_seal()");
 
   kmyth_clear_and_free(unseal_output, unseal_output_len);
   kmyth_clear(authString, auth_string_len);
