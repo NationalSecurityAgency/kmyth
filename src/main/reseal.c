@@ -33,10 +33,11 @@ static void usage(const char *prog)
           "options are: \n\n"
           " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
           " -i or --input           Path to file containing the data to be sealed.\n"
-          " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
+          " -o or --output          Destination path for the resealed file. Defaults to input filename (input is renamed) in the CWD.\n"
           " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
           " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
           "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
+          " -g                      Used when resealing a file that already contains a policy OR\n" // may change later
           " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
           " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
           " -x or --expected_pcrs   Specifies PCR selection list for expected policy digestp value.\n"
@@ -72,6 +73,7 @@ const struct option longopts[] = {
   {"input", required_argument, 0, 'i'},
   {"output", required_argument, 0, 'o'},
   {"force", no_argument, 0, 'f'},
+  {"previous_policy_or", no_argument, 0, 'g'},
   {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
   {"cipher", required_argument, 0, 'c'},
@@ -100,7 +102,6 @@ int main(int argc, char **argv)
   // Initialize parameters that might be modified by command line options
   char *inPath = NULL;
   char *outPath = NULL;
-  size_t outPath_size = 0;
   char *authString = NULL;
   char *ownerAuthPasswd = "";
   char *pcrsString = NULL;
@@ -142,15 +143,7 @@ int main(int argc, char **argv)
     case 'l':
       list_ciphers();
     case 'o':
-      // make outPath a copy of the argument for consistency with case
-      // where we assign a default outPath value - always allocate memory
-      // so we can always free it
-      outPath_size = strlen(optarg) + 1;
-      if (outPath_size > 1)
-      {
-        outPath = malloc(outPath_size * sizeof(char));
-        memcpy(outPath, optarg, outPath_size);
-      }
+      outPath = optarg;
       break;
     case 'p':
       pcrsString = optarg;
@@ -209,152 +202,155 @@ int main(int argc, char **argv)
       kmyth_clear(authString, auth_string_len);
     }
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(outPath);
+    return 1;
+  }
+
+  // Check that the -e 'expected policy' was specified
+  if (expPolicyDigestString == NULL)
+  {
+    kmyth_log(LOG_ERR, "no expected policy specified ... exiting");
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, auth_string_len);
+    }
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     return 1;
   }
 
   // If output file not specified, set output path to basename(inPath) with
   // a .ski extension in the directory that the application is being run from.
+  struct stat st = { 0 };
   if (outPath == NULL)
   {
-    // create buffer to hold default filename derived from input filename
-    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
-    memset(default_fn, '\0', sizeof(default_fn));
-
-    // Initialize default filename to basename() of input path, truncating if
-    // necessary. The maximum size of this "root" value is the must allow space
-    // to add a '.' delimiter (1 byte) and the default extension
-    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
-    size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
-    max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
-    strncpy(default_fn, basename(inPath), max_root_len);
-
-    // remove any leading '.'s
-    while (*default_fn == '.')
+    // default output filename is input filename
+    outPath = inPath;
+  }
+  else
+  {
+    // if user specified output filename does not match default
+    if (strcmp(outPath, inPath) != 0)
     {
-      memmove(default_fn, default_fn + 1, sizeof(default_fn) - 1);
+      // check if file exists - if so, stop unless user wants overwrite
+      if (!stat(outPath, &st) && !forceOverwrite)
+      {
+        kmyth_log(LOG_ERR,
+                  "output filename (%s) already exists ... exiting",
+                   outPath);
+        kmyth_clear(authString, auth_string_len);
+        kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+        return 1;
+      }
     }
-
-    // ensure that this intermediate result is not an empty string
-    if (strlen(default_fn) == 0)
-    {
-      kmyth_log(LOG_ERR, "invalid/empty default filename root ... exiting");
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-      return 1;
-    }
-
-    // everything beyond first non-leading '.' is treated as extension
-    char *ext_ptr = strstr(default_fn, ".");
-    if (ext_ptr == NULL)
-    {
-      // no filename extension found - just add trailing '.'
-      strncat(default_fn, ".", 1);
-    }
-    else
-    {
-      // input fileame extension delimiter found, null everything after it
-      // The type conversion here is safe assuming inPath is not too pathological,
-      // so that's something we should think about.
-      ptrdiff_t filename_portion = ext_ptr - default_fn;
-      size_t tail_length = sizeof(default_fn) - (size_t)filename_portion;
-      memset(ext_ptr + 1, '\0', tail_length);
-    }
-
-    // concatenate default filename root and extension
-    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
-                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
-
-    // Make sure default filename we constructed doesn't already exist
-    struct stat st = { 0 };
-    if (!stat(default_fn, &st) && !forceOverwrite)
-    {
-      kmyth_log(LOG_ERR,
-                "default output filename (%s) already exists ... exiting",
-                default_fn);
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-      return 1;
-    }
-
-    // Go ahead and make the default value the output path
-    outPath_size = strlen(default_fn);
-    outPath = malloc(outPath_size * sizeof(char));
-    memcpy(outPath, default_fn, outPath_size);
-    kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
-  uint8_t *output = NULL;
-  size_t output_length = 0;
+  uint8_t *unseal_output = NULL;
+  size_t unseal_output_len = 0;
+
+// Call top-level "kmyth-unseal" function
+  if (tpm2_kmyth_unseal_file(inPath,
+                             &unseal_output,
+                             &unseal_output_len,
+                             (uint8_t *) authString,
+                             auth_string_len,
+                             (uint8_t *) ownerAuthPasswd,
+                             oa_passwd_len))
+  {
+    kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
+    kmyth_clear(authString, auth_string_len);
+    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    return 1;
+  }
 
   int * pcrs = NULL;
-  int pcrs_len = 0;
+  size_t pcrs_len = 0;
 
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    free(outPath);
-    free(output);
     free(pcrs);
     return 1;
   }
 
   int * exp_pcrs = NULL;
-  int exp_pcrs_len = 0;
+  size_t exp_pcrs_len = 0;
 
   if (parse_pcrs_string(expPcrsString, &exp_pcrs, &exp_pcrs_len) != 0 ||
       exp_pcrs_len < 0)
   {
     kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", expPcrsString);
-    free(outPath);
-    free(output);
     free(pcrs);
     free(exp_pcrs);
     return 1;
   }
 
-  // Call top-level "kmyth-seal" function
-  // Call top-level "kmyth-reseal" function
-  if (tpm2_kmyth_seal_file(inPath,
-                           &output,
-                           &output_length,
-                           (uint8_t *) authString,
-                           auth_string_len,
-                           (uint8_t *) ownerAuthPasswd,
-                           oa_passwd_len,
-                           pcrs,
-                           (size_t) pcrs_len,
-                           cipherString,
-                           expPolicyDigestString,
-                           exp_pcrs,
-                           (size_t) exp_pcrs_len,
-                           bool_trial_only))
+  uint8_t *seal_output = NULL;
+  size_t seal_output_len = 0;
+
+// Call top-level "kmyth-seal" function
+if (tpm2_kmyth_seal(unseal_output,
+                    unseal_output_len,
+                    &seal_output,
+                    &seal_output_len,
+                    (uint8_t *) authString,
+                    auth_string_len,
+                    (uint8_t *) ownerAuthPasswd,
+                    oa_passwd_len,
+                    pcrs,
+                    (size_t) pcrs_len,
+                    cipherString,
+                    expPolicyDigestString,
+                    exp_pcrs,
+                    exp_pcrs_len,
+                    bool_trial_only))
   {
-    kmyth_log(LOG_ERR, "kmyth-reseal error ... exiting");
+    kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
     free(pcrs);
     free(exp_pcrs);
-    free(outPath);
-    free(output);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
+    free(seal_output);
     return 1;
   }
 
+  kmyth_clear_and_free(unseal_output, unseal_output_len);
+  free(pcrs);
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
   free(pcrs);
   free(exp_pcrs);
 
-  if (write_bytes_to_file(outPath, output, output_length))
+  // rename input file to <input filename>.orig to preserve it
+  char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
+  strncpy(renamePath, inPath, strlen(inPath));
+  strncat(renamePath, ".orig", 5);
+  if (!stat(renamePath, &st) && !forceOverwrite)
   {
-    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    free(outPath);
-    free(output);
+    kmyth_log(LOG_ERR,
+          "output filename (%s) already exists ... exiting",
+          renamePath);
+    free(seal_output);
+    free(renamePath);
     return 1;
   }
+  
+  if (rename((const char *) inPath, (const char *) renamePath) != 0)
+  {
+    kmyth_log(LOG_ERR, "renaming of input file failed ... exiting");
+    free(seal_output);
+    free(renamePath);
+    return 1;
+  }
+  free(renamePath);
+  if (write_bytes_to_file(outPath, seal_output, seal_output_len))
+  {
+    kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+    free(seal_output);
+  }
 
-  free(outPath);
-  free(output);
+  kmyth_clear_and_free(seal_output, seal_output_len);
 
   return 0;
 }
