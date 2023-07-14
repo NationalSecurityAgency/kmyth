@@ -309,7 +309,7 @@ int main(int argc, char **argv)
   size_t output_length = 0;
 
   int *pcrs = NULL;
-  int pcrs_len = 0;
+  size_t pcrs_len = 0;
 
   if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
   {
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
   }
 
   int *exp_pcrs = NULL;
-  int exp_pcrs_len = 0;
+  size_t exp_pcrs_len = 0;
 
   if (parse_pcrs_string(expPcrsString, &exp_pcrs, &exp_pcrs_len) != 0 ||
       exp_pcrs_len < 0)

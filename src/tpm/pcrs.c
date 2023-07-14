@@ -17,7 +17,7 @@
 //############################################################################
 // parse_pcrs_string()
 //############################################################################
-int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
+int parse_pcrs_string(char *pcrs_string, int **pcrs, size_t *pcrs_len)
 {
   *pcrs_len = 0;
 

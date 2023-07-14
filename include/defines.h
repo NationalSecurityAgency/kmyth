@@ -84,6 +84,15 @@
 #define MAX_RETRIES 3
 
 /**
+ * The kmyth PCR_SELECTION_LISTS struct is used to specify multiple PCR
+ * selection criteria, if a policy-OR criteria is needed. This constant
+ * defines the maximum numver of PCR criteria supported and is used to
+ * size the array of TPML_PCR_SELECTION structs than can be encapsulated
+ * within a PCR_SELECTION_LISTS struct
+ */
+#define MAX_PCR_SEL_CNT 2
+
+/**
  * In TPM 2.0, the size value for a key or data value (unique parameter)
  * buffer can be set to zero at creation time. As this is the only time
  * we specifically set the size parameter for a data or key value buffer,

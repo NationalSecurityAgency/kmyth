@@ -8,6 +8,8 @@
 #ifndef TPM2_INTERFACE_H
 #define TPM2_INTERFACE_H
 
+#include "defines.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -96,8 +98,12 @@ typedef struct
  */
 typedef struct
 {
-  size_t count;                 // number of PCR selection lists
-  TPML_PCR_SELECTION * pcrList; // array of PCR selection lists
+  // number of PCR selection lists
+  size_t count;
+
+  // array (up to MAX_PCR_SEL_CNT) of PCR selection lists
+  TPML_PCR_SELECTION pcrList[MAX_PCR_SEL_CNT];
+
 } PCR_SELECTION_LISTS;
 
 /**

@@ -27,7 +27,7 @@
  *
  * @return 0 if success, 1 if error
  */
-int parse_pcrs_string(char * pcrs_string, int ** pcrs, int * pcrs_len);
+int parse_pcrs_string(char * pcrs_string, int ** pcrs, size_t * pcrs_len);
 
 /**
  * @brief Converts a PCR selection integer array into the TPM 2.0 struct used
