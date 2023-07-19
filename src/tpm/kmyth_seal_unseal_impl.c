@@ -44,8 +44,6 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t pcrs_len,
                     char *cipher_string,
                     char *expected_policy,
-                    int * exp_pcrs,
-                    size_t exp_pcrs_len,
                     bool bool_trial_only)
 {
   if(oa_bytes_len > UINT16_MAX)
@@ -537,8 +535,6 @@ int tpm2_kmyth_seal_file(char *input_path,
                          size_t pcrs_len,
                          char *cipher_string,
                          char *exp_digest,
-                         int * exp_pcrs,
-                         size_t exp_pcrs_len,
                          bool bool_trial_only)
 {
   uint8_t* data = NULL;
@@ -587,8 +583,6 @@ int tpm2_kmyth_seal_file(char *input_path,
                       pcrs_len,
                       cipher_string,
                       exp_digest,
-                      exp_pcrs,
-                      exp_pcrs_len,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data ... exiting");

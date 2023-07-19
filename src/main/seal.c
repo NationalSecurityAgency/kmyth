@@ -30,22 +30,46 @@ static void usage(const char *prog)
   fprintf(stdout,
           "\nusage: %s [options] \n\n"
           "options are: \n\n"
-          " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
-          " -i or --input           Path to file containing the data to be sealed.\n"
-          " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
-          " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
-          " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
-          "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
-          " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
-          " -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers \n"
-          " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
-          " -x or --expected_pcrs   Specifies PCR selection list for expected policy digestp value.\n"
-          "                         Defaults to no PCRs specified (if not specified with this option).\n"
-          "                         Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
+          " -a or --auth_string     String used to create 'authVal' digest.\n"
+          "                         Defaults to empty string.\n"
+          " -c or --cipher          Specifies the cipher type to use.\n"
+          "                         Defaults to \'%s\'\n"
+          " -e or --expected_policy Specifies pairs of additional PCR\n"
+          "                         selection and policy digest values to\n"
+          "                         include as alternative criteria for a\n"
+          "                         policy-OR based authorization.\n"
+          "                         Encapsulate in double quotes, delimit\n"
+          "                         entries within a pair using a colon, and\n"
+          "                         delimit pair values using commas. (e.g.,\n"
+          "                         \'0, 1\':0x01..10, \'1, 2\':0x10..01\')\n"
+          "                         Empty or missing PCR selection criteria\n"
+          "                         is invalid (negates need for policy-OR).\n"
+          "                         More than seven pair values is invalid\n"
+          "                         (TPM only supports up to eight policy-OR\n"
+          "                         branches).\n"
+          " -f or --force           Force the overwrite of an existing .ski\n"
+          "                         file when using default output.\n"
+          " -g or --get_exp_policy  Retrieves the policy digest associated\n"
+          "                         with the specified authorization string,\n"
+          "                         specified PCR selections, and/or current\n"
+          "                         system configuration (PCR values)\n"
+          "                         authorization. Defaults to emptyAuth\n"
+          "                         to match TPM default.\n"
+          " -h or --help            Help (displays this usage).\n"
+          " -i or --input           Path to file containing the data to be\n"
+          "                         sealed.\n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
-          " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
-          " -v or --verbose         Enable detailed logging.\n"
-          " -h or --help            Help (displays this usage).\n", prog,
+          " -o or --output          Destination path for the sealed file.\n"
+          "                         Defaults to <filename>.ski in the CWD.\n"
+          " -p or --pcrs_list       List of TPM platform configuration\n"
+          "                         registers (PCRs) to apply to\n"
+          "                         authorization policy. Defaults to no\n"
+          "                         PCRs specified. Encapsulate in single\n"
+          "                         quotes and delimit integer values using\n"
+          "                         commas. (e.g. \'0, 1, 2\').\n"
+          " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy\n"
+          " -v or --verbose         Enable detailed logging.\n",
+          prog,
           cipher_list[0].cipher_name);
 }
 
@@ -77,7 +101,6 @@ const struct option longopts[] = {
   {"cipher", required_argument, 0, 'c'},
   {"get_exp_policy", no_argument, 0, 'g'},
   {"expected_policy", required_argument, 0, 'e'},
-  {"expected_pcrs", required_argument, 0, 'x'},
   {"verbose", no_argument, 0, 'v'},
   {"help", no_argument, 0, 'h'},
   {"list_ciphers", no_argument, 0, 'l'},
@@ -108,8 +131,6 @@ int main(int argc, char **argv)
   char *cipherString = NULL;
   bool forceOverwrite = false;
   char *expPolicyDigestString = NULL;
-  char *emptyPcrsString = "";
-  char *expPcrsString = NULL;
   bool boolTrialOnly = false;
 
   // Parse and apply command line options
@@ -117,7 +138,7 @@ int main(int argc, char **argv)
   int option_index;
 
   while ((options =
-          getopt_long(argc, argv, "a:c:e:i:o:p:w:x:fghlv", longopts,
+          getopt_long(argc, argv, "a:c:e:i:o:p:w:fghlv", longopts,
                       &option_index)) != -1)
   {
     switch (options)
@@ -169,9 +190,6 @@ int main(int argc, char **argv)
     case 'w':
       ownerAuthPasswd = optarg;
       break;
-    case 'x':
-      expPcrsString = optarg;
-      break;
     default:
       return 1;
     }
@@ -186,40 +204,16 @@ int main(int argc, char **argv)
        inPath != NULL ||
        cipherString != NULL ||
        forceOverwrite ||
-       expPolicyDigestString != NULL ||
-       expPcrsString != NULL)
+       expPolicyDigestString != NULL)
     {
-      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, -w , and -x ",
-                             "have no effect when combined with -g");
-    }
-  }
-
-  // If the user specifies a PCR selection list for an expected policy,
-  // an expected policy digest must be specified. For the reverse, if an
-  // expected policy digest is specified without an expected policy PCR
-  // selection list, it is assumed that an empty PCR selection list
-  // (no PCRs selected) is desired.
-  if (expPolicyDigestString == NULL)
-  { 
-    if (expPcrsString != NULL)
-    { 
-      kmyth_log(LOG_ERR, "Expected policy PCR selections without digest",
-                         "... exiting");
-      return 1;
-    }
-  }
-  else
-  {
-    if (expPcrsString == NULL)
-    {
-      expPcrsString = emptyPcrsString;
+      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have ",
+                             "no effect when combined with -g");
     }
   }
 
   // Since these originate in main() we know they are null terminated
   size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
-  size_t oa_passwd_len =
-    (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
+  size_t oa_passwd_len = (ownerAuthPasswd==NULL) ? 0 : strlen(ownerAuthPasswd);
 
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL && !boolTrialOnly)
@@ -234,7 +228,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  // If output file not specified, set output path to basename(inPath) with
+  // If output file not specified, set output path to basename (inPath) with
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL && !boolTrialOnly)
   {
@@ -320,20 +314,6 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  int *exp_pcrs = NULL;
-  size_t exp_pcrs_len = 0;
-
-  if (parse_pcrs_string(expPcrsString, &exp_pcrs, &exp_pcrs_len) != 0 ||
-      exp_pcrs_len < 0)
-  {
-    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", expPcrsString);
-    free(outPath);
-    free(output);
-    free(pcrs);
-    free(exp_pcrs);
-    return 1;
-  }
-
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath,
                            &output,
@@ -346,15 +326,12 @@ int main(int argc, char **argv)
                            (size_t) pcrs_len,
                            cipherString,
                            expPolicyDigestString,
-                           exp_pcrs,
-                           (size_t) exp_pcrs_len,
                            boolTrialOnly))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, auth_string_len);
     kmyth_clear(ownerAuthPasswd, oa_passwd_len);
     free(pcrs);
-    free(exp_pcrs);
     free(outPath);
     free(output);
     return 1;
@@ -363,7 +340,6 @@ int main(int argc, char **argv)
   kmyth_clear(authString, auth_string_len);
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
   free(pcrs);
-  free(exp_pcrs);
 
   // only create output file if -g option is NOT passed
   if (boolTrialOnly == 0)

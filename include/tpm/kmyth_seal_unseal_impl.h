@@ -63,19 +63,6 @@
  *                               (i.e., policy-OR criteria not specified),
  *                               a NULL pointer value should be provided.
  *
- * @param[in]  exp_pcrs          Array of integers corresponding to the user
- *                               specified PCR selection string (used to
- *                               set the criteria for which, if any, PCRs
- *                               should be applied in conjunction with an
- *                               alternate (expected) authorization policy
- *                               digest. Should be NULL if an expected
- *                               policy digest (policy-OR criteria) is not
- *                               specified.
- * 
- * @param[in]  exp_pcrs_len      Length (in bytes) of 'PCR Selection'
- *                               integer array for alternate (expected)
- *                               authorization policy
- * 
  * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
  *                               "-g" option (get expected policy digest) was
  *                               invoked by the user. In this case, no data is
@@ -98,8 +85,6 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t pcrs_len,
                     char * cipher_string,
                     char * exp_digest,
-                    int * exp_pcrs,
-                    size_t exp_pcrs_len,
                     bool bool_trial_only);
 
 /**
@@ -187,19 +172,6 @@ int tpm2_kmyth_unseal(uint8_t * input,
  *                               (i.e., policy-OR criteria not specified),
  *                               a NULL pointer value should be provided.
  *
- * @param[in]  exp_pcrs          Array of integers corresponding to the user
- *                               specified PCR selection string (used to
- *                               set the criteria for which, if any, PCRs
- *                               should be applied in conjunction with an
- *                               alternate (expected) authorization policy
- *                               digest. Should be NULL if an expected
- *                               policy digest (policy-OR criteria) is not
- *                               specified.
- * 
- * @param[in]  exp_pcrs_len      Length (in bytes) of 'PCR Selection'
- *                               integer array for alternate (expected)
- *                               authorization policy
- * 
  * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
  *                               "-g" option (get expected policy digest) was
  *                               invoked by the user. In this case, no data is
@@ -221,8 +193,6 @@ int tpm2_kmyth_seal_file(char * input_path,
                          size_t pcrs_len,
                          char * cipher_string,
                          char * exp_digest,
-                         int * exp_pcrs,
-                         size_t exp_pcrs_len,
                          bool bool_trial_only);
 
 /**

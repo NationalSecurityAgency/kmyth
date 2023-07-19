@@ -95,9 +95,6 @@ void test_tpm2_kmyth_seal(void)
   char *expected_policy = NULL;
   uint8_t bool_trial_only = 0;
 
-  int *exp_pcrs = NULL;
-  size_t exp_pcrs_len = 0;
-
   // Check that a fake cipher with other valid inputs causes error and
   // the output is not initialized or populated.
   CU_ASSERT(tpm2_kmyth_seal(input,
@@ -112,8 +109,6 @@ void test_tpm2_kmyth_seal(void)
                             pcrs_len,
                             "fake_cipher",
                             expected_policy,
-                            exp_pcrs,
-                            exp_pcrs_len,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -132,8 +127,6 @@ void test_tpm2_kmyth_seal(void)
                             pcrs_len,
                             NULL,
                             expected_policy,
-                            exp_pcrs,
-                            exp_pcrs_len,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -152,8 +145,6 @@ void test_tpm2_kmyth_seal(void)
                             pcrs_len,
                             NULL,
                             expected_policy,
-                            exp_pcrs,
-                            exp_pcrs_len,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -172,8 +163,6 @@ void test_tpm2_kmyth_seal(void)
                             pcrs_len,
                             NULL,
                             expected_policy,
-                            exp_pcrs,
-                            exp_pcrs_len,
                             bool_trial_only) == 0 );
 
   uint8_t *plaintext = NULL;
@@ -265,8 +254,6 @@ void test_tpm2_kmyth_seal_file(void)
   int *pcrs = NULL;
   size_t pcrs_len = 0;
   char *expected_policy = NULL;
-  int *exp_pcrs = NULL;
-  size_t exp_pcrs_len = 0;
   uint8_t bool_trial_only = 0;
 
   // Check a NULL input path fails and doesn't change output.
@@ -281,8 +268,6 @@ void test_tpm2_kmyth_seal_file(void)
                                  pcrs_len,
                                  NULL,
                                  expected_policy,
-                                 exp_pcrs,
-                                 exp_pcrs_len,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -299,8 +284,6 @@ void test_tpm2_kmyth_seal_file(void)
                                  pcrs_len,
                                  NULL,
                                  expected_policy,
-                                 exp_pcrs,
-                                 exp_pcrs_len,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
