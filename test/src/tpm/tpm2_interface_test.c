@@ -608,7 +608,7 @@ void test_create_policy_digest(void)
   //Valid test with one PCR selected
   int pcrs[2] = { };
   pcrs[0] = 5;
-  init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct);
+  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
   out.size = 0;
   CU_ASSERT(create_policy_digest(sapi_ctx,
                                  &pcrs_struct,
@@ -622,7 +622,7 @@ void test_create_policy_digest(void)
   //Valid test with multiple PCRs selected
   out.size = 0;
   pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, NULL, 0, &pcrs_struct);
+  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
   CU_ASSERT(create_policy_digest(sapi_ctx,
                                  &pcrs_struct,
                                  &pOR_digests_struct,
@@ -738,7 +738,7 @@ void test_apply_policy(void)
   int pcrs[2] = { };
   pcrs[0] = 5;
   pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, NULL, 0, &pcrs_struct);
+  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
   CU_ASSERT(apply_policy(sapi_ctx,
                          session.sessionHandle,
                          &pcrs_struct,
@@ -756,7 +756,7 @@ void test_apply_policy(void)
     int pcrs[1] = { };
     pcrs[0] = 23;
 
-    init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct);
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx,
                                    &pcrs_struct,
                                    &pOR_digests_struct,
@@ -766,7 +766,7 @@ void test_apply_policy(void)
     if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
     {
       pcrs[0] = 23;
-      init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct);
+      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
       CU_ASSERT(create_policy_digest(sapi_ctx,
                                      &pcrs_struct,
                                      &pOR_digests_struct,
@@ -828,7 +828,7 @@ void test_apply_policy_or(void)
 
     int pcrs[1] = { };
     pcrs[0] = 23;
-    init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct);
+    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx,
                                    &pcrs_struct,
                                    &pHashList,
@@ -837,7 +837,7 @@ void test_apply_policy_or(void)
 
     if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
     {
-      init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct);
+      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
       CU_ASSERT(create_policy_digest(sapi_ctx,
                                      &pcrs_struct,
                                      &pHashList,

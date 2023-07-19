@@ -133,8 +133,6 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (init_pcr_selection(sapi_ctx,
                          pcrs,
                          pcrs_len,
-                         exp_pcrs,
-                         exp_pcrs_len,
                          &(ski.pcr_list)))
   {
     kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");

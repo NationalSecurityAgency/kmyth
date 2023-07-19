@@ -355,7 +355,7 @@ void test_tpm2_kmyth_seal_data(void)
   TPM2B_AUTH authVal = {.size = 0 };
   create_authVal(NULL, 0, &authVal);
 
-  init_pcr_selection(sapi_ctx, NULL, 0, NULL, 0, &(ski.pcr_list));
+  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_list));
 
   TPM2B_DIGEST authPolicy = {.size = 0 };
   create_policy_digest(sapi_ctx,
@@ -461,7 +461,7 @@ void test_tpm2_kmyth_unseal_data(void)
 
   TPM2B_DIGEST authPolicy = {.size = 0, };
 
-  init_pcr_selection(sapi_ctx, NULL, 0, NULL, 0, &(ski.pcr_list));
+  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_list));
 
   create_policy_digest(sapi_ctx,
                        &(ski.pcr_list),

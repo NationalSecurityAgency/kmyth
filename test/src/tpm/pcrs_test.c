@@ -51,31 +51,31 @@ void test_init_pcr_selection(void)
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
 
   //No PCRs selected
-  CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, NULL, 0, &pcrs_struct) == 0);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
 
   //One PCR selected
   pcrs[0] = 5;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct) == 0);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 0);
 
   //Multiple PCRS selected
   pcrs[1] = 3;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, NULL, 0, &pcrs_struct) == 0);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 0);
 
   //Invalid PCR selected
   pcrs[0] = -3;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, NULL, 0, &pcrs_struct) == 1);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 1);
 
   //Valid AND invalid PCRs
   pcrs[0] = 2;
   pcrs[1] = -4;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, NULL, 0, &pcrs_struct) == 1);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 1);
 
   //Check for length 0 with non-NULL pcrs array
   pcrs[1] = 3;                  //make all entries valid
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 0, NULL, 0, &pcrs_struct) == 1);
+  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 0, &pcrs_struct) == 1);
 
   //NULL TPM context
-  CU_ASSERT(init_pcr_selection(NULL, pcrs, 2, NULL, 0, &pcrs_struct) != 0);
+  CU_ASSERT(init_pcr_selection(NULL, pcrs, 2, &pcrs_struct) != 0);
 }
 
 //----------------------------------------------------------------------------
