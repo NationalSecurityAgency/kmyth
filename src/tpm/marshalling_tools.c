@@ -691,17 +691,6 @@ Ski get_default_ski(void)
     .enc_data_size = 0
   };
 
-  // default PCR_SELECTIONS struct contains one TPML_PCR_SELECTION struct
-  // with an empty (no PCRs selected) mask
-  ret.pcr_sel.count++;
-  ret.pcr_sel.pcrList[0] = malloc(sizeof(TPML_PCR_SELECTION));
-  if (ret.pcr_sel.pcrList[0] == NULL)
-  {
-    kmyth_log(LOG_ERR, "default (empty) PCR selections list malloc() error");
-  }
-
-  ret.pcr_sel.pcrList[0]->count = 0;
-
   return (ret);
 }
 

@@ -125,6 +125,8 @@ int tpm2_kmyth_seal(uint8_t * input,
   //       sense for the current kmyth implementation supporting multiple PCR
   //       criteria, so should be disallowed if this is the case.
 
+  TPML_PCR_SELECTION current_pcrList = { .count = 0, };
+
   if (pcrs_string != NULL)
   {
     int * pcrs = NULL;
@@ -147,36 +149,26 @@ int tpm2_kmyth_seal(uint8_t * input,
     // check PCR selections array not empty (e.g., "" PCR selection string)
     if (pcrs_len > 0)
     {
-      // allocate memory for new TPM2 PCR selection list struct
-      ski.pcr_sel.pcrList[0] = malloc(sizeof(TPML_PCR_SELECTION));
-      if (ski.pcr_sel.pcrList[0] == NULL)
-      {
-        kmyth_log(LOG_ERR, "malloc() PCR selection struct error ... exiting");
-        free(pcrs);
-        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-
       // configure TPM2 'PCR selections list' struct based on user input
       if (init_pcr_selection(sapi_ctx,
                              pcrs,
                              pcrs_len,
-                             ski.pcr_sel.pcrList[0]))
+                             &current_pcrList))
       {
         kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");
-        free(pcrs);
         kmyth_clear(objAuthVal.buffer, objAuthVal.size);
         kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+        free(pcrs);
         free_tpm2_resources(&sapi_ctx);
         return 1;
       }
-      ski.pcr_sel.count++;
+
       kmyth_log(LOG_DEBUG, "configured current PCR selections for kmyth-seal");
     }
-
   }
+
+  ski.pcr_sel.pcrList[0] = &current_pcrList; 
+  ski.pcr_sel.count++;
 
   // Parse expected policy string
 
