@@ -90,7 +90,7 @@
  * size the array of TPML_PCR_SELECTION structs than can be encapsulated
  * within a PCR_SELECTION_LISTS struct
  */
-#define MAX_PCR_SEL_CNT 2
+#define MAX_PCR_SEL_CNT 8
 
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)

@@ -439,6 +439,156 @@ const char *getErrorString(TSS2_RC err)
   return Tss2_RC_Decode(err);
 }
 
+/*
+//############################################################################
+// init_policyOR_params()
+//############################################################################
+int init_policyOR_params(TSS2_SYS_CONTEXT * sapi_ctx,
+                         char * str,
+                         PCR_SELECTIONS * pcrs,
+                         TPML_DIGEST * policyDigests)
+{
+  // input string should be of form:
+  //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
+  // input string "pairs" should be of form:
+  //   '<PCR selection string>':<policy digest string>
+  // PCR selection string should be encapsulated in single quotes and delimit
+  // integer values using commas.
+  //   (e.g. '0, 1, 2')
+  // policy digest string should be in hexadecimal form and of the proper
+  // length for the hash algorithm being used (see SHA-256 example below):
+  //   0x0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+
+  char * token = NULL;
+  char * pair_vals[7];
+  size_t pair_cnt = 0;
+
+  // parse out the "pair values" from the input string
+  token = strtok(str)
+  while ((pair_cnt < MAX_PCR_SEL_CNT) && (token != NULL))
+  {
+    pair_vals[pair_cnt] = malloc (strlen(token) + 1);
+    if (pair_vals[pair_cnt] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of expected policy pair error ... exiting");
+      for (int j = 0; j < pair_cnt; j++)
+      {
+        free(pair_vals[j]);
+      }
+      return (1);
+    }
+    pair_vals[pair_cnt] = token;
+    token = strtok(NULL, ",");
+    pair_cnt++;
+  }
+  if ((token != NULL) || (pair_cnt == 0))
+  {
+    kmyth_log(LOG_ERR, "invalid expected policy pair count (%u) ... exiting",
+                       pair_cnt);
+    for (int j = 0; j < pair_cnt; j++)
+    {
+      free(pair_vals[j]);
+    }
+    return (1);
+  }
+
+  // Initialize PCR Selection List struct
+  pcrs->count = pair_cnt + 1;
+  pcrs->pcrList = malloc(pcrs->count * sizeof(TPML_PCR_SELECTION *));
+  if (pcrs->pcrList == NULL)
+  {
+    kmyth_log(LOG_ERR, "PCR select list pointers malloc() error ... exiting");
+    for (int j = 0; j < pair_cnt; j++)
+    {
+      free(pair_vals[j]);
+    }
+    return (1);
+  }
+
+  // parse each policy-OR criteria "pair"
+  for (size_t i = 0; i < pair_cnt; i++)
+  {
+    // obtain PCR selection list string as first token
+    token = strtok(pair_vals[i], ":");
+
+    // empty "pair" would require incorrect parsing above - should not occur
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "empty PCR selection/policy digest pair");
+      for (int j = 0; j < pair_cnt; j++)
+      {
+        free(pair_vals[j]);
+        free(pcrs + j);
+      }
+      return (1);
+    }
+
+    // allocate memory for new PCR selection struct
+    TPML_PCR_SELECTION * pcrSel = malloc(sizeof(TPML_PCR_SELECTION));
+    if (pcrSel = NULL)
+
+    // convert PCR selection string to entry in PCR Selection Lists struct
+    // Note: policy-OR criteria starts at second entry (index = 1)
+    if (init_pcr_selection(sapi_ctx, token, &(pcrs->pcrList[i+1])) != 0)
+    {
+      kmyth_log(LOG_ERR, "improperly formatted PCR selection string: %s",
+                         token);
+      for (int j = 0; j < pair_cnt; j++)
+      {
+        free(pair_vals[j]);
+        free(pcrs + j);
+      }
+      return (1);
+
+    }
+
+    // expected policies start at second location (index = 1)
+    pcrs->pcrList[i+1] = token;
+ 
+    // obtain policy digest string as second token
+    token = strtok(NULL, ":");
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "expected policy string (%s): missing digest", str);
+      for (int j = 0; j < pair_cnt; j++)
+      {
+        free(pair_vals[j]);
+        free(pcrs + j);
+        pcrs[j] = NULL;
+      }
+      return (1);
+    }
+    policyDigests->count++;
+    if (convert_string_to_digest(token, &(policyDigests->digests[i+1])) != 0)
+    {
+      kmyth_log(LOG_ERR, "error converting digest string (%s)", token);
+      for (int j = 0; j < pair_cnt; j++)
+      {
+        free(pair_vals[j]);
+        free(pcrs + j);
+        pcrs[j] = NULL;
+      }
+      return (1);
+    }
+
+  // validate that the input string has no additional tokens
+  token = strtok(NULL, ":");
+  if (token != NULL)
+  {
+    kmyth_log(LOG_ERR, "unexpected policy data: '%s'", token);
+    for (int j = 0; j < pair_cnt; j++)
+    {
+      free(pair_vals[j]);
+      free(pcrs + j);
+      pcrs[j] = NULL;
+    }
+    return (1);
+  }
+ 
+  return (0);
+}
+*/
+
 //############################################################################
 // init_password_cmd_auth()
 //############################################################################
@@ -658,13 +808,12 @@ int check_response_auth(SESSION * authSession,
 //############################################################################
 // create_authVal()
 //############################################################################
-int create_authVal(uint8_t * auth_bytes,
-                   size_t auth_bytes_len,
+int create_authVal(char * auth_string,
                    TPM2B_AUTH * authValOut)
 {
   if (authValOut == NULL)
   {
-    kmyth_log(LOG_ERR, "no TPM2 digest structure provided ... exiting");
+    kmyth_log(LOG_ERR, "unallocated TPM2 digest struct provided ... exiting");
     return 1;
   }
 
@@ -673,10 +822,10 @@ int create_authVal(uint8_t * auth_bytes,
 
   // If no authorization string was specified by the user (NULL string passed
   // in), initialize authorization value to the default (all-zero digest)
-  if (auth_bytes == NULL || auth_bytes_len == 0)
+  if (auth_string == NULL)
   {
-    kmyth_log(LOG_DEBUG, "NULL authorization string");
     memset(authValOut->buffer, 0, authValOut->size);
+    kmyth_log(LOG_DEBUG, "NULL authorization string - authVal is default");
   }
 
   // Otherwise, if an authorization string is provided, calculate the
@@ -684,10 +833,14 @@ int create_authVal(uint8_t * auth_bytes,
   else
   {
     // use OpenSSL EVP_Digest() to compute hash
-    if (!EVP_Digest((char *) auth_bytes, auth_bytes_len, authValOut->buffer,
-                    NULL, KMYTH_OPENSSL_HASH, NULL))
+    if (!EVP_Digest(auth_string,
+                    strlen(auth_string),
+                    authValOut->buffer,
+                    NULL,
+                    KMYTH_OPENSSL_HASH,
+                    NULL))
     {
-      kmyth_log(LOG_ERR, "error computing hash ... exiting");
+      kmyth_log(LOG_ERR, "error computing authVal hash ... exiting");
       return 1;
     }
   }

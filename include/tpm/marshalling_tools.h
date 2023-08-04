@@ -14,16 +14,17 @@
 #include <tss2/tss2_sys.h>
 
 #include "formatting_tools.h"
+#include "pcrs.h"
 
 #include "cipher/cipher.h"
 
 typedef struct Ski
 {
   // List of PCRs chosen to use when kmyth-sealing
-  TPML_PCR_SELECTION pcr_list;
+  PCR_SELECTIONS pcr_sel;
 
   // List of digests used for a policy-OR authorization
-  TPML_DIGEST policy_or_digest_list;
+  TPML_DIGEST policy_digests;
 
   // Storage key public/private
   TPM2B_PUBLIC sk_pub;
@@ -202,7 +203,7 @@ Ski get_default_ski(void);
  *
  * @return 0 if success, 1 if error
  */
-int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
                        size_t * pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
@@ -333,7 +334,7 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *
  * @return 0 if success, 1 if error
  */
-int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                          uint8_t * pcr_selection_struct_data,
                          size_t pcr_selection_struct_data_size,
                          size_t pcr_selection_struct_data_offset,
@@ -383,7 +384,7 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
  *
  * @return 0 if success, 1 if error
  */
-int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
+int pack_pcr(PCR_SELECTIONS * pcr_select_in,
              uint8_t * packed_data_out,
              size_t packed_data_out_size,
              size_t packed_data_out_offset);
@@ -414,7 +415,7 @@ int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
  *
  * @return 0 if success, 1 if error
  */
-int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
+int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
                uint8_t * packed_data_in,
                size_t packed_data_in_size,
                size_t packed_data_in_offset);

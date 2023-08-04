@@ -12,22 +12,32 @@
 
 #include <tss2/tss2_sys.h>
 
+#include "defines.h"
+
 /**
- * @brief Converts a user specified (command-line parameter) PCR selection
- *        string into an integer array.
- *
- * @param[in]  pcrs_string A string specifying comma separated integers that
- *                         will be used to select which TPM 2.0 PCRs should
- *                         be applied to the authorization policy.
+ * @brief Policy-OR authorizations could specify different PCR selections
+ *        for different branches of the policy-OR criteria. This requires,
+ *        therefore, different PCR selection lists for each 'branch' of the
+ *        policy (i.e., for each policy digest in the policy-OR criteria).
+ *        This typedef specifies a struct that can be used to store a list
+ *        of PCR selection lists.
  * 
- * @param[out] pcrs        An array containing integers specifying which 
- *                         PCRs to apply.
- *
- * @param[out] pcrs_len    The length of the PCR selection integer array.
- *
- * @return 0 if success, 1 if error
+ * NOTE:  Currently, kmyth supports a PCR selection list count of 0 (no PCR
+ *        authorization criteria), 1 (PCR criteria for a single authorization
+ *        policy), and 2 (PCR criteria for 2 branches of a policy-OR criteria).
+ *        TPM 2.0, however, supports up to eight branches in a policy-OR
+ *        authorization, and this struct would support future extension of
+ *        kmyth functionality to support additional PCR selection flexibility.
  */
-int parse_pcrs_string(char * pcrs_string, int ** pcrs, size_t * pcrs_len);
+typedef struct
+{
+  // number of PCR selection lists
+  size_t count;
+
+  // array (up to MAX_PCR_SEL_CNT) of PCR selection list pointers
+  TPML_PCR_SELECTION * pcrList[MAX_PCR_SEL_CNT];
+
+} PCR_SELECTIONS;
 
 /**
  * @brief Converts a PCR selection integer array into the TPM 2.0 struct used

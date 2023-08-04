@@ -28,33 +28,24 @@
  * @param[out] output_length     Pointer to length (in bytes) of output
  *                               buffer containing 'kmyth-unseal' result
  * 
- * @param[in]  auth_bytes        Byte array containing user specified
- *                               authorization value needed to satisfy
- *                               the authorization policy.
+ * @param[in]  auth_string       User specified authorization string to be
+ *                               included as a criteria in the authorization
+ *                               policy.
  *
- * @param[in]  auth_bytes_len    Length (in bytes) of the user specified
- *                               authorization value byte buffer.
+ * @param[in]  owner_auth_string User specified authorization string for the
+ *                               TPM's 'owner' (storage) hierarchy. If the
+ *                               user has secured the TPM's owner (storage)
+ *                               hierarchy in this manner, specifying this
+ *                               parameter is required.
  *
- * @param[in]  owner_auth_bytes  Byte array containing the user specified
- *                               authorization value for the TPM's 'owner'
- *                               (storage) hierarchy.
- *
- * @param[in]  oa_bytes_len      Length (in bytes) fpr the user specified
- *                               TPM 'owner' (storage) hierarchy authorization
- *                               value byte buffer.
- *
- * @param[in]  pcrs             Array of integers corresponding to the user
- *                               specified PCR selection string (used to
- *                               set the criteria for which, if any, PCRs
- *                               should be applied to authorization policy)
- * 
- * @param[in]  pcrs_len         Length (in bytes) of 'PCR Selection'
- *                               integer array
- * 
  * @param[in]  cipher_string     User specified string that identifies the
  *                               symmetric cipher to be used by kmyth-seal
  * 
- * @param[in]  exp_digest        If the "-e" (expected policy digest) option
+ * @param[in]  pcrs_string       User specified PCR selection string (used to
+ *                               set the criteria for which, if any, PCRs
+ *                               should be applied to authorization policy)
+ * 
+ * @param[in]  exp_policy_string If the "-e" (expected policy digest) option
  *                               was invoked by the user, this parameter is
  *                               used to pass the specified hexadecimal
  *                               string so that it can be used for one of
@@ -77,14 +68,11 @@ int tpm2_kmyth_seal(uint8_t * input,
                     size_t input_len,
                     uint8_t ** output,
                     size_t *output_len,
-                    uint8_t * auth_bytes,
-                    size_t auth_bytes_len,
-                    uint8_t * owner_auth_bytes,
-                    size_t oa_bytes_len,
-                    int * pcrs,
-                    size_t pcrs_len,
+                    char * auth_string,
+                    char * owner_auth_string,
                     char * cipher_string,
-                    char * exp_digest,
+                    char * pcrs_string,
+                    char * exp_policy_string,
                     bool bool_trial_only);
 
 /**
@@ -106,9 +94,11 @@ int tpm2_kmyth_seal(uint8_t * input,
  * @param[in]  auth_bytes_len    Length (in bytes) fpr the user specified
  *                               authorization value byte buffer.
  *
- * @param[in]  owner_auth_bytes  Byte array containing the user specified
- *                               authorization value for the TPM's 'owner'
- *                               hierarchy.
+ * @param[in]  owner_auth_string User specified authorization string for the
+ *                               TPM's 'owner' (storage) hierarchy. If the
+ *                               user has secured the TPM's owner (storage)
+ *                               hierarchy in this manner, specifying this
+ *                               parameter is required.
  *
  * @param[in]  oa_bytes_len      Length (in bytes) for the buffer containing
  *                               the user specified authorization value for
@@ -120,10 +110,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       size_t input_len,
                       uint8_t ** output,
                       size_t *output_len,
-                      uint8_t * auth_bytes,
-                      size_t auth_bytes_len,
-                      uint8_t * owner_auth_bytes,
-                      size_t oa_bytes_len);
+                      char * auth_string,
+                      char * owner_auth_string);
 
 /**
  * @brief 'kmyth-seal' file using TPM 2.0.
@@ -137,33 +125,23 @@ int tpm2_kmyth_unseal(uint8_t * input,
  * @param[out] output_length     Pointer to length (in bytes) of output
  *                               buffer containing 'kmyth-unseal' result
  * 
- * @param[in]  auth_bytes        Byte array containing user specified
- *                               authorization value needed to satisfy
- *                               the authorization policy.
+ * @param[in]  auth_string       User specified authorization string needed
+ *                               to satisfy the authorization policy.
  *
- * @param[in]  auth_bytes_len    Length (in bytes) of the user specified
- *                               authorization value byte buffer.
+ * @param[in]  owner_auth_string User specified authorization string for the
+ *                               TPM's 'owner' (storage) hierarchy. If the
+ *                               user has secured the TPM's owner (storage)
+ *                               hierarchy in this manner, specifying this
+ *                               parameter is required.
  *
- * @param[in]  owner_auth_bytes  Byte array containing the user specified
- *                               authorization value for the TPM's 'owner'
- *                               (storage) hierarchy.
- *
- * @param[in]  oa_bytes_len      Length (in bytes) fpr the user specified
- *                               TPM 'owner' (storage) hierarchy authorization
- *                               value byte buffer.
- *
- * @param[in]  pcrs              Array of integers corresponding to the user
- *                               specified PCR selection string (used to
- *                               set the criteria for which, if any, PCRs
- *                               should be applied to authorization policy)
- * 
- * @param[in]  pcrs_len          Length (in bytes) of 'PCR Selection'
- *                               integer array
- * 
  * @param[in]  cipher_string     User specified string that identifies the
  *                               symmetric cipher to be used by kmyth-seal
  * 
- * @param[in]  exp_digest        If the "-e" (expected policy digest) option
+ * @param[in]  pcrs_string       User specified PCR selection string (used to
+ *                               set the criteria for which, if any, PCRs
+ *                               should be applied to authorization policy)
+ * 
+ * @param[in]  exp_policy_string If the "-e" (expected policy digest) option
  *                               was invoked by the user, this parameter is
  *                               used to pass the specified hexadecimal
  *                               string so that it can be used for one of
@@ -185,14 +163,11 @@ int tpm2_kmyth_unseal(uint8_t * input,
 int tpm2_kmyth_seal_file(char * input_path,
                          uint8_t ** output,
                          size_t * output_len,
-                         uint8_t * auth_bytes,
-                         size_t auth_bytes_len,
-                         uint8_t * owner_auth_bytes,
-                         size_t oa_bytes_len,
-                         int * pcrs,
-                         size_t pcrs_len,
+                         char * auth_string,
+                         char * owner_auth_string,
                          char * cipher_string,
-                         char * exp_digest,
+                         char * pcrs_string,
+                         char * exp_policy_string,
                          bool bool_trial_only);
 
 /**
@@ -227,10 +202,8 @@ int tpm2_kmyth_seal_file(char * input_path,
 int tpm2_kmyth_unseal_file(char * input_path,
                            uint8_t ** output,
                            size_t * output_length,
-                           uint8_t * auth_bytes,
-                           size_t auth_bytes_len,
-                           uint8_t * owner_auth_bytes,
-                           size_t oa_bytes_len);
+                           char * auth_string,
+                           char * owner_auth_string);
 
 /**
  * @brief 'kmyth-seal' data using TPM 2.0.

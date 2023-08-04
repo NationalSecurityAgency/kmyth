@@ -15,7 +15,7 @@
 #include "kmyth_seal_unseal_impl.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
-#include "pcrs.h"
+#include "formatting_tools.h"
 
 #include "cipher/cipher.h"
 
@@ -122,24 +122,26 @@ int main(int argc, char **argv)
   set_applog_path(KMYTH_APPLOG_PATH);
 
   // Initialize parameters that might be modified by command line options
-  char *inPath = NULL;
-  char *outPath = NULL;
+  char * inPath = NULL;
+  char * outPath = NULL;
   size_t outPath_size = 0;
-  char *authString = NULL;
-  char *ownerAuthPasswd = "";
-  char *pcrsString = NULL;
-  char *cipherString = NULL;
+  char * authString = NULL;
+  char * ownerAuthPasswd = "";
+  char * pcrsString = NULL;
+  char * cipherString = NULL;
+  char * expPolicyString = NULL;
   bool forceOverwrite = false;
-  char *expPolicyDigestString = NULL;
   bool boolTrialOnly = false;
 
   // Parse and apply command line options
   int options;
   int option_index;
 
-  while ((options =
-          getopt_long(argc, argv, "a:c:e:i:o:p:w:fghlv", longopts,
-                      &option_index)) != -1)
+  while ((options = getopt_long(argc,
+                                argv,
+                                "a:c:e:i:o:p:w:fghlv",
+                                longopts,
+                                &option_index)) != -1)
   {
     switch (options)
     {
@@ -150,7 +152,7 @@ int main(int argc, char **argv)
       cipherString = optarg;
       break;
     case 'e':
-      expPolicyDigestString = optarg;
+      expPolicyString = optarg;
       break;
     case 'f':
       forceOverwrite = true;
@@ -195,6 +197,10 @@ int main(int argc, char **argv)
     }
   }
 
+  // Since these originate in main() we know they are null terminated
+  size_t authString_len = (authString == NULL) ? 0 : strlen(authString);
+  size_t oaPasswd_len = (ownerAuthPasswd==NULL) ? 0 : strlen(ownerAuthPasswd);
+
   // Some options don't do anything with -g, so warn about that now.
   if(boolTrialOnly)
   {
@@ -204,26 +210,19 @@ int main(int argc, char **argv)
        inPath != NULL ||
        cipherString != NULL ||
        forceOverwrite ||
-       expPolicyDigestString != NULL)
+       expPolicyString != NULL)
     {
       kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have ",
                              "no effect when combined with -g");
     }
   }
 
-  // Since these originate in main() we know they are null terminated
-  size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
-  size_t oa_passwd_len = (ownerAuthPasswd==NULL) ? 0 : strlen(ownerAuthPasswd);
-
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL && !boolTrialOnly)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, auth_string_len);
-    }
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     free(outPath);
     return 1;
   }
@@ -254,8 +253,8 @@ int main(int argc, char **argv)
     if (strlen(default_fn) == 0)
     {
       kmyth_log(LOG_ERR, "invalid/empty default filename root ... exiting");
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       return 1;
     }
 
@@ -287,8 +286,8 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR,
                 "default output filename (%s) already exists ... exiting",
                 default_fn);
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       return 1;
     }
 
@@ -302,44 +301,27 @@ int main(int argc, char **argv)
   uint8_t *output = NULL;
   size_t output_length = 0;
 
-  int *pcrs = NULL;
-  size_t pcrs_len = 0;
-
-  if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
-  {
-    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    free(outPath);
-    free(output);
-    free(pcrs);
-    return 1;
-  }
-
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal_file(inPath,
                            &output,
                            &output_length,
-                           (uint8_t *) authString,
-                           auth_string_len,
-                           (uint8_t *) ownerAuthPasswd,
-                           oa_passwd_len,
-                           pcrs,
-                           (size_t) pcrs_len,
+                           authString,
+                           ownerAuthPasswd,
                            cipherString,
-                           expPolicyDigestString,
+                           pcrsString,
+                           expPolicyString,
                            boolTrialOnly))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    kmyth_clear(authString, auth_string_len);
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(pcrs);
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     free(outPath);
     free(output);
     return 1;
   }
 
-  kmyth_clear(authString, auth_string_len);
-  kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-  free(pcrs);
+  kmyth_clear(authString, authString_len);
+  kmyth_clear(ownerAuthPasswd, oaPasswd_len);
 
   // only create output file if -g option is NOT passed
   if (boolTrialOnly == 0)

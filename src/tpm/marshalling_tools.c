@@ -13,6 +13,7 @@
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
 #include <tss2/tss2_mu.h>
+#include <arpa/inet.h>
 
 #include "defines.h"
 
@@ -32,40 +33,40 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   size_t remaining = input_length;
   Ski temp_ski = get_default_ski();
 
-  // read in (parse out) 'raw' (encoded) PCR selection list block
-  uint8_t *raw_pcr_select_list_data = NULL;
-  size_t raw_pcr_select_list_size = 0;
+  // read in (parse out) 'raw' (encoded) PCR selections block
+  uint8_t *raw_pcr_select_data = NULL;
+  size_t raw_pcr_select_size = 0;
 
   if (get_block_bytes((char **) &position,
                       &remaining,
-                      &raw_pcr_select_list_data,
-                      &raw_pcr_select_list_size,
-                      KMYTH_DELIM_PCR_SELECTION_LIST,
-                      strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                      KMYTH_DELIM_POLICY_OR,
-                      strlen(KMYTH_DELIM_POLICY_OR)))
+                      &raw_pcr_select_data,
+                      &raw_pcr_select_size,
+                      KMYTH_DELIM_PCR_SELECTIONS,
+                      strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                      KMYTH_DELIM_POLICY_OR_DIGESTS,
+                      strlen(KMYTH_DELIM_POLICY_OR_DIGESTS)))
   {
     kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
-    free(raw_pcr_select_list_data);
+    free(raw_pcr_select_data);
     return 1;
   }
 
   // read in (parse out) 'raw' (encoded) POLICY OR digest list block
-  uint8_t *raw_policy_digest_list_data = NULL;
-  size_t raw_policy_digest_list_size = 0;
+  uint8_t *raw_policy_or_digest_data = NULL;
+  size_t raw_policy_or_digest_size = 0;
 
   if (get_block_bytes((char **) &position,
                       &remaining,
-                      &raw_policy_digest_list_data,
-                      &raw_policy_digest_list_size,
-                      KMYTH_DELIM_POLICY_OR,
-                      strlen(KMYTH_DELIM_POLICY_OR),
+                      &raw_policy_or_digest_data,
+                      &raw_policy_or_digest_size,
+                      KMYTH_DELIM_POLICY_OR_DIGESTS,
+                      strlen(KMYTH_DELIM_POLICY_OR_DIGESTS),
                       KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                       strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
   {
     kmyth_log(LOG_ERR, "get policy digest list error ... exiting");
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     return 1;
   }
 
@@ -83,8 +84,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE)))
   {
     kmyth_log(LOG_ERR, "get storage key public error ... exiting");
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     return 1;
   }
@@ -103,8 +104,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       strlen(KMYTH_DELIM_CIPHER_SUITE)))
   {
     kmyth_log(LOG_ERR, "get storage key private error ... exiting");
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     return 1;
@@ -124,8 +125,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       strlen(KMYTH_DELIM_SYM_KEY_PUBLIC)))
   {
     kmyth_log(LOG_ERR, "get cipher string error ... exiting");
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
@@ -140,8 +141,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   {
     kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
     free_ski(&temp_ski);
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_cipher_str_data);
@@ -165,8 +166,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   {
     kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
     free_ski(&temp_ski);
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
@@ -187,8 +188,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   {
     kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
     free_ski(&temp_ski);
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
@@ -209,8 +210,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   {
     kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
     free_ski(&temp_ski);
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
@@ -225,8 +226,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   {
     kmyth_log(LOG_ERR, "unable to find the end delimiter ... exiting");
     free_ski(&temp_ski);
-    free(raw_pcr_select_list_data);
-    free(raw_policy_digest_list_data);
+    free(raw_pcr_select_data);
+    free(raw_policy_or_digest_data);
     free(raw_sk_pub_data);
     free(raw_sk_priv_data);
     free(raw_sym_pub_data);
@@ -241,29 +242,29 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   int retval = 0;
 
   // base64 decode PCR selection list data
-  uint8_t *decoded_pcr_select_list_data = NULL;
-  size_t decoded_pcr_select_list_size = 0;
-  size_t decoded_pcr_select_list_offset = 0;
+  uint8_t *decoded_pcr_select_data = NULL;
+  size_t decoded_pcr_select_size = 0;
+  size_t decoded_pcr_select_offset = 0;
 
-  retval |= decodeBase64Data(raw_pcr_select_list_data,
-                             raw_pcr_select_list_size,
-                             &decoded_pcr_select_list_data,
-                             &decoded_pcr_select_list_size);
-  free(raw_pcr_select_list_data);
-  raw_pcr_select_list_data = NULL;
+  retval |= decodeBase64Data(raw_pcr_select_data,
+                             raw_pcr_select_size,
+                             &decoded_pcr_select_data,
+                             &decoded_pcr_select_size);
+  free(raw_pcr_select_data);
+  raw_pcr_select_data = NULL;
 
-  uint8_t *decoded_policy_digest_list_data = NULL;
-  size_t decoded_policy_digest_list_size = 0;
-  size_t decoded_policy_digest_list_offset = 0;
+  uint8_t *decoded_policy_or_digest_data = NULL;
+  size_t decoded_policy_or_digest_size = 0;
+  size_t decoded_policy_or_digest_offset = 0;
 
   // base64 decode policy digest list data
-  retval |= decodeBase64Data(raw_policy_digest_list_data,
-                             raw_policy_digest_list_size,
-                             &decoded_policy_digest_list_data,
-                             &decoded_policy_digest_list_size);
+  retval |= decodeBase64Data(raw_policy_or_digest_data,
+                             raw_policy_or_digest_size,
+                             &decoded_policy_or_digest_data,
+                             &decoded_policy_or_digest_size);
 
-  free(raw_policy_digest_list_data);
-  raw_policy_digest_list_data = NULL;
+  free(raw_policy_or_digest_data);
+  raw_policy_or_digest_data = NULL;
 
   // base64 decode public data block for storage key
   uint8_t *decoded_sk_pub_data = NULL;
@@ -327,14 +328,14 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   }
   else
   {
-    retval = unmarshal_skiObjects(&temp_ski.pcr_list,
-                                  decoded_pcr_select_list_data,
-                                  decoded_pcr_select_list_size,
-                                  decoded_pcr_select_list_offset,
-                                  &temp_ski.policy_or_digest_list,
-                                  decoded_policy_digest_list_data,
-                                  decoded_policy_digest_list_size,
-                                  decoded_policy_digest_list_offset,
+    retval = unmarshal_skiObjects(&temp_ski.pcr_sel,
+                                  decoded_pcr_select_data,
+                                  decoded_pcr_select_size,
+                                  decoded_pcr_select_offset,
+                                  &temp_ski.policy_digests,
+                                  decoded_policy_or_digest_data,
+                                  decoded_policy_or_digest_size,
+                                  decoded_policy_or_digest_offset,
                                   &temp_ski.sk_pub,
                                   decoded_sk_pub_data,
                                   decoded_sk_pub_size,
@@ -357,13 +358,15 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     }
   }
 
-  free(decoded_pcr_select_list_data);
-  free(decoded_policy_digest_list_data);
+  free(decoded_pcr_select_data);
+  free(decoded_policy_or_digest_data);
   free(decoded_sk_pub_data);
   free(decoded_sk_priv_data);
   free(decoded_sym_pub_data);
   free(decoded_sym_priv_data);
+
   *output = temp_ski;
+
   return retval;
 }
 
@@ -385,7 +388,9 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   // and structs (TPML_PCR_SELECTION)
   // Note: must account for two extra bytes to include the buffer's size value
   //       in the TPM2B_* sized buffer cases
-  size_t pcr_select_size = sizeof(input.pcr_list);
+
+
+  size_t pcr_select_size = sizeof(input.pcr_sel) + 1 + (input.pcr_sel.count*2);
   size_t pcr_select_offset = 0;
   uint8_t *pcr_select_data = (uint8_t *) calloc(pcr_select_size,
                                                 sizeof(uint8_t));
@@ -397,7 +402,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t policy_digest_list_size = (size_t) sizeof(input.policy_or_digest_list) + 1;
+  size_t policy_digest_list_size = (size_t) sizeof(input.policy_digests) + 1;
   size_t policy_digest_list_offset = 0;
   uint8_t * policy_digest_list_data = calloc(policy_digest_list_size,
                                              sizeof(uint8_t));
@@ -468,11 +473,11 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  if (marshal_skiObjects(&input.pcr_list,
+  if (marshal_skiObjects(&input.pcr_sel,
                          &pcr_select_data,
                          &pcr_select_size,
                          pcr_select_offset,
-                         &(input.policy_or_digest_list),
+                         &(input.policy_digests),
                          &policy_digest_list_data,
                          &policy_digest_list_size,
                          policy_digest_list_offset,
@@ -609,14 +614,14 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   uint8_t *out = NULL;
   size_t out_length = 0;
 
-  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_PCR_SELECTION_LIST,
-         strlen(KMYTH_DELIM_PCR_SELECTION_LIST));
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_PCR_SELECTIONS,
+         strlen(KMYTH_DELIM_PCR_SELECTIONS));
   concat(&out, &out_length, pcr64_select_data, pcr64_select_size);
   free(pcr64_select_data);
   pcr64_select_data = NULL;
 
-  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY_OR,
-         strlen(KMYTH_DELIM_POLICY_OR));
+  concat(&out, &out_length, (uint8_t *) KMYTH_DELIM_POLICY_OR_DIGESTS,
+         strlen(KMYTH_DELIM_POLICY_OR_DIGESTS));
   concat(&out, &out_length, policy64_data, policy64_data_size);
   free(policy64_data);
   policy64_data = NULL;
@@ -676,22 +681,34 @@ void free_ski(Ski * ski)
 Ski get_default_ski(void)
 {
   Ski ret = {
-    .pcr_list = {.count = 0,},
-    .policy_or_digest_list = {.count = 0,},
-    .sk_priv = {.size = 0,},
-    .cipher = {.cipher_name = NULL,},
-    .sym_key_pub = {.size = 0},
-    .sym_key_priv = {.size = 0},
+    .pcr_sel = { .count = 0, .pcrList = { NULL } },
+    .policy_digests = { .count = 0, },
+    .sk_priv = { .size = 0, },
+    .cipher = { .cipher_name = NULL, },
+    .sym_key_pub = { .size = 0, },
+    .sym_key_priv = { .size = 0, },
     .enc_data = NULL,
     .enc_data_size = 0
   };
+
+  // default PCR_SELECTIONS struct contains one TPML_PCR_SELECTION struct
+  // with an empty (no PCRs selected) mask
+  ret.pcr_sel.count++;
+  ret.pcr_sel.pcrList[0] = malloc(sizeof(TPML_PCR_SELECTION));
+  if (ret.pcr_sel.pcrList[0] == NULL)
+  {
+    kmyth_log(LOG_ERR, "default (empty) PCR selections list malloc() error");
+  }
+
+  ret.pcr_sel.pcrList[0]->count = 0;
+
   return (ret);
 }
 
 //############################################################################
 // marshal_skiObjects()
 //############################################################################
-int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                        uint8_t ** pcr_selection_struct_data,
                        size_t * pcr_selection_struct_data_size,
                        size_t pcr_selection_struct_data_offset,
@@ -835,7 +852,7 @@ int marshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
 //############################################################################
 // unmarshal_skiObjects()
 //############################################################################
-int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
+int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                          uint8_t * pcr_selection_struct_data,
                          size_t pcr_selection_struct_data_size,
                          size_t pcr_selection_struct_data_offset,
@@ -904,22 +921,67 @@ int unmarshal_skiObjects(TPML_PCR_SELECTION * pcr_selection_struct,
 //############################################################################
 // pack_pcr()
 //############################################################################
-int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
+int pack_pcr(PCR_SELECTIONS * pcr_select_in,
              uint8_t * packed_data_out,
              size_t packed_data_out_size,
              size_t packed_data_out_offset)
 {
   TSS2_RC rc = 0;
 
-  if ((rc = Tss2_MU_TPML_PCR_SELECTION_Marshal(pcr_select_in,
-                                               packed_data_out,
-                                               packed_data_out_size,
-                                               &packed_data_out_offset)))
+  // store count of TPML_PCR_SELECTION structs (valued 0-8) as a one-byte integer
+  uint8_t temp_byte = (uint8_t) pcr_select_in->count;
+  memcpy(packed_data_out, &temp_byte, sizeof(uint8_t));
+  packed_data_out_offset += sizeof(uint8_t);
+
+  // if necessary, create buffer to process TPML_PCR_SELECTION structs
+  uint8_t * temp_data = NULL;
+  size_t temp_size = sizeof(TPML_PCR_SELECTION);
+  size_t temp_offset = 0;
+
+  if (pcr_select_in->count > 0)
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X ... exiting", rc);
-    return 1;
+    temp_data = malloc(temp_size);
+    if (temp_data == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of temporary buffer failed");
+      return 1;
+    } 
   }
+
+  for (size_t i = 0; i < pcr_select_in->count; i++)
+  {
+    // create packed bytes for TPML_PCR_SELECTION struct
+    if ((rc = Tss2_MU_TPML_PCR_SELECTION_Marshal(pcr_select_in->pcrList[i],
+                                                 temp_data,
+                                                 temp_size,
+                                                 &temp_offset)))
+    {
+      kmyth_log(LOG_ERR,
+                "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X ... exiting", rc);
+      return 1;
+    }
+
+    // write size of packed struct as a two-byte unsigned integer
+    temp_byte = (uint8_t) temp_offset;
+    kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
+    memcpy(packed_data_out + packed_data_out_offset,
+           &temp_byte,
+           sizeof(uint8_t));
+    packed_data_out_offset += sizeof(uint8_t);
+    kmyth_log(LOG_DEBUG, "packed_data_out_offset = %u", packed_data_out_offset);
+
+    // write packed struct data
+    memcpy(packed_data_out + packed_data_out_offset,
+           temp_data,
+           temp_offset);
+    packed_data_out_offset += temp_offset;
+    kmyth_log(LOG_DEBUG, "packed_data_out_offset = %u", packed_data_out_offset);
+    
+    // reset temporary buffer offset for packing next struct
+    temp_offset = 0;
+  }
+
+  free(temp_data);
 
   return 0;
 }
@@ -927,21 +989,48 @@ int pack_pcr(TPML_PCR_SELECTION * pcr_select_in,
 //############################################################################
 // unpack_pcr()
 //############################################################################
-int unpack_pcr(TPML_PCR_SELECTION * pcr_select_out,
+int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
                uint8_t * packed_data_in,
                size_t packed_data_in_size,
                size_t packed_data_in_offset)
 {
   TSS2_RC rc = 0;
 
-  if ((rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
-                                                 packed_data_in_size,
-                                                 &packed_data_in_offset,
-                                                 pcr_select_out)))
+  // read count of TPML_PCR_SELECTION structs (one-byte unsigned integer)
+  uint8_t temp_byte = packed_data_in[0];
+  pcr_select_out->count = (size_t) temp_byte;
+  packed_data_in_offset += sizeof(uint8_t);
+
+  kmyth_log(LOG_DEBUG, "count = %zu", pcr_select_out->count);
+
+  // unpack list of TPML_PCR_SELECTION struct data
+  for (size_t i = 0; i < pcr_select_out->count; i++)
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x ... exiting", rc);
-    return 1;
+    // allocate memory for the unpacked TPML_PCR_SELECTION struct
+    pcr_select_out->pcrList[i] = malloc(sizeof(TPML_PCR_SELECTION));
+    if (pcr_select_out->pcrList[i] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of PCR selection list error "
+                         "(index = %zu)", i);
+      return 1;
+    }
+
+    // get size (in bytes) of packed TPML_PCR_SELECTION struct
+    temp_byte = packed_data_in[packed_data_in_offset];
+    kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
+    packed_data_in_offset += sizeof(uint8_t);
+    kmyth_log(LOG_DEBUG, "packed_data_in_offset = %zu", packed_data_in_offset);
+
+    if ((rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
+                                                   packed_data_in_offset +
+                                                   (size_t) temp_byte,
+                                                   &packed_data_in_offset,
+                                                   pcr_select_out->pcrList[i])))
+    {
+      kmyth_log(LOG_ERR,
+                "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x ... exiting", rc);
+      return 1;
+    }
   }
 
   return 0;

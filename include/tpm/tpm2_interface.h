@@ -82,31 +82,6 @@ typedef struct
 } SESSION;
 
 /**
- * @brief Policy-OR authorizations could specify different PCR selections
- *        for different branches of the policy-OR criteria. This requires,
- *        therefore, different PCR selection lists for each 'branch' of the
- *        policy (i.e., for each policy digest in the policy-OR criteria).
- *        This typedef specifies a struct that can be used to store a list
- *        of PCR selection lists.
- * 
- * NOTE:  Currently, kmyth support a PCR selection list count of 0 (no PCR
- *        authorization criteria), 1 (PCR criteria for a single authorization
- *        policy), and 2 (PCR criteria for 2 branches of a policy-OR criteria).
- *        TPM 2.0, however, supports up to eight branches in a policy-OR
- *        authorization, and this struct would support future extension of
- *        kmyth functionality to support additional PCR selection flexibility.
- */
-typedef struct
-{
-  // number of PCR selection lists
-  size_t count;
-
-  // array (up to MAX_PCR_SEL_CNT) of PCR selection lists
-  TPML_PCR_SELECTION pcrList[MAX_PCR_SEL_CNT];
-
-} PCR_SELECTION_LISTS;
-
-/**
  * @brief Initializes TPM 2.0 connection to resource manager. 
  *
  * Will error if resource manager is not running. 
@@ -356,17 +331,16 @@ int check_response_auth(SESSION * authSession,
  * TPM 2.0 supports two types of "password" authorization. In the first, and
  * simplest, a plaintext password can be used directly. In the second the
  * password is used as an input to HMAC-based authorization. This code
- * supports an implementation of the second. The user passes in bytes
+ * supports an implementation of the second. The user passes in a string
  * (e.g., as a command line parameter), which is referred to here as the 
- * auth_bytes. This function computes the hash of these bytes and that result 
- * is referred to as the authorization value (authVal). When authorizing TPM 
+ * auth_string. This function computes the hash of this value and that result
+ * is referred to as the authorization value (authVal). When authorizing TPM
  * commands, this authVal is used as the key for a keyed hash (HMAC) computation.
  * 
- * @param[in]  auth_bytes     Authorization bytes to use in creating the authVal
- *                            used in the authorization policy applied to Kmyth
- *                            ordinary (storage key and sealed data) objects.
- *
- * @param[in]  auth_bytes_len length of authStringIn
+ * @param[in]  auth_string    Authorization string (NULL terminated) to use in
+ *                            creating the authVal used in the authorization
+ *                            policy applied to Kmyth ordinary (storage key
+ *                            and sealed data) objects.
  *
  * @param[out] authValOut     TPM 2.0 authorization value (digest) structure to
  *                            contain the result computed by this function:
@@ -374,11 +348,13 @@ int check_response_auth(SESSION * authSession,
  *                              <LI> all-zero digest if input string is NULL
  *                              <LI> hash of input string otherwise
  *                            </UL>
+ *                            Note: Memory for this parameter must be allocated
+ *                                  by caller before passing to this function.
  *
  * @return 0 if success, 1 if error
  */
-int create_authVal(uint8_t * auth_bytes,
-                   size_t auth_bytes_len, TPM2B_AUTH * authValOut);
+int create_authVal(char * auth_string,
+                   TPM2B_AUTH * authValOut);
 
 /**
  * @brief Computes command parameter hash that is one of the inputs used for

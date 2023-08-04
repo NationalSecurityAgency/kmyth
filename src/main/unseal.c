@@ -163,10 +163,8 @@ int main(int argc, char **argv)
   if (tpm2_kmyth_unseal_file(inPath,
                              &output,
                              &output_length,
-                             (uint8_t *) authString,
-                             auth_string_len,
-                             (uint8_t *) ownerAuthPasswd,
-                             oa_passwd_len))
+                             authString,
+                             ownerAuthPasswd))
   {
     kmyth_clear_and_free(output, output_length);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");

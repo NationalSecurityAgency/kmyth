@@ -26,16 +26,16 @@ extern "C" {
 /** 
  * @ingroup block_delim
  *
- * @brief   Indicates the start of the PCR selection list block
+ * @brief   Indicates the start of the PCR selections block
  */
-#define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"
+#define KMYTH_DELIM_PCR_SELECTIONS "-----PCR SELECTIONS-----\n"
 
 /**
  * @ingroup block_delim
  *
  * @brief   Indicates the start of the Policy-OR digest list block
  */
-#define KMYTH_DELIM_POLICY_OR "-----POLICY OR-----\n"
+#define KMYTH_DELIM_POLICY_OR_DIGESTS "-----POLICY OR_DIGESTS-----\n"
 
 /** 
  * @ingroup block_delim
@@ -249,6 +249,24 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest);
  */
 int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf);
 
+/**
+ * @brief Converts a user specified (command-line parameter) PCR selection
+ *        string into an integer array.
+ *
+ * @param[in]  pcrs_string A string specifying comma separated integers that
+ *                         will be used to select which TPM 2.0 PCRs should
+ *                         be applied to the authorization policy.
+ * 
+ * @param[out] pcrs        An array containing integers specifying which 
+ *                         PCRs to apply.
+ *
+ * @param[out] pcrs_len    The length of the PCR selection integer array.
+ *
+ * @return 0 if success, 1 if error
+ */
+int convert_pcrs_string_to_int_array(char * pcrs_string,
+                                     int ** pcrs,
+                                     size_t * pcrs_len);
 
 #ifdef __cplusplus
 }

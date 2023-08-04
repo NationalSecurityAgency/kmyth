@@ -197,6 +197,14 @@ int main(int argc, char **argv)
     { 
       kmyth_log(LOG_ERR, "Expected policy PCR selections without digest",
                          "... exiting");
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
+      if (ownerAuthPasswd != NULL)
+      {
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      }
       return 1;
     }
   }
@@ -208,20 +216,18 @@ int main(int argc, char **argv)
     }
   }
 
-  // Since these originate in main() we know they are null terminated
-  size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
-  size_t oa_passwd_len =
-    (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
-
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
     if (authString != NULL)
     {
-      kmyth_clear(authString, auth_string_len);
+      kmyth_clear(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
     return 1;
   }
 
@@ -231,9 +237,12 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "no expected policy specified ... exiting");
     if (authString != NULL)
     {
-      kmyth_clear(authString, auth_string_len);
+      kmyth_clear(authString, strlen(authString));
     }
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
     return 1;
   }
 
@@ -256,8 +265,14 @@ int main(int argc, char **argv)
         kmyth_log(LOG_ERR,
                   "output filename (%s) already exists ... exiting",
                    outPath);
-        kmyth_clear(authString, auth_string_len);
-        kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+        if (authString != NULL)
+        {
+          kmyth_clear(authString, strlen(authString));
+        }
+        if (ownerAuthPasswd != NULL)
+        {
+          kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+        }
         return 1;
       }
     }
@@ -270,59 +285,60 @@ int main(int argc, char **argv)
   if (tpm2_kmyth_unseal_file(inPath,
                              &unseal_output,
                              &unseal_output_len,
-                             (uint8_t *) authString,
-                             auth_string_len,
-                             (uint8_t *) ownerAuthPasswd,
-                             oa_passwd_len))
+                             authString,
+                             ownerAuthPasswd))
   {
     kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
     kmyth_clear_and_free(unseal_output, unseal_output_len);
-    kmyth_clear(authString, auth_string_len);
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    return 1;
-  }
-
-  int * pcrs = NULL;
-  size_t pcrs_len = 0;
-
-  if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
-  {
-    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
-    free(pcrs);
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
     return 1;
   }
 
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
 
-// Call top-level "kmyth-seal" function
-if (tpm2_kmyth_seal(unseal_output,
-                    unseal_output_len,
-                    &seal_output,
-                    &seal_output_len,
-                    (uint8_t *) authString,
-                    auth_string_len,
-                    (uint8_t *) ownerAuthPasswd,
-                    oa_passwd_len,
-                    pcrs,
-                    (size_t) pcrs_len,
-                    cipherString,
-                    expPolicyDigestString,
-                    bool_trial_only))
+  // Call top-level "kmyth-seal" function
+  if (tpm2_kmyth_seal(unseal_output,
+                      unseal_output_len,
+                      &seal_output,
+                      &seal_output_len,
+                      authString,
+                      ownerAuthPasswd,
+                      cipherString,
+                      pcrsString,
+                      expPolicyDigestString,
+                      bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    kmyth_clear(authString, auth_string_len);
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
     kmyth_clear_and_free(unseal_output, unseal_output_len);
     free(seal_output);
-    free(pcrs);
     return 1;
   }
 
   kmyth_clear_and_free(unseal_output, unseal_output_len);
-  kmyth_clear(authString, auth_string_len);
-  kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-  free(pcrs);
+  if (authString != NULL)
+  {
+    kmyth_clear(authString, strlen(authString));
+  }
+  if (ownerAuthPasswd != NULL)
+  {
+    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+  }
 
   // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
