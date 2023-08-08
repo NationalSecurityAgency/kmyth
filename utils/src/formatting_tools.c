@@ -516,10 +516,10 @@ int convert_pcrs_string_to_int_array(char * pcrs_string,
   return 0;
 }
 
-int parse_exp_policy_string(char * exp_policy_string,
-                            size_t * pair_count,
-                            char ** pcrs_strings,
-                            char ** digest_strings)
+int parse_exp_policy_string_pairs(char * exp_policy_string,
+                                  size_t * pair_count,
+                                  char ** pcrs_strings,
+                                  char ** digest_strings)
 {
   *pair_count = 0;
 
@@ -527,6 +527,145 @@ int parse_exp_policy_string(char * exp_policy_string,
   {
     kmyth_log(LOG_DEBUG, "NULL expected policy string ... nothing to parse");
     return 0;
+  }
+
+  // input string should be of form:
+  //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
+
+  char * token = NULL;
+  char * pair_vals[7];
+  size_t pair_cnt = 0;
+
+  // parse out the "pair values" from the input string
+  token = strtok(exp_policy_string, ",");
+  while ((pair_cnt < MAX_POLICY_OR_CNT) && (token != NULL))
+  {
+    pair_vals[pair_cnt] = malloc (strlen(token) + 1);
+    if (pair_vals[pair_cnt] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of expected policy pair error ... exiting");
+      for (size_t i = 0; i < pair_cnt; i++)
+      {
+        free(pair_vals[i]);
+      }
+      return 1;
+    }
+    memcpy(pair_vals[pair_cnt], token, strlen(token) + 1);
+    pair_cnt++;
+    token = strtok(NULL, ",");
+  }
+
+  if (pair_cnt == 0)
+  {
+    kmyth_log(LOG_ERR, "no expected policy pairs parsed ... exiting");
+    return 1;
+  }
+
+  if (token != NULL) 
+  {
+    kmyth_log(LOG_ERR, "expected policy pair count exceeded ... exiting");
+    for (size_t i = 0; i < pair_cnt; i++)
+    {
+      free(pair_vals[i]);
+    }
+    return 1;
+  }
+
+  // assign recovered pair value count to output parameter
+  *pair_count = pair_cnt;
+
+  // parse all of the recovered string "pairs" that should be of form:
+  //   '<PCR selection string>':<policy digest string>
+  for (size_t i = 0; i < pair_cnt; i++)
+  {
+    // parse on ':' as delimiter
+    token = strtok(pair_vals[i], ":");
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "pcrs string parse error (%s) ... exiting",
+                         pair_vals[i]);
+      return 1;
+    }
+
+    // allocate memory for recovered pcrs string 
+    pcrs_strings[i] = malloc(strlen(token) + 1);
+    if (pcrs_strings[i] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of pcrs string error ... exiting");
+      for (size_t j = 0; j < pair_cnt; i++)
+      {
+        free(pair_vals[j]);
+      }
+      for (size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+      }
+      return 1;
+    }
+
+    // trim leading and trailing whitespace and assign
+    // recovered pcrs string to output parameter
+    size_t idx1 = 0, idx2 = strlen(token);
+    memset(pcrs_strings[i], '\0', idx2 + 1);
+    while (isspace(token[idx1]))
+    {
+      idx1++;
+    }
+    while (isspace(token[idx2 -1]))
+    {
+      idx2--;
+    }
+    memcpy(pcrs_strings[i], token + idx1, idx2 - idx1);
+
+    // recover digest string 
+    token = strtok(NULL, ":");
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "digest string parse error (%s) ... exiting",
+                         pair_vals[i]);
+      return 1;
+    }
+
+    // allocate memory for recovered digest string
+    digest_strings[i] = malloc(strlen(token) + 1); 
+    if (digest_strings[i] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of digest string error ... exiting");
+      for (size_t j = 0; j < pair_cnt; i++)
+      {
+        free(pair_vals[j]);
+        free(pcrs_strings[j]);
+      }
+      for (size_t j = 0; j < i; j++)
+      {
+        free(digest_strings[j]);
+      }
+      return 1;
+    }
+
+    // trim leading and trailing whitespace and assign
+    // recovered pcrs string to output parameter
+    idx1 = 0;
+    idx2 = strlen(token);
+    memset(digest_strings[i], '\0', idx2 + 1);
+    while (isspace(token[idx1]))
+    {
+      idx1++;
+    }
+    while (isspace(token[idx2 - 1]))
+    {
+      idx2--;
+    }
+    memcpy(digest_strings[i], token + idx1, idx2 - idx1);
+
+    // check for additional (invalid) tokens
+    token = strtok(NULL, ":");
+    if (token != NULL)
+    {
+      kmyth_log(LOG_ERR, "pair string parse error (%s) ... exiting",
+                         pair_vals[i]);
+      return 1;
+    }
   }
 
   return 0;

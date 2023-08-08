@@ -82,6 +82,24 @@ typedef struct
 } SESSION;
 
 /**
+ * @brief Policy-OR authorizations specify a policy digest list
+ *        for different branches of the policy-OR criteria. This
+ *        typedef specifies a struct that can be used to store a
+ *        boolean indicating whether or not a policy-OR criteria
+ *        is being used, and, if so, the list of policy digest
+ *        values that make up the criteria.
+ */
+typedef struct
+{
+  // boolean indicating whether or not a policy-OR criteria is employed
+  bool isPolicyOr;
+
+  // pointer to TPM2 struct containing the list of policy digests
+  TPML_DIGEST * policyDigestList;
+
+} POLICY_OR_DATA;
+
+/**
  * @brief Initializes TPM 2.0 connection to resource manager. 
  *
  * Will error if resource manager is not running. 

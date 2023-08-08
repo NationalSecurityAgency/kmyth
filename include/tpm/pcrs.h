@@ -15,27 +15,20 @@
 #include "defines.h"
 
 /**
- * @brief Policy-OR authorizations could specify different PCR selections
+ * @brief Kmyth policy-OR authorizations could specify different PCRs
  *        for different branches of the policy-OR criteria. This requires,
  *        therefore, different PCR selection lists for each 'branch' of the
  *        policy (i.e., for each policy digest in the policy-OR criteria).
  *        This typedef specifies a struct that can be used to store a list
  *        of PCR selection lists.
- * 
- * NOTE:  Currently, kmyth supports a PCR selection list count of 0 (no PCR
- *        authorization criteria), 1 (PCR criteria for a single authorization
- *        policy), and 2 (PCR criteria for 2 branches of a policy-OR criteria).
- *        TPM 2.0, however, supports up to eight branches in a policy-OR
- *        authorization, and this struct would support future extension of
- *        kmyth functionality to support additional PCR selection flexibility.
  */
 typedef struct
 {
   // number of PCR selection lists
   size_t count;
 
-  // array (up to MAX_PCR_SEL_CNT) of PCR selection list pointers
-  TPML_PCR_SELECTION * pcrList[MAX_PCR_SEL_CNT];
+  // array (up to MAX_POLICY_OR_CNT) of PCR selection list pointers
+  TPML_PCR_SELECTION * pcrList[MAX_POLICY_OR_CNT];
 
 } PCR_SELECTIONS;
 

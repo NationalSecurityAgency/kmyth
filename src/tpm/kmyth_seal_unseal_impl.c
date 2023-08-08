@@ -112,18 +112,22 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
 
-  // Create a "PCR selections" (TPML_PCR_SELECTION) struct and populate it in
-  // accordance with the PCR values specified in user input "PCR selections"
-  // string, if any. "PCR selections" structs, if any, are encapsulated within
-  // a PCR_SELECTIONS struct. The list of 0-8 TPML_PCR_SELECTION structs
+  // Create a  TPM2 "PCR selections" (TPML_PCR_SELECTION) struct and populate
+  // it in accordance with the user specified PCR selections string, if
+  // provided. TPML_PCR_SELECTION structs are encapsulated within a
+  // PCR_SELECTIONS struct. The list of 1-8 TPML_PCR_SELECTION structs
   // contained within the PCR_SELECTIONS struct enable policy-OR authorization
   // based on multiple PCR criteria.
   // NOTE: If the "PCR selections" string is NULL (no PCRs were selected by
-  //       the user), the PCR_SELECTIONS struct will contain an empty list of
-  //       TPML_PCR_SELECTION structs (.count = 0). A policy-OR criteria
-  //       where one of the policy branches has no PCRs selected does not make
-  //       sense for the current kmyth implementation supporting multiple PCR
-  //       criteria, so should be disallowed if this is the case.
+  //       the user), the PCR_SELECTIONS struct will contain a single
+  //       TPML_PCR_SELECTION struct with a mask that selects none of the
+  //       PCRs (default empty mask - .count = 0).
+  //
+  //       Also, a policy-OR criteria where one of the policy branches has no
+  //       PCRs selected does not make sense for the current kmyth
+  //       implementation supporting only PCR-based policy-OR criteria, so,
+  //       if a policy-OR criteria is specified, all 'branches' of the policy
+  //       should specify a non-empty set of PCR selections.
 
   TPML_PCR_SELECTION current_pcrList = { .count = 0, };
 
@@ -171,6 +175,22 @@ int tpm2_kmyth_seal(uint8_t * input,
   ski.pcr_sel.count++;
 
   // Parse expected policy string
+  size_t policy_cnt = 0;
+  char * pString[8];
+  char * dString[8];
+  if (exp_policy_string != NULL)
+  {
+    parse_exp_policy_string_pairs(exp_policy_string,
+                                  &policy_cnt,
+                                  pString,
+                                  dString);
+    for (size_t cnt = 0; cnt < policy_cnt; cnt++)
+    {
+      printf("pString[%zu] = %s\n", cnt, pString[cnt]);
+      printf("dString[%zu] = %s\n", cnt, dString[cnt]);
+    }
+    return 0;
+  }
 
   // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
   // create, we will assign TPM 2.0 policy-based enhanced authorization

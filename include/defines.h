@@ -84,13 +84,14 @@
 #define MAX_RETRIES 3
 
 /**
- * The kmyth PCR_SELECTION_LISTS struct is used to specify multiple PCR
- * selection criteria, if a policy-OR criteria is needed. This constant
- * defines the maximum numver of PCR criteria supported and is used to
- * size the array of TPML_PCR_SELECTION structs than can be encapsulated
- * within a PCR_SELECTION_LISTS struct
+ * Kmyth supports PCR-based policy-OR authorization criteria. This constant
+ * defines the maximum number of policy-OR criteria supported, which maps to
+ * both the number of PCR criteria supported (used to size the array of
+ * TPML_PCR_SELECTION structs than can be encapsulated within a
+ * PCR_SELECTIONS struct) and the number of policy digests that can be
+ * specified (limited to eight by the TPML_DIGEST struct).
  */
-#define MAX_PCR_SEL_CNT 8
+#define MAX_POLICY_OR_CNT 8
 
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)

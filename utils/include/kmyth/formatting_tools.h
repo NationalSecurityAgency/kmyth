@@ -268,6 +268,11 @@ int convert_pcrs_string_to_int_array(char * pcrs_string,
                                      int ** pcrs,
                                      size_t * pcrs_len);
 
+int parse_exp_policy_string_pairs(char * exp_policy_string,
+                                  size_t * pair_count,
+                                  char ** pcrs_strings,
+                                  char ** digest_strings);
+
 #ifdef __cplusplus
 }
 #endif

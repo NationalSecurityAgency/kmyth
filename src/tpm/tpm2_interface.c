@@ -1320,7 +1320,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
   }
 
-  if (policyOR_digestList->count == 2)
+  if (policyOR_digestList->count >= 2)
   {
     printf("Calling apply_policy_or() ...\n");
 
