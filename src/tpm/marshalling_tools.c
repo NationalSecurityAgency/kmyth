@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 
 #include "defines.h"
+#include "tpm2_interface.h"
 
 //############################################################################
 // parse_ski_bytes
@@ -332,7 +333,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                                   decoded_pcr_select_data,
                                   decoded_pcr_select_size,
                                   decoded_pcr_select_offset,
-                                  &temp_ski.policy_digests,
+                                  &temp_ski.policy_or,
                                   decoded_policy_or_digest_data,
                                   decoded_policy_or_digest_size,
                                   decoded_policy_or_digest_offset,
@@ -390,7 +391,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   //       in the TPM2B_* sized buffer cases
 
 
-  size_t pcr_select_size = sizeof(input.pcr_sel) + 1 + (input.pcr_sel.count*2);
+  size_t pcr_select_size = sizeof(input.pcr_sel);
   size_t pcr_select_offset = 0;
   uint8_t *pcr_select_data = (uint8_t *) calloc(pcr_select_size,
                                                 sizeof(uint8_t));
@@ -402,13 +403,12 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
     return 1;
   }
 
-  size_t policy_digest_list_size = (size_t) sizeof(input.policy_digests) + 1;
+  size_t policy_digest_list_size = sizeof(input.policy_or);
+  kmyth_log(LOG_DEBUG, "sizeof(input.policy_or) = %zu", sizeof(input.policy_or));
   size_t policy_digest_list_offset = 0;
   uint8_t * policy_digest_list_data = calloc(policy_digest_list_size,
                                              sizeof(uint8_t));
 
-  // if both policy branches are present, includes
-  // policy branch info to be marshalled to ski file
   if (policy_digest_list_data == NULL)
   {
     kmyth_log(LOG_ERR, "policy digest list data malloc failed ... exiting");
@@ -477,7 +477,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
                          &pcr_select_data,
                          &pcr_select_size,
                          pcr_select_offset,
-                         &(input.policy_digests),
+                         &(input.policy_or),
                          &policy_digest_list_data,
                          &policy_digest_list_size,
                          policy_digest_list_offset,
@@ -682,7 +682,7 @@ Ski get_default_ski(void)
 {
   Ski ret = {
     .pcr_sel = { .count = 0, .pcrList = { NULL } },
-    .policy_digests = { .count = 0, },
+    .policy_or = { .isPolicyOr = false, .list = NULL },
     .sk_priv = { .size = 0, },
     .cipher = { .cipher_name = NULL, },
     .sym_key_pub = { .size = 0, },
@@ -698,10 +698,10 @@ Ski get_default_ski(void)
 // marshal_skiObjects()
 //############################################################################
 int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
-                       uint8_t ** pcr_selection_struct_data,
-                       size_t * pcr_selection_struct_data_size,
-                       size_t pcr_selection_struct_data_offset,
-                       TPML_DIGEST * policy_or_digest_list,
+                       uint8_t ** pcr_selection_data,
+                       size_t * pcr_selection_data_size,
+                       size_t pcr_selection_data_offset,
+                       POLICY_OR_DATA * policy_or_struct,
                        uint8_t ** policy_or_data,
                        size_t * policy_or_data_size,
                        size_t policy_or_data_offset,
@@ -727,7 +727,7 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
   // (i.e., TPM sealed storage and symmetric keys) public/private blobs
   // are non-empty.
   if (pcr_selection_struct == NULL ||
-      policy_or_digest_list == NULL ||
+      policy_or_struct == NULL ||
       storage_key_public_blob == NULL ||
       storage_key_public_blob->size == 0 ||
       storage_key_private_blob == NULL ||
@@ -742,37 +742,33 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
   }
 
   // Marshal (pack) TPM PCR selection list struct
-  if (*pcr_selection_struct_data == NULL ||
-      pcr_selection_struct_data_size == NULL)
+  if (*pcr_selection_data == NULL || pcr_selection_data_size == NULL)
   {
     kmyth_log(LOG_ERR, "NULL PCR select list data pointer ... exiting");
     return 1;
   }
   if (pack_pcr(pcr_selection_struct,
-               *pcr_selection_struct_data,
-               *pcr_selection_struct_data_size,
-               pcr_selection_struct_data_offset))
+               *pcr_selection_data,
+               *pcr_selection_data_size,
+               pcr_selection_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing PCR select struct ... exiting");
     return 1;
   }
 
-  // Marshal (pack) optional policy-OR digest list
-  if (*policy_or_data != NULL || policy_or_data_size == NULL)
+  // Marshal (pack) policy-OR data struct
+  if (*policy_or_data == NULL || policy_or_data_size == NULL)
   {
-    if (pack_digest_list(policy_or_digest_list,
-                         *policy_or_data,
-                         *policy_or_data_size,
-                         policy_or_data_offset))
-    {
-      kmyth_log(LOG_ERR, "error packing policy-OR digest list ... exiting");
-      return 1;
-    }
+    kmyth_log(LOG_ERR, "NULL policy-OR data pointer ... exiting");
+    return 1;
   }
-  // For scenario not employing policy-OR, ensure digest list is empty
-  else
+  if (pack_policy_or(policy_or_struct,
+                     *policy_or_data,
+                     *policy_or_data_size,
+                     policy_or_data_offset))
   {
-    policy_or_digest_list->count = 0;
+    kmyth_log(LOG_ERR, "error packing policy-OR struct ... exiting");
+    return 1;
   }
 
   // Marshal (pack) public data buffer for storage key (SK)
@@ -845,7 +841,7 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                          uint8_t * pcr_selection_struct_data,
                          size_t pcr_selection_struct_data_size,
                          size_t pcr_selection_struct_data_offset,
-                         TPML_DIGEST * policy_or_digest_list,
+                         POLICY_OR_DATA * policy_or_struct,
                          uint8_t * policy_or_data,
                          size_t policy_or_data_size,
                          size_t policy_or_data_offset,
@@ -875,10 +871,10 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                        pcr_selection_struct_data_offset);
 
   // Unmarshal TPM Digest list struct
-  retval |= unpack_digest_list(policy_or_digest_list,
-                               policy_or_data,
-                               policy_or_data_size,
-                               policy_or_data_offset);
+  retval |= unpack_policy_or(policy_or_struct,
+                             policy_or_data,
+                             policy_or_data_size,
+                             policy_or_data_offset);
 
   // Unmarshal public data for Kmyth storage key (SK)
   retval |= unpack_public(storage_key_public_blob,
@@ -1026,11 +1022,67 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
 }
 
 //############################################################################
+// pack_policy_or()
+//############################################################################
+int pack_policy_or(POLICY_OR_DATA * policy_or_in,
+                   uint8_t * packed_data_out,
+                   size_t packed_data_out_size,
+                   size_t packed_data_out_offset)
+{
+  TSS2_RC rc = 0;
+
+  // store 'isPolicyOr' bool as a one-byte unsigned integer
+  uint8_t temp_byte = (uint8_t) policy_or_in->isPolicyOr;
+  memcpy(packed_data_out, &temp_byte, sizeof(uint8_t));
+  packed_data_out_offset += sizeof(uint8_t);
+
+  if ((rc = Tss2_MU_TPML_DIGEST_Marshal(policy_or_in->list,
+                                        packed_data_out,
+                                        packed_data_out_size,
+                                        &packed_data_out_offset)))
+  {
+    kmyth_log(LOG_ERR,
+              "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X ... exiting", rc);
+    return 1;
+  }
+
+  return 0;
+}
+
+//############################################################################
+// unpack_policy_or()
+//############################################################################
+int unpack_policy_or(POLICY_OR_DATA * policy_or_out,
+                     uint8_t * packed_data_in,
+                     size_t packed_data_in_size,
+                     size_t packed_data_in_offset)
+{
+  TSS2_RC rc = 0;
+
+  // read 'isPolicyOr' bool (one-byte unsigned integer)
+  policy_or_out->isPolicyOr = (bool) packed_data_in[0];
+  packed_data_in_offset += sizeof(uint8_t);
+
+  if ((rc = Tss2_MU_TPML_DIGEST_Unmarshal(packed_data_in,
+                                          packed_data_in_size,
+                                          &packed_data_in_offset,
+                                          policy_or_out->list)))
+  {
+    kmyth_log(LOG_ERR,
+              "Tss2_MU_TPML_DIGEST_Unmarshal(): 0x%08x ... exiting", rc);
+    return 1;
+  }
+
+  return 0;
+}
+
+//############################################################################
 // pack_public()
 //############################################################################
 int pack_public(TPM2B_PUBLIC * public_blob_in,
                 uint8_t * packed_data_out,
-                size_t packed_data_out_size, size_t packed_data_out_offset)
+                size_t packed_data_out_size,
+                size_t packed_data_out_offset)
 {
   TSS2_RC rc = 0;
 
@@ -1110,52 +1162,6 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
   {
     kmyth_log(LOG_ERR,
               "Tss2_MU_TPM2B_PRIVATE_Unmarshal(): 0x%08x ... exiting", rc);
-    return 1;
-  }
-
-  return 0;
-}
-
-//############################################################################
-// pack_digest_list()
-//############################################################################
-int pack_digest_list(TPML_DIGEST * digest_list_in,
-                     uint8_t * packed_data_out,
-                     size_t packed_data_out_size,
-                     size_t packed_data_out_offset)
-{
-  TSS2_RC rc = 0;
-
-  if ((rc = Tss2_MU_TPML_DIGEST_Marshal(digest_list_in,
-                                        packed_data_out,
-                                        packed_data_out_size,
-                                        &packed_data_out_offset)))
-  {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X ... exiting", rc);
-    return 1;
-  }
-
-  return 0;
-}
-
-//############################################################################
-// unpack_digest_list()
-//############################################################################
-int unpack_digest_list(TPML_DIGEST * digest_out,
-                       uint8_t * packed_data_in,
-                       size_t packed_data_in_size,
-                       size_t packed_data_in_offset)
-{
-  TSS2_RC rc = 0;
-
-  if ((rc = Tss2_MU_TPML_DIGEST_Unmarshal(packed_data_in,
-                                          packed_data_in_size,
-                                          &packed_data_in_offset,
-                                          digest_out)))
-  {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_DIGEST_Unmarshal(): 0x%08x ... exiting", rc);
     return 1;
   }
 

@@ -14,6 +14,7 @@
 #include <tss2/tss2_sys.h>
 
 #include "formatting_tools.h"
+#include "tpm2_interface.h"
 #include "pcrs.h"
 
 #include "cipher/cipher.h"
@@ -24,7 +25,7 @@ typedef struct Ski
   PCR_SELECTIONS pcr_sel;
 
   // List of digests used for a policy-OR authorization
-  TPML_DIGEST policy_digests;
+  POLICY_OR_DATA policy_or;
 
   // Storage key public/private
   TPM2B_PUBLIC sk_pub;
@@ -89,26 +90,28 @@ Ski get_default_ski(void);
  * @brief Marshals TPM2 structures that need to be written to the .ski file
  *        into byte arrays.
  *
- * @param[in] pcr_selection_struct             TPM 2.0 PCR selection list
- *                                             struct to be packed - passed
+ * @param[in] pcr_selection_struct             PCR_SELECTIONS struct containing
+ *                                             a set of TPM 2.0 PCR selection list
+ *                                             structs to be packed - passed
  *                                             as a pointer to the struct.
  *
- * @param[out] pcr_selection_struct_data       Pointer to byte array where the
- *                                             marshaled PCR selection list
- *                                             data will be stored.
+ * @param[out] pcr_selection_data              Pointer to byte array where the
+ *                                             marshaled PCR selection data
+ *                                             will be stored.
  *                                             Memory for this is allocated
  *                                             within this function but must
  *                                             be freed by the caller.
  *
- * @param[out] pcr_selection_struct_data_size  Pointer to a size_t to hold the
- *                                             length (in bytes) of
- *                                             pcr_selection_struct_data
+ * @param[out] pcr_selection_data_size         Pointer to a size_t to hold the
+ *                                             the length (in bytes) of
+ *                                             pcr_selection_data
  *
- * @param[in] pcr_selection_struct_data_offset Specifies the starting byte in
+ * @param[in] pcr_selection_data_offset        Specifies the starting byte in
  *                                             the destination buffer for the
  *                                             PCR selection struct data.
  * 
- * @param[in] policy_or_digest_list            Pointer to TPM 2.0 policy digest
+ * @param[in] policy_or_struct                 Pointer to POLICY_OR_DATA struct
+ *                                             encapsulating the TPM2 digest
  *                                             list (TPML_DIGEST) struct to be
  *                                             packed.
  *
@@ -204,10 +207,10 @@ Ski get_default_ski(void);
  * @return 0 if success, 1 if error
  */
 int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
-                       uint8_t ** pcr_selection_struct_data,
-                       size_t * pcr_selection_struct_data_size,
-                       size_t pcr_selection_struct_data_offset,
-                       TPML_DIGEST * policy_or_digest_list,
+                       uint8_t ** pcr_selection_data,
+                       size_t * pcr_selection_data_size,
+                       size_t pcr_selection_data_offset,
+                       POLICY_OR_DATA * policy_or_struct,
                        uint8_t ** policy_or_data,
                        size_t * policy_or_data_size,
                        size_t policy_or_data_offset,
@@ -238,21 +241,21 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  *                                             selection data - passed as
  *                                             a pointer to the struct.
  *
- * @param[in] pcr_selection_struct_data        Pointer to byte array containing
+ * @param[in] pcr_selection_data        `       Pointer to byte array containing
  *                                             the marshaled PCR selection list
  *                                             data.
  *
- * @param[in] pcr_selection_struct_data_size   The length (in bytes) of
+ * @param[in] pcr_selection_data_size          The length (in bytes) of
  *                                             pcr_selection_struct_data
  *
- * @param[in] pcr_selection_struct_data_offset Specifies the starting byte in
+ * @param[in] pcr_selection_data_offset        Specifies the starting byte in
  *                                             the destination buffer for the
  *                                             PCR selection struct data.
  *
- * @param[out] policy_or_digest_list           Pointer to TPM 2.0 policy digest
- *                                             list (TPML_DIGEST) struct to
- *                                             hold unpacked policy-OR digest
- *                                             values.
+ * @param[out] policy_or_struct                Pointer to POLICY_OR_DATA struct
+ *                                             to hold list (TPM2 TPML_DIGEST
+ *                                             struct) with unpacked policy-OR
+ *                                             digest values.
  *
  * @param[in] policy_or_data                   Pointer to the marshaled
  *                                             policy-OR digest list data.
@@ -335,10 +338,10 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  * @return 0 if success, 1 if error
  */
 int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
-                         uint8_t * pcr_selection_struct_data,
-                         size_t pcr_selection_struct_data_size,
-                         size_t pcr_selection_struct_data_offset,
-                         TPML_DIGEST * policy_or_digest_list,
+                         uint8_t * pcr_selection_data,
+                         size_t pcr_selection_data_size,
+                         size_t pcr_selection_data_offset,
+                         POLICY_OR_DATA * policy_or_struct,
                          uint8_t * policy_or_data,
                          size_t policy_or_data_size,
                          size_t policy_or_data_offset,
@@ -421,17 +424,16 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
                size_t packed_data_in_offset);
 
 /**
- * @brief As the contents of memory containing a TPM 2.0 digest list may have
- *        platform-specific formatting (padding, byte/bit ordering, etc),
- *        this function packs a TPM 2.0 digest (TPM2B_DIGEST struct) into a
- *        platform independent format, supporting the writing of this data
- *        to a kmyth .ski output file.
+ * @brief This function packs an input POLICY_OR_DATA structure
+ *        (containing a TPML_DIGEST struct) into a platform
+ *        independent format, which, for Kmyth, facilitates writing
+ *        this data to a .ski output file.
  *
  * This function uses the TSS2 API for marshaling data to obtain
  * the packed, platform independent result.
  *
- * @param[in]  digest_list_in         TPM 2.0 digest list struct - passed as
- *                                    a pointer to a TPML_DIGEST sized buffer
+ * @param[in]  policy_or_in           POLICY_OR_DATA struct to be packed -
+ *                                    passed as a pointer to the struct
  *
  * @param[out] packed_data_out        Data buffer for packed result - passed
  *                                    as a pointer to the output byte array
@@ -445,42 +447,40 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
  *
  * @return 0 if success, 1 if error
  */
-int pack_digest_list(TPML_DIGEST * digest_list_in,
-                     uint8_t * packed_data_out,
-                     size_t packed_data_out_size,
-                     size_t packed_data_out_offset);
+int pack_policy_or(POLICY_OR_DATA * policy_or_in,
+                   uint8_t * packed_data_out,
+                   size_t packed_data_out_size,
+                   size_t packed_data_out_offset);
 
 /**
- * @brief As the contents of memory containing a TPM 2.0 digest list may have
- *        platform-specific formatting (padding, byte/bit ordering, etc), this
- *        function unpacks a platform independently formatted TPM 2.0 digest
- *        list(e.g., a policy digest list read in from a kmyth .ski file) into
- *        a TPML_DIGEST struct, where it can be used by a kmyth application
- *        interacting with a TPM 2.0.
+ * @brief This function unpacks platform independently formatted
+ *        policy-OR authorization data (e.g., that read from a .ski
+ *        file) into a POLICY_OR_DATA struct, where it can be used
+ *        by a Kmyth application interacting with a TPM 2.0.
  *
  * This function uses the TSS2 API for unmarshalling data to obtain the unpacked,
  * platform dependent result.
  *
- * @param[out] digest_list_out       TPM 2.0 digest list (TPML_DIGEST struct)
- *                                   to hold the unpacked digest list result.
+ * @param[out] policy_or_out        POLICY_OR_DATA struct to hold the unpacked
+ *                                  policy-OR authorization data result.
  *
- * @param[in]  packed_data_in        Data buffer holding the packed digest input -
- *                                   passed as a pointer to the byte array.
+ * @param[in]  packed_data_in       Data buffer holding the packed digest input -
+ *                                  passed as a pointer to the byte array.
  *
- * @param[in]  packed_data_in_size   Size, in bytes, of the memory pointed to
- *                                   by the input packed data buffer
- *                                   (packed_data_in).
+ * @param[in]  packed_data_in_size  Size, in bytes, of the memory pointed to
+ *                                  by the input packed data buffer
+ *                                  (packed_data_in).
  *
- * @param[in] packed_data_in_offset  The byte offset, into the input data
- *                                   buffer, specifying where the source
- *                                   data starts.
+ * @param[in] packed_data_in_offset The byte offset, into the input data
+ *                                  buffer, specifying where the source
+ *                                  data starts.
  *
  * @return 0 if success, 1 if error
  */
-int unpack_digest_list(TPML_DIGEST * digest_list_out,
-                       uint8_t * packed_data_in,
-                       size_t packed_data_in_size,
-                       size_t packed_data_in_offset);
+int unpack_policy_or(POLICY_OR_DATA * policy_or_out,
+                     uint8_t * packed_data_in,
+                     size_t packed_data_in_size,
+                     size_t packed_data_in_offset);
 
 /**
  * @brief As the contents of memory containing the public area of a

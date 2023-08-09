@@ -131,11 +131,11 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   TPML_PCR_SELECTION current_pcrList = { .count = 0, };
 
+  int * pcrs = NULL;
+  size_t pcrs_len = 0;
+
   if (pcrs_string != NULL)
   {
-    int * pcrs = NULL;
-    size_t pcrs_len = 0;
-
     // reformat PCR selections as integer array
     if (convert_pcrs_string_to_int_array(pcrs_string, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
     {
@@ -149,35 +149,31 @@ int tpm2_kmyth_seal(uint8_t * input,
       free_tpm2_resources(&sapi_ctx);
       return 1;
     }
+  }
 
-    // check PCR selections array not empty (e.g., "" PCR selection string)
-    if (pcrs_len > 0)
-    {
-      // configure TPM2 'PCR selections list' struct based on user input
-      if (init_pcr_selection(sapi_ctx,
-                             pcrs,
-                             pcrs_len,
-                             &current_pcrList))
-      {
-        kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");
-        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-        free(pcrs);
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-
-      kmyth_log(LOG_DEBUG, "configured current PCR selections for kmyth-seal");
-    }
+  // configure TPM2 'PCR selections list' struct based on user input
+  if (init_pcr_selection(sapi_ctx,
+                         pcrs,
+                         pcrs_len,
+                         &current_pcrList))
+  {
+    kmyth_log(LOG_ERR, "error initializing PCRs ... exiting");
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+    free(pcrs);
+    free_tpm2_resources(&sapi_ctx);
+    return 1;
   }
 
   ski.pcr_sel.pcrList[0] = &current_pcrList; 
   ski.pcr_sel.count++;
 
+  kmyth_log(LOG_DEBUG, "configured current PCR selections for kmyth-seal");
+
   // Parse expected policy string
   size_t policy_cnt = 0;
-  char * pString[8];
-  char * dString[8];
+  char * pString[MAX_POLICY_OR_CNT] = { NULL };
+  char * dString[MAX_POLICY_OR_CNT] = { NULL };
   if (exp_policy_string != NULL)
   {
     parse_exp_policy_string_pairs(exp_policy_string,
@@ -189,8 +185,10 @@ int tpm2_kmyth_seal(uint8_t * input,
       printf("pString[%zu] = %s\n", cnt, pString[cnt]);
       printf("dString[%zu] = %s\n", cnt, dString[cnt]);
     }
-    return 0;
   }
+
+  TPML_DIGEST policy_or_digests = { .count = 0, };
+  ski.policy_or.list = &policy_or_digests;
 
   // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
   // create, we will assign TPM 2.0 policy-based enhanced authorization
@@ -204,7 +202,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   if (create_policy_digest(sapi_ctx,
                            ski.pcr_sel.pcrList[0],
-                           &(ski.policy_digests),
+                           ski.policy_or.list,
                            &objAuthPolicy))
   {
     kmyth_log(LOG_ERR,
@@ -246,13 +244,13 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (exp_policy_string != NULL)
   {
     // assigns the previously calculated objAuthPolicy to first policy branch
-    ski.policy_digests.count++;
-    ski.policy_digests.digests[0] = objAuthPolicy;
+    ski.policy_or.list->count++;
+    ski.policy_or.list->digests[0] = objAuthPolicy;
 
     // fills the second policy branch with a policy specified by the user
     policyOrDigestList.count++;
     if (convert_string_to_digest(exp_policy_string,
-                                 &(ski.policy_digests.digests[1])))
+                                 &(ski.policy_or.list->digests[1])))
     {
       kmyth_log(LOG_ERR,
                 "failed to convert secondary policy %s to digest ... exiting",
@@ -271,7 +269,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     apply_policy(sapi_ctx,
                  trialPolicySession.sessionHandle,
                  ski.pcr_sel.pcrList[0],
-                 &(ski.policy_digests));
+                 ski.policy_or.list);
 
     // obtains the policy digest from the policyOR calculation
     Tss2_Sys_PolicyGetDigest(sapi_ctx,
@@ -531,7 +529,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                              &(ski.sym_key_priv),
                              &objAuthValue,
                              ski.pcr_sel.pcrList[0],
-                             &(ski.policy_digests),
+                             ski.policy_or.list,
                              &key,
                              &key_len))
   {

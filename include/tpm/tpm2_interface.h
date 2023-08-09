@@ -95,7 +95,7 @@ typedef struct
   bool isPolicyOr;
 
   // pointer to TPM2 struct containing the list of policy digests
-  TPML_DIGEST * policyDigestList;
+  TPML_DIGEST * list;
 
 } POLICY_OR_DATA;
 
