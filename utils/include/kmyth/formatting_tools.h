@@ -33,9 +33,9 @@ extern "C" {
 /**
  * @ingroup block_delim
  *
- * @brief   Indicates the start of the Policy-OR digest list block
+ * @brief   Indicates the start of the Policy-OR data (digest list) block
  */
-#define KMYTH_DELIM_POLICY_OR_DIGESTS "-----POLICY OR_DIGESTS-----\n"
+#define KMYTH_DELIM_POLICY_OR "-----POLICY OR-----\n"
 
 /** 
  * @ingroup block_delim

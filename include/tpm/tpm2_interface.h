@@ -39,21 +39,21 @@ typedef struct
   // Inputs to Tss2_Sys_StartAuthSession() that need to be saved
 
   TPMI_DH_OBJECT tpmKey;        // handle of loaded decrypt key used
-  // to encrypt salt
+                                // to encrypt salt
 
   TPMI_DH_ENTITY bind;          // entity providing the authValue
 
   TPM2B_ENCRYPTED_SECRET encryptedSalt; // encrypted salt value
-  // zero-sized value for unsalted session
+                                        // zero-sized for unsalted session
 
   TPM2B_MAX_BUFFER salt;        // user provided salt value
 
   TPM2_SE sessionType;          // session type (password, HMAC,
-  // policy, or trial)
-  // Kmyth only allows policy or trial
+                                // policy, or trial)
+                                // kmyth only allows policy or trial
 
   TPMT_SYM_DEF symmetric;       // symmetric algorithm and key size
-  // for parameter encryption
+                                // for parameter encryption
 
   TPMI_ALG_HASH authHash;       // hash algorithm for the session
 
@@ -66,14 +66,14 @@ typedef struct
   // Internal state for the session
 
   TPM2B_DIGEST sessionKey;      // empty (zero-size) value for
-  // unsalted and unbound session
+                                // unsalted and unbound session
 
   TPM2B_DIGEST authValueBind;   // authVal of bind object
 
   TPM2B_NONCE nonceNewer;       // initiator generates 'newer' nonce
 
   TPM2B_NONCE nonceOlder;       // last nonce initiator received
-  // from other party becomes 'older'
+                                // from other party becomes 'older'
 
   TPM2B_NONCE nonceTpmDecrypt;  // Applicable for 'decrypt' sessions
 
@@ -85,17 +85,16 @@ typedef struct
  * @brief Policy-OR authorizations specify a policy digest list
  *        for different branches of the policy-OR criteria. This
  *        typedef specifies a struct that can be used to store a
- *        boolean indicating whether or not a policy-OR criteria
- *        is being used, and, if so, the list of policy digest
- *        values that make up the criteria.
+ *        list of policy digest values that make up the criteria.
+ *        A boolean indicating whether or not a policy-OR criteria
+ *        is specified, is also included.
+ * 
  */
 typedef struct
 {
-  // boolean indicating whether or not a policy-OR criteria is employed
-  bool isPolicyOr;
+  bool isPolicyOR;
 
-  // pointer to TPM2 struct containing the list of policy digests
-  TPML_DIGEST * list;
+  TPML_DIGEST * digestList;
 
 } POLICY_OR_DATA;
 

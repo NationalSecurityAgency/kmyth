@@ -54,6 +54,13 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
+  // create "default" (initialize) struct to hold .ski file contents:
+  //   - empty PCR selections struct (no PCRs selected)
+  //   - empty policy-OR data struct
+  //   - empty (null) cipher string
+  //   - empty storage key (public/private structs)
+  //   - empty symmetric key (public/private structs)
+  //   - empty encrypted data buffer
   Ski ski = get_default_ski();
 
   // obtain symmetric cipher to be used
@@ -114,20 +121,11 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   // Create a  TPM2 "PCR selections" (TPML_PCR_SELECTION) struct and populate
   // it in accordance with the user specified PCR selections string, if
-  // provided. TPML_PCR_SELECTION structs are encapsulated within a
-  // PCR_SELECTIONS struct. The list of 1-8 TPML_PCR_SELECTION structs
-  // contained within the PCR_SELECTIONS struct enable policy-OR authorization
-  // based on multiple PCR criteria.
+  // provided. 
   // NOTE: If the "PCR selections" string is NULL (no PCRs were selected by
   //       the user), the PCR_SELECTIONS struct will contain a single
   //       TPML_PCR_SELECTION struct with a mask that selects none of the
   //       PCRs (default empty mask - .count = 0).
-  //
-  //       Also, a policy-OR criteria where one of the policy branches has no
-  //       PCRs selected does not make sense for the current kmyth
-  //       implementation supporting only PCR-based policy-OR criteria, so,
-  //       if a policy-OR criteria is specified, all 'branches' of the policy
-  //       should specify a non-empty set of PCR selections.
 
   TPML_PCR_SELECTION current_pcrList = { .count = 0, };
 
@@ -151,7 +149,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     }
   }
 
-  // configure TPM2 'PCR selections list' struct based on user input
+  // configure PCR selections struct with user input (or default empty) values
   if (init_pcr_selection(sapi_ctx,
                          pcrs,
                          pcrs_len,
@@ -164,6 +162,26 @@ int tpm2_kmyth_seal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
+
+  // The kmyth .ski file encodes a PCR_SELECTIONS struct which encapsulates
+  // a list of up to eight (8) TPML_PCR_SELECTION structs:
+  //
+  // - The first TPML_PCR_SELECTION struct in this list (index = 0) contains
+  //   the current PCR selections (i.e., those specified by the user in a
+  //   command-line option string). While this struct may be configured with
+  //   an empty mask (no PCRs selected), it must exist even if no PCR criteria
+  //   is specified by the user. In addition to its use in specifying an
+  //   authorization policy, this set of PCRs is incorporated in object
+  //   creation data.
+  //
+  // - The remaining TPML_PCR_SELECTIONS structs (index = 1-7) support
+  //   policy-OR authorization based on multiple PCR criteria. A policy-OR
+  //   criteria where one of the policy branches has no PCRs selected does
+  //   not make sense for the current kmyth implementation supporting only
+  //   PCR-based policy-OR criteria, so, if a policy-OR criteria is specified
+  //   (PCR_SELECTIONS struct has more than one TPML_PCR_SELECTION struct)
+  //   all 'branches' of the policy must specify a non-empty set of PCR
+  //   selections.
 
   ski.pcr_sel.pcrList[0] = &current_pcrList; 
   ski.pcr_sel.count++;
@@ -188,7 +206,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
 
   TPML_DIGEST policy_or_digests = { .count = 0, };
-  ski.policy_or.list = &policy_or_digests;
+  ski.policy_or.digestList = &policy_or_digests;
 
   // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
   // create, we will assign TPM 2.0 policy-based enhanced authorization
@@ -202,7 +220,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   if (create_policy_digest(sapi_ctx,
                            ski.pcr_sel.pcrList[0],
-                           ski.policy_or.list,
+                           ski.policy_or.digestList,
                            &objAuthPolicy))
   {
     kmyth_log(LOG_ERR,
@@ -244,13 +262,13 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (exp_policy_string != NULL)
   {
     // assigns the previously calculated objAuthPolicy to first policy branch
-    ski.policy_or.list->count++;
-    ski.policy_or.list->digests[0] = objAuthPolicy;
+    ski.policy_or.digestList->count++;
+    ski.policy_or.digestList->digests[0] = objAuthPolicy;
 
     // fills the second policy branch with a policy specified by the user
     policyOrDigestList.count++;
     if (convert_string_to_digest(exp_policy_string,
-                                 &(ski.policy_or.list->digests[1])))
+                                 &(ski.policy_or.digestList->digests[1])))
     {
       kmyth_log(LOG_ERR,
                 "failed to convert secondary policy %s to digest ... exiting",
@@ -269,7 +287,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     apply_policy(sapi_ctx,
                  trialPolicySession.sessionHandle,
                  ski.pcr_sel.pcrList[0],
-                 ski.policy_or.list);
+                 ski.policy_or.digestList);
 
     // obtains the policy digest from the policyOR calculation
     Tss2_Sys_PolicyGetDigest(sapi_ctx,
@@ -529,7 +547,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                              &(ski.sym_key_priv),
                              &objAuthValue,
                              ski.pcr_sel.pcrList[0],
-                             ski.policy_or.list,
+                             ski.policy_or.digestList,
                              &key,
                              &key_len))
   {
