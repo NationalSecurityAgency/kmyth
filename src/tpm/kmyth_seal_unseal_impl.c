@@ -163,6 +163,10 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
 
+  // cleanup
+  free(pcrs);
+  pcrs = NULL;
+
   // The kmyth .ski file encodes a PCR_SELECTIONS struct which encapsulates
   // a list of up to eight (8) TPML_PCR_SELECTION structs:
   //
@@ -174,39 +178,18 @@ int tpm2_kmyth_seal(uint8_t * input,
   //   authorization policy, this set of PCRs is incorporated in object
   //   creation data.
   //
-  // - The remaining TPML_PCR_SELECTIONS structs (index = 1-7) support
-  //   policy-OR authorization based on multiple PCR criteria. A policy-OR
-  //   criteria where one of the policy branches has no PCRs selected does
-  //   not make sense for the current kmyth implementation supporting only
-  //   PCR-based policy-OR criteria, so, if a policy-OR criteria is specified
-  //   (PCR_SELECTIONS struct has more than one TPML_PCR_SELECTION struct)
-  //   all 'branches' of the policy must specify a non-empty set of PCR
-  //   selections.
+  // - The remaining TPML_PCR_SELECTIONS structs (index = 1-7), if present,
+  //   support policy-OR authorization based on multiple PCR criteria. A
+  //   policy-OR criteria where one of the policy branches has no PCRs
+  //   selected does not make sense for the current kmyth implementation
+  //   supporting only PCR-based policy-OR criteria, so, if a policy-OR
+  //   criteria is specified, all 'branches' of the policy must specify a
+  //   non-empty set of PCR selections.
 
   ski.pcr_sel.pcrList[0] = &current_pcrList; 
   ski.pcr_sel.count++;
 
   kmyth_log(LOG_DEBUG, "configured current PCR selections for kmyth-seal");
-
-  // Parse expected policy string
-  size_t policy_cnt = 0;
-  char * pString[MAX_POLICY_OR_CNT] = { NULL };
-  char * dString[MAX_POLICY_OR_CNT] = { NULL };
-  if (exp_policy_string != NULL)
-  {
-    parse_exp_policy_string_pairs(exp_policy_string,
-                                  &policy_cnt,
-                                  pString,
-                                  dString);
-    for (size_t cnt = 0; cnt < policy_cnt; cnt++)
-    {
-      printf("pString[%zu] = %s\n", cnt, pString[cnt]);
-      printf("dString[%zu] = %s\n", cnt, dString[cnt]);
-    }
-  }
-
-  TPML_DIGEST policy_or_digests = { .count = 0, };
-  ski.policy_or.digestList = &policy_or_digests;
 
   // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
   // create, we will assign TPM 2.0 policy-based enhanced authorization
@@ -220,11 +203,10 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   if (create_policy_digest(sapi_ctx,
                            ski.pcr_sel.pcrList[0],
-                           ski.policy_or.digestList,
+                           NULL,
                            &objAuthPolicy))
   {
-    kmyth_log(LOG_ERR,
-              "error creating policy digest for new Kmyth object ... exiting");
+    kmyth_log(LOG_ERR, "error creating authPolicy digest ... exiting");
 
     // clear potential 'auth' data, free TPM resources before exiting early
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -233,48 +215,141 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
 
-  kmyth_log(LOG_DEBUG, "after create_policy_digest()");
+  kmyth_log(LOG_DEBUG, "created policy digest using current auth/PCR values");
 
-  // optional argument allowing user to receive a hex dump of the policy digest,
-  // to be used to calculate a second policy for policyOR authorization
+  // There is a command-line argument allowing user to receive a hex dump of
+  // the policy digest. This supports obtaining the digest values to supply
+  // for a policy-OR authorization criteria.
+
   if (bool_trial_only == true)
   {
-    // size of string is 2x chars for the size of the TPM2B_DIGEST buffer + 4
-    // for TPM2B struct which encodes size in memory + 1 byte for null termination.
-    // prints to the console and finishes the program without sealing
-    // By using TPM2B_DIGEST size we're reserving a little bit more than needed but
-    // then the output_string can be reserved based on compile-time values.
-    size_t string_size = (2 * sizeof(TPM2B_DIGEST)) + 1;
-    char output_string[string_size];
+    // create stack variable for digest hex-string
+    //   - each byte of the digest requires 2 characters for the hex
+    //     string representation
+    //   - additional byte required at end for null termination
+    //   - by using the size of a TPM2B_DIGEST struct, we're reserving more
+    //     memory than needed but this approach uses values available at
+    //     compile time
+    char output_string[(2 * sizeof(TPM2B_DIGEST)) + 1];
 
     convert_digest_to_string(&objAuthPolicy, output_string);
     printf("policy digest: %s\n", output_string);
     return 0;
   }
 
-  // TPML_DIGEST struct to hold the 2 policy branches per TPM specifications
-  // (will remain empty if no policy-OR criteria specified)
-  TPML_DIGEST policyOrDigestList = { .count = 0, };
+  // Parse expected policy string
 
-  // if the user has passed in secondary policy, this indicates that they wish
-  // to use a compound policy-OR criteria and the argument they've passed in
-  // represents an alternative policy digest
+  size_t exp_policy_str_cnt = 0;
+  char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
+  char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
+
+  // PCR and digest lists supporting policy-OR criteria
+  //   - will remain empty (as initialized) if no policy-OR criteria specified
+  TPML_PCR_SELECTION policy_or_pcrs[MAX_POLICY_OR_CNT-1] = { { .count = 0, } };
+  for (size_t i = 0; i < (MAX_POLICY_OR_CNT - 1); i++)
+  {
+    ski.pcr_sel.pcrList[i+1] = &(policy_or_pcrs[i]); 
+  }
+  TPML_DIGEST policy_or_digests = { .count = 0, };
+
   if (exp_policy_string != NULL)
   {
-    // assigns the previously calculated objAuthPolicy to first policy branch
-    ski.policy_or.digestList->count++;
-    ski.policy_or.digestList->digests[0] = objAuthPolicy;
-
-    // fills the second policy branch with a policy specified by the user
-    policyOrDigestList.count++;
-    if (convert_string_to_digest(exp_policy_string,
-                                 &(ski.policy_or.digestList->digests[1])))
+    // parse string containing user specified policy-OR criteria
+    if (parse_exp_policy_string_pairs(exp_policy_string,
+                                      &exp_policy_str_cnt,
+                                      pString,
+                                      dString) != 0)
     {
-      kmyth_log(LOG_ERR,
-                "failed to convert secondary policy %s to digest ... exiting",
-                exp_policy_string);
+      kmyth_log(LOG_ERR, "error parsing policy-OR data string ... exiting");
       return 1;
     }
+    kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
+                         exp_policy_str_cnt);
+
+    // after successfully parsing user input:
+    //   - set isPolicyOR boolean true
+    //   - assign non-NULL policy-OR digest list
+    ski.policy_or.isPolicyOR = true;
+    ski.policy_or.digestList = &policy_or_digests;
+
+    // assign the "current" objAuthPolicy to first policy branch
+    ski.policy_or.digestList->digests[0] = objAuthPolicy;
+    ski.policy_or.digestList->count++;
+
+    for (size_t i = 0; i < exp_policy_str_cnt; i++)
+    {
+      kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
+                            i + 1, pString[i]);
+
+      // reformat PCR selections as integer array
+      if (convert_pcrs_string_to_int_array(pString[i], &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
+      {
+        kmyth_log(LOG_ERR, "parse PCR string #%zu error ... exiting", i + 1);
+        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+        for (size_t j = i; j < exp_policy_str_cnt; j++)
+        {
+          free(pString[j]);
+          free(dString[j]);
+        }
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+
+      // cleanup parsed PCR selection string just re-formatted
+      free(pString[i]);
+
+      // configure PCR selections struct with user input values
+      if (init_pcr_selection(sapi_ctx,
+                             pcrs,
+                             pcrs_len,
+                             ski.pcr_sel.pcrList[i+1]) != 0)
+      {
+        kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
+        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+        free(pcrs);
+        free(dString[i]);
+        for (size_t j = i + 1; j < exp_policy_str_cnt; j++)
+        {
+          free(pString[j]);
+          free(dString[j]);
+        }
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+      ski.pcr_sel.count++;
+
+      // cleanup intermediate PCR selections integer array just processed
+      free(pcrs);
+      pcrs = NULL;
+
+      // configure policy-OR digest list struct with user input value
+      kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
+      if (convert_string_to_digest(dString[i],
+                                   &(policy_or_digests.digests[i+1])) != 0)
+      {
+        kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
+        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+        free(dString[i]);
+        for (size_t j = i + 1; j < exp_policy_str_cnt; j++)
+        {
+          free(pString[j]);
+          free(dString[j]);
+        }
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+      policy_or_digests.count++;
+      
+      // cleanup parsed digest hex-string just processed
+      free(dString[i]);
+    }
+  }
+
+  if (ski.policy_or.isPolicyOR)
+  {
     TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
     TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
 
@@ -397,7 +472,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (tpm2_kmyth_seal_data(sapi_ctx,
                            &objAuthVal,
                            ski.pcr_sel.pcrList[0],
-                           &policyOrDigestList,
+                           ski.policy_or.digestList,
                            &objAuthPolicy,
                            storageKey_handle,
                            wrapKey,

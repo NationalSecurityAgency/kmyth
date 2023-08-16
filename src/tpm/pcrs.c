@@ -59,8 +59,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
 
     if (pcrs_len == 0)
     {
-      kmyth_log(LOG_ERR,
-                "non-NULL PCRs array supplied, but length is 0 ... exiting");
+      kmyth_log(LOG_ERR, "non-NULL, zero-size PCRs input array ... exiting");
       return 1;
     }
 
@@ -79,7 +78,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     if (pcrs_struct->pcrSelections[0].sizeofSelect == 3)
     {
       kmyth_log(LOG_DEBUG,
-                "PCR Selection List #1 Mask (msb->lsb): 0x%02X%02X%02X",
+                "PCR Selection Mask (msb->lsb): 0x%02X%02X%02X",
                 pcrs_struct->pcrSelections[0].pcrSelect[2],
                 pcrs_struct->pcrSelections[0].pcrSelect[1],
                 pcrs_struct->pcrSelections[0].pcrSelect[0]);

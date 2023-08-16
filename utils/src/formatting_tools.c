@@ -516,6 +516,9 @@ int convert_pcrs_string_to_int_array(char * pcrs_string,
   return 0;
 }
 
+//############################################################################
+// parse_exp_policy_string_pairs()
+//############################################################################
 int parse_exp_policy_string_pairs(char * exp_policy_string,
                                   size_t * pair_count,
                                   char ** pcrs_strings,
@@ -533,11 +536,11 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
 
   char * token = NULL;
-  char * pair_vals[7];
+  char * pair_vals[MAX_POLICY_OR_CNT - 1];
   size_t pair_cnt = 0;
 
   // parse out the "pair values" from the input string
-  token = strtok(exp_policy_string, ",");
+  token = strtok(exp_policy_string, ";");
   while ((pair_cnt < MAX_POLICY_OR_CNT) && (token != NULL))
   {
     pair_vals[pair_cnt] = malloc (strlen(token) + 1);
@@ -552,7 +555,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     }
     memcpy(pair_vals[pair_cnt], token, strlen(token) + 1);
     pair_cnt++;
-    token = strtok(NULL, ",");
+    token = strtok(NULL, ";");
   }
 
   if (pair_cnt == 0)
