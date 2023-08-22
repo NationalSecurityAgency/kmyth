@@ -25,7 +25,7 @@ typedef struct Ski
   PCR_SELECTIONS pcr_sel;
 
   // List of digests used for a policy-OR authorization
-  POLICY_OR_DATA policy_or;
+  TPML_DIGEST policy_or;
 
   // Storage key public/private
   TPM2B_PUBLIC sk_pub;
@@ -210,7 +210,7 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                        uint8_t ** pcr_selection_data,
                        size_t * pcr_selection_data_size,
                        size_t pcr_selection_data_offset,
-                       POLICY_OR_DATA * policy_or_struct,
+                       TPML_DIGEST * policy_or_struct,
                        uint8_t ** policy_or_data,
                        size_t * policy_or_data_size,
                        size_t policy_or_data_offset,
@@ -341,7 +341,7 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                          uint8_t * pcr_selection_data,
                          size_t pcr_selection_data_size,
                          size_t pcr_selection_data_offset,
-                         POLICY_OR_DATA * policy_or_struct,
+                         TPML_DIGEST * policy_or_struct,
                          uint8_t * policy_or_data,
                          size_t policy_or_data_size,
                          size_t policy_or_data_offset,
@@ -424,15 +424,14 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
                size_t packed_data_in_offset);
 
 /**
- * @brief This function packs an input POLICY_OR_DATA structure
- *        (containing a TPML_DIGEST struct) into a platform
+ * @brief This function packs a TPML_DIGEST structure into a platform
  *        independent format, which, for Kmyth, facilitates writing
  *        this data to a .ski output file.
  *
  * This function uses the TSS2 API for marshaling data to obtain
  * the packed, platform independent result.
  *
- * @param[in]  policy_or_in           POLICY_OR_DATA struct to be packed -
+ * @param[in]  policy_or_in           TPML_DIGEST struct to be packed -
  *                                    passed as a pointer to the struct
  *
  * @param[out] packed_data_out        Data buffer for packed result - passed
@@ -447,22 +446,22 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
  *
  * @return 0 if success, 1 if error
  */
-int pack_policy_or(POLICY_OR_DATA * policy_or_in,
+int pack_policy_or(TPML_DIGEST * policy_or_in,
                    uint8_t * packed_data_out,
                    size_t packed_data_out_size,
                    size_t packed_data_out_offset);
 
 /**
  * @brief This function unpacks platform independently formatted
- *        policy-OR authorization data (e.g., that read from a .ski
- *        file) into a POLICY_OR_DATA struct, where it can be used
+ *        policy-OR authorization digests (e.g., that read from a .ski
+ *        file) into a TPML_DIGEST struct, where it can be used
  *        by a Kmyth application interacting with a TPM 2.0.
  *
  * This function uses the TSS2 API for unmarshalling data to obtain the unpacked,
  * platform dependent result.
  *
- * @param[out] policy_or_out        POLICY_OR_DATA struct to hold the unpacked
- *                                  policy-OR authorization data result.
+ * @param[out] policy_or_out        TPML_DIGEST struct to hold the unpacked
+ *                                  policy-OR authorization digest list result.
  *
  * @param[in]  packed_data_in       Data buffer holding the packed digest input -
  *                                  passed as a pointer to the byte array.
@@ -477,7 +476,7 @@ int pack_policy_or(POLICY_OR_DATA * policy_or_in,
  *
  * @return 0 if success, 1 if error
  */
-int unpack_policy_or(POLICY_OR_DATA * policy_or_out,
+int unpack_policy_or(TPML_DIGEST * policy_or_out,
                      uint8_t * packed_data_in,
                      size_t packed_data_in_size,
                      size_t packed_data_in_offset);

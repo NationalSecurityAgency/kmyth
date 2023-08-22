@@ -1150,8 +1150,6 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
   // (if empty, PCR criteria will not be included in the authorization policy)
   if (policySession_pcrList->count > 0)
   {
-    kmyth_log(LOG_DEBUG, "inside if");
-
     // policySession→policyDigest is extended by a call to Tss2_Sys_PolicyPCR()
     //   - an empty (zero length) PCR digest must be passed in
     TPM2B_DIGEST pcrEmptyDigest;
@@ -1204,8 +1202,9 @@ int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
                     TPML_DIGEST * policyDigestList)
 {
   // policy-OR criteria requires minimum of 2 digest values
-  // (for now, we will enforce that it must be only 2 digest values)
-  if (policyDigestList->count != 2)
+  // MAX_POLICY_OR_CNT must eight or less (TPML_DIGEST holds up to 8 digests)
+  if ((policyDigestList->count < 2) ||
+      (policyDigestList->count > MAX_POLICY_OR_CNT))
   {
     kmyth_log(LOG_ERR, "invalid policy-OR digest list (count = %lu)",
               policyDigestList->count);

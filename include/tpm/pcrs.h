@@ -19,16 +19,16 @@
  *        for different branches of the policy-OR criteria. This requires,
  *        therefore, different PCR selection lists for each 'branch' of the
  *        policy (i.e., for each policy digest in the policy-OR criteria).
- *        This typedef specifies a struct that can be used to store a list
- *        of PCR selection lists.
+ *        This typedef specifies a struct that can be used to store a set
+ *        of PCR selection list structs.
  */
 typedef struct
 {
-  // number of PCR selection lists
+  // number of PCR selection list (TPML_PCR_SELECTION) structs
   size_t count;
 
   // array (up to MAX_POLICY_OR_CNT) of PCR selection list pointers
-  TPML_PCR_SELECTION * pcrList[MAX_POLICY_OR_CNT];
+  TPML_PCR_SELECTION pcrs[MAX_POLICY_OR_CNT];
 
 } PCR_SELECTIONS;
 
