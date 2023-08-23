@@ -1233,6 +1233,20 @@ int apply_policy_or(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
+// find_valid_policy()
+//############################################################################
+int find_valid_policy(TSS2_SYS_CONTEXT * sapi_ctx,
+                      PCR_SELECTIONS * pcrSelections,
+                      TPML_DIGEST * policyDigestList,
+                      int * valid_index)
+{
+  // initialize result to failure case (only update if we find valid policy)
+  *valid_index = -1;
+
+  return 0;
+}
+
+//############################################################################
 // create_caller_nonce()
 //############################################################################
 int create_caller_nonce(TPM2B_NONCE * nonceOut)

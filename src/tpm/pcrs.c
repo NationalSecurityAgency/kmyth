@@ -16,6 +16,55 @@
 #include "formatting_tools.h"
 
 //############################################################################
+// tpm2_get_pcr_count()
+//############################################################################
+int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
+{
+  // query TPM 2.0 to obtain the count of available PCRs
+  TPMS_CAPABILITY_DATA capData;
+
+  if (get_tpm2_properties
+      (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
+       &capData))
+  {
+    kmyth_log(LOG_ERR, "error obtaining PCR count from TPM ... exiting");
+    return 1;
+  }
+  *pcrCount = (int) capData.data.tpmProperties.tpmProperty[0].value;
+  kmyth_log(LOG_DEBUG, "count of available PCRs (TPM2_PT_PCR_COUNT) = %d",
+            *pcrCount);
+  return 0;
+}
+
+//############################################################################
+// isEmptyPcrSelection()
+//############################################################################
+bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
+{
+  // initialize result to "is empty"
+  bool result = true;
+
+  // test PCR selection mask bytes until non-zero one found or all tested
+  for (int i = 0; i < pcrs_struct->count; i++)
+  {
+    for (int j = 0; j < pcrs_struct->pcrSelections[i].sizeofSelect; j++)
+    {
+      if (pcrs_struct->pcrSelections[i].pcrSelect[j] != 0)
+      {
+        result = false;
+        break;
+      }
+    }
+    if (result == false)
+    {
+      break;
+    }
+  }
+
+  return result;
+}
+
+//############################################################################
 // init_pcr_selection()
 //############################################################################
 int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
@@ -89,23 +138,3 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
   return 0;
 }
 
-//############################################################################
-// tpm2_get_pcr_count()
-//############################################################################
-int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
-{
-  // query TPM 2.0 to obtain the count of available PCRs
-  TPMS_CAPABILITY_DATA capData;
-
-  if (get_tpm2_properties
-      (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
-       &capData))
-  {
-    kmyth_log(LOG_ERR, "error obtaining PCR count from TPM ... exiting");
-    return 1;
-  }
-  *pcrCount = (int) capData.data.tpmProperties.tpmProperty[0].value;
-  kmyth_log(LOG_DEBUG, "count of available PCRs (TPM2_PT_PCR_COUNT) = %d",
-            *pcrCount);
-  return 0;
-}

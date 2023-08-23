@@ -33,6 +33,32 @@ typedef struct
 } PCR_SELECTIONS;
 
 /**
+ * @brief Obtains the total count of available PCRs by reading the
+ *        TPM2_PT_PCR_COUNT property from the TPM.
+ *
+ * @param[in]  sapi_ctx  System API (SAPI) context, must be initialized
+ *                       and passed in as pointer to the SAPI context
+ *
+ * @param[out] pcrCount  Integer that the PCR count result will be returned
+ *                       in (passed in as a pointer to an int value)
+ *
+ * @return 0 if success, 1 if error
+ */
+int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
+
+/**
+ * @brief Tests if PCR selection struct does not select any PCRs using a
+ *        TPM2 suuporting routine to check PCRs one-by-one to check whether
+ *        or not at least one PCR is selected ().
+ *
+ * @param[in]  pcrs_struct  TPML_PCR_SELECTION struct to be checked
+ *                          (passed in as pointer to the struct)
+ *
+ * @return true if no PCRs selected (empty PCR select mask), false otherwise
+ */
+bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct);
+
+/**
  * @brief Converts a PCR selection integer array into the TPM 2.0 struct used
  *        to specify which PCRs to use in a sealing (or other) operation.
  *        Also verifies that the user's PCR selections are valid. 
@@ -56,19 +82,5 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
                        int *pcrs,
                        size_t pcrs_len,
                        TPML_PCR_SELECTION * pcrs_struct);
-
-/**
- * @brief Obtains the total count of available PCRs by reading the
- *        TPM2_PT_PCR_COUNT property from the TPM.
- *
- * @param[in]  sapi_ctx  System API (SAPI) context, must be initialized
- *                       and passed in as pointer to the SAPI context
- *
- * @param[out] pcrCount  Integer that the PCR count result will be returned
- *                       in (passed in as a pointer to an int value)
- *
- * @return 0 if success, 1 if error
- */
-int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
 
 #endif /* PRCS_H */

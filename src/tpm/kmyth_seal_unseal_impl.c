@@ -183,6 +183,12 @@ int tpm2_kmyth_seal(uint8_t * input,
   // can then incorporate this result into the objects we create as the
   // authorization policy digest value that must be regenerated to authorize
   // use of these objects.
+  //
+  // Note: For now we will not consider a policy-OR authorization criteria.
+  //       We will compute a policy digest based on the "current" authVal
+  //       and/or PCR selection settings. This will be the digest for the
+  //       first policy "branch" in a policy-OR (or the only "branch" if a
+  //       policy-OR criteria is not specified).
 
   TPM2B_DIGEST objAuthPolicy = {.size = 0, };
 
@@ -199,6 +205,8 @@ int tpm2_kmyth_seal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
+  ski.policy_or.digests[0] = objAuthPolicy;
+  ski.policy_or.count++;
 
   kmyth_log(LOG_DEBUG, "created policy digest using current auth/PCR values");
 
@@ -240,10 +248,6 @@ int tpm2_kmyth_seal(uint8_t * input,
     }
     kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
                          exp_policy_str_cnt);
-
-    // assign the "current" objAuthPolicy to first policy branch
-    ski.policy_or.digests[0] = objAuthPolicy;
-    ski.policy_or.count++;
 
     for (size_t i = 0; i < exp_policy_str_cnt; i++)
     {
@@ -315,33 +319,48 @@ int tpm2_kmyth_seal(uint8_t * input,
       // cleanup parsed digest hex-string just processed
       free(dString[i]);
     }
+
+    // verify PCR selections and policy digests were encoded as matched pairs
+    if(ski.pcr_sel.count != ski.policy_or.count)
+    {
+      kmyth_log(LOG_ERR, "mismatched PCR selection and policy digest counts");
+      kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+      kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+      free_tpm2_resources(&sapi_ctx);
+      return 1;
+    }
+
+    // verify none of the PCR selections are "empty" (no PCRs selected)
+    // (as kmyth policy-OR criteria are PCR-based, this invalidates the
+    // need for a policy-OR since the empty PCR case negates the need to
+    // specify altnernate digests due to changes in PCR values)
+    for (size_t i = 0; i < ski.pcr_sel.count; i++)
+    {
+      if (ski.pcr_sel.pcrs[i].count == 0)
+      {
+        kmyth_log(LOG_ERR, "policy-OR branch with empty PCR selections");
+        free_ski(&ski);
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+    }
   }
 
+  // If a policy-OR authorization criteria is specified, the policy digest
+  // must be re-computed to incorporate the additional policy-OR criteria
   if (ski.policy_or.count > 0)
   {
-    TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
-    TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
-
-    // initializing a new trial session for computing a new policy digest
-    // that incorporates the policy-OR criteria
-    SESSION trialPolicySession;
-
-    create_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL);
-
-    apply_policy(sapi_ctx,
-                 trialPolicySession.sessionHandle,
-                 &(ski.pcr_sel.pcrs[0]),
-                 &(ski.policy_or));
-
-    // obtains the policy digest from the policyOR calculation
-    Tss2_Sys_PolicyGetDigest(sapi_ctx,
-                             trialPolicySession.sessionHandle,
-                             nullCmdAuths,
-                             &objAuthPolicy,
-                             nullRspAuths);
-
-    // flushes the session from the TPM
-    Tss2_Sys_FlushContext(sapi_ctx, trialPolicySession.sessionHandle);
+    if (create_policy_digest(sapi_ctx,
+                             &(ski.pcr_sel.pcrs[0]),
+                             &(ski.policy_or),
+                             &objAuthPolicy))
+    {
+        kmyth_log(LOG_ERR, "(re)compute digest error");
+        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+    }
   }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
@@ -560,7 +579,6 @@ int tpm2_kmyth_unseal(uint8_t * input,
     return 1;
   }
   kmyth_log(LOG_DEBUG, "parsed input .ski file");
-  kmyth_log(LOG_DEBUG, "policy-OR digest count = %u", ski.policy_or.count);
 
   // The Storage Key (SK) will be used by the TPM to unseal the symmetric
   // wrapping key. We have obtained its public and encrypted private blobs
@@ -574,12 +592,92 @@ int tpm2_kmyth_unseal(uint8_t * input,
                         &ski.sk_pub,
                         &storageKey_handle))
   {
-    kmyth_log(LOG_ERR, "error loading storage key ... exiting");
+    kmyth_log(LOG_ERR, "error loading storage key");
     free_ski(&ski);
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
   kmyth_log(LOG_DEBUG, "loaded SK at handle = 0x%08X", storageKey_handle);
+
+  // If a policy-OR criteria is specified, we do not know which PCR
+  // selection and policy digest result corresponds to the current TPM
+  // configuration. Therefore, we will use trial policies to figure out
+  // which policy criteria (if any) will result in a successful
+  // policy-based authorization. Once we find one, we can stop.
+  int validPolicyOrIndex = -1;
+
+  if (ski.policy_or.count > 1)
+  {
+    // verify PCR selections and policy digests were encoded as matched pairs
+    if(ski.pcr_sel.count != ski.policy_or.count)
+    {
+      kmyth_log(LOG_ERR, ".ski PCR selection/digest counts mismatch");
+      free_ski(&ski);
+      free_tpm2_resources(&sapi_ctx);
+      return 1;
+    }
+
+    // verify none of the PCR selection masks are "empty" (no PCRs selected)
+    // (as kmyth policy-OR criteria are PCR-based, this invalidates the
+    // need for a policy-OR since the empty PCR case negates the need to
+    // specify altnernate digests due to changes in PCR values)
+    for (size_t i = 0; i < ski.pcr_sel.count; i++)
+    {
+      if (isEmptyPcrSelection(&(ski.pcr_sel.pcrs[i])))
+      {
+        kmyth_log(LOG_ERR, "policy-OR PCRs[%zu]: empty mask", i);
+        free_ski(&ski);
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+    }
+
+    // start testing PCR selection / policy digest pairs
+    TPM2B_DIGEST testDigest = { .size = 0, };
+
+    for (int i = 0; i < ski.policy_or.count; i++)
+    {
+      // use trial session to compute current policy digest for a set of PCRs
+      if (create_policy_digest(sapi_ctx,
+                               &(ski.pcr_sel.pcrs[i]),
+                               NULL,
+                               &testDigest))
+      {
+        kmyth_log(LOG_ERR, "error computing trial policy digest");
+        free_ski(&ski);
+        free_tpm2_resources(&sapi_ctx);
+        return 1;
+      }
+
+      // check if result matches "expected" policy digest value
+      bool isMatch = true;
+
+      for (size_t j = 0; j < testDigest.size; j++)
+      {
+        if (testDigest.buffer[j] != ski.policy_or.digests[i].buffer[j])
+        {
+          isMatch = false;
+          break;
+        }
+      }
+
+      // check if this PCR selection/expected digest pair is valid
+      if (isMatch)
+      {
+        validPolicyOrIndex = i;
+        break;
+      }
+    }
+
+    if (validPolicyOrIndex < 0)
+    {
+      kmyth_log(LOG_ERR, "no valid PCR / expected policy digest pair");
+      free_ski(&ski);
+      free_tpm2_resources(&sapi_ctx);
+      return 1;
+    }
+    kmyth_log(LOG_DEBUG, "validPolicyOrIndex = %d", validPolicyOrIndex);
+  }
 
   // A symmetric wrapping key is used to encrypt kmyth-sealed data.
   // We unseal the sealed symmetric wrapping key using an enhanced
@@ -592,12 +690,12 @@ int tpm2_kmyth_unseal(uint8_t * input,
                              &(ski.sym_key_pub),
                              &(ski.sym_key_priv),
                              &objAuthValue,
-                             &(ski.pcr_sel.pcrs[0]),
+                             &(ski.pcr_sel.pcrs[validPolicyOrIndex]),
                              &ski.policy_or,
                              &key,
                              &key_len))
   {
-    kmyth_log(LOG_ERR, "error unsealing data ... exiting");
+    kmyth_log(LOG_ERR, "error unsealing data");
     free_ski(&ski);
     free_tpm2_resources(&sapi_ctx);
     kmyth_clear(key, key_len);
@@ -613,7 +711,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                          output,
                          output_len))
   {
-    kmyth_log(LOG_ERR, "error decrypting data ... exiting");
+    kmyth_log(LOG_ERR, "error decrypting data");
     free_ski(&ski);
     free_tpm2_resources(&sapi_ctx);
     kmyth_clear(key, key_len);
