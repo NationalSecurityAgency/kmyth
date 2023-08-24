@@ -378,8 +378,11 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  * @param[out] packed_data_out        Data buffer for packed result - passed
  *                                    as a pointer to the output byte array
  *
- * @param[in]  packed_data_out_size   Size, in bytes, of the data buffer to
- *                                    hold the packed result
+ * @param[out] packed_data_out_size   Size, in bytes, of the data buffer
+ *                                    needed to hold the packed result
+ *                                    including the offset (i.e., index
+ *                                    of byte after last byte written to
+ *                                    buffer) - passed as a pointer to size
  *
  * @param[in]  packed_data_out_offset The byte offset, into the data buffer,
  *                                    where the starting byte of the packed
@@ -389,7 +392,7 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  */
 int pack_pcr(PCR_SELECTIONS * pcr_select_in,
              uint8_t * packed_data_out,
-             size_t packed_data_out_size,
+             size_t * packed_data_out_size,
              size_t packed_data_out_offset);
 
 /**
@@ -437,8 +440,11 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
  * @param[out] packed_data_out        Data buffer for packed result - passed
  *                                    as a pointer to the output byte array
  *
- * @param[in]  packed_data_out_size   Size, in bytes, of the data buffer to
- *                                    hold the packed result
+ * @param[out] packed_data_out_size   Size, in bytes, of the data buffer
+ *                                    needed to hold the packed result
+ *                                    including the offset (i.e., index
+ *                                    of byte after last byte written to
+ *                                    buffer) - passed as a pointer to size
  *
  * @param[in]  packed_data_out_offset The byte offset, into the data buffer,
  *                                    where the starting byte of the packed
@@ -448,7 +454,7 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
  */
 int pack_policy_or(TPML_DIGEST * policy_or_in,
                    uint8_t * packed_data_out,
-                   size_t packed_data_out_size,
+                   size_t * packed_data_out_size,
                    size_t packed_data_out_offset);
 
 /**

@@ -336,9 +336,7 @@ void test_init_password_cmd_auth(void)
   CU_ASSERT(init_password_cmd_auth(&auth, &cmd_out, &res_out) == 0);
 
   //Valid test non-null auth
-  uint8_t *auth_bytes = (uint8_t *) "0123";
-
-  create_authVal(auth_bytes, 4, &auth);
+  create_authVal("0123", &auth);
   CU_ASSERT(auth.size > 0);
   CU_ASSERT(init_password_cmd_auth(&auth, &cmd_out, &res_out) == 0);
 }
@@ -458,12 +456,10 @@ void test_check_response_auth(void)
 //----------------------------------------------------------------------------
 void test_create_authVal(void)
 {
-  uint8_t *ab = NULL;
-  size_t ab_size = 0;
   TPM2B_AUTH auth = {.size = 0, };
 
   //Valid test, empty auth
-  CU_ASSERT(create_authVal(ab, ab_size, &auth) == 0);
+  CU_ASSERT(create_authVal(NULL, &auth) == 0);
   CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
   uint8_t result = 0;
 
@@ -474,10 +470,8 @@ void test_create_authVal(void)
   CU_ASSERT(result == 0);
 
   //Valid test with non-empty auth
-  ab = (uint8_t *) "0123";
-  ab_size = 4;
   auth.size = 0;
-  CU_ASSERT(create_authVal(ab, ab_size, &auth) == 0);
+  CU_ASSERT(create_authVal("0123", &auth) == 0);
   CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
   result = 0;
   for (int i = 0; i < auth.size; i++)
@@ -486,21 +480,8 @@ void test_create_authVal(void)
   }
   CU_ASSERT(result != 0);
 
-  //Valid auth string with size 0
-  ab = (uint8_t *) "0123";
-  ab_size = 4;
-  auth.size = 0;
-  CU_ASSERT(create_authVal(ab, 0, &auth) == 0);
-  CU_ASSERT(auth.size == KMYTH_DIGEST_SIZE);
-  result = 0;
-  for (int i = 0; i < auth.size; i++)
-  {
-    result |= auth.buffer[i];
-  }
-  CU_ASSERT(result == 0);       //Treats as if input string was NULL
-
   //NULL output
-  CU_ASSERT(create_authVal(ab, ab_size, NULL) != 0);
+  CU_ASSERT(create_authVal("0123", NULL) != 0);
 }
 
 //----------------------------------------------------------------------------

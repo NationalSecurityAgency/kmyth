@@ -70,7 +70,8 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
 
 const size_t RAW_PCR_LEN = 132;
 
-uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint8_t RAW_PCR[] = {
+  0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -152,32 +153,36 @@ int marshalling_tools_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 // init_test_pcrSelect
 //----------------------------------------------------------------------------
-size_t init_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset)
+size_t init_test_pcrSelect(PCR_SELECTIONS * test_pcrSelect, size_t offset)
 {
   // initialize test PCR selection struct (test input to pack_pcr())
   test_pcrSelect->count = 1;
-  test_pcrSelect->pcrSelections[0].hash = KMYTH_HASH_ALG;
-  test_pcrSelect->pcrSelections[0].sizeofSelect = 3;
-  test_pcrSelect->pcrSelections[0].pcrSelect[0] = 0xAA;
-  test_pcrSelect->pcrSelections[0].pcrSelect[1] = 0x55;
-  test_pcrSelect->pcrSelections[0].pcrSelect[2] = 0xAA;
+  test_pcrSelect->pcrs[0].count = 1;
+  test_pcrSelect->pcrs[0].pcrSelections[0].hash = KMYTH_HASH_ALG;
+  test_pcrSelect->pcrs[0].pcrSelections[0].sizeofSelect = 3;
+  test_pcrSelect->pcrs[0].pcrSelections[0].pcrSelect[0] = 0xAA;
+  test_pcrSelect->pcrs[0].pcrSelections[0].pcrSelect[1] = 0x55;
+  test_pcrSelect->pcrs[0].pcrSelections[0].pcrSelect[2] = 0xAA;
 
-  size_t struct_size = 0;
 
-  // compute required byte array size for packed test PCR Selection struct
-  //   - test_pcrSelect->count: UINT32 (4 bytes)
-  //   - test_pcrSelect->pcrSelections[0].hash: UINT16 (2 bytes)
-  //   - test_pcrSelect->pcrSelections[0].sizeofSelect: UINT8 (1 byte)
-  //   - test_pcrSelect->pcrSelections[0].pcrSelect[]: 'sizeofSelect' bytes
-  struct_size += sizeof(uint32_t);
-  struct_size += sizeof(uint16_t);
-  struct_size += sizeof(uint8_t);
-  struct_size += test_pcrSelect->pcrSelections[0].sizeofSelect;
+  // compute required byte array size for packed test PCR selections struct
+  //   - test_pcrSelect->count: UINT8 (1 bytes)
+  //   - test_pcrSelect->count (up to MAX_POLICY_OR_CNT)
+  //     TPML_PCR_SELECTION structs:
+  //       - uint16_t "packed struct bytes size" for each
+  //       - sizeof(TPML_PCR_SELECTION) bytes in each struct
+  size_t req_size = 0;
+  req_size += sizeof(uint8_t);
+  for (int i = 0; i < test_pcrSelect->count; i++)
+  {
+    req_size += sizeof(uint16_t);
+    req_size += sizeof(TPML_PCR_SELECTION);
+  }
 
   // required byte array size for packed TPML_PCR_SELECTION struct includes:
   //   - number of bytes needed for struct members: struct_size
   //   - specified offset bytes: 'offset' extra bytes at beginning of array
-  return (struct_size + offset);
+  return (req_size + offset);
 }
 
 //----------------------------------------------------------------------------
@@ -218,8 +223,10 @@ bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b)
 //----------------------------------------------------------------------------
 // check_packed_pcrSelect
 //----------------------------------------------------------------------------
-bool check_packed_pcrSelect(TPML_PCR_SELECTION in, uint8_t * packed_data,
-                            size_t packed_size, size_t packed_offset)
+bool check_packed_pcrSelect(TPML_PCR_SELECTION in,
+                            uint8_t * packed_data,
+                            size_t packed_size,
+                            size_t packed_offset)
 {
   // make sure packed byte array is large enough to hold packed struct
   //   - in.count is a UINT32 and needs four bytes

@@ -255,7 +255,7 @@ int tpm2_kmyth_seal(uint8_t * input,
                             i + 1, pString[i]);
 
       // reformat PCR selections as integer array
-      if (convert_pcrs_string_to_int_array(pString[i], &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
+      if (convert_pcrs_string_to_int_array(pString[i], &pcrs, &pcrs_len) != 0 || pcrs_len <= 0)
       {
         kmyth_log(LOG_ERR, "parse PCR string #%zu error ... exiting", i + 1);
         kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -599,15 +599,21 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "loaded SK at handle = 0x%08X", storageKey_handle);
 
+  // If no policy-OR criteria, the only policy digest is at index = 0
+  // Therefore, we will initialize to this value
+  int validPolicyOrIndex = 0;
+
   // If a policy-OR criteria is specified, we do not know which PCR
   // selection and policy digest result corresponds to the current TPM
   // configuration. Therefore, we will use trial policies to figure out
   // which policy criteria (if any) will result in a successful
   // policy-based authorization. Once we find one, we can stop.
-  int validPolicyOrIndex = -1;
-
   if (ski.policy_or.count > 1)
   {
+    // re-initialize valid index value to an invalid index
+    // (only becomes valid if a successful criteria found)
+    validPolicyOrIndex = -1;
+
     // verify PCR selections and policy digests were encoded as matched pairs
     if(ski.pcr_sel.count != ski.policy_or.count)
     {

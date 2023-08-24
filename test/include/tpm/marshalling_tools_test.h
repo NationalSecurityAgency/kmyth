@@ -43,10 +43,11 @@ int marshalling_tools_add_tests(CU_pSuite suite);
  * @return    size (size_t) required for a packed byte array to hold the
  *            specified input struct and the specified offset into the array
  */
-size_t init_test_pcrSelect(TPML_PCR_SELECTION * test_pcrSelect, size_t offset);
+size_t init_test_pcrSelect(PCR_SELECTIONS * test_pcrSelect, size_t offset);
 size_t init_test_public(TPM2B_PUBLIC * test_public, size_t offset);
 size_t init_test_private(TPM2B_PRIVATE * test_private,
-                         size_t buffer_size, size_t offset);
+                         size_t buffer_size,
+                         size_t offset);
 
 /**
  * These utilities are used to compare two structs (of the same type).

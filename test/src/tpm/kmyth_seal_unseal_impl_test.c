@@ -83,16 +83,14 @@ void test_tpm2_kmyth_seal(void)
   uint8_t *output = NULL;
   size_t output_len = 0;
 
-  uint8_t *auth_bytes = NULL;
-  size_t auth_bytes_len = 0;
+  char *auth_string = NULL;
 
-  uint8_t *owner_auth_bytes = NULL;
-  size_t oa_bytes_len = 0;
+  char *owner_auth_string = NULL;
 
-  int *pcrs = NULL;
-  size_t pcrs_len = 0;
+  char *pcrs_string = NULL;
 
-  char *expected_policy = NULL;
+  char *expected_policy_string = NULL;
+
   uint8_t bool_trial_only = 0;
 
   // Check that a fake cipher with other valid inputs causes error and
@@ -101,14 +99,11 @@ void test_tpm2_kmyth_seal(void)
                             input_len,
                             &output,
                             &output_len,
-                            auth_bytes,
-                            auth_bytes_len,
-                            owner_auth_bytes,
-                            oa_bytes_len,
-                            pcrs,
-                            pcrs_len,
+                            auth_string,
+                            owner_auth_string,
+                            pcrs_string,
                             "fake_cipher",
-                            expected_policy,
+                            expected_policy_string,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -119,14 +114,11 @@ void test_tpm2_kmyth_seal(void)
                             5,
                             &output,
                             &output_len,
-                            auth_bytes,
-                            auth_bytes_len,
-                            owner_auth_bytes,
-                            oa_bytes_len,
-                            pcrs,
-                            pcrs_len,
+                            auth_string,
+                            owner_auth_string,
+                            pcrs_string,
                             NULL,
-                            expected_policy,
+                            expected_policy_string,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -137,14 +129,11 @@ void test_tpm2_kmyth_seal(void)
                             0,
                             &output,
                             &output_len,
-                            auth_bytes,
-                            auth_bytes_len,
-                            owner_auth_bytes,
-                            oa_bytes_len,
-                            pcrs,
-                            pcrs_len,
+                            auth_string,
+                            owner_auth_string,
+                            pcrs_string,
                             NULL,
-                            expected_policy,
+                            expected_policy_string,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -155,14 +144,11 @@ void test_tpm2_kmyth_seal(void)
                             input_len,
                             &output,
                             &output_len,
-                            auth_bytes,
-                            auth_bytes_len,
-                            owner_auth_bytes,
-                            oa_bytes_len,
-                            pcrs,
-                            pcrs_len,
+                            auth_string,
+                            owner_auth_string,
+                            pcrs_string,
                             NULL,
-                            expected_policy,
+                            expected_policy_string,
                             bool_trial_only) == 0 );
 
   uint8_t *plaintext = NULL;
@@ -172,10 +158,8 @@ void test_tpm2_kmyth_seal(void)
                               output_len,
                               &plaintext,
                               &plaintext_len,
-                              auth_bytes,
-                              auth_bytes_len,
-                              owner_auth_bytes,
-                              oa_bytes_len) == 0);
+                              auth_string,
+                              owner_auth_string) == 0);
   CU_ASSERT(plaintext_len == input_len);
   CU_ASSERT(memcmp(plaintext, input, input_len) == 0);
 
@@ -193,21 +177,17 @@ void test_tpm2_kmyth_unseal(void)
   uint8_t *output = NULL;
   size_t output_len = 0;
 
-  uint8_t *auth_bytes = NULL;
-  size_t auth_bytes_len = 0;
+  char *auth_string = NULL;
 
-  uint8_t *owner_auth_bytes = NULL;
-  size_t oa_bytes_len = 0;
+  char *owner_auth_string = NULL;
 
   // Check a NULL input with 0 length fails and output is not changed
   CU_ASSERT(tpm2_kmyth_unseal(NULL,
                               0,
                               &output,
                               &output_len,
-                              auth_bytes,
-                              auth_bytes_len,
-                              owner_auth_bytes,
-                              oa_bytes_len) == 1);
+                              auth_string,
+                              owner_auth_string) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -216,10 +196,8 @@ void test_tpm2_kmyth_unseal(void)
                               0,
                               &output,
                               &output_len,
-                              auth_bytes,
-                              auth_bytes_len,
-                              owner_auth_bytes,
-                              oa_bytes_len) == 1);
+                              auth_string,
+                              owner_auth_string) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -228,10 +206,8 @@ void test_tpm2_kmyth_unseal(void)
                               5,
                               &output,
                               &output_len,
-                              auth_bytes,
-                              auth_bytes_len,
-                              owner_auth_bytes,
-                              oa_bytes_len) == 1);
+                              auth_string,
+                              owner_auth_string) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -247,27 +223,21 @@ void test_tpm2_kmyth_seal_file(void)
   char fake_input_path[] = "fake input path";
   uint8_t *output = NULL;
   size_t output_len = 0;
-  uint8_t *auth_bytes = NULL;
-  size_t auth_bytes_len = 0;
-  uint8_t *owner_auth_bytes = NULL;
-  size_t oa_bytes_len = 0;
-  int *pcrs = NULL;
-  size_t pcrs_len = 0;
-  char *expected_policy = NULL;
+  char *auth_string = NULL;
+  char *owner_auth_string = NULL;
+  char *pcrs_string = NULL;
+  char *expected_policy_string = NULL;
   uint8_t bool_trial_only = 0;
 
   // Check a NULL input path fails and doesn't change output.
   CU_ASSERT(tpm2_kmyth_seal_file(NULL,
                                  &output,
                                  &output_len,
-                                 auth_bytes,
-                                 auth_bytes_len,
-                                 owner_auth_bytes,
-                                 oa_bytes_len,
-                                 pcrs,
-                                 pcrs_len,
+                                 auth_string,
+                                 owner_auth_string,
+                                 pcrs_string,
                                  NULL,
-                                 expected_policy,
+                                 expected_policy_string,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -276,14 +246,11 @@ void test_tpm2_kmyth_seal_file(void)
   CU_ASSERT(tpm2_kmyth_seal_file(fake_input_path,
                                  &output,
                                  &output_len,
-                                 auth_bytes,
-                                 auth_bytes_len,
-                                 owner_auth_bytes,
-                                 oa_bytes_len,
-                                 pcrs,
-                                 pcrs_len,
+                                 auth_string,
+                                 owner_auth_string,
+                                 pcrs_string,
                                  NULL,
-                                 expected_policy,
+                                 expected_policy_string,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -297,19 +264,15 @@ void test_tpm2_kmyth_unseal_file(void)
   char fake_input_path[] = "fake input path";
   uint8_t *output = NULL;
   size_t output_len = 0;
-  uint8_t *auth_bytes = NULL;
-  size_t auth_bytes_len = 0;
-  uint8_t *owner_auth_bytes = NULL;
-  size_t oa_bytes_len = 0;
+  char *auth_string = NULL;
+  char *owner_auth_string = NULL;
 
   // Check a NULL input path fails and doesn't change output.
   CU_ASSERT(tpm2_kmyth_unseal_file(NULL,
                                    &output,
                                    &output_len,
-                                   auth_bytes,
-                                   auth_bytes_len,
-                                   owner_auth_bytes,
-                                   oa_bytes_len) == 1);
+                                   auth_string,
+                                   owner_auth_string) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -317,10 +280,8 @@ void test_tpm2_kmyth_unseal_file(void)
   CU_ASSERT(tpm2_kmyth_unseal_file(fake_input_path,
                                    &output,
                                    &output_len,
-                                   auth_bytes,
-                                   auth_bytes_len,
-                                   owner_auth_bytes,
-                                   oa_bytes_len) == 1);
+                                   auth_string,
+                                   owner_auth_string) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 }
@@ -336,14 +297,14 @@ void test_tpm2_kmyth_seal_data(void)
 
   Ski ski = get_default_ski();
   TPM2B_AUTH authVal = {.size = 0 };
-  create_authVal(NULL, 0, &authVal);
+  create_authVal(NULL, &authVal);
 
-  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_list));
+  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_sel.pcrs[0]));
 
   TPM2B_DIGEST authPolicy = {.size = 0 };
   create_policy_digest(sapi_ctx,
-                       &(ski.pcr_list),
-                       &(ski.policy_or_digest_list),
+                       &(ski.pcr_sel.pcrs[0]),
+                       &(ski.policy_or),
                        &authPolicy);
 
   TPM2_HANDLE srk_handle = 0;
@@ -356,7 +317,7 @@ void test_tpm2_kmyth_seal_data(void)
                      srk_handle,
                      authVal,
                      authVal,
-                     ski.pcr_list,
+                     ski.pcr_sel.pcrs[0],
                      authPolicy,
                      &sk_handle,
                      &(ski.sk_priv),
@@ -368,8 +329,8 @@ void test_tpm2_kmyth_seal_data(void)
   // Check that seal with valid inputs works.
   CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx,
                                  &authVal,
-                                 &(ski.pcr_list),
-                                 &(ski.policy_or_digest_list),
+                                 &(ski.pcr_sel.pcrs[0]),
+                                 &(ski.policy_or),
 	                               &authPolicy,
                                  sk_handle,
                                  data,
@@ -380,8 +341,8 @@ void test_tpm2_kmyth_seal_data(void)
   // Check failure with NULL context.
   CU_ASSERT(tpm2_kmyth_seal_data(NULL,
                                  &authVal,
-                                 &(ski.pcr_list),
-                                 &(ski.policy_or_digest_list),
+                                 &(ski.pcr_sel.pcrs[0]),
+                                 &(ski.policy_or),
 	                               &authPolicy,
                                  sk_handle,
                                  data,
@@ -392,8 +353,8 @@ void test_tpm2_kmyth_seal_data(void)
   // Failure with NULL data.
   CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx,
                                  &authVal,
-                                 &(ski.pcr_list),
-                                 &(ski.policy_or_digest_list),
+                                 &(ski.pcr_sel.pcrs[0]),
+                                 &(ski.policy_or),
 	                               &authPolicy,
                                  sk_handle,
                                  NULL,
@@ -404,8 +365,8 @@ void test_tpm2_kmyth_seal_data(void)
   // Failure with length 0 data
   CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx,
                                  &authVal,
-                                 &(ski.pcr_list),
-                                 &(ski.policy_or_digest_list),
+                                 &(ski.pcr_sel.pcrs[0]),
+                                 &(ski.policy_or),
 	                               &authPolicy,
                                  sk_handle,
                                  data,
@@ -416,8 +377,8 @@ void test_tpm2_kmyth_seal_data(void)
   // Failure with NULL length 0 data
   CU_ASSERT(tpm2_kmyth_seal_data(sapi_ctx,
                                  &authVal,
-                                 &(ski.pcr_list),
-                                 &(ski.policy_or_digest_list),
+                                 &(ski.pcr_sel.pcrs[0]),
+                                 &(ski.policy_or),
 	                               &authPolicy,
                                  sk_handle,
                                  NULL,
@@ -440,15 +401,15 @@ void test_tpm2_kmyth_unseal_data(void)
   Ski ski = get_default_ski();
 
   TPM2B_AUTH authVal = {.size = 0 };
-  create_authVal(NULL, 0, &authVal);
+  create_authVal(NULL, &authVal);
 
   TPM2B_DIGEST authPolicy = {.size = 0, };
 
-  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_list));
+  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_sel.pcrs[0]));
 
   create_policy_digest(sapi_ctx,
-                       &(ski.pcr_list),
-                       &(ski.policy_or_digest_list),
+                       &(ski.pcr_sel.pcrs[0]),
+                       &(ski.policy_or),
                        &authPolicy);
 
   TPM2_HANDLE srk_handle = 0;
@@ -461,7 +422,7 @@ void test_tpm2_kmyth_unseal_data(void)
                      srk_handle,
                      authVal,
                      authVal,
-                     ski.pcr_list,
+                     ski.pcr_sel.pcrs[0],
                      authPolicy,
                      &sk_handle,
                      &ski.sk_priv,
@@ -472,8 +433,8 @@ void test_tpm2_kmyth_unseal_data(void)
 
   tpm2_kmyth_seal_data(sapi_ctx,
                        &authVal,
-                       &(ski.pcr_list),
-                       &(ski.policy_or_digest_list),
+                       &(ski.pcr_sel.pcrs[0]),
+                       &(ski.policy_or),
                        &authPolicy,
                        sk_handle,
                        input_data,
@@ -490,8 +451,8 @@ void test_tpm2_kmyth_unseal_data(void)
                                    &(ski.sym_key_pub),
                                    &(ski.sym_key_priv),
                                    &authVal,
-                                   &(ski.pcr_list),
-                                   &(ski.policy_or_digest_list),
+                                   &(ski.pcr_sel.pcrs[0]),
+                                   &(ski.policy_or),
 	                                 &output_data,
                                    &output_data_len) == 0);
   CU_ASSERT(output_data_len == 8);
@@ -507,8 +468,8 @@ void test_tpm2_kmyth_unseal_data(void)
                                    &(ski.sym_key_pub),
                                    &(ski.sym_key_priv),
                                    &authVal,
-                                   &(ski.pcr_list),
-                                   &(ski.policy_or_digest_list),
+                                   &(ski.pcr_sel.pcrs[0]),
+                                   &(ski.policy_or),
 	                                 &output_data,
                                    &output_data_len) == 1);
   CU_ASSERT(output_data_len == 0);

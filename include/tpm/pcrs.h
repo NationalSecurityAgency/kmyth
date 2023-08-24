@@ -24,8 +24,8 @@
  */
 typedef struct
 {
-  // number of PCR selection list (TPML_PCR_SELECTION) structs
-  size_t count;
+  // number of PCR selection (TPML_PCR_SELECTION) structs
+  uint8_t count;
 
   // array (up to MAX_POLICY_OR_CNT) of PCR selection list pointers
   TPML_PCR_SELECTION pcrs[MAX_POLICY_OR_CNT];

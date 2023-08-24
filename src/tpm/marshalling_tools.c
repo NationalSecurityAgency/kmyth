@@ -25,7 +25,7 @@
 Ski get_default_ski(void)
 {
   Ski ret = {
-    .pcr_sel = { .count = 0, .pcrs = { {.count = 0, } } },
+    .pcr_sel = { .count = 0, .pcrs = { { .count = 0, } } },
     .policy_or = { .count = 0, },
     .sk_pub = { .size = 0, },
     .sk_priv = { .size = 0, },
@@ -753,7 +753,7 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
   }
   if (pack_pcr(pcr_selection_struct,
                *pcr_selection_data,
-               *pcr_selection_data_size,
+               pcr_selection_data_size,
                pcr_selection_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing PCR select struct ... exiting");
@@ -768,7 +768,7 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
   }
   if (pack_policy_or(policy_or_struct,
                      *policy_or_data,
-                     *policy_or_data_size,
+                     policy_or_data_size,
                      policy_or_data_offset))
   {
     kmyth_log(LOG_ERR, "error packing policy-OR struct ... exiting");
@@ -912,7 +912,7 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
 //############################################################################
 int pack_pcr(PCR_SELECTIONS * pcr_select_in,
              uint8_t * packed_data_out,
-             size_t packed_data_out_size,
+             size_t * packed_data_out_size,
              size_t packed_data_out_offset)
 {
   TSS2_RC rc = 0;
@@ -941,7 +941,7 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
       return 1;
     }
 
-    // write size of packed struct as a two-byte unsigned integer
+    // write packed struct size as a one-byte unsigned integer (valued 0-255)
     temp_byte = (uint8_t) temp_offset;
     kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
     memcpy(packed_data_out + packed_data_out_offset,
@@ -960,6 +960,9 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
     // reset temporary buffer offset for packing next struct
     temp_offset = 0;
   }
+
+  // update packed byte buffer size output parameter
+  *packed_data_out_size = packed_data_out_offset;
 
   return 0;
 }
@@ -986,14 +989,15 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
   {
     // get size (in bytes) of packed TPML_PCR_SELECTION struct
     temp_byte = packed_data_in[packed_data_in_offset];
+    kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
     packed_data_in_offset += sizeof(uint8_t);
     kmyth_log(LOG_DEBUG, "packed_data_in_offset = %zu", packed_data_in_offset);
 
-    if ((rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
-                                                   packed_data_in_offset +
-                                                   (size_t) temp_byte,
-                                                   &packed_data_in_offset,
-                                                   &(pcr_select_out->pcrs[i]))))
+    rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
+                                              sizeof(TPML_PCR_SELECTION),
+                                              &packed_data_in_offset,
+                                              &(pcr_select_out->pcrs[i]));
+    if (rc)
     {
       kmyth_log(LOG_ERR,
                 "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x ... exiting", rc);
@@ -1009,7 +1013,7 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
 //############################################################################
 int pack_policy_or(TPML_DIGEST * policy_or_in,
                    uint8_t * packed_data_out,
-                   size_t packed_data_out_size,
+                   size_t * packed_data_out_size,
                    size_t packed_data_out_offset)
 {
   TSS2_RC rc = 0;
@@ -1017,13 +1021,16 @@ int pack_policy_or(TPML_DIGEST * policy_or_in,
   // marshal policy-OR digest list
   if ((rc = Tss2_MU_TPML_DIGEST_Marshal(policy_or_in,
                                         packed_data_out,
-                                        packed_data_out_size,
+                                        *packed_data_out_size,
                                         &packed_data_out_offset)))
   {
     kmyth_log(LOG_ERR,
               "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X ... exiting", rc);
     return 1;
   }
+
+  // update packed byte buffer size output parameter
+  *packed_data_out_size = packed_data_out_offset;
 
   return 0;
 }

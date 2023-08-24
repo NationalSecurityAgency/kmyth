@@ -117,7 +117,7 @@ void test_check_if_srk(void)
 
   //Valid test if not srk
   TPM2B_AUTH obj_auth = {.size = 0, };
-  create_authVal(NULL, 0, &obj_auth);
+  create_authVal(NULL, &obj_auth);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   TPML_DIGEST pOR_digests_struct ={.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };
@@ -213,7 +213,7 @@ void test_create_and_load_sk(void)
 
   //Valid test
   TPM2B_AUTH obj_auth = {.size = 0, };
-  create_authVal(NULL, 0, &obj_auth);
+  create_authVal(NULL, &obj_auth);
   TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
   TPML_DIGEST pOR_digests_struct = {.count = 0, };
   TPM2B_DIGEST auth_policy = {.size = 0, };

@@ -141,7 +141,8 @@ int create_nkl_bytes(uint8_t * input, size_t input_length,
 //############################################################################
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size,
-                     uint8_t ** base64_data, size_t * base64_data_size)
+                     uint8_t ** base64_data,
+                     size_t * base64_data_size)
 {
   // check that there is actually data to encode, return error if not
   if (raw_data == NULL || raw_data_size == 0)
@@ -232,7 +233,8 @@ int encodeBase64Data(uint8_t * raw_data,
 //############################################################################
 int decodeBase64Data(uint8_t * base64_data,
                      size_t base64_data_size,
-                     uint8_t ** raw_data, size_t * raw_data_size)
+                     uint8_t ** raw_data,
+                     size_t * raw_data_size)
 {
   // check that there is actually data to decode, return error if not
   if (base64_data == NULL || base64_data_size == 0)
