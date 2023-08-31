@@ -75,7 +75,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   if (pcr_select_data == NULL)
   {
-    kmyth_log(LOG_ERR, "calloc() error for PCR select data ... exiting");
+    kmyth_log(LOG_ERR, "calloc() error for PCR select data");
     return 1;
   }
 
@@ -86,7 +86,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   if (policy_or_data == NULL)
   {
-    kmyth_log(LOG_ERR, "policy-OR data calloc() failed ... exiting");
+    kmyth_log(LOG_ERR, "policy-OR data calloc() failed");
     free(pcr_select_data);
     return 1;
   }
@@ -97,7 +97,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   if (sk_pub_data == NULL)
   {
-    kmyth_log(LOG_ERR, "storage key public data malloc() error ... exiting");
+    kmyth_log(LOG_ERR, "storage key public data malloc() error");
     free(pcr_select_data);
     free(policy_or_data);
     return 1;
@@ -109,7 +109,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   if (sk_priv_data == NULL)
   {
-    kmyth_log(LOG_ERR, "storage key private data malloc failed ... exiting");
+    kmyth_log(LOG_ERR, "storage key private data malloc failed");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -122,8 +122,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
 
   if (sym_key_pub_data == NULL)
   {
-    kmyth_log(LOG_ERR,
-              "unable to allocate memory for wrapping key public data ... exiting");
+    kmyth_log(LOG_ERR, "symmetric key public data malloc() error");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -138,7 +137,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
   if (sym_key_priv_data == NULL)
   {
     kmyth_log(LOG_ERR,
-              "unable to allocate memory for wrapping key private data ... exiting");
+              "unable to allocate memory for wrapping key private data");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -172,7 +171,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
                          &sym_key_priv_size,
                          sym_key_priv_offset))
   {
-    kmyth_log(LOG_ERR, "unable to marshal data for ski file ... exiting");
+    kmyth_log(LOG_ERR, "unable to marshal data for ski file");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -200,7 +199,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
       input.enc_data == NULL ||
       input.enc_data_size == 0)
   {
-    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
+    kmyth_log(LOG_ERR, "cannot write empty sections");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -255,7 +254,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length)
                        &enc64_data,
                        &enc64_data_size))
   {
-    kmyth_log(LOG_ERR, "error base64 encoding ski string ... exiting");
+    kmyth_log(LOG_ERR, "error base64 encoding ski string");
     free(pcr_select_data);
     free(policy_or_data);
     free(sk_pub_data);
@@ -353,7 +352,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   // verify that valid (non-NULL) input buffer provided
   if (input == NULL)
   {
-    kmyth_log(LOG_ERR, "NULL input cannot be parsed ... exiting");
+    kmyth_log(LOG_ERR, "NULL input cannot be parsed");
     return 1;
   }
 
@@ -374,7 +373,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_POLICY_OR,
                       strlen(KMYTH_DELIM_POLICY_OR)))
   {
-    kmyth_log(LOG_ERR, "get PCR selection list error ... exiting");
+    kmyth_log(LOG_ERR, "get PCR selection list error");
     free(raw_pcr_select_data);
     return 1;
   }
@@ -392,7 +391,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                       strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)))
   {
-    kmyth_log(LOG_ERR, "get policy digest list error ... exiting");
+    kmyth_log(LOG_ERR, "get policy digest list error");
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
     return 1;
@@ -411,7 +410,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_STORAGE_KEY_PRIVATE,
                       strlen(KMYTH_DELIM_STORAGE_KEY_PRIVATE)))
   {
-    kmyth_log(LOG_ERR, "get storage key public error ... exiting");
+    kmyth_log(LOG_ERR, "get storage key public error");
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
     free(raw_sk_pub_data);
@@ -431,7 +430,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_CIPHER_SUITE,
                       strlen(KMYTH_DELIM_CIPHER_SUITE)))
   {
-    kmyth_log(LOG_ERR, "get storage key private error ... exiting");
+    kmyth_log(LOG_ERR, "get storage key private error");
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
     free(raw_sk_pub_data);
@@ -452,7 +451,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_SYM_KEY_PUBLIC,
                       strlen(KMYTH_DELIM_SYM_KEY_PUBLIC)))
   {
-    kmyth_log(LOG_ERR, "get cipher string error ... exiting");
+    kmyth_log(LOG_ERR, "get cipher string error");
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
     free(raw_sk_pub_data);
@@ -467,7 +466,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
     kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
   if (temp_ski.cipher.cipher_name == NULL)
   {
-    kmyth_log(LOG_ERR, "cipher_t init error ... exiting");
+    kmyth_log(LOG_ERR, "cipher_t init error");
     free_ski(&temp_ski);
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
@@ -492,7 +491,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       KMYTH_DELIM_SYM_KEY_PRIVATE,
                       strlen(KMYTH_DELIM_SYM_KEY_PRIVATE)))
   {
-    kmyth_log(LOG_ERR, "get symmetric key public error ... exiting");
+    kmyth_log(LOG_ERR, "get symmetric key public error");
     free_ski(&temp_ski);
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
@@ -514,7 +513,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       strlen(KMYTH_DELIM_SYM_KEY_PRIVATE),
                       KMYTH_DELIM_ENC_DATA, strlen(KMYTH_DELIM_ENC_DATA)))
   {
-    kmyth_log(LOG_ERR, "get symmetric key private error ... exiting");
+    kmyth_log(LOG_ERR, "get symmetric key private error");
     free_ski(&temp_ski);
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
@@ -536,7 +535,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                       strlen(KMYTH_DELIM_ENC_DATA),
                       KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE)))
   {
-    kmyth_log(LOG_ERR, "getting encrypted data error ... exiting");
+    kmyth_log(LOG_ERR, "getting encrypted data error");
     free_ski(&temp_ski);
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
@@ -552,7 +551,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
       ((char *) position, KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE))
       || remaining != strlen(KMYTH_DELIM_END_FILE))
   {
-    kmyth_log(LOG_ERR, "unable to find the end delimiter ... exiting");
+    kmyth_log(LOG_ERR, "unable to find the end delimiter");
     free_ski(&temp_ski);
     free(raw_pcr_select_data);
     free(raw_policy_or_data);
@@ -652,7 +651,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 
   if (retval)
   {
-    kmyth_log(LOG_ERR, "base64 decode error ... exiting");
+    kmyth_log(LOG_ERR, "base64 decode error");
   }
   else
   {
@@ -682,7 +681,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
                                   decoded_sym_priv_offset);
     if (retval)
     {
-      kmyth_log(LOG_ERR, "unmarshal .ski object error ... exiting");
+      kmyth_log(LOG_ERR, "unmarshal .ski object error");
     }
   }
 
@@ -741,14 +740,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
       sym_key_private_blob == NULL ||
       sym_key_private_blob->size == 0)
   {
-    kmyth_log(LOG_ERR, "input struct(s) to be packed invalid ... exiting");
+    kmyth_log(LOG_ERR, "input struct(s) to be packed invalid");
     return 1;
   }
 
   // Marshal (pack) TPM PCR selection list struct
   if (*pcr_selection_data == NULL || pcr_selection_data_size == NULL)
   {
-    kmyth_log(LOG_ERR, "NULL PCR select list data pointer ... exiting");
+    kmyth_log(LOG_ERR, "NULL PCR select list data pointer");
     return 1;
   }
   if (pack_pcr(pcr_selection_struct,
@@ -756,14 +755,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                pcr_selection_data_size,
                pcr_selection_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing PCR select struct ... exiting");
+    kmyth_log(LOG_ERR, "error packing PCR select struct");
     return 1;
   }
 
   // Marshal (pack) policy-OR data struct
   if (*policy_or_data == NULL || policy_or_data_size == NULL)
   {
-    kmyth_log(LOG_ERR, "NULL policy-OR data pointer ... exiting");
+    kmyth_log(LOG_ERR, "NULL policy-OR data pointer");
     return 1;
   }
   if (pack_policy_or(policy_or_struct,
@@ -771,14 +770,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                      policy_or_data_size,
                      policy_or_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing policy-OR struct ... exiting");
+    kmyth_log(LOG_ERR, "error packing policy-OR struct");
     return 1;
   }
 
   // Marshal (pack) public data buffer for storage key (SK)
   if (*storage_key_public_data == NULL || storage_key_public_data_size == NULL)
   {
-    kmyth_log(LOG_ERR, "invalid SK public byte array ... exiting");
+    kmyth_log(LOG_ERR, "invalid SK public byte array");
     return 1;
   }
   if (pack_public(storage_key_public_blob,
@@ -786,14 +785,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                   *storage_key_public_data_size,
                   storage_key_public_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing SK public blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing SK public blob");
     return 1;
   }
 
   // Marshal (pack) private data buffer for storage key (SK)
   if (*storage_key_private_data == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated SK private byte array ... exiting");
+    kmyth_log(LOG_ERR, "unallocated SK private byte array");
     return 1;
   }
   if (pack_private(storage_key_private_blob,
@@ -801,14 +800,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                    *storage_key_private_data_size,
                    storage_key_private_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing SK private blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing SK private blob");
     return 1;
   }
 
   // Marshal (pack) public data buffer for symmetric key
   if (*sym_key_public_data == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated symmetric key public buffer ... exiting");
+    kmyth_log(LOG_ERR, "unallocated symmetric key public buffer");
     return 1;
   }
   if (pack_public(sym_key_public_blob,
@@ -816,14 +815,14 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                   *sym_key_public_data_size,
                   sym_key_public_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing symmetric key public blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing symmetric key public blob");
     return 1;
   }
 
   // Marshal (pack) private data buffer for symmetric key
   if (*sym_key_private_data == NULL)
   {
-    kmyth_log(LOG_ERR, "unalloc'd symmetric key private buffer ... exiting");
+    kmyth_log(LOG_ERR, "unalloc'd symmetric key private buffer");
     return 1;
   }
   if (pack_private(sym_key_private_blob,
@@ -831,7 +830,7 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                    *sym_key_private_data_size,
                    sym_key_private_data_offset))
   {
-    kmyth_log(LOG_ERR, "error packing sealed key private blob ... exiting");
+    kmyth_log(LOG_ERR, "error packing sealed key private blob");
     return 1;
   }
 
@@ -917,9 +916,24 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
 {
   TSS2_RC rc = 0;
 
+  if ((pcr_select_in == NULL) ||
+      (packed_data_out == NULL) ||
+      (packed_data_out_size == NULL))
+  {
+    kmyth_log(LOG_ERR, "NULL parameter pointer");
+    return 1;
+  }
+
   // store count of TPML_PCR_SELECTION structs (valued 0-8) as one-byte uint8_t
   uint8_t temp_byte = (uint8_t) pcr_select_in->count;
-  memcpy(packed_data_out, &temp_byte, sizeof(uint8_t));
+  if ((packed_data_out_offset + sizeof(uint8_t)) > *packed_data_out_size)
+  {
+    kmyth_log(LOG_ERR, "packed PCR selection data buffer overflow");
+    return 1;
+  }
+  memcpy(packed_data_out + packed_data_out_offset,
+         &temp_byte,
+         sizeof(uint8_t));
   packed_data_out_offset += sizeof(uint8_t);
 
   // create stack buffer to process TPML_PCR_SELECTION structs
@@ -936,21 +950,30 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
                                                  temp_size,
                                                  &temp_offset)))
     {
-      kmyth_log(LOG_ERR,
-                "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X ... exiting", rc);
+      kmyth_log(LOG_ERR, "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X", rc);
       return 1;
     }
 
     // write packed struct size as a one-byte unsigned integer (valued 0-255)
-    temp_byte = (uint8_t) temp_offset;
-    kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
-    memcpy(packed_data_out + packed_data_out_offset,
-           &temp_byte,
-           sizeof(uint8_t));
-    packed_data_out_offset += sizeof(uint8_t);
-    kmyth_log(LOG_DEBUG, "packed_data_out_offset = %u", packed_data_out_offset);
+    //temp_byte = (uint8_t) temp_offset;
+    //kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
+    //if ((packed_data_out_offset + sizeof(uint8_t)) > *packed_data_out_size)
+    //{
+    //  kmyth_log(LOG_ERR, "packed PCR selection data buffer overflow");
+    //  return 1;
+    //}
+    //memcpy(packed_data_out + packed_data_out_offset,
+    //       &temp_byte,
+    //       sizeof(uint8_t));
+    //packed_data_out_offset += sizeof(uint8_t);
+    //kmyth_log(LOG_DEBUG, "packed_data_out_offset = %u", packed_data_out_offset);
 
     // write packed struct data
+    if ((packed_data_out_offset + temp_offset) > *packed_data_out_size)
+    {
+      kmyth_log(LOG_ERR, "packed PCR selection data buffer overflow");
+      return 1;
+    }
     memcpy(packed_data_out + packed_data_out_offset,
            temp_data,
            temp_offset);
@@ -977,30 +1000,52 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
 {
   TSS2_RC rc = 0;
 
+  if (packed_data_in == NULL)
+  {
+    kmyth_log(LOG_ERR, "input packed PCR selection buffer pointer is NULL");
+    return 1;
+  }
+
   // read count of TPML_PCR_SELECTION structs (one-byte unsigned integer)
-  uint8_t temp_byte = packed_data_in[0];
+  if ((packed_data_in_offset + sizeof(uint8_t)) > packed_data_in_size)
+  {
+    kmyth_log(LOG_ERR, "input packed PCR data buffer overflow");
+    return 1;
+  }
+  uint8_t temp_byte = packed_data_in[packed_data_in_offset];
+  if ((temp_byte < 1) || (temp_byte > MAX_POLICY_OR_CNT))
+  {
+    kmyth_log(LOG_ERR, "unpacked invalid TPML_PCR_SELECTION struct count (%u)",
+                       temp_byte);
+    return 1;
+  }
   pcr_select_out->count = (size_t) temp_byte;
   packed_data_in_offset += sizeof(uint8_t);
-
-  kmyth_log(LOG_DEBUG, "count = %zu", pcr_select_out->count);
 
   // unpack list of TPML_PCR_SELECTION struct data
   for (size_t i = 0; i < pcr_select_out->count; i++)
   {
-    // get size (in bytes) of packed TPML_PCR_SELECTION struct
-    temp_byte = packed_data_in[packed_data_in_offset];
-    kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
-    packed_data_in_offset += sizeof(uint8_t);
-    kmyth_log(LOG_DEBUG, "packed_data_in_offset = %zu", packed_data_in_offset);
-
-    rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(packed_data_in,
+    // had some buffer overflow issues when calling the "unmarshal" function
+    // with a 'packed_data_in_size' buffer - therefore, a stack-hosted,
+    // sizeof(TPML_PCR_SELECTION) sized temporary buffer is employed
+    uint8_t temp_buf[sizeof(TPML_PCR_SELECTION)] = { 0 };
+    size_t temp_offset = 0;
+    memcpy(temp_buf,
+           packed_data_in + packed_data_in_offset,
+           packed_data_in_size);
+ 
+    rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(temp_buf,
                                               sizeof(TPML_PCR_SELECTION),
-                                              &packed_data_in_offset,
+                                              &temp_offset,
                                               &(pcr_select_out->pcrs[i]));
     if (rc)
     {
-      kmyth_log(LOG_ERR,
-                "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x ... exiting", rc);
+      kmyth_log(LOG_ERR, "Tss2_MU_TPML_PCR_SELECTION_Unmarshal(): 0x%08x", rc);
+      return 1;
+    }
+    if ((packed_data_in_offset + temp_offset) > packed_data_in_size)
+    {
+      kmyth_log(LOG_ERR, "input packed PCR data buffer overflow");
       return 1;
     }
   }
@@ -1024,8 +1069,7 @@ int pack_policy_or(TPML_DIGEST * policy_or_in,
                                         *packed_data_out_size,
                                         &packed_data_out_offset)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPML_DIGEST_Marshal(): 0x%08X", rc);
     return 1;
   }
 
@@ -1051,8 +1095,7 @@ int unpack_policy_or(TPML_DIGEST * policy_or_out,
                                           &packed_data_in_offset,
                                           policy_or_out)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPML_DIGEST_Unmarshal(): 0x%08x ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPML_DIGEST_Unmarshal(): 0x%08x", rc);
     return 1;
   }
 
@@ -1077,8 +1120,7 @@ int pack_public(TPM2B_PUBLIC * public_blob_in,
                                          packed_data_out_size,
                                          &packed_data_out_offset)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_PUBLIC_Marshal(): 0x%08X ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPM2B_PUBLIC_Marshal(): 0x%08X", rc);
     return 1;
   }
 
@@ -1100,8 +1142,7 @@ int unpack_public(TPM2B_PUBLIC * public_blob_out,
                                            &packed_data_in_offset,
                                            public_blob_out)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_PUBLIC_Unmarshal(): 0x%08x ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPM2B_PUBLIC_Unmarshal(): 0x%08x", rc);
     return 1;
   }
 
@@ -1123,8 +1164,7 @@ int pack_private(TPM2B_PRIVATE * private_blob_in,
                                           packed_data_out_size,
                                           &packed_data_out_offset)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_PRIVATE_Marshal(): 0x%08X ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPM2B_PRIVATE_Marshal(): 0x%08X", rc);
     return 1;
   }
 
@@ -1146,8 +1186,7 @@ int unpack_private(TPM2B_PRIVATE * private_blob_out,
                                             &packed_data_in_offset,
                                             private_blob_out)))
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_MU_TPM2B_PRIVATE_Unmarshal(): 0x%08x ... exiting", rc);
+    kmyth_log(LOG_ERR, "Tss2_MU_TPM2B_PRIVATE_Unmarshal(): 0x%08x", rc);
     return 1;
   }
 
@@ -1165,7 +1204,7 @@ int unpack_uint32_to_str(uint32_t uint_value, char **str_repr)
                ((uint8_t *) & uint_value)[1],
                ((uint8_t *) & uint_value)[0]) < 0)
   {
-    kmyth_log(LOG_ERR, "error unpacking uint32 to string ... exiting");
+    kmyth_log(LOG_ERR, "error unpacking uint32 to string");
     return 1;
   }
 

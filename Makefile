@@ -513,8 +513,9 @@ $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lcunit \
-				-lkmyth-utils \
-	      -lkmyth-tpm
+		  -lkmyth-utils \
+	      -lkmyth-tpm \
+		  -lkmyth-logger
 
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@

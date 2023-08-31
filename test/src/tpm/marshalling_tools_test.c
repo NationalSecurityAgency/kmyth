@@ -11,76 +11,11 @@
 #include <openssl/rand.h>
 
 #include "tpm2_interface.h"
+#include "kmyth_log.h"
 #include "marshalling_tools_test.h"
 #include "marshalling_tools.h"
 #include "object_tools.h"
 #include "defines.h"
-
-const char *CONST_SKI_BYTES = "\
------PCR SELECTION LIST-----\n\
-AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
------POLICY OR-----\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAA=\n\
------STORAGE KEY PUBLIC-----\n\
-AToAAQALAAMAcgAgcnAGdT2tfu/ZnZHE4WPOMJSz3gJgW40hgL+QrfFxCYsABgCA\n\
-AEMAEAgAAAAAAAEArdcEDo+56w/VbgFyKes4ckyuenee13iZ8v1XKgdqPdtwST4m\n\
-Hj9wfrHBxqjkGHX7TFb7uxsRCB6sMoRAyWptkoiOFa0HtD3M3ba7OytC32z4hGoM\n\
-nZOR4+vYSWl7fpddPcJKmCAXGCYgKsyDk+DbZPspsTWqCwmNaxuJz2Hp4t1wMnqW\n\
-5VB+hA0Wd2/+alM0RMDHMZwGYlq92V227bL0H9iQGMu76xnmLY8U2fqYSC+OOw0n\n\
-8zOMxAMLnRz6A5cOjgDFWkEDIk2qxBD4TBssBXIrlaEWFNFQW9pcIt/mJV7/81lr\n\
-XJb4L9ZUt3yXy4ONZKg4aW3kfmJQtNthrX7VjQ==\n\
------STORAGE KEY ENC PRIVATE-----\n\
-AP4AIFBZmN3PX8YZNyWYKAJnfPf5QtXMPmXrzExLKot8uh9KABDZW0vb/GLwMj4x\n\
-YrRRF3YBQHmTcy5sc7CfvaqKNiyWcFO1s/uRUDF7WDQrlHHUKaNHXUyoPuFsmR/w\n\
-p5P6nSWcc/IBTQ24uUVHTqhDcxAgR51PfXefpiyP5oUeG6eOacTAjyuIUufALRdT\n\
-IvKmfGRW8ubGIn3W1U/lGs/pi7eOTaSYFBbQrnw9y9VEqEo0IVJgWUmUJ6yF4Gdh\n\
-squWofLQ9MBFzrCo3ErrWYtUJjRh0zKPSQKsQXHFyT7caY/Kr6kH61KzY6GR8lgR\n\
-qKENvBDt+93KHiPutl59sg==\n\
------CIPHER SUITE-----\n\
-AES/GCM/NoPadding/256\n\
------SYM KEY PUBLIC-----\n\
-AE4ACAALAAAAUgAgcnAGdT2tfu/ZnZHE4WPOMJSz3gJgW40hgL+QrfFxCYsAEAAg\n\
-2Q6eibPyxc2Mdz1bwauQJPy8bMWVCUEb1j5ji+I1BHw=\n\
------SYM KEY ENC PRIVATE-----\n\
-AJ4AIOy/btaxKHMDW9wUvCSiKRuBPoVm5E1BL4JSui8L1FKvABBDuE3PdIHsD5Wy\n\
-Zay95le0ytJu+Wf9ACc1WBUMtzRZikYUFHrlw+ujJU70gbOrmq6OD0XwVlwfjA+/\n\
-AkbYa8d1Mhs1Dxqxp0gnpNPCwFGt0SCipy8WtcdwXlFbZNrBO+Zqw9SbzMGnZGMi\n\
-lYUkqJ/V5ZBlLek/ufMxMg==\n\
------ENC DATA-----\n\
-j53ixEuUSZcgOBkv9bSQkH1WXo7IWKsMP/XfevBjYhl/RBAmxpZeXLao2uCA8cc=\n\
------FILE END-----\n";
-
-const char *RAW_PCR64 =
-  "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
-
-const size_t RAW_PCR_LEN = 132;
-
-uint8_t RAW_PCR[] = {
-  0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0
-};
 
 //----------------------------------------------------------------------------
 // marshalling_tools_add_tests()
@@ -188,7 +123,7 @@ size_t init_test_pcrSelect(PCR_SELECTIONS * test_pcrSelect, size_t offset)
 //----------------------------------------------------------------------------
 // match_pcrSelect
 //----------------------------------------------------------------------------
-bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b)
+bool match_pcrSelect(PCR_SELECTIONS a, PCR_SELECTIONS b)
 {
   if (a.count != b.count)
   {
@@ -197,21 +132,31 @@ bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b)
 
   for (int i = 0; i < a.count; i++)
   {
-    if (a.pcrSelections[i].hash != b.pcrSelections[i].hash)
+    if (a.pcrs[i].count != b.pcrs[i].count)
     {
       return false;
     }
 
-    if (a.pcrSelections[i].sizeofSelect != b.pcrSelections[i].sizeofSelect)
+    for (int j = 0; j < a.pcrs[i].count; j++)
     {
-      return false;
-    }
-
-    for (int j = 0; j < a.pcrSelections[i].sizeofSelect; j++)
-    {
-      if (a.pcrSelections[i].pcrSelect[j] != b.pcrSelections[i].pcrSelect[j])
+      if (a.pcrs[i].pcrSelections[j].hash != b.pcrs[i].pcrSelections[j].hash)
       {
         return false;
+      }
+
+      if (a.pcrs[i].pcrSelections[j].sizeofSelect !=
+          b.pcrs[i].pcrSelections[j].sizeofSelect)
+      {
+        return false;
+      }
+
+      for (int k = 0; k < a.pcrs[i].pcrSelections[j].sizeofSelect; k++)
+      {
+        if (a.pcrs[i].pcrSelections[j].pcrSelect[k] !=
+            b.pcrs[i].pcrSelections[j].pcrSelect[k])
+        {
+          return false;
+        }
       }
     }
   }
@@ -223,23 +168,27 @@ bool match_pcrSelect(TPML_PCR_SELECTION a, TPML_PCR_SELECTION b)
 //----------------------------------------------------------------------------
 // check_packed_pcrSelect
 //----------------------------------------------------------------------------
-bool check_packed_pcrSelect(TPML_PCR_SELECTION in,
+bool check_packed_pcrSelect(PCR_SELECTIONS in,
                             uint8_t * packed_data,
                             size_t packed_size,
                             size_t packed_offset)
 {
   // make sure packed byte array is large enough to hold packed struct
-  //   - in.count is a UINT32 and needs four bytes
-  //   - in.pcrSelections needs:
-  //       * in.count * (2 bytes for hash alg ID + 1 bytee for sizeofSelect)
-  //       * sum of sizeofSelect values bytes for actual PCR mask(s)
-  size_t pcr_mask_byte_count = 0;
-
+  size_t packed_size_limit = sizeof(uint8_t); // in.count
   for (int i = 0; i < in.count; i++)
   {
-    pcr_mask_byte_count += in.pcrSelections[i].sizeofSelect;
+    packed_size_limit += sizeof(uint32_t); // in.pcrs[i].count
+
+    for (int j = 0; j < in.pcrs[i].count; j++)
+    {
+      packed_size_limit += sizeof(uint16_t); // in.pcrs[i].pcrSelections[j].hash
+      packed_size_limit += sizeof(uint8_t);  // in.pcrs[i].pcrSelections.sizeofSelect
+
+      // in.pcrs[i].pcrSelections.pcrSelect[] (mask bytes)
+      packed_size_limit += in.pcrs[i].pcrSelections[j].sizeofSelect * sizeof(uint8_t);
+    }
   }
-  size_t packed_size_limit = (size_t)(sizeof(uint32_t) + (in.count * (sizeof(uint16_t) + sizeof(uint8_t))) + pcr_mask_byte_count);
+  packed_size_limit += packed_offset;
   if (packed_size < packed_size_limit)
   {
     return false;
@@ -248,43 +197,55 @@ bool check_packed_pcrSelect(TPML_PCR_SELECTION in,
   // account for specified offset
   size_t index = packed_offset;
 
-  uint32_t packed_count_val = 0;
-
-  // check that the count portion of the packed value matches original count
-  packed_count_val |= (uint32_t) (packed_data[index++] << 24);
-  packed_count_val |= (uint32_t) (packed_data[index++] << 16);
-  packed_count_val |= (uint32_t) (packed_data[index++] << 8);
-  packed_count_val |= (uint32_t) packed_data[index++];
-  if (packed_count_val != in.count)
+  // test number of TPML_PCR_SELECTION structs encapsulated
+  uint8_t packed_struct_count = packed_data[index++];
+  if (packed_struct_count != in.count)
   {
     return false;
   }
 
-  // for all sets of PCR selection data
+  // test each of the encapsulated, packed TPML_PCR_SELECTION structs
   for (int i = 0; i < in.count; i++)
   {
-    uint16_t packed_hash_alg_id = 0;
+    // parse PCR bank count value for this entry
+    uint32_t packed_bank_count = 0;
+    packed_bank_count |= (uint32_t) (packed_data[index++] << 24);
+    packed_bank_count |= (uint32_t) (packed_data[index++] << 16);
+    packed_bank_count |= (uint32_t) (packed_data[index++] << 8);
+    packed_bank_count |= (uint32_t) packed_data[index++];
 
-    // check that the hash algorithm ID of the packed value matches input value
-    packed_hash_alg_id |= (uint16_t) (packed_data[index++] << 8);
-    packed_hash_alg_id |= (uint16_t) packed_data[index++];
-    if (packed_hash_alg_id != in.pcrSelections[i].hash)
+    // check that the packed byte count matches original count
+    if (packed_bank_count != in.pcrs[i].count)
     {
       return false;
     }
 
-    // check the packed size (in bytes) of the PCR selection mask matches
-    if (packed_data[index++] != in.pcrSelections[i].sizeofSelect)
+    // for all sets of PCR selection data
+    for (int j = 0; j < in.pcrs[i].count; j++)
     {
-      return false;
-    }
+      uint16_t packed_hash_alg_id = 0;
 
-    // check that the packed PCR selection mask bytes match
-    for (int j = 0; j < in.pcrSelections[i].sizeofSelect; j++)
-    {
-      if (packed_data[index++] != in.pcrSelections[i].pcrSelect[j])
+      // check that the hash algorithm ID of the packed value matches input value
+      packed_hash_alg_id |= (uint16_t) (packed_data[index++] << 8);
+      packed_hash_alg_id |= (uint16_t) packed_data[index++];
+      if (packed_hash_alg_id != in.pcrs[i].pcrSelections[j].hash)
       {
         return false;
+      }
+
+      // check the packed size (in bytes) of the PCR selection mask matches
+      if (packed_data[index++] != in.pcrs[i].pcrSelections[j].sizeofSelect)
+      {
+        return false;
+      }
+
+      // check that the packed PCR selection mask bytes match
+      for (int k = 0; k < in.pcrs[i].pcrSelections[j].sizeofSelect; k++)
+      {
+        if (packed_data[index++] != in.pcrs[i].pcrSelections[j].pcrSelect[k])
+        {
+          return false;
+        }
       }
     }
   }
@@ -294,9 +255,9 @@ bool check_packed_pcrSelect(TPML_PCR_SELECTION in,
 }
 
 //----------------------------------------------------------------------------
-// match_policyDigestList
+// match_digestList
 //----------------------------------------------------------------------------
-bool match_policyDigestList(TPML_DIGEST a, TPML_DIGEST b)
+bool match_digestList(TPML_DIGEST a, TPML_DIGEST b)
 {
   if (a.count != b.count)
   {
@@ -324,10 +285,10 @@ bool match_policyDigestList(TPML_DIGEST a, TPML_DIGEST b)
 }
 
 //----------------------------------------------------------------------------
-// check_packed_policyDigestList
+// check_packed_digestList
 //----------------------------------------------------------------------------
-bool check_packed_policyDigestList(TPML_DIGEST in, uint8_t * packed_data,
-                                   size_t packed_size, size_t packed_offset)
+bool check_packed_digestList(TPML_DIGEST in, uint8_t * packed_data,
+                             size_t packed_size, size_t packed_offset)
 {
   // make sure packed byte array is large enough to hold packed struct
   //   - in.count is a UINT32 and needs four bytes
@@ -711,8 +672,8 @@ bool check_packed_private(TPM2B_PRIVATE in, uint8_t * packed_data,
 void test_marshal_unmarshal_skiObjects(void)
 {
   // test input/output struct parameters
-  TPML_PCR_SELECTION pcr_selection_in = { 0 };
-  TPML_PCR_SELECTION pcr_selection_out = { 0 };
+  PCR_SELECTIONS pcr_selection_in = { 0 };
+  PCR_SELECTIONS pcr_selection_out = { 0 };
   TPML_DIGEST policy_or_digest_list_in = { 0 };
   TPML_DIGEST policy_or_digest_list_out = { 0 };
   TPM2B_PUBLIC sk_public_in = { 0 };
@@ -769,7 +730,7 @@ void test_marshal_unmarshal_skiObjects(void)
   // check that NULL PCR selection struct input errors
   ret_val = marshal_skiObjects(NULL,
                                &pcr_selection_data,
-                              &pcr_selection_size,
+                               &pcr_selection_size,
                                pcr_selection_offset,
                                &policy_or_digest_list_in,
                                &policy_or_digest_list_data,
@@ -1222,10 +1183,10 @@ void test_marshal_unmarshal_skiObjects(void)
                                    pcr_selection_data,
                                    pcr_selection_size,
                                    pcr_selection_offset));
-  CU_ASSERT(check_packed_policyDigestList(policy_or_digest_list_in,
-                                          policy_or_digest_list_data,
-                                          policy_or_digest_list_size,
-                                          policy_or_digest_list_offset));
+  CU_ASSERT(check_packed_digestList(policy_or_digest_list_in,
+                                    policy_or_digest_list_data,
+                                    policy_or_digest_list_size,
+                                    policy_or_digest_list_offset));
   CU_ASSERT(check_packed_public(sk_public_in,
                                 sk_public_data,
                                 sk_public_size,
@@ -1277,8 +1238,9 @@ void test_marshal_unmarshal_skiObjects(void)
                                  sym_key_private_data,
                                  sym_key_private_size,
                                  sym_key_private_offset);
+  CU_ASSERT(ret_val == 0);
   CU_ASSERT(match_pcrSelect(pcr_selection_out, pcr_selection_in));
-  CU_ASSERT(match_policyDigestList(policy_or_digest_list_out, policy_or_digest_list_in));
+  CU_ASSERT(match_digestList(policy_or_digest_list_out, policy_or_digest_list_in));
   CU_ASSERT(match_public(sk_public_out, sk_public_in));
   CU_ASSERT(match_private(sk_private_out, sk_private_in));
   CU_ASSERT(match_public(sym_key_public_out, sym_key_public_in));
@@ -1298,9 +1260,9 @@ void test_marshal_unmarshal_skiObjects(void)
 //----------------------------------------------------------------------------
 void test_pack_unpack_pcr(void)
 {
-  TPML_PCR_SELECTION test_in = { 0 };
-  TPML_PCR_SELECTION empty = { 0 };
-  TPML_PCR_SELECTION test_out = { 0 };
+  PCR_SELECTIONS test_in = { 0 };
+  PCR_SELECTIONS empty = { 0 };
+  PCR_SELECTIONS test_out = { 0 };
   size_t test_packed_pcr_offset = 8;
   size_t test_packed_pcr_size = 0;
   int ret_val = -1;
@@ -1313,56 +1275,52 @@ void test_pack_unpack_pcr(void)
 
   // check that passing a NULL input (value to be packed or unpacked) errors
   ret_val = pack_pcr(NULL, test_packed_pcr_data,
-                     test_packed_pcr_size, test_packed_pcr_offset);
+                     &test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
   ret_val = unpack_pcr(&test_out, NULL,
                        test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that passing a empty input produces packed array containing only
-  // the zero .count member (UINT32 is four bytes)
-  ret_val = pack_pcr(&empty, test_packed_pcr_data, 4, 0);
+  // the zero .count member
+  size_t packed_size = sizeof(uint8_t);
+  ret_val = pack_pcr(&empty, test_packed_pcr_data, &packed_size, 0);
   CU_ASSERT(ret_val == 0);
-  CU_ASSERT((test_packed_pcr_data[0] == 0) && (test_packed_pcr_data[1] == 0) &&
-            (test_packed_pcr_data[2] == 0) && (test_packed_pcr_data[3] == 0));
+  CU_ASSERT(packed_size == sizeof(uint8_t));
 
-  // check that unwrapping previous result returns empty struct
-  test_out.count = 0xffffffff;
-  CU_ASSERT(test_out.count == 0xffffffff);
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data, 4, 0);
-  CU_ASSERT(ret_val == 0);
-  CU_ASSERT(test_out.count == 0);
+  // check that unwrapping previous result errors (invalid .count)
+  ret_val = unpack_pcr(&test_out, test_packed_pcr_data, packed_size, 0);
+  CU_ASSERT(ret_val != 0);
 
   // check that zero-size byte array input to unpack_pcr() errors
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data, 0, 0);
   CU_ASSERT(ret_val != 0);
 
   // check that zero-size output byte array for pack_pcr() errors
-  ret_val = pack_pcr(&empty, test_packed_pcr_data, 0, 0);
+  test_packed_pcr_size = 0;
+  ret_val = pack_pcr(&empty, test_packed_pcr_data, &test_packed_pcr_size, 0);
   CU_ASSERT(ret_val != 0);
 
-  // check that a non-zero-sized, but too small, output array errors pack
-  ret_val = pack_pcr(&test_in, test_packed_pcr_data,
-                     test_packed_pcr_size - 1, test_packed_pcr_offset);
-  CU_ASSERT(ret_val != 0);
+  // reinitialize test PCR Selection struct input, get required byte array size
+  test_packed_pcr_offset = 8;
+  test_packed_pcr_size = init_test_pcrSelect(&test_in, test_packed_pcr_offset);
+  CU_ASSERT(test_packed_pcr_size > 0);
 
   // pack the PCR selection struct test value with correct parameters
   ret_val = pack_pcr(&test_in, test_packed_pcr_data,
-                     test_packed_pcr_size, test_packed_pcr_offset);
-
-  // check that pack operation did not return error
+                     &test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val == 0);
 
   // check that the result was packed as expected
-  CU_ASSERT(check_packed_pcrSelect(test_in, test_packed_pcr_data,
+  test_packed_pcr_offset = 8;
+  CU_ASSERT(check_packed_pcrSelect(test_in,
+                                   test_packed_pcr_data,
                                    test_packed_pcr_size,
                                    test_packed_pcr_offset));
 
   // unpack the packed PCR selection struct test value just generated
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
                        test_packed_pcr_size, test_packed_pcr_offset);
-
-  // check that unpack operation did not return error
   CU_ASSERT(ret_val == 0);
 
   // check that the unpacked struct matches original input
@@ -1371,18 +1329,39 @@ void test_pack_unpack_pcr(void)
   // check that a non-zero-sized, but too small, input array errors unpack
   ret_val = unpack_pcr(&test_out,
                        test_packed_pcr_data,
-                       test_packed_pcr_size - 1, test_packed_pcr_offset);
+                       test_packed_pcr_size - 1,
+                       test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check that unpacking with too small an offset produces wrong result
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_size, test_packed_pcr_offset - 1);
-  CU_ASSERT(ret_val == 0);
-  CU_ASSERT(!match_pcrSelect(test_out, test_in));
+  // check unpacking with offset too small offset errors (or could
+  // possibly return wrong result if shifted decode is valid)
+  test_packed_pcr_data[test_packed_pcr_offset - 1] = (uint8_t) 1;
+  test_packed_pcr_data[test_packed_pcr_offset] = (uint8_t) 0;
+  test_packed_pcr_data[test_packed_pcr_offset + 1] = (uint8_t) 0;
+  test_packed_pcr_data[test_packed_pcr_offset + 2] = (uint8_t) 0;
+  test_packed_pcr_data[test_packed_pcr_offset + 3] = (uint8_t) 1;
+  test_packed_pcr_data[test_packed_pcr_offset + 6] = (uint8_t) 3;
+  ret_val = unpack_pcr(&test_out,
+                       test_packed_pcr_data,
+                       test_packed_pcr_size,
+                       test_packed_pcr_offset - 1);
+  if (ret_val == 0)
+  {
+    CU_ASSERT(!match_pcrSelect(test_out, test_in));
+  }
 
   // check that unpacking with too large an offset produces an error
-  ret_val = unpack_pcr(&test_out, test_packed_pcr_data,
-                       test_packed_pcr_size, test_packed_pcr_offset + 1);
+  ret_val = unpack_pcr(&test_out,
+                       test_packed_pcr_data,
+                       test_packed_pcr_size,
+                       test_packed_pcr_offset + 1);
+  CU_ASSERT(ret_val != 0);
+
+  // check that a non-zero-sized, but too small, output array errors pack
+  CU_ASSERT(test_packed_pcr_size > 0);
+  test_packed_pcr_size--;
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data,
+                     &test_packed_pcr_size, test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
   // check that packing into a larger byte array than necessary
@@ -1390,7 +1369,7 @@ void test_pack_unpack_pcr(void)
   // Note: changing offset from a positive number to zero creates extra
   //       bytes at the end of the packed data byte array)
   CU_ASSERT(test_packed_pcr_offset > 0);
-  ret_val = pack_pcr(&test_in, test_packed_pcr_data, test_packed_pcr_size, 0);
+  ret_val = pack_pcr(&test_in, test_packed_pcr_data, &test_packed_pcr_size, 0);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(check_packed_pcrSelect(test_in, test_packed_pcr_data,
                                    test_packed_pcr_size, 0));
@@ -1692,10 +1671,9 @@ void test_unpack_uint32_to_str(void)
 void test_parse_ski_bytes(void)
 {
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+  uint8_t * ski_bytes = malloc(ski_bytes_len * sizeof(uint8_t));
 
-  uint8_t *ski_bytes = malloc(ski_bytes_len * sizeof(char));
-
-  memcpy(ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
+  strncpy((char *) ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
 
   Ski output = get_default_ski();
 
@@ -1711,53 +1689,60 @@ void test_parse_ski_bytes(void)
   //Invalid delims:
   ////////
 
-  // "-----PCR SELECTION LIST-----"", indices 0-28
+  // "-----PCR SELECTIONS-----\n", indices 0-24
   ski_bytes[0] = '!';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[0] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----STORAGE KEY PUBLIC-----", indices 952-979
-  ski_bytes[952] = '!';
+  // "-----POLICY OR-----\n", indices 42-61
+  ski_bytes[53] = 'N';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[952] = '-';
+  ski_bytes[53] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----STORAGE KEY ENC PRIVATE-----", indices 1412-1444
-  ski_bytes[1412] = '!';
+  // "-----STORAGE KEY PUBLIC-----\n", indices 115-143
+  ski_bytes[138] = '*';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[1412] = '-';
+  ski_bytes[138] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----CIPHER_SUITE-----", indices 1796-1817
-  ski_bytes[1796] = '!';
+  // "-----STORAGE KEY ENC PRIVATE-----\n", indices 575-608
+  ski_bytes[580] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[1796] = '-';
+  ski_bytes[580] = 'S';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----SYM_KEY_PUBLIC-----", indices 1841-1864
-  ski_bytes[1841] = '!';
+  // "-----CIPHER_SUITE-----\n", indices 1649-1671
+  ski_bytes[1660] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[1841] = '-';
+  ski_bytes[1660] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----SYM KEY ENC PRIVATE-----", indices 1976-2004
-  ski_bytes[1976] = '!';
+  // "-----SYM_KEY_PUBLIC-----\n", indices 1694-1718
+  ski_bytes[1701] = 'N';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[1976] = '-';
+  ski_bytes[1701] = 'M';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----ENC_DATA-----", indices 2226-2243
-  ski_bytes[2226] = '!';
+  // "-----SYM KEY ENC PRIVATE-----\n", indices 1829-1858
+  ski_bytes[1857] = '!';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[2226] = '-';
+  ski_bytes[1857] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
 
-  // "-----END_FILE-----", indices 2310-2327
-  ski_bytes[2310] = '!';
+  // "-----ENC_DATA-----\n", indices 2079-2097
+  ski_bytes[2087] = '#';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
-  ski_bytes[2310] = '-';
+  ski_bytes[2087] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
+  // "-----FILE END-----\n", indices 2155-2173
+  ski_bytes[2165] = 'A';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
+  ski_bytes[2165] = 'E';
+  CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+
   free(ski_bytes);
 }
 
@@ -1767,6 +1752,9 @@ void test_parse_ski_bytes(void)
 void test_create_ski_bytes(void)
 {
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+  uint8_t * ski_bytes = malloc(ski_bytes_len * sizeof(uint8_t));
+
+  strncpy((char *) ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
 
   Ski ski = get_default_ski();
 
@@ -1859,6 +1847,8 @@ void test_create_ski_bytes(void)
   CU_ASSERT(create_ski_bytes(get_default_ski(), &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
+
+  free(ski_bytes);
 }
 
 //----------------------------------------------------------------------------
@@ -1867,6 +1857,10 @@ void test_create_ski_bytes(void)
 void test_free_ski(void)
 {
   size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
+  uint8_t * ski_bytes = malloc(ski_bytes_len * sizeof(uint8_t));
+
+  strncpy((char *) ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
+
   Ski ski = get_default_ski();
 
   // Get valid Ski struct
@@ -1877,6 +1871,8 @@ void test_free_ski(void)
   free_ski(&ski);
   CU_ASSERT(ski.enc_data == NULL);
   CU_ASSERT(ski.enc_data_size == 0);
+
+  free(ski_bytes);
 }
 
 //----------------------------------------------------------------------------
@@ -1886,9 +1882,11 @@ void test_get_default_ski(void)
 {
   Ski ski = get_default_ski();
 
-  CU_ASSERT(ski.pcr_list.count == 0);
+  CU_ASSERT(ski.pcr_sel.count == 0);
+  CU_ASSERT(ski.policy_or.count == 0);
   CU_ASSERT(ski.sk_pub.size == 0);
   CU_ASSERT(ski.sk_priv.size == 0);
+  CU_ASSERT(ski.cipher.cipher_name == NULL);
   CU_ASSERT(ski.sym_key_pub.size == 0);
   CU_ASSERT(ski.sym_key_priv.size == 0);
   CU_ASSERT(ski.enc_data == NULL);
@@ -1930,15 +1928,15 @@ void test_verifyPackUnpackDigestList(void)
   packed_data_size = (sizeof(digest_list_in) + 1);
   packed_data = (uint8_t *) malloc(packed_data_size);
 
-  CU_ASSERT(pack_digest_list(&digest_list_in,
+  CU_ASSERT(pack_policy_or(&digest_list_in,
+                           packed_data,
+                           &packed_data_size,
+                           packed_data_offset) == 0);
+  CU_ASSERT(packed_data != NULL);
+  CU_ASSERT(unpack_policy_or(&digest_list_out,
                              packed_data,
                              packed_data_size,
                              packed_data_offset) == 0);
-  CU_ASSERT(packed_data != NULL);
-  CU_ASSERT(unpack_digest_list(&digest_list_out,
-                               packed_data,
-                               packed_data_size,
-                               packed_data_offset) == 0);
   CU_ASSERT(digest_list_out.count != 0);
   CU_ASSERT(digest_list_out.count == digest_list_in.count);
   CU_ASSERT(digest_list_out.digests[0].size == digest_list_in.digests[0].size);

@@ -505,6 +505,9 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       char * auth_string,
                       char * owner_auth_string)
 {
+  kmyth_log(LOG_DEBUG, "sizeof(PCR_SELECTIONS) = %zu", sizeof(PCR_SELECTIONS));
+  kmyth_log(LOG_DEBUG, "sizeof(TPML_PCR_SELECTION) = %zu", sizeof(TPML_PCR_SELECTION));
+
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 

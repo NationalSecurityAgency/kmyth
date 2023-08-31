@@ -135,4 +135,3 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
 
   return 0;
 }
-
