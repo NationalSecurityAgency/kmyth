@@ -16,6 +16,8 @@
 
 #include <tss2/tss2_sys.h>
 
+#include "pcrs.h"
+
 /**
  * @brief 'kmyth-seal' wrapper function
  *
@@ -54,6 +56,22 @@
  *                               (i.e., policy-OR criteria not specified),
  *                               a NULL pointer value should be provided.
  *
+ * @param[in]  pcrs_in           In a "reseal" scenario, the currently sealed
+ *                               input may have been sealed with PCR criteria
+ *                               (perhaps even multiple PCR selection criterion
+ *                               if a policy-OR based authorization was used).
+ *                               This parameter, therefore, supports passing in
+ *                               an existing set of PCR selections that
+ *                               kmyth-seal can re-use and/or extend.
+ * 
+ * @param[in]  digests_in        In a "reseal" scenario, the currently sealed
+ *                               input will have been sealed with policy digest
+ *                               criteria (perhaps even multiple policy digest
+ *                               values if a policy-OR based authorization was
+ *                               used). This parameter, therefore, supports
+ *                               passing in an existing set of policy digests
+ *                               that kmyth-seal can re-use and/or extend.
+ * 
  * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
  *                               "-g" option (get expected policy digest) was
  *                               invoked by the user. In this case, no data is
@@ -73,6 +91,8 @@ int tpm2_kmyth_seal(uint8_t * input,
                     char * cipher_string,
                     char * pcrs_string,
                     char * exp_policy_string,
+                    PCR_SELECTIONS * pcrs_in,
+                    TPML_DIGEST * digests_in,
                     bool bool_trial_only);
 
 /**
@@ -104,6 +124,24 @@ int tpm2_kmyth_seal(uint8_t * input,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
+ * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
+ *                               input may have been sealed with PCR criteria
+ *                               (perhaps even multiple PCR selection criterion
+ *                               if a policy-OR based authorization was used).
+ *                               This parameter, therefore, supports
+ *                               kmyth-unseal recovering an existing set of
+ *                               PCR selections that can then be passed to
+ *                               kmyth-seal to re-use and/or extend.
+ * 
+ * @param[out] digests_out       In a "reseal" scenario, the currently sealed
+ *                               input will have been sealed with policy digest
+ *                               criteria (perhaps even multiple policy digest
+ *                               values if a policy-OR based authorization was
+ *                               used). This parameter, therefore, supports
+ *                               kmyth-unseal recovering an existing set of
+ *                               policy digests that can then be passed to
+ *                               kmyth-seal to re-use and/or extend.
+ * 
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal(uint8_t * input,
@@ -111,7 +149,9 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       uint8_t ** output,
                       size_t *output_len,
                       char * auth_string,
-                      char * owner_auth_string);
+                      char * owner_auth_string,
+                      PCR_SELECTIONS * pcrs_out,
+                      TPML_DIGEST * digests_out);
 
 /**
  * @brief 'kmyth-seal' file using TPM 2.0.
@@ -197,13 +237,33 @@ int tpm2_kmyth_seal_file(char * input_path,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
+ * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
+ *                               input may have been sealed with PCR criteria
+ *                               (perhaps even multiple PCR selection criterion
+ *                               if a policy-OR based authorization was used).
+ *                               This parameter, therefore, supports
+ *                               kmyth-unseal recovering an existing set of
+ *                               PCR selections that can then be passed to
+ *                               kmyth-seal to re-use and/or extend.
+ * 
+ * @param[out] digests_out       In a "reseal" scenario, the currently sealed
+ *                               input will have been sealed with policy digest
+ *                               criteria (perhaps even multiple policy digest
+ *                               values if a policy-OR based authorization was
+ *                               used). This parameter, therefore, supports
+ *                               kmyth-unseal recovering an existing set of
+ *                               policy digests that can then be passed to
+ *                               kmyth-seal to re-use and/or extend.
+ * 
  * @return 0 on success, 1 on error
  */
 int tpm2_kmyth_unseal_file(char * input_path,
                            uint8_t ** output,
                            size_t * output_length,
                            char * auth_string,
-                           char * owner_auth_string);
+                           char * owner_auth_string,
+                           PCR_SELECTIONS * pcrs_out,
+                           TPML_DIGEST * digests_out);
 
 /**
  * @brief 'kmyth-seal' data using TPM 2.0.
@@ -291,9 +351,10 @@ int tpm2_kmyth_seal_data(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                  input 'data' blob under the SK and
  *                                  then unsealing it. 
  *
- * @param[in]  policyOR_digestList  Pointer to digest list struct containing
- *                                  optional policy digest arguments needed
- *                                  for policy-OR authorizations
+ * @param[in]  digestList           Pointer to digest list struct containing
+ *                                  policy digest arguments. For policy-OR
+ *                                  authorizations, this list will contain
+ *                                  multiple values (2 - MAX_POLICY_OR_CNT).
  *
  * @param[out] result               The kmyth-unsealed result
  *                                  (passed as pointer to byte buffer)
@@ -310,7 +371,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_PRIVATE * sdo_private,
                            TPM2B_AUTH * authVal,
                            TPML_PCR_SELECTION * pcrList,
-                           TPML_DIGEST * policyOR_digestList,
+                           TPML_DIGEST * digestList,
                            uint8_t ** result,
                            size_t * result_size);
 

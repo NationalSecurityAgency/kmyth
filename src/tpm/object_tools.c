@@ -1016,7 +1016,7 @@ int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
   }
 
   // Unseal the object
-  kmyth_log(LOG_DEBUG, "unsealing TPM object ...");
+  kmyth_log(LOG_DEBUG, "unsealing TPM object");
   rc = Tss2_Sys_Unseal(sapi_ctx,
                        object_handle,
                        &unsealObjectCmdAuths,

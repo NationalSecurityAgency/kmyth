@@ -157,6 +157,9 @@ int main(int argc, char **argv)
   }
 
   // Call top-level "kmyth-unseal" function
+  PCR_SELECTIONS ski_pcrs = { 0 };
+  TPML_DIGEST ski_digests = { 0 };
+
   uint8_t *output = NULL;
   size_t output_length = 0;
 
@@ -164,7 +167,9 @@ int main(int argc, char **argv)
                              &output,
                              &output_length,
                              authString,
-                             ownerAuthPasswd))
+                             ownerAuthPasswd,
+                             &ski_pcrs,
+                             &ski_digests))
   {
     kmyth_clear_and_free(output, output_length);
     kmyth_log(LOG_ERR, "kmyth-unseal failed ... exiting");

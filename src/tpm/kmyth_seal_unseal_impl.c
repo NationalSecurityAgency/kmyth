@@ -41,6 +41,8 @@ int tpm2_kmyth_seal(uint8_t * input,
                     char * cipher_string,
                     char * pcrs_string,
                     char * exp_policy_string,
+                    PCR_SELECTIONS * pcrs_in,
+                    TPML_DIGEST * digests_in,
                     bool bool_trial_only)
 {
   // init connection to the resource manager
@@ -62,6 +64,16 @@ int tpm2_kmyth_seal(uint8_t * input,
   //   - empty symmetric key (public/private structs)
   //   - empty encrypted data buffer
   Ski ski = get_default_ski();
+
+  // if provided, initialize PCR and policy digest criteria to input values
+  if (pcrs_in != NULL)
+  {
+    ski.pcr_sel = *pcrs_in;
+  }
+  if (digests_in != NULL)
+  {
+    ski.policy_or = *digests_in;
+  }
 
   // obtain symmetric cipher to be used
   if (cipher_string == NULL)
@@ -205,9 +217,12 @@ int tpm2_kmyth_seal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
+  // replace existing 'current' or add to empty digest list
   ski.policy_or.digests[0] = objAuthPolicy;
-  ski.policy_or.count++;
-
+  if (ski.policy_or.count == 0)
+  {
+    ski.policy_or.count++;
+  }
   kmyth_log(LOG_DEBUG, "created policy digest using current auth/PCR values");
 
   // There is a command-line argument allowing user to receive a hex dump of
@@ -338,6 +353,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     {
       if (ski.pcr_sel.pcrs[i].count == 0)
       {
+        kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[%zu] = %u", i, ski.pcr_sel.pcrs[i].count);
         kmyth_log(LOG_ERR, "policy-OR branch with empty PCR selections");
         free_ski(&ski);
         free_tpm2_resources(&sapi_ctx);
@@ -502,11 +518,10 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       uint8_t ** output,
                       size_t *output_len,
                       char * auth_string,
-                      char * owner_auth_string)
+                      char * owner_auth_string,
+                      PCR_SELECTIONS * pcrs_out,
+                      TPML_DIGEST * digests_out)
 {
-  kmyth_log(LOG_DEBUG, "sizeof(PCR_SELECTIONS) = %zu", sizeof(PCR_SELECTIONS));
-  kmyth_log(LOG_DEBUG, "sizeof(TPML_PCR_SELECTION) = %zu", sizeof(TPML_PCR_SELECTION));
-
   // Initialize connection to TPM 2.0 resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
@@ -581,6 +596,10 @@ int tpm2_kmyth_unseal(uint8_t * input,
     return 1;
   }
   kmyth_log(LOG_DEBUG, "parsed input .ski file");
+
+  // assign parsed PCR and policy digest criteria to output parameters
+  *pcrs_out = ski.pcr_sel;
+  *digests_out = ski.policy_or;
 
   // The Storage Key (SK) will be used by the TPM to unseal the symmetric
   // wrapping key. We have obtained its public and encrypted private blobs
@@ -789,6 +808,8 @@ int tpm2_kmyth_seal_file(char * input_path,
                       cipher_string,
                       pcrs_string,
                       exp_policy_string,
+                      NULL,
+                      NULL,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data");
@@ -812,7 +833,9 @@ int tpm2_kmyth_unseal_file(char *input_path,
                            uint8_t ** output,
                            size_t * output_length,
                            char * auth_string,
-                           char * owner_auth_string)
+                           char * owner_auth_string,
+                           PCR_SELECTIONS * pcrs_out,
+                           TPML_DIGEST * digests_out)
 {
 
   uint8_t *data = NULL;
@@ -828,7 +851,9 @@ int tpm2_kmyth_unseal_file(char *input_path,
                         output,
                         output_length,
                         auth_string,
-                        owner_auth_string))
+                        owner_auth_string,
+                        pcrs_out,
+                        digests_out))
   {
     kmyth_log(LOG_ERR, "Unable to unseal contents");
     free(data);
@@ -951,7 +976,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                            TPM2B_PRIVATE * sdo_private,
                            TPM2B_AUTH * authVal,
                            TPML_PCR_SELECTION * pcrList,
-                           TPML_DIGEST * policyOR_digestList,
+                           TPML_DIGEST * digestList,
                            uint8_t ** result,
                            size_t * result_size)
 {
@@ -971,7 +996,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
   if (apply_policy(sapi_ctx,
                    unsealData_session.sessionHandle,
                    pcrList,
-                   policyOR_digestList))
+                   digestList))
   {
     kmyth_log(LOG_ERR, "apply policy to session context error");
     return 1;
@@ -1002,7 +1027,7 @@ int tpm2_kmyth_unseal_data(TSS2_SYS_CONTEXT * sapi_ctx,
                           &unsealData_session,
                           sdo_handle,
                           authVal,
-                          policyOR_digestList,
+                          digestList,
                           pcrList,
                           &unseal_sensitive))
   {

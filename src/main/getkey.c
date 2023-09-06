@@ -250,12 +250,16 @@ int main(int argc, char **argv)
   char *sdo_orig_fn = NULL;
   uint8_t *clientPrivateKey_data = NULL;
   size_t clientPrivateKey_size = 0;
+  PCR_SELECTIONS ski_pcrs = { 0 };
+  TPML_DIGEST ski_digests = { 0 };
 
   if (tpm2_kmyth_unseal_file(inPath,
                              &clientPrivateKey_data,
                              &clientPrivateKey_size,
                              authString,
-                             ownerAuthPasswd))
+                             ownerAuthPasswd,
+                             &ski_pcrs,
+                             &ski_digests))
   {
     kmyth_log(LOG_ERR, "Unable to unseal the certificate's private key.");
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);

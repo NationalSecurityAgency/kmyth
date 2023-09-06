@@ -281,12 +281,17 @@ int main(int argc, char **argv)
   uint8_t *unseal_output = NULL;
   size_t unseal_output_len = 0;
 
+  PCR_SELECTIONS orig_pcrs = { 0 };
+  TPML_DIGEST orig_digests = { 0 };
+
 // Call top-level "kmyth-unseal" function
   if (tpm2_kmyth_unseal_file(inPath,
                              &unseal_output,
                              &unseal_output_len,
                              authString,
-                             ownerAuthPasswd))
+                             ownerAuthPasswd,
+                             &orig_pcrs,
+                             &orig_digests))
   {
     kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
     kmyth_clear_and_free(unseal_output, unseal_output_len);
@@ -314,6 +319,8 @@ int main(int argc, char **argv)
                       cipherString,
                       pcrsString,
                       expPolicyDigestString,
+                      &orig_pcrs,
+                      &orig_digests,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");

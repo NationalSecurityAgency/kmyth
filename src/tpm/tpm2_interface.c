@@ -1177,8 +1177,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     if (policyOR_digestList->count < 2)
     {
-      kmyth_log(LOG_DEBUG, "less than two policy digests - "
-                           "skipping apply_policy_or");
+      kmyth_log(LOG_DEBUG, "no policy-OR based criteria applied");
     }
     else
     {

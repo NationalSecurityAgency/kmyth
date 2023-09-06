@@ -417,7 +417,7 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
                                     TPM2_HANDLE srkHandle,
                                     TPM2B_AUTH * sps_auth)
 {
-  kmyth_log(LOG_DEBUG, "deriving SRK ..");
+  kmyth_log(LOG_DEBUG, "deriving SRK");
 
   // Check that the handle passed in is within persistent range
   if ((srkHandle < TPM2_PERSISTENT_FIRST) || (srkHandle > TPM2_PERSISTENT_LAST))
