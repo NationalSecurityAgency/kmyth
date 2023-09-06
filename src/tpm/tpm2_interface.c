@@ -40,7 +40,7 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
   // TCTI context must be initialized first 
   if (*sapi_ctx != NULL)
   {
-    kmyth_log(LOG_ERR, "SAPI context passed in must be NULL ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context passed in must be NULL");
     return 1;
   }
 
@@ -49,7 +49,7 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   if (init_tcti_abrmd(&tcti_ctx))
   {
-    kmyth_log(LOG_ERR, "unable to initialize TCTI context ... exiting");
+    kmyth_log(LOG_ERR, "unable to initialize TCTI context");
     return 1;
   }
 
@@ -61,7 +61,7 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     //   - tcti_ctx must still be cleaned up
     Tss2_Tcti_Finalize(tcti_ctx);
     free(tcti_ctx);
-    kmyth_log(LOG_ERR, "unable to initialize SAPI context ... exiting");
+    kmyth_log(LOG_ERR, "unable to initialize SAPI context");
     return 1;
   }
 
@@ -76,7 +76,7 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     free(*sapi_ctx);
     Tss2_Tcti_Finalize(tcti_ctx);
     free(tcti_ctx);
-    kmyth_log(LOG_ERR, "cannot determine TPM impl type (HW/emul) ... exiting");
+    kmyth_log(LOG_ERR, "cannot determine TPM impl type (HW/emul)");
     return 1;
   }
   else
@@ -90,7 +90,7 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
         free(*sapi_ctx);
         Tss2_Tcti_Finalize(tcti_ctx);
         free(tcti_ctx);
-        kmyth_log(LOG_ERR, "unable to start TPM 2.0 ... exiting");
+        kmyth_log(LOG_ERR, "unable to start TPM 2.0");
         return 1;
       }
       else
@@ -115,7 +115,7 @@ int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   // TCTI context must be passed in uninitialized (NULL)
   if (*tcti_ctx != NULL)
   {
-    kmyth_log(LOG_ERR, "TCTI context passed in not NULL ... exiting");
+    kmyth_log(LOG_ERR, "TCTI context passed in not NULL");
     return 1;
   }
 
@@ -136,7 +136,7 @@ int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
   *tcti_ctx = (TSS2_TCTI_CONTEXT *) calloc(1, size);
   if (*tcti_ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "calloc for res mgr TCTI context failed ... exiting");
+    kmyth_log(LOG_ERR, "calloc for res mgr TCTI context failed");
     return 1;
   }
 
@@ -161,14 +161,14 @@ int init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
   // SAPI context passed in to be initialized must be empty (NULL)
   if (*sapi_ctx != NULL)
   {
-    kmyth_log(LOG_ERR, "pointer to input SAPI context not NULL ... exiting");
+    kmyth_log(LOG_ERR, "pointer to input SAPI context not NULL");
     return 1;
   }
 
   // TCTI context should have already been initialized - must not be NULL
   if (tcti_ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "TCTI context is a NULL pointer ... exiting");
+    kmyth_log(LOG_ERR, "TCTI context is a NULL pointer");
     return 1;
   }
 
@@ -187,13 +187,13 @@ int init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
 
   if (size == 0)
   {
-    kmyth_log(LOG_ERR, "maximum size for SAPI context is zero ... exiting");
+    kmyth_log(LOG_ERR, "maximum size for SAPI context is zero");
     return 1;
   }
   *sapi_ctx = (TSS2_SYS_CONTEXT *) calloc(1, size);
   if (*sapi_ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "memory allocation for SAPI context failed ... exiting");
+    kmyth_log(LOG_ERR, "memory allocation for SAPI context failed");
     return 1;
   }
 
@@ -312,7 +312,7 @@ int startup_tpm2(TSS2_SYS_CONTEXT ** sapi_ctx)
   // make sure we can access the TPM SAPI
   if (*sapi_ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "SAPI context is not initialized ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context is not initialized");
     return 1;
   }
 
@@ -371,8 +371,8 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     kmyth_log(LOG_ERR, "Tss2_Get_Capability(): rc = 0x%08X, %s",
               rc, getErrorString(rc));
-    kmyth_log(LOG_ERR, "unable to get capability = %u, property = %u,"
-              " count = %u ... exiting", capability, property, propertyCount);
+    kmyth_log(LOG_ERR, "unable to get capability = %u, property = %u, "
+                       "count = %u", capability, property, propertyCount);
     return 1;
   }
 
@@ -395,8 +395,7 @@ int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
                           TPM2_CAP_TPM_PROPERTIES,
                           TPM2_PT_MANUFACTURER, TPM2_PT_GROUP, &capData))
   {
-    kmyth_log(LOG_ERR, "unable to get TPM2_PT_MANUFACTURER "
-              "property from TPM ... exiting");
+    kmyth_log(LOG_ERR, "unable to get TPM2_PT_MANUFACTURER property from TPM");
     return 1;
   }
 
@@ -406,7 +405,7 @@ int get_tpm2_impl_type(TSS2_SYS_CONTEXT * sapi_ctx, bool *isEmulator)
   if (unpack_uint32_to_str(capData.data.tpmProperties.tpmProperty[0].value,
                            &manufacturer_str))
   {
-    kmyth_log(LOG_ERR, "unable to get vendor string ... exiting");
+    kmyth_log(LOG_ERR, "unable to get vendor string");
     return 1;
   }
 
@@ -517,12 +516,12 @@ int init_policy_cmd_auth(SESSION * authSession,
 
   if (create_caller_nonce(&callerNonce))
   {
-    kmyth_log(LOG_ERR, "error generating new nonce ... exiting");
+    kmyth_log(LOG_ERR, "error generating new nonce");
     return 1;
   }
   if (rollNonces(authSession, callerNonce))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    kmyth_log(LOG_ERR, "error rolling session nonces");
     return 1;
   }
   kmyth_log(LOG_DEBUG, "rolled nonces - nonceCaller is now nonceNewer");
@@ -552,7 +551,7 @@ int init_policy_cmd_auth(SESSION * authSession,
                      authCmdParams_len,
                      &cpHash))
   {
-    kmyth_log(LOG_ERR, "error creating the command hash ... exiting");
+    kmyth_log(LOG_ERR, "error creating the command hash");
     return 1;
   }
 
@@ -564,7 +563,7 @@ int init_policy_cmd_auth(SESSION * authSession,
                        sessionAttr,
                        &commandAuths->auths[0].hmac))
   {
-    kmyth_log(LOG_ERR, "error computing authorization HMAC ... exiting");
+    kmyth_log(LOG_ERR, "error computing authorization HMAC");
     return 1;
   }
 
@@ -588,7 +587,7 @@ int check_response_auth(SESSION * authSession,
 {
   if (responseAuths->auths[0].hmac.size == 0)
   {
-    kmyth_log(LOG_ERR, "Empty auth response ... exiting");
+    kmyth_log(LOG_ERR, "Empty auth response");
     return 1;
   }
   // nonceTPM (received in response from TPM) is available
@@ -598,7 +597,7 @@ int check_response_auth(SESSION * authSession,
   // roll nonces - move nonceCaller to nonceOlder, noncTPM to nonceNewer
   if (rollNonces(authSession, responseAuths->auths[0].nonce))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    kmyth_log(LOG_ERR, "error rolling session nonces");
     return 1;
   }
   kmyth_log(LOG_DEBUG, "rolled nonces - nonceTPM is now nonceNewer");
@@ -615,7 +614,7 @@ int check_response_auth(SESSION * authSession,
                      &rpHash))
   {
     kmyth_log(LOG_ERR,
-              "error creating the response parameter hash ... exiting");
+              "error creating the response parameter hash");
     return 1;
   }
 
@@ -629,7 +628,7 @@ int check_response_auth(SESSION * authSession,
                        responseAuths->auths[0].sessionAttributes,
                        &checkHMAC))
   {
-    kmyth_log(LOG_ERR, "error computing HMAC ... exiting");
+    kmyth_log(LOG_ERR, "error computing HMAC");
     return 1;
   }
 
@@ -640,14 +639,14 @@ int check_response_auth(SESSION * authSession,
   // compare computed response authHMAC with result returned in responseAuths
   if (checkHMAC.size != responseAuths->auths[0].hmac.size)
   {
-    kmyth_log(LOG_ERR, "comp/ret authHMACs differ in length ... exiting");
+    kmyth_log(LOG_ERR, "comp/ret authHMACs differ in length");
     return 1;
   }
   for (int i = 0; i < checkHMAC.size; i++)
   {
     if (checkHMAC.buffer[i] != responseAuths->auths[0].hmac.buffer[i])
     {
-      kmyth_log(LOG_ERR, "computed/returned authHMACs differ ... exiting");
+      kmyth_log(LOG_ERR, "computed/returned authHMACs differ");
       return 1;
     }
   }
@@ -664,7 +663,7 @@ int create_authVal(char * auth_string,
 {
   if (authValOut == NULL)
   {
-    kmyth_log(LOG_ERR, "unallocated TPM2 digest struct provided ... exiting");
+    kmyth_log(LOG_ERR, "unallocated TPM2 digest struct provided");
     return 1;
   }
 
@@ -691,7 +690,7 @@ int create_authVal(char * auth_string,
                     KMYTH_OPENSSL_HASH,
                     NULL))
     {
-      kmyth_log(LOG_ERR, "error computing authVal hash ... exiting");
+      kmyth_log(LOG_ERR, "error computing authVal hash");
       return 1;
     }
   }
@@ -709,7 +708,7 @@ int compute_cpHash(TPM2_CC cmdCode,
 {
   if (cpHash_out == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    kmyth_log(LOG_ERR, "no buffer available to store digest");
     return 1;
   }
 
@@ -718,7 +717,7 @@ int compute_cpHash(TPM2_CC cmdCode,
 
   if (!EVP_DigestInit_ex(md_ctx, KMYTH_OPENSSL_HASH, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting up digest context ... exiting");
+    kmyth_log(LOG_ERR, "error setting up digest context");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -726,7 +725,7 @@ int compute_cpHash(TPM2_CC cmdCode,
   // update with commmand code input
   if (!EVP_DigestUpdate(md_ctx, (uint8_t *) & cmdCode, sizeof(TPM2_CC)))
   {
-    kmyth_log(LOG_ERR, "error hashing command code ... exiting");
+    kmyth_log(LOG_ERR, "error hashing command code");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -734,7 +733,7 @@ int compute_cpHash(TPM2_CC cmdCode,
   // update with name of entity being authorized
   if (!EVP_DigestUpdate(md_ctx, authEntityName.name, authEntityName.size))
   {
-    kmyth_log(LOG_ERR, "error hashing entity name ... exiting");
+    kmyth_log(LOG_ERR, "error hashing entity name");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -742,7 +741,7 @@ int compute_cpHash(TPM2_CC cmdCode,
   // update with command parameters
   if (!EVP_DigestUpdate(md_ctx, cmdParams, cmdParams_size))
   {
-    kmyth_log(LOG_ERR, "error hashing command parameters ... exiting");
+    kmyth_log(LOG_ERR, "error hashing command parameters");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -753,7 +752,7 @@ int compute_cpHash(TPM2_CC cmdCode,
 
   if (!EVP_DigestFinal_ex(md_ctx, cpHash_result, &cpHash_result_size))
   {
-    kmyth_log(LOG_ERR, "error finalizing digest ... exiting");
+    kmyth_log(LOG_ERR, "error finalizing digest");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -781,7 +780,7 @@ int compute_rpHash(TPM2_RC rspCode,
 {
   if (rpHash_out == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer available to store digest ... exiting");
+    kmyth_log(LOG_ERR, "no buffer available to store digest");
     return 1;
   }
 
@@ -790,7 +789,7 @@ int compute_rpHash(TPM2_RC rspCode,
 
   if (!EVP_DigestInit_ex(md_ctx, KMYTH_OPENSSL_HASH, NULL))
   {
-    kmyth_log(LOG_ERR, "error setting up digest context ... exiting");
+    kmyth_log(LOG_ERR, "error setting up digest context");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -798,7 +797,7 @@ int compute_rpHash(TPM2_RC rspCode,
   // update with response code input
   if (!EVP_DigestUpdate(md_ctx, (uint8_t *) & rspCode, sizeof(TPM2_RC)))
   {
-    kmyth_log(LOG_ERR, "error hashing response code ... exiting");
+    kmyth_log(LOG_ERR, "error hashing response code");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -806,7 +805,7 @@ int compute_rpHash(TPM2_RC rspCode,
   // update with command code input
   if (!EVP_DigestUpdate(md_ctx, (uint8_t *) & cmdCode, sizeof(TPM2_CC)))
   {
-    kmyth_log(LOG_ERR, "error hashing command code ... exiting");
+    kmyth_log(LOG_ERR, "error hashing command code");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -814,7 +813,7 @@ int compute_rpHash(TPM2_RC rspCode,
   // update with command parameters
   if (!EVP_DigestUpdate(md_ctx, cmdParams, cmdParams_size))
   {
-    kmyth_log(LOG_ERR, "error hashing command parameters ... exiting");
+    kmyth_log(LOG_ERR, "error hashing command parameters");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -825,7 +824,7 @@ int compute_rpHash(TPM2_RC rspCode,
 
   if (!EVP_DigestFinal_ex(md_ctx, rpHash_result, &rpHash_result_size))
   {
-    kmyth_log(LOG_ERR, "error finalizing digest ... exiting");
+    kmyth_log(LOG_ERR, "error finalizing digest");
     EVP_MD_CTX_destroy(md_ctx);
     return 1;
   }
@@ -854,7 +853,7 @@ int compute_authHMAC(SESSION auth_session,
 {
   if (auth_HMAC == NULL)
   {
-    kmyth_log(LOG_ERR, "no buffer available to store HMAC ... exiting");
+    kmyth_log(LOG_ERR, "no buffer available to store HMAC");
     return 1;
   }
 
@@ -867,7 +866,7 @@ int compute_authHMAC(SESSION auth_session,
                     KMYTH_OPENSSL_HASH,
                     NULL))
   {
-    kmyth_log(LOG_ERR, "error initializing HMAC ... exiting");
+    kmyth_log(LOG_ERR, "error initializing HMAC");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -876,7 +875,7 @@ int compute_authHMAC(SESSION auth_session,
   if (!HMAC_Update(hmac_ctx, auth_pHash.buffer, auth_pHash.size))
   {
     kmyth_log(LOG_ERR,
-              "error updating HMAC with authorized command hash ... exiting");
+              "error updating HMAC with authorized command hash");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -885,7 +884,7 @@ int compute_authHMAC(SESSION auth_session,
   if (!HMAC_Update(hmac_ctx, auth_session.nonceNewer.buffer,
                    auth_session.nonceNewer.size))
   {
-    kmyth_log(LOG_ERR, "error updating HMAC with new nonce ... exiting");
+    kmyth_log(LOG_ERR, "error updating HMAC with new nonce");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -894,7 +893,7 @@ int compute_authHMAC(SESSION auth_session,
   if (!HMAC_Update(hmac_ctx, auth_session.nonceOlder.buffer,
                    auth_session.nonceOlder.size))
   {
-    kmyth_log(LOG_ERR, "error updating HMAC with old nonce ... exiting");
+    kmyth_log(LOG_ERR, "error updating HMAC with old nonce");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -903,7 +902,7 @@ int compute_authHMAC(SESSION auth_session,
   if (!HMAC_Update(hmac_ctx, &auth_sessionAttributes, sizeof(TPMA_SESSION)))
   {
     kmyth_log(LOG_ERR,
-              "error updating HMAC with session attributes ... exiting");
+              "error updating HMAC with session attributes");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -914,7 +913,7 @@ int compute_authHMAC(SESSION auth_session,
 
   if (!HMAC_Final(hmac_ctx, authHMAC_result, &authHMAC_result_size))
   {
-    kmyth_log(LOG_ERR, "error finalizing HMAC ... exiting");
+    kmyth_log(LOG_ERR, "error finalizing HMAC");
     HMAC_CTX_free(hmac_ctx);
     return 1;
   }
@@ -943,7 +942,7 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (create_auth_session(sapi_ctx, &trialPolicySession, TPM2_SE_TRIAL))
   {
-    kmyth_log(LOG_ERR, "error creating auth session ... exiting");
+    kmyth_log(LOG_ERR, "error creating auth session");
     return 1;
   }
 
@@ -953,7 +952,7 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
                    tp_pcrList,
                    tp_policyOR_digestList))
   {
-    kmyth_log(LOG_ERR, "error applying policy to session context ... exiting");
+    kmyth_log(LOG_ERR, "error applying policy to session context");
     return 1;
   }
 
@@ -1025,7 +1024,7 @@ int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (rollNonces(policySession, initialNonce))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    kmyth_log(LOG_ERR, "error rolling session nonces");
     return 1;
   }
   policySession->nonceTPM.size = 0;
@@ -1033,7 +1032,7 @@ int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   // initiate an unbound, unsalted policy session
   if (start_policy_auth_session(sapi_ctx, policySession, session_type))
   {
-    kmyth_log(LOG_ERR, "error starting policy session ... exiting");
+    kmyth_log(LOG_ERR, "error starting policy session");
     return 1;
   }
 
@@ -1052,13 +1051,13 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   //   - policy (used for actual policy authorization) - TPM2_SE_POLICY
   if ((session_type != TPM2_SE_TRIAL) && (session_type != TPM2_SE_POLICY))
   {
-    kmyth_log(LOG_ERR, "invalid session type ... exiting");
+    kmyth_log(LOG_ERR, "invalid session type");
     return 1;
   }
   if (session->nonceNewer.size != KMYTH_DIGEST_SIZE
       || session->nonceOlder.size != KMYTH_DIGEST_SIZE)
   {
-    kmyth_log(LOG_ERR, "Session nonce uninitialized ... exiting");
+    kmyth_log(LOG_ERR, "Session nonce uninitialized");
     return 1;
   }
   session->sessionType = session_type;
@@ -1110,7 +1109,7 @@ int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
   // state (i.e., nonceTPM -> nonceNewer and  nonceCaller -> nonceOlder)
   if (rollNonces(session, session->nonceTPM))
   {
-    kmyth_log(LOG_ERR, "error rolling session nonces ... exiting");
+    kmyth_log(LOG_ERR, "error rolling session nonces");
     return 1;
   }
   kmyth_log(LOG_DEBUG,
@@ -1139,9 +1138,8 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (rc != TPM2_RC_SUCCESS)
   {
-    kmyth_log(LOG_ERR,
-              "Tss2_Sys_PolicyAuthValue(): rc = 0x%08X, %s ... exiting", rc,
-              getErrorString(rc));
+    kmyth_log(LOG_ERR, "Tss2_Sys_PolicyAuthValue(): rc = 0x%08X, %s", rc,
+                       getErrorString(rc));
     return 1;
   }
   kmyth_log(LOG_DEBUG, "applied AuthVal policy to session context");
@@ -1169,6 +1167,10 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
       return 1;
     }
     kmyth_log(LOG_DEBUG, "applied PCR policy to session context");
+  }
+  else
+  {
+    kmyth_log(LOG_DEBUG, "no PCR policy applied");
   }
 
   if (policyOR_digestList != NULL)
@@ -1256,7 +1258,7 @@ int create_caller_nonce(TPM2B_NONCE * nonceOut)
 
   if (!RAND_bytes(rand_bytes, KMYTH_DIGEST_SIZE))
   {
-    kmyth_log(LOG_ERR, "error generating random bytes ... exiting");
+    kmyth_log(LOG_ERR, "error generating random bytes");
   }
 
   // Put random bytes result in the TPM2B_NONCE struct passed in
@@ -1275,13 +1277,13 @@ int rollNonces(SESSION * session, TPM2B_NONCE newNonce)
 {
   if (session == NULL)
   {
-    kmyth_log(LOG_ERR, "no session ... exiting");
+    kmyth_log(LOG_ERR, "no session");
     return 1;
   }
 
   if (newNonce.size != KMYTH_DIGEST_SIZE)
   {
-    kmyth_log(LOG_ERR, "Invalid newNonce size ... exiting");
+    kmyth_log(LOG_ERR, "Invalid newNonce size");
     return 1;
   }
 

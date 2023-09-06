@@ -27,7 +27,7 @@ int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount)
       (sapi_ctx, TPM2_CAP_TPM_PROPERTIES, TPM2_PT_PCR_COUNT, TPM2_PT_GROUP,
        &capData))
   {
-    kmyth_log(LOG_ERR, "error obtaining PCR count from TPM ... exiting");
+    kmyth_log(LOG_ERR, "error obtaining PCR count from TPM");
     return 1;
   }
   *pcrCount = (int) capData.data.tpmProperties.tpmProperty[0].value;
@@ -77,7 +77,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (get_pcr_count(sapi_ctx, &numPCRs) || numPCRs < 0 || numPCRs > UINT8_MAX)
   {
-    kmyth_log(LOG_ERR, "unable to retrieve PCR count ... exiting");
+    kmyth_log(LOG_ERR, "unable to retrieve PCR count");
     return 1;
   }
 
@@ -89,26 +89,28 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
   //     are 24 PCRs in the TPM, 3 mask bytes are required)
   //   - set initial state to a an empty (no PCRs selected) state (if no
   //     PCRs are specified by the user, no PCR-based criteria is default)
-  pcrs_struct->count = 1;
-  pcrs_struct->pcrSelections[0].hash = KMYTH_HASH_ALG;
-  pcrs_struct->pcrSelections[0].sizeofSelect = (uint8_t)numPCRs / 8;
-  for (int i = 0; i < pcrs_struct->pcrSelections[0].sizeofSelect; i++)
-  {
-    pcrs_struct->pcrSelections[0].pcrSelect[i] = 0;
-  }
-  kmyth_log(LOG_DEBUG, "initialized PCR struct with no PCRs selected");
+  pcrs_struct->count = 0;
 
   // If the user specified PCRs, update the empty PCR Selection
   // structure appropriately
   if (pcrs)
   {
-    kmyth_log(LOG_DEBUG, "applying first set of user-specified PCRs ...");
-
+    // check that user specified non-zero sized set of PCRs
     if (pcrs_len == 0)
     {
-      kmyth_log(LOG_ERR, "non-NULL, zero-size PCRs input array ... exiting");
+      kmyth_log(LOG_ERR, "non-NULL, zero-size PCRs input array");
       return 1;
     }
+
+    // create set of PCR selections and initialize to an empty set of PCRs
+    pcrs_struct->count++;
+    pcrs_struct->pcrSelections[0].hash = KMYTH_HASH_ALG;
+    pcrs_struct->pcrSelections[0].sizeofSelect = (uint8_t)numPCRs / 8;
+    for (int i = 0; i < pcrs_struct->pcrSelections[0].sizeofSelect; i++)
+    {
+      pcrs_struct->pcrSelections[0].pcrSelect[i] = 0;
+    }
+    kmyth_log(LOG_DEBUG, "initialized PCR struct with no PCRs selected");
 
     for (size_t i = 0; i < pcrs_len; i++)
     {
@@ -116,7 +118,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
 
       if (pcr < 0 || pcr >= numPCRs)
       {
-        kmyth_log(LOG_ERR, "invalid PCR value specified (%d) ... exiting", pcr);
+        kmyth_log(LOG_ERR, "invalid PCR value specified (%d)", pcr);
         return 1;
       }
       pcrs_struct->pcrSelections[0].pcrSelect[pcr / 8] |= (uint8_t)(1 << (pcr % 8));
