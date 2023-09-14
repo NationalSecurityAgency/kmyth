@@ -69,6 +69,7 @@ int tpm2_kmyth_seal(uint8_t * input,
   if (pcrs_in != NULL)
   {
     ski.pcr_sel = *pcrs_in;
+    kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[0].count = %u", ski.pcr_sel.pcrs[0].count);
   }
   if (digests_in != NULL)
   {
@@ -170,7 +171,10 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
 
   // configure PCR selections struct with user input (or default empty) values
-  ski.pcr_sel.count++;
+  if (ski.pcr_sel.count == 0)
+  {
+    ski.pcr_sel.count++;
+  }
   if (init_pcr_selection(sapi_ctx,
                          pcrs,
                          pcrs_len,
@@ -263,6 +267,14 @@ int tpm2_kmyth_seal(uint8_t * input,
     }
     kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
                          exp_policy_str_cnt);
+    
+    size_t list_index = ski.pcr_sel.count;
+    if ((list_index + exp_policy_str_cnt > MAX_POLICY_OR_CNT))
+    {
+      kmyth_log(LOG_ERR, "digest count (%zu) would exceed limit (%u)",
+                         list_index + exp_policy_str_cnt, MAX_POLICY_OR_CNT);
+      return 1;
+    }
 
     for (size_t i = 0; i < exp_policy_str_cnt; i++)
     {
@@ -291,7 +303,7 @@ int tpm2_kmyth_seal(uint8_t * input,
       if (init_pcr_selection(sapi_ctx,
                              pcrs,
                              pcrs_len,
-                             &(ski.pcr_sel.pcrs[i+1])) != 0)
+                             &(ski.pcr_sel.pcrs[list_index])) != 0)
       {
         kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
         kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -315,7 +327,7 @@ int tpm2_kmyth_seal(uint8_t * input,
       // configure policy-OR digest list struct with user input value
       kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
       if (convert_string_to_digest(dString[i],
-                        &(ski.policy_or.digests[i+1])) != 0)
+                        &(ski.policy_or.digests[list_index])) != 0)
       {
         kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
         kmyth_clear(objAuthVal.buffer, objAuthVal.size);
@@ -330,9 +342,12 @@ int tpm2_kmyth_seal(uint8_t * input,
         return 1;
       }
       ski.policy_or.count++;
-      
+
       // cleanup parsed digest hex-string just processed
       free(dString[i]);
+
+      // update PCR selection/digest list index for next iteration of loop 
+      list_index++;
     }
 
     // verify PCR selections and policy digests were encoded as matched pairs
@@ -353,7 +368,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     {
       if (ski.pcr_sel.pcrs[i].count == 0)
       {
-        kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[%zu] = %u", i, ski.pcr_sel.pcrs[i].count);
+        kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[%zu].count = %u", i, ski.pcr_sel.pcrs[i].count);
         kmyth_log(LOG_ERR, "policy-OR branch with empty PCR selections");
         free_ski(&ski);
         free_tpm2_resources(&sapi_ctx);

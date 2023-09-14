@@ -103,7 +103,7 @@ int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
     }
 
     // create set of PCR selections and initialize to an empty set of PCRs
-    pcrs_struct->count++;
+    pcrs_struct->count = 1;
     pcrs_struct->pcrSelections[0].hash = KMYTH_HASH_ALG;
     pcrs_struct->pcrSelections[0].sizeofSelect = (uint8_t)numPCRs / 8;
     for (int i = 0; i < pcrs_struct->pcrSelections[0].sizeofSelect; i++)
