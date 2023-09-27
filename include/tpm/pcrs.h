@@ -44,7 +44,7 @@ typedef struct
  *
  * @return 0 if success, 1 if error
  */
-int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, int *pcrCount);
+int get_pcr_count(TSS2_SYS_CONTEXT * sapi_ctx, uint32_t * pcrCount);
 
 /**
  * @brief Tests if PCR selection struct does not select any PCRs using a
@@ -78,9 +78,7 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct);
  *
  * @return 0 if success, 1 if error
  */
-int init_pcr_selection(TSS2_SYS_CONTEXT * sapi_ctx,
-                       int *pcrs,
-                       size_t pcrs_len,
-                       TPML_PCR_SELECTION * pcrs_struct);
+int init_pcr_selection(char * pcrs_string_in,
+                       PCR_SELECTIONS * pcrs_struct_out);
 
 #endif /* PRCS_H */

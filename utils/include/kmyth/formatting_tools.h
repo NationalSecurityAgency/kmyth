@@ -268,6 +268,34 @@ int convert_pcrs_string_to_int_array(char * pcrs_string,
                                      int ** pcrs,
                                      size_t * pcrs_len);
 
+/**
+ * @brief Represents a TPMS_PCR_SELECTION criteria as a hexstring of its
+ *        PCR selections mask 
+ *
+ * @param[in]  mask_in   Pointer to a TPMS_PCR_SELECTIONS struct used to
+ *                       configure selections for a Platform Configuration
+ *                       Register (PCR) bank within the TPM
+ *
+ * @param[out] hex_out   Allocated character buffer that will be used to
+ *                       "return" output hexstring result
+ *
+ * @return 0 if success, 1 if error
+ */
+int pcrs2hex(TPMS_PCR_SELECTION *mask_in, char * hex_out);
+
+/**
+ * @brief 
+ *
+ * @param[in]  exp_policy_string
+ * 
+ * @param[out] pair_count
+ * 
+ * @param[out] pcrs_strings
+ * 
+ * @param[out] digest_strings
+ *
+ * @return 0 if success, 1 if error
+ */
 int parse_exp_policy_string_pairs(char * exp_policy_string,
                                   size_t * pair_count,
                                   char ** pcrs_strings,

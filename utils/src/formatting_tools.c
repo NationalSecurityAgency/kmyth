@@ -519,6 +519,26 @@ int convert_pcrs_string_to_int_array(char * pcrs_string,
 }
 
 //############################################################################
+// pcrs2hex()
+//############################################################################
+int pcrs2hex(TPMS_PCR_SELECTION *mask_in, char * hex_out)
+{
+  if (hex_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "unallocated hexstring buffer parameter");
+    return 1;
+  }
+
+  for (int i = 0; i < mask_in->sizeofSelect; i++)
+  {
+    sprintf(&(hex_out[i*2]), "%02X", mask_in->pcrSelect[i]);
+  }
+  hex_out[mask_in->sizeofSelect * 2] = '\0';
+
+  return 0;
+}
+
+//############################################################################
 // parse_exp_policy_string_pairs()
 //############################################################################
 int parse_exp_policy_string_pairs(char * exp_policy_string,

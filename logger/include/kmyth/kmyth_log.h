@@ -219,6 +219,13 @@ void set_applog_output_mode(int new_output_mode);
 void set_applog_severity_threshold(int new_severity_threshold);
 
 /**
+ * @brief gets "severity threshold" for application logging
+ *
+ * @return current application logging severity threshold level value
+ */
+int get_applog_severity_threshold();
+
+/**
  * @brief sets "facility" for syslog utility logging
  *
  * @param[in]  new_syslog_facility  

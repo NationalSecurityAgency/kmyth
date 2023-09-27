@@ -89,8 +89,6 @@ int tpm2_kmyth_seal(uint8_t * input,
                     char * auth_string,
                     char * owner_auth_string,
                     char * cipher_string,
-                    char * pcrs_string,
-                    char * exp_policy_string,
                     PCR_SELECTIONS * pcrs_in,
                     TPML_DIGEST * digests_in,
                     bool bool_trial_only);
@@ -206,8 +204,8 @@ int tpm2_kmyth_seal_file(char * input_path,
                          char * auth_string,
                          char * owner_auth_string,
                          char * cipher_string,
-                         char * pcrs_string,
-                         char * exp_policy_string,
+                         PCR_SELECTIONS * pcrs_in,
+                         TPML_DIGEST * digests_in,
                          bool bool_trial_only);
 
 /**

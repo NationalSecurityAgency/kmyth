@@ -9,6 +9,7 @@
 #define TPM2_INTERFACE_H
 
 #include "defines.h"
+#include "pcrs.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -505,6 +506,32 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
                          TPML_PCR_SELECTION * tp_pcrList,
                          TPML_DIGEST * tp_policyOR_digestList,
                          TPM2B_DIGEST * policyDigest_out);
+
+
+/**
+ * @brief Configures lists of paired PCR selection and policy digests used to
+ *        specify a policy-OR authorization criteria.
+ *
+ * @param[in]     exp_policy_string   String, supplied as a command-line
+ *                                    option by the user, that specifies pairs
+ *                                    of alternative PCR selections and policy
+ *                                    digests to be used in a policy-OR
+ *                                    authorization criteria.
+ *
+ * @param[in/out] pcrs_struct         Pointer to PCR Selections List structure
+ *                                    used in an authorization policy. In a
+ *                                    policy-OR scenario, the PCR selection
+ *                                    structs contained at indices > 0. 
+ *
+ * @param[out]    digests_struct      Pointer to a list of policy digests
+ *                                    struct to be configured for a policy-OR
+ *                                    authorization criteria.
+ *
+ * @return 0 if success, 1 if error. 
+ */
+int init_policy_or(char * exp_policy_string,
+                   PCR_SELECTIONS * pcrs_struct,
+                   TPML_DIGEST * digests_struct);
 
 /**
  * @brief Creates a session used to authorize kmyth objects

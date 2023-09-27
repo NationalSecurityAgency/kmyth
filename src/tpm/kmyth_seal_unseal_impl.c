@@ -39,12 +39,34 @@ int tpm2_kmyth_seal(uint8_t * input,
                     char * auth_string,
                     char * owner_auth_string,
                     char * cipher_string,
-                    char * pcrs_string,
-                    char * exp_policy_string,
                     PCR_SELECTIONS * pcrs_in,
                     TPML_DIGEST * digests_in,
                     bool bool_trial_only)
 {
+  // create "default" (initialize) struct to hold .ski file contents:
+  //   - empty PCR selections struct (no PCRs selected)
+  //   - empty policy-OR TPML_DIGEST struct (digest count = 0)
+  //   - empty (null) cipher string
+  //   - empty storage key (public/private structs)
+  //   - empty symmetric key (public/private structs)
+  //   - empty encrypted data buffer
+  Ski ski = get_default_ski();
+
+  // initialize PCR and policy digest criteria to input values
+  if (pcrs_in == NULL)
+  {
+    kmyth_log(LOG_ERR, "null PCR_SELECTIONS struct input pointer");
+    return 1;
+  }
+  ski.pcr_sel = *pcrs_in;
+  kmyth_log(LOG_DEBUG, "input PCR selections applied to .ski contents");
+ 
+  if (digests_in != NULL)
+  {
+    ski.policy_or = *digests_in;
+    kmyth_log(LOG_DEBUG, "non-NULL input policy-OR digests applied");
+  }
+
   // init connection to the resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
@@ -56,33 +78,12 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "initialized connection to TPM 2.0 resource manager");
 
-  // create "default" (initialize) struct to hold .ski file contents:
-  //   - empty PCR selections struct (no PCRs selected)
-  //   - empty policy-OR TPML_DIGEST struct (digest count = 0)
-  //   - empty (null) cipher string
-  //   - empty storage key (public/private structs)
-  //   - empty symmetric key (public/private structs)
-  //   - empty encrypted data buffer
-  Ski ski = get_default_ski();
-
-  // if provided, initialize PCR and policy digest criteria to input values
-  if (pcrs_in != NULL)
-  {
-    ski.pcr_sel = *pcrs_in;
-    kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[0].count = %u", ski.pcr_sel.pcrs[0].count);
-  }
-  if (digests_in != NULL)
-  {
-    ski.policy_or = *digests_in;
-  }
-
   // obtain symmetric cipher to be used
   if (cipher_string == NULL)
   {
     cipher_string = KMYTH_DEFAULT_CIPHER;
   }
   ski.cipher = kmyth_get_cipher_t_from_string(cipher_string);
-
   if (ski.cipher.cipher_name == NULL)
   {
     kmyth_log(LOG_ERR, "invalid cipher: %s", cipher_string);
@@ -131,66 +132,6 @@ int tpm2_kmyth_seal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
-
-  // The kmyth .ski file encodes a PCR_SELECTIONS struct which encapsulates
-  // a list of up to eight (8) TPML_PCR_SELECTION structs:
-  //
-  // - The first TPML_PCR_SELECTION struct in this list (index = 0) contains
-  //   the current PCR selections (i.e., those specified by the user in a
-  //   command-line option string). While this struct may be configured with
-  //   an empty mask (no PCRs selected), it must exist even if no PCR criteria
-  //   is specified by the user. In addition to its use in specifying an
-  //   authorization policy, this set of PCRs is incorporated in object
-  //   creation data.
-  //
-  // - The remaining TPML_PCR_SELECTIONS structs (index = 1-7), if present,
-  //   support policy-OR authorization based on multiple PCR criteria. A
-  //   policy-OR criteria where one of the policy branches has no PCRs
-  //   selected does not make sense for the current kmyth implementation
-  //   supporting only PCR-based policy-OR criteria, so, if a policy-OR
-  //   criteria is specified, all 'branches' of the policy must specify a
-  //   non-empty set of PCR selections.
-  int * pcrs = NULL;
-  size_t pcrs_len = 0;
-
-  if (pcrs_string != NULL)
-  {
-    // reformat PCR selections as integer array
-    if (convert_pcrs_string_to_int_array(pcrs_string, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
-    {
-      kmyth_log(LOG_ERR, "parse PCR string %s error", pcrs_string);
-      if (pcrs != NULL)
-      {
-        free(pcrs);
-      }
-      kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-      kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-      free_tpm2_resources(&sapi_ctx);
-      return 1;
-    }
-  }
-
-  // configure PCR selections struct with user input (or default empty) values
-  if (ski.pcr_sel.count == 0)
-  {
-    ski.pcr_sel.count++;
-  }
-  if (init_pcr_selection(sapi_ctx,
-                         pcrs,
-                         pcrs_len,
-                         &(ski.pcr_sel.pcrs[0])))
-  {
-    kmyth_log(LOG_ERR, "error initializing PCRs");
-    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-    free(pcrs);
-    free_tpm2_resources(&sapi_ctx);
-    return 1;
-  }
-
-  // cleanup
-  free(pcrs);
-  pcrs = NULL;
 
   // For all non-primary (other than SRK), Kmyth TPM 2.0 objects that we will
   // create, we will assign TPM 2.0 policy-based enhanced authorization
@@ -247,134 +188,6 @@ int tpm2_kmyth_seal(uint8_t * input,
     convert_digest_to_string(&objAuthPolicy, output_string);
     printf("policy digest: %s\n", output_string);
     return 0;
-  }
-
-  // Parse expected policy string
-  size_t exp_policy_str_cnt = 0;
-  char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
-  char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
-
-  if (exp_policy_string != NULL)
-  {
-    // parse string containing user specified policy-OR criteria
-    if (parse_exp_policy_string_pairs(exp_policy_string,
-                                      &exp_policy_str_cnt,
-                                      pString,
-                                      dString) != 0)
-    {
-      kmyth_log(LOG_ERR, "error parsing policy-OR data string");
-      return 1;
-    }
-    kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
-                         exp_policy_str_cnt);
-    
-    size_t list_index = ski.pcr_sel.count;
-    if ((list_index + exp_policy_str_cnt > MAX_POLICY_OR_CNT))
-    {
-      kmyth_log(LOG_ERR, "digest count (%zu) would exceed limit (%u)",
-                         list_index + exp_policy_str_cnt, MAX_POLICY_OR_CNT);
-      return 1;
-    }
-
-    for (size_t i = 0; i < exp_policy_str_cnt; i++)
-    {
-      kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
-                            i + 1, pString[i]);
-
-      // reformat PCR selections as integer array
-      if (convert_pcrs_string_to_int_array(pString[i], &pcrs, &pcrs_len) != 0 || pcrs_len <= 0)
-      {
-        kmyth_log(LOG_ERR, "parse PCR string #%zu error", i + 1);
-        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-        for (size_t j = i; j < exp_policy_str_cnt; j++)
-        {
-          free(pString[j]);
-          free(dString[j]);
-        }
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-
-      // cleanup parsed PCR selection string just re-formatted
-      free(pString[i]);
-
-      // configure PCR selections struct with user input values
-      if (init_pcr_selection(sapi_ctx,
-                             pcrs,
-                             pcrs_len,
-                             &(ski.pcr_sel.pcrs[list_index])) != 0)
-      {
-        kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
-        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-        free(pcrs);
-        free(dString[i]);
-        for (size_t j = i + 1; j < exp_policy_str_cnt; j++)
-        {
-          free(pString[j]);
-          free(dString[j]);
-        }
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-      ski.pcr_sel.count++;
-
-      // cleanup intermediate PCR selections integer array just processed
-      free(pcrs);
-      pcrs = NULL;
-
-      // configure policy-OR digest list struct with user input value
-      kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
-      if (convert_string_to_digest(dString[i],
-                        &(ski.policy_or.digests[list_index])) != 0)
-      {
-        kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
-        kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-        kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-        free(dString[i]);
-        for (size_t j = i + 1; j < exp_policy_str_cnt; j++)
-        {
-          free(pString[j]);
-          free(dString[j]);
-        }
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-      ski.policy_or.count++;
-
-      // cleanup parsed digest hex-string just processed
-      free(dString[i]);
-
-      // update PCR selection/digest list index for next iteration of loop 
-      list_index++;
-    }
-
-    // verify PCR selections and policy digests were encoded as matched pairs
-    if(ski.pcr_sel.count != ski.policy_or.count)
-    {
-      kmyth_log(LOG_ERR, "mismatched PCR selection and policy digest counts");
-      kmyth_clear(objAuthVal.buffer, objAuthVal.size);
-      kmyth_clear(ownerAuth.buffer, ownerAuth.size);
-      free_tpm2_resources(&sapi_ctx);
-      return 1;
-    }
-
-    // verify none of the PCR selections are "empty" (no PCRs selected)
-    // (as kmyth policy-OR criteria are PCR-based, this invalidates the
-    // need for a policy-OR since the empty PCR case negates the need to
-    // specify altnernate digests due to changes in PCR values)
-    for (size_t i = 0; i < ski.pcr_sel.count; i++)
-    {
-      if (ski.pcr_sel.pcrs[i].count == 0)
-      {
-        kmyth_log(LOG_DEBUG, "ski.pcr_sel.pcrs[%zu].count = %u", i, ski.pcr_sel.pcrs[i].count);
-        kmyth_log(LOG_ERR, "policy-OR branch with empty PCR selections");
-        free_ski(&ski);
-        free_tpm2_resources(&sapi_ctx);
-        return 1;
-      }
-    }
   }
 
   // If a policy-OR authorization criteria is specified, the policy digest
@@ -777,8 +590,8 @@ int tpm2_kmyth_seal_file(char * input_path,
                          char * auth_string,
                          char * owner_auth_string,
                          char * cipher_string,
-                         char * pcrs_string,
-                         char * exp_policy_string,
+                         PCR_SELECTIONS * pcrs_in,
+                         TPML_DIGEST * digests_in,
                          bool bool_trial_only)
 {
   uint8_t * data = NULL;
@@ -821,10 +634,8 @@ int tpm2_kmyth_seal_file(char * input_path,
                       auth_string,
                       owner_auth_string,
                       cipher_string,
-                      pcrs_string,
-                      exp_policy_string,
-                      NULL,
-                      NULL,
+                      pcrs_in,
+                      digests_in,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data");

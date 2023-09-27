@@ -34,7 +34,6 @@ static void usage(const char *prog)
           " -a or --auth_string     String used to create 'authVal' digest.\n"
           "                         Defaults to empty string.\n"
           "                         Defaults to \'%s\'\n"
-          " -c or --cipher          Specifies the cipher type to use.\n"
           " -e or --expected_policy Specifies pairs of additional PCR\n"
           "                         selection and policy digest values to\n"
           "                         include as alternative criteria for a\n"
@@ -52,16 +51,9 @@ static void usage(const char *prog)
           "                         file when using default output.\n"
           " -h or --help            Help (displays this usage).\n"
           " -i or --input           Path to file containing the data to be\n"
-          "                         sealed.\n"
-          " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
+          "                         resealed.\n"
           " -o or --output          Destination path for the sealed file.\n"
-          "                         Defaults to <filename>.ski in the CWD.\n"
-          " -p or --pcrs_list       List of TPM platform configuration\n"
-          "                         registers (PCRs) to apply to\n"
-          "                         authorization policy. Defaults to no\n"
-          "                         PCRs specified. Encapsulate in single\n"
-          "                         quotes and delimit integer values using\n"
-          "                         commas. (e.g. \'0, 1, 2\').\n"
+          "                         Defaults to input filename.\n"
           " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy\n"
           "                         authorization. Defaults to emptyAuth\n"
           "                         to match TPM default.\n"
@@ -70,38 +62,15 @@ static void usage(const char *prog)
           cipher_list[0].cipher_name);
 }
 
-static void list_ciphers(void)
-{
-  size_t i = 0;
-
-  fprintf(stdout, "The following ciphers are currently supported by kmyth:\n");
-  while (cipher_list[i].cipher_name != NULL)
-  {
-    fprintf(stdout, "  %s%s\n", cipher_list[i].cipher_name,
-            (i == 0) ? " (default)" : "");
-    i++;
-  }
-  fprintf(stdout,
-          "To select a cipher use the '-c' option with the full cipher name.\n"
-          "For example, the option '-c AES/KeyWrap/RFC5649Padding/256'\n"
-          "will select AES Key Wrap with Padding as specified in RFC 5649\n"
-          "using a 256-bit key.\n");
-}
-
 const struct option longopts[] = {
   {"auth_string", required_argument, 0, 'a'},
+  {"expected_policy", required_argument, 0, 'e'},
+  {"force", no_argument, 0, 'f'},
+  {"help", no_argument, 0, 'h'},
   {"input", required_argument, 0, 'i'},
   {"output", required_argument, 0, 'o'},
-  {"force", no_argument, 0, 'f'},
-  {"previous_policy_or", no_argument, 0, 'g'},
-  {"pcrs_list", required_argument, 0, 'p'},
   {"owner_auth", required_argument, 0, 'w'},
-  {"cipher", required_argument, 0, 'c'},
-  {"expected_policy", required_argument, 0, 'e'},
-  {"expected_pcrs", required_argument, 0, 'x'},
   {"verbose", no_argument, 0, 'v'},
-  {"help", no_argument, 0, 'h'},
-  {"list_ciphers", no_argument, 0, 'l'},
   {0, 0, 0, 0}
 };
 
@@ -124,13 +93,8 @@ int main(int argc, char **argv)
   char *outPath = NULL;
   char *authString = NULL;
   char *ownerAuthPasswd = "";
-  char *pcrsString = NULL;
-  char *cipherString = NULL;
   bool forceOverwrite = false;
   char *expPolicyDigestString = NULL;
-  char *emptyPcrsString = "";
-  char *expPcrsString = NULL;
-  uint8_t bool_trial_only = 0; // reseal forces this
 
   // Parse and apply command line options
   int options;
@@ -145,9 +109,6 @@ int main(int argc, char **argv)
     case 'a':
       authString = optarg;
       break;
-    case 'c':
-      cipherString = optarg;
-      break;
     case 'e':
       expPolicyDigestString = optarg;
       break;
@@ -160,13 +121,8 @@ int main(int argc, char **argv)
     case 'i':
       inPath = optarg;
       break;
-    case 'l':
-      list_ciphers();
     case 'o':
       outPath = optarg;
-      break;
-    case 'p':
-      pcrsString = optarg;
       break;
     case 'v':
       // always display all log messages (severity threshold = LOG_DEBUG)
@@ -178,41 +134,8 @@ int main(int argc, char **argv)
     case 'w':
       ownerAuthPasswd = optarg;
       break;
-    case 'x':
-      expPcrsString = optarg;
-      break;
     default:
       return 1;
-    }
-  }
-
-  // If the user specifies a PCR selection list for an expected policy,
-  // an expected policy digest must be specified. For the reverse, if an
-  // expected policy digest is specified without an expected policy PCR
-  // selection list, it is assumed that an empty PCR selection list
-  // (no PCRs selected) is desired.
-  if (expPolicyDigestString == NULL)
-  { 
-    if (expPcrsString != NULL)
-    { 
-      kmyth_log(LOG_ERR, "Expected policy PCR selections without digest",
-                         "... exiting");
-      if (authString != NULL)
-      {
-        kmyth_clear(authString, strlen(authString));
-      }
-      if (ownerAuthPasswd != NULL)
-      {
-        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-      }
-      return 1;
-    }
-  }
-  else
-  {
-    if (expPcrsString == NULL)
-    {
-      expPcrsString = emptyPcrsString;
     }
   }
 
@@ -308,6 +231,7 @@ int main(int argc, char **argv)
 
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
+  char *cipherString = NULL;
 
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal(unseal_output,
@@ -317,11 +241,9 @@ int main(int argc, char **argv)
                       authString,
                       ownerAuthPasswd,
                       cipherString,
-                      pcrsString,
-                      expPolicyDigestString,
                       &orig_pcrs,
                       &orig_digests,
-                      bool_trial_only))
+                      false))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     if (authString != NULL)

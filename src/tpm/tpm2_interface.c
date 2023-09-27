@@ -365,14 +365,26 @@ int get_tpm2_properties(TSS2_SYS_CONTEXT * sapi_ctx,
   TPMI_YES_NO moreDataAvailable = 1;
 
   rc =
-    Tss2_Sys_GetCapability(sapi_ctx, 0, capability, property, propertyCount,
-                           &moreDataAvailable, capabilityData, 0);
+    Tss2_Sys_GetCapability(sapi_ctx,
+                           0,
+                           capability,
+                           property,
+                           propertyCount,
+                           &moreDataAvailable,
+                           capabilityData,
+                           0);
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "Tss2_Get_Capability(): rc = 0x%08X, %s",
-              rc, getErrorString(rc));
-    kmyth_log(LOG_ERR, "unable to get capability = %u, property = %u, "
-                       "count = %u", capability, property, propertyCount);
+    kmyth_log(LOG_ERR,
+              "Tss2_Get_Capability(): rc = 0x%08X, %s",
+              rc,
+              getErrorString(rc));
+    kmyth_log(LOG_ERR,
+              "unable to get capability = %u, property = %u, "
+              "count = %u",
+              capability,
+              property,
+              propertyCount);
     return 1;
   }
 
@@ -991,7 +1003,101 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
 }
 
 //############################################################################
-// create_auth_session
+// init_policy_or()
+//############################################################################
+int init_policy_or(char * exp_policy_string,
+                   PCR_SELECTIONS * pcrs_struct,
+                   TPML_DIGEST * digests_struct)
+{
+  size_t expPolicyStrCnt = 0;
+  char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
+  char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
+
+  if (parse_exp_policy_string_pairs(exp_policy_string,
+                                    &expPolicyStrCnt,
+                                    pString,
+                                    dString) != 0)
+  {
+    kmyth_log(LOG_ERR, "error parsing policy-OR data string");
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
+                        expPolicyStrCnt);
+    
+  if ((expPolicyStrCnt > MAX_POLICY_OR_CNT))
+  {
+    kmyth_log(LOG_ERR, "digest count (%zu) would exceed limit (%u)",
+                        expPolicyStrCnt, MAX_POLICY_OR_CNT);
+    return 1;
+  }
+
+  for (size_t i = 0; i < expPolicyStrCnt; i++)
+  {
+    // extend list of PCR selections for each provided policy-OR criteria
+    kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
+                          i + 1, pString[i]);
+
+    if (init_pcr_selection(pString[i], pcrs_struct) != 0)
+    {
+      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
+      for (size_t j = i; j < expPolicyStrCnt; j++)
+      {
+        free(pString[j]);
+        free(dString[j]);
+      }
+      return 1;
+    }
+
+    // cleanup parsed PCR selection string just re-formatted
+    free(pString[i]);
+
+    // configure policy-OR digest list struct with user input value
+    kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
+
+    if (convert_string_to_digest(dString[i],
+                                 &(digests_struct->digests[i+1])) != 0)
+    {
+      kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
+      free(dString[i]);
+      for (size_t j = i + 1; j < expPolicyStrCnt; j++)
+      {
+        free(pString[j]);
+        free(dString[j]);
+      }
+      return 1;
+    }
+    digests_struct->count++;
+
+    // cleanup parsed digest hex-string just processed
+    free(dString[i]);
+  }
+
+  // verify PCR selections and policy digests were encoded as matched pairs
+  if(pcrs_struct->count != digests_struct->count)
+  {
+    kmyth_log(LOG_ERR, "mismatched PCR selection and policy digest counts");
+    return 1;
+  }
+
+  // verify none of the PCR selections are "empty" (no PCRs selected)
+  // (as kmyth policy-OR criteria are PCR-based, this invalidates the
+  // need for a policy-OR since the empty PCR case negates the need to
+  // specify alternate digests due to scenarios that produce PCR value
+  // changes)
+  for (size_t i = 0; i < pcrs_struct->count; i++)
+  {
+    if (isEmptyPcrSelection(&(pcrs_struct->pcrs[i])))
+    {
+      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections");
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+//############################################################################
+// create_auth_session()
 //############################################################################
 int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * policySession,
