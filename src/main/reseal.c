@@ -17,6 +17,7 @@
 #include "kmyth_log.h"
 #include "memory_util.h"
 #include "pcrs.h"
+#include "formatting_tools.h"
 
 #include "cipher/cipher.h"
 
@@ -204,8 +205,8 @@ int main(int argc, char **argv)
   uint8_t *unseal_output = NULL;
   size_t unseal_output_len = 0;
 
-  PCR_SELECTIONS orig_pcrs = { 0 };
-  TPML_DIGEST orig_digests = { 0 };
+  PCR_SELECTIONS pcrs = { 0 };
+  TPML_DIGEST digests = { 0 };
 
 // Call top-level "kmyth-unseal" function
   if (tpm2_kmyth_unseal_file(inPath,
@@ -213,8 +214,8 @@ int main(int argc, char **argv)
                              &unseal_output_len,
                              authString,
                              ownerAuthPasswd,
-                             &orig_pcrs,
-                             &orig_digests))
+                             &pcrs,
+                             &digests))
   {
     kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
     kmyth_clear_and_free(unseal_output, unseal_output_len);
@@ -229,6 +230,156 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  // apply user specified "expected policy" to PCR selections and policy
+  // digest lists recovered by unsealing the input .ski file
+  size_t expPolicyStrCnt = 0;
+  char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
+  char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
+
+  if (parse_exp_policy_string_pairs(expPolicyDigestString,
+                                    &expPolicyStrCnt,
+                                    pString,
+                                    dString) != 0)
+  {
+    kmyth_log(LOG_ERR, "error parsing policy-OR data string");
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
+    return 1;
+  }
+  kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
+                       expPolicyStrCnt);
+    
+  if ((expPolicyStrCnt + digests.count) > MAX_POLICY_OR_CNT)
+  {
+    kmyth_log(LOG_ERR, "digest count (%zu + %u) would exceed limit (%u)",
+                       expPolicyStrCnt, digests.count, MAX_POLICY_OR_CNT);
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
+    return 1;
+  }
+
+  // As we are about to configure a policy-OR digest list, it will be
+  // non-empty. The first location (index = 0), though, will contain the
+  // "current" policy digest that will be computed later. If the input
+  // .ski file had no policy-OR criteria (empty policy digest list with
+  // digest count of zero) we will set the digest list count to one,
+  // therefore, to create a placeholder. If the input .ski file di have a
+  // policy-OR authorization criteria, this step was done by an earlier
+  // kmyth-seal(), so no action is needed here
+  if (digests.count == 0)
+  {
+    digests.count = 1;
+  }
+
+  for (size_t i = 0; i < expPolicyStrCnt; i++)
+  {
+    // extend list of PCR selections for each provided policy-OR criteria
+    kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
+                         i + 1, pString[i]);
+
+    if (init_pcr_selection(pString[i], &pcrs) != 0)
+    {
+      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
+      if (ownerAuthPasswd != NULL)
+      {
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      }
+      free(outPath);
+      for (size_t j = i; j < expPolicyStrCnt; j++)
+      {
+        free(pString[j]);
+        free(dString[j]);
+      }
+      return 1;
+    }
+
+    // cleanup parsed PCR selection string just re-formatted
+    free(pString[i]);
+
+    // configure policy-OR digest list struct with user input value
+    kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
+
+    if (convert_string_to_digest(dString[i], &(digests.digests[i+1])) != 0)
+    {
+      kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
+      if (ownerAuthPasswd != NULL)
+      {
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      }
+      free(dString[i]);
+      for (size_t j = i + 1; j < expPolicyStrCnt; j++)
+      {
+        free(pString[j]);
+        free(dString[j]);
+      }
+      return 1;
+    }
+    digests.count++;
+
+    // cleanup parsed digest hex-string just processed
+    free(dString[i]);
+  }
+
+  // verify PCR selections and policy digests were encoded as matched pairs
+  if(pcrs.count != digests.count)
+  {
+    kmyth_log(LOG_ERR,
+              "mismatched PCR selection (%u) and policy digest (%u) counts",
+              pcrs.count,
+              digests.count);
+    if (authString != NULL)
+    {
+      kmyth_clear(authString, strlen(authString));
+    }
+    if (ownerAuthPasswd != NULL)
+    {
+      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+    }
+    return 1;
+  }
+
+  // verify none of the PCR selections are "empty" (no PCRs selected)
+  // (as kmyth policy-OR criteria are PCR-based, this invalidates the
+  // need for a policy-OR since the empty PCR case negates the need to
+  // specify alternate digests due to scenarios that produce PCR value
+  // changes)
+  for (size_t i = 0; i < pcrs.count; i++)
+  {
+    if (isEmptyPcrSelection(&(pcrs.pcrs[i])))
+    {
+      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections");
+      if (authString != NULL)
+      {
+        kmyth_clear(authString, strlen(authString));
+      }
+      if (ownerAuthPasswd != NULL)
+      {
+        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      }
+      return 1;
+    }
+  }
+
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
   char *cipherString = NULL;
@@ -241,9 +392,9 @@ int main(int argc, char **argv)
                       authString,
                       ownerAuthPasswd,
                       cipherString,
-                      &orig_pcrs,
-                      &orig_digests,
-                      false))
+                      &pcrs,
+                      &digests,
+                      false) != 0)
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     if (authString != NULL)

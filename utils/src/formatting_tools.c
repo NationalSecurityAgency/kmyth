@@ -563,7 +563,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
 
   // parse out the "pair values" from the input string
   token = strtok(exp_policy_string, ";");
-  while ((pair_cnt < MAX_POLICY_OR_CNT) && (token != NULL))
+  while ((pair_cnt < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
   {
     pair_vals[pair_cnt] = malloc (strlen(token) + 1);
     if (pair_vals[pair_cnt] == NULL)

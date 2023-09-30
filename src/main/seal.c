@@ -334,6 +334,7 @@ int main(int argc, char **argv)
     free(outPath);
     return 1;
   }
+  kmyth_log(LOG_DEBUG, "configured 'current' PCR selections");
 
   // configure policy-OR digest list struct:
   //
@@ -373,6 +374,12 @@ int main(int argc, char **argv)
       free(outPath);
       return 1;
     }
+
+    // As we are about to configure a policy-OR digest list, it will be
+    // non-empty. The first location (index = 0), though, will contain the
+    // "current" policy digest that will be computed later. We will set the
+    // digest list count to one, therefore, to create a placeholder.
+    policyOR_digests.count = 1;
 
     for (size_t i = 0; i < expPolicyStrCnt; i++)
     {
@@ -424,7 +431,10 @@ int main(int argc, char **argv)
     // verify PCR selections and policy digests were encoded as matched pairs
     if(pcrSelections.count != policyOR_digests.count)
     {
-      kmyth_log(LOG_ERR, "mismatched PCR selection and policy digest counts");
+      kmyth_log(LOG_ERR,
+                "mismatched PCR selection (%u) and policy digest (%u) counts",
+                pcrSelections.count,
+                policyOR_digests.count);
       kmyth_clear(authString, authString_len);
       kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       free(outPath);

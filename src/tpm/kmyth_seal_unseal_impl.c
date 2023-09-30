@@ -162,12 +162,6 @@ int tpm2_kmyth_seal(uint8_t * input,
     free_tpm2_resources(&sapi_ctx);
     return 1;
   }
-  // replace existing 'current' or add to empty digest list
-  ski.policy_or.digests[0] = objAuthPolicy;
-  if (ski.policy_or.count == 0)
-  {
-    ski.policy_or.count++;
-  }
   kmyth_log(LOG_DEBUG, "created policy digest using current auth/PCR values");
 
   // There is a command-line argument allowing user to receive a hex dump of
@@ -187,13 +181,24 @@ int tpm2_kmyth_seal(uint8_t * input,
 
     convert_digest_to_string(&objAuthPolicy, output_string);
     printf("policy digest: %s\n", output_string);
+
+    // clear potential 'auth' data, free TPM resources before exiting early
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+    free_tpm2_resources(&sapi_ctx);
+
     return 0;
   }
 
-  // If a policy-OR authorization criteria is specified, the policy digest
-  // must be re-computed to incorporate the additional policy-OR criteria
-  if (ski.policy_or.count > 0)
+  // if policy-OR authorization criteria, the policy digest list must
+  // be configured
+  if (ski.policy_or.count > 1)
   {
+    // fill in "current" (without policy-OR) policy digest in the first index
+    ski.policy_or.digests[0] = objAuthPolicy;
+
+    // the "current" policy digest must then be re-computed to incorporate
+    // the policy-OR criteria
     if (create_policy_digest(sapi_ctx,
                              &(ski.pcr_sel.pcrs[0]),
                              &(ski.policy_or),
@@ -205,6 +210,18 @@ int tpm2_kmyth_seal(uint8_t * input,
         free_tpm2_resources(&sapi_ctx);
         return 1;
     }
+    kmyth_log(LOG_DEBUG, "recomputed policy digest with policy-OR criteria");
+  }
+  else if (ski.policy_or.count == 1)
+  {
+    kmyth_log(LOG_ERR, "non-empty policy-OR digest with single option");
+
+    // clear potential 'auth' data, free TPM resources before exiting early
+    kmyth_clear(objAuthVal.buffer, objAuthVal.size);
+    kmyth_clear(ownerAuth.buffer, ownerAuth.size);
+    free_tpm2_resources(&sapi_ctx);
+
+    return 1;
   }
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
@@ -225,6 +242,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
     kmyth_clear(ownerAuth.buffer, ownerAuth.size);
     free_tpm2_resources(&sapi_ctx);
+
     return 1;
   }
   kmyth_log(LOG_DEBUG, "retrieved SRK handle (0x%08X)", storageRootKey_handle);
@@ -250,6 +268,7 @@ int tpm2_kmyth_seal(uint8_t * input,
     kmyth_clear(objAuthVal.buffer, objAuthVal.size);
     kmyth_clear(ownerAuth.buffer, ownerAuth.size);
     free_tpm2_resources(&sapi_ctx);
+
     return 1;
   }
 
@@ -331,8 +350,8 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
 
-  free_ski(&ski);
   // done, so free any allocated resources that remain
+  free_ski(&ski);
   free_tpm2_resources(&sapi_ctx);
 
   return 0;
