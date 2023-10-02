@@ -286,12 +286,11 @@ int main(int argc, char **argv)
   for (size_t i = 0; i < expPolicyStrCnt; i++)
   {
     // extend list of PCR selections for each provided policy-OR criteria
-    kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
-                         i + 1, pString[i]);
+    kmyth_log(LOG_DEBUG, "policy-OR PCR string #%zu = %s", i + 1, pString[i]);
 
     if (init_pcr_selection(pString[i], &pcrs) != 0)
     {
-      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
+      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + pcrs.count);
       if (authString != NULL)
       {
         kmyth_clear(authString, strlen(authString));
@@ -308,6 +307,8 @@ int main(int argc, char **argv)
       }
       return 1;
     }
+    kmyth_log(LOG_DEBUG, "PCR init - policy branch #%zu (index = %zu)",
+                         i + pcrs.count, i - pcrs.count - 1);
 
     // cleanup parsed PCR selection string just re-formatted
     free(pString[i]);
@@ -315,7 +316,8 @@ int main(int argc, char **argv)
     // configure policy-OR digest list struct with user input value
     kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
 
-    if (convert_string_to_digest(dString[i], &(digests.digests[i+1])) != 0)
+    if (convert_string_to_digest(dString[i],
+                                 &(digests.digests[i + digests.count])) != 0)
     {
       kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
       if (authString != NULL)
@@ -367,7 +369,7 @@ int main(int argc, char **argv)
   {
     if (isEmptyPcrSelection(&(pcrs.pcrs[i])))
     {
-      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections");
+      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections", i);
       if (authString != NULL)
       {
         kmyth_clear(authString, strlen(authString));
@@ -409,6 +411,8 @@ int main(int argc, char **argv)
     free(seal_output);
     return 1;
   }
+
+  isEmptyPcrSelection(&(pcrs.pcrs[1]));
 
   kmyth_clear_and_free(unseal_output, unseal_output_len);
   if (authString != NULL)

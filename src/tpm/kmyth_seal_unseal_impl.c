@@ -59,7 +59,8 @@ int tpm2_kmyth_seal(uint8_t * input,
     return 1;
   }
   ski.pcr_sel = *pcrs_in;
-  kmyth_log(LOG_DEBUG, "input PCR selections applied to .ski contents");
+  kmyth_log(LOG_DEBUG, "non-NULL input PCR selections applied");
+  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
  
   if (digests_in != NULL)
   {
@@ -212,6 +213,9 @@ int tpm2_kmyth_seal(uint8_t * input,
     }
     kmyth_log(LOG_DEBUG, "recomputed policy digest with policy-OR criteria");
   }
+
+  // a policy-OR digest list containing a single policy digest is invalid and
+  // should never occur - we test for it here, though, just in case
   else if (ski.policy_or.count == 1)
   {
     kmyth_log(LOG_ERR, "non-empty policy-OR digest with single option");
@@ -223,6 +227,13 @@ int tpm2_kmyth_seal(uint8_t * input,
 
     return 1;
   }
+
+  else
+  {
+    kmyth_log(LOG_DEBUG, "policy-OR digest list not configured");
+  }
+
+  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
@@ -444,6 +455,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "parsed input .ski file");
 
+  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
+  
   // assign parsed PCR and policy digest criteria to output parameters
   *pcrs_out = ski.pcr_sel;
   *digests_out = ski.policy_or;

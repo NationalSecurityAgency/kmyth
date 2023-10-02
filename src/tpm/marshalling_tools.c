@@ -947,6 +947,9 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
     kmyth_log(LOG_DEBUG, "pcr_select_in->pcrs[%zu].count = %u",
                          i, pcr_select_in->pcrs[i].count);
 
+    kmyth_log(LOG_DEBUG, "pcr_select_in->pcrs[%zu].pcrSelections[0].pcrSelect[0] = %u",
+                         i, pcr_select_in->pcrs[i].pcrSelections[0].pcrSelect[0]);
+
     // create packed bytes for TPML_PCR_SELECTION struct
     if ((rc = Tss2_MU_TPML_PCR_SELECTION_Marshal(&(pcr_select_in->pcrs[i]),
                                                  temp_data,
@@ -1025,19 +1028,12 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
   pcr_select_out->count = (size_t) temp_byte;
   packed_data_in_offset += sizeof(uint8_t);
 
-  // unpack list of TPML_PCR_SELECTION struct data
+  // unpack list of TPML_PCR_SELECTION structs data
   for (size_t i = 0; i < pcr_select_out->count; i++)
   {
-    // had some buffer overflow issues when calling the "unmarshal" function
-    // with a 'packed_data_in_size' buffer - therefore, a stack-hosted,
-    // sizeof(TPML_PCR_SELECTION) sized temporary buffer is employed
-    uint8_t temp_buf[sizeof(TPML_PCR_SELECTION)] = { 0 };
     size_t temp_offset = 0;
-    memcpy(temp_buf,
-           packed_data_in + packed_data_in_offset,
-           packed_data_in_size);
  
-    rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal(temp_buf,
+    rc = Tss2_MU_TPML_PCR_SELECTION_Unmarshal((packed_data_in + packed_data_in_offset),
                                               sizeof(TPML_PCR_SELECTION),
                                               &temp_offset,
                                               &(pcr_select_out->pcrs[i]));
@@ -1051,8 +1047,8 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
       kmyth_log(LOG_ERR, "input packed PCR data buffer overflow");
       return 1;
     }
-    kmyth_log(LOG_DEBUG, "pcr_select_out->pcrs[%zu].count = %u",
-                         i, pcr_select_out->pcrs[i].count);
+
+    packed_data_in_offset += temp_offset;
   }
 
   return 0;
