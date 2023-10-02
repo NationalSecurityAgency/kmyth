@@ -944,12 +944,6 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
   // pack each configured TPML_PCR_SELECTION struct within PCR_SELECTIONS struct
   for (size_t i = 0; i < pcr_select_in->count; i++)
   {
-    kmyth_log(LOG_DEBUG, "pcr_select_in->pcrs[%zu].count = %u",
-                         i, pcr_select_in->pcrs[i].count);
-
-    kmyth_log(LOG_DEBUG, "pcr_select_in->pcrs[%zu].pcrSelections[0].pcrSelect[0] = %u",
-                         i, pcr_select_in->pcrs[i].pcrSelections[0].pcrSelect[0]);
-
     // create packed bytes for TPML_PCR_SELECTION struct
     if ((rc = Tss2_MU_TPML_PCR_SELECTION_Marshal(&(pcr_select_in->pcrs[i]),
                                                  temp_data,
@@ -959,20 +953,6 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
       kmyth_log(LOG_ERR, "Tss2_MU_TPML_PCR_SELECTION_Marshal(): 0x%08X", rc);
       return 1;
     }
-
-    // write packed struct size as a one-byte unsigned integer (valued 0-255)
-    //temp_byte = (uint8_t) temp_offset;
-    //kmyth_log(LOG_DEBUG, "temp_byte = %u", temp_byte);
-    //if ((packed_data_out_offset + sizeof(uint8_t)) > *packed_data_out_size)
-    //{
-    //  kmyth_log(LOG_ERR, "packed PCR selection data buffer overflow");
-    //  return 1;
-    //}
-    //memcpy(packed_data_out + packed_data_out_offset,
-    //       &temp_byte,
-    //       sizeof(uint8_t));
-    //packed_data_out_offset += sizeof(uint8_t);
-    //kmyth_log(LOG_DEBUG, "packed_data_out_offset = %u", packed_data_out_offset);
 
     // write packed struct data
     if ((packed_data_out_offset + temp_offset) > *packed_data_out_size)

@@ -359,6 +359,7 @@ int main(int argc, char **argv)
     }
     return 1;
   }
+  kmyth_log(LOG_DEBUG, "PCR selection and policy digest counts match");
 
   // verify none of the PCR selections are "empty" (no PCRs selected)
   // (as kmyth policy-OR criteria are PCR-based, this invalidates the
@@ -381,6 +382,7 @@ int main(int argc, char **argv)
       return 1;
     }
   }
+  kmyth_log(LOG_DEBUG, "no policy-OR branch with empty PCR selections");
 
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
@@ -411,8 +413,6 @@ int main(int argc, char **argv)
     free(seal_output);
     return 1;
   }
-
-  isEmptyPcrSelection(&(pcrs.pcrs[1]));
 
   kmyth_clear_and_free(unseal_output, unseal_output_len);
   if (authString != NULL)

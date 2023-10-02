@@ -60,7 +60,6 @@ int tpm2_kmyth_seal(uint8_t * input,
   }
   ski.pcr_sel = *pcrs_in;
   kmyth_log(LOG_DEBUG, "non-NULL input PCR selections applied");
-  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
  
   if (digests_in != NULL)
   {
@@ -232,8 +231,6 @@ int tpm2_kmyth_seal(uint8_t * input,
   {
     kmyth_log(LOG_DEBUG, "policy-OR digest list not configured");
   }
-
-  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
 
   // The storage root key (SRK) is the primary key for the storage hierarchy
   // in the TPM.  We will first check to see if it is already loaded in
@@ -455,8 +452,6 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "parsed input .ski file");
 
-  isEmptyPcrSelection(&(ski.pcr_sel.pcrs[1]));
-  
   // assign parsed PCR and policy digest criteria to output parameters
   *pcrs_out = ski.pcr_sel;
   *digests_out = ski.policy_or;
@@ -563,7 +558,8 @@ int tpm2_kmyth_unseal(uint8_t * input,
       free_tpm2_resources(&sapi_ctx);
       return 1;
     }
-    kmyth_log(LOG_DEBUG, "validPolicyOrIndex = %d", validPolicyOrIndex);
+    kmyth_log(LOG_DEBUG, "policy-OR branch #%d (index = %d) valid",
+                         validPolicyOrIndex + 1, validPolicyOrIndex);
   }
 
   // A symmetric wrapping key is used to encrypt kmyth-sealed data.

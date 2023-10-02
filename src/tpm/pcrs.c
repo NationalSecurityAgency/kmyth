@@ -52,8 +52,6 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
   {
     for (int j = 0; j < pcrs_struct->pcrSelections[i].sizeofSelect; j++)
     {
-      kmyth_log(LOG_DEBUG, "i = %d, j = %d, mask byte = %u", i, j,
-                           pcrs_struct->pcrSelections[i].pcrSelect[j]);
       if (pcrs_struct->pcrSelections[i].pcrSelect[j] != 0)
       {
         result = false;
@@ -61,7 +59,6 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
     }
   }
 
-  kmyth_log(LOG_DEBUG, "result = %d", result);
   return result;
 }
 
