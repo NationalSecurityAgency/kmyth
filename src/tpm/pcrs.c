@@ -4,16 +4,15 @@
  *        Platform Configuration Registers (PCRs) in TPM 2.0.
  */
 
-#include "pcrs.h"
-
 #include <ctype.h>
 #include <string.h>
 
 #include <openssl/evp.h>
 
 #include "defines.h"
-#include "tpm2_interface.h"
 #include "formatting_tools.h"
+#include "pcrs.h"
+#include "tpm2_interface.h"
 
 //############################################################################
 // tpm2_get_pcr_count()
@@ -47,11 +46,12 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
   // initialize result to "is empty"
   bool result = true;
 
-  // test PCR selection mask bytes until non-zero one found or all tested
+  // interate through PCR selection mask bytes until result known
   for (int i = 0; i < pcrs_struct->count; i++)
   {
     for (int j = 0; j < pcrs_struct->pcrSelections[i].sizeofSelect; j++)
     {
+      // if non-zero mask byte found, return "is not empty" (false)
       if (pcrs_struct->pcrSelections[i].pcrSelect[j] != 0)
       {
         result = false;
@@ -59,6 +59,7 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
     }
   }
 
+  // all mask bytes zero, so return "is empty" (true) result initialized to
   return result;
 }
 
