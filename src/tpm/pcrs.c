@@ -46,7 +46,14 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
   // initialize result to "is empty"
   bool result = true;
 
-  // interate through PCR selection mask bytes until result known
+  // check PCR selections 'bank' count - if zero, empty mask
+  if (pcrs_struct->count == 0)
+  {
+    return result;
+  }
+
+  // although kmyth should not do this, a PCR 'bank' could be set to
+  // an empty mask, hence, interate through configured PCR select mask bytes
   for (int i = 0; i < pcrs_struct->count; i++)
   {
     for (int j = 0; j < pcrs_struct->pcrSelections[i].sizeofSelect; j++)
@@ -117,7 +124,8 @@ int init_pcr_selection(char * pcrs_string_in,
   pcrs_struct_out->count++;
 
   // kmyth employs single sets of PCRs from the KMYTH_HASH_ALG 'bank'
-  pcrs_struct_out->pcrs[list_index].count = 1;
+  // Note: initialize PCR bank count to zero, default is no PCR criteria
+  pcrs_struct_out->pcrs[list_index].count = 0;
   pcrs_struct_out->pcrs[list_index].pcrSelections[0].hash = KMYTH_HASH_ALG;
 
   // each selection "mask" in a PCR "bank" is 8 bits, but there are
@@ -161,6 +169,10 @@ int init_pcr_selection(char * pcrs_string_in,
       free_tpm2_resources(&sapi_ctx);
       return 1;
     }
+  
+    // as we are about to specify PCR selections, update PCR 'bank' count
+    // to reflect non-empty PCR selection criteria
+    pcrs_struct_out->pcrs[list_index].count = 1;
 
     for (size_t i = 0; i < pcrs_len; i++)
     {
@@ -180,6 +192,7 @@ int init_pcr_selection(char * pcrs_string_in,
     free(pcrs);
   }
 
+  // support debug logging of resultant mask value
   if (get_applog_severity_threshold() >= LOG_DEBUG)
   {
     char hexStr[(maskSize * 2) + 1];

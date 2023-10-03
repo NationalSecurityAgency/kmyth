@@ -1252,7 +1252,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
 
   // If the supplied PCR Selection List is not empty, supply PCR policy command
   // (if empty, PCR criteria will not be included in the authorization policy)
-  if (policySession_pcrList->count > 0)
+  if (isEmptyPcrSelection(policySession_pcrList) == false)
   {
     // policySession→policyDigest is extended by a call to Tss2_Sys_PolicyPCR()
     //   - an empty (zero length) PCR digest must be passed in
@@ -1283,7 +1283,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     if (policyOR_digestList->count < 2)
     {
-      kmyth_log(LOG_DEBUG, "no policy-OR based criteria applied");
+      kmyth_log(LOG_DEBUG, "digest count < 2: no policy-OR criteria applied");
     }
     else
     {
@@ -1295,7 +1295,7 @@ int apply_policy(TSS2_SYS_CONTEXT * sapi_ctx,
   }
   else
   {
-    kmyth_log(LOG_DEBUG, "no policy-OR criteria applied");
+    kmyth_log(LOG_DEBUG, "null digests ptr: no policy-OR criteria applied");
   }
 
   return 0;

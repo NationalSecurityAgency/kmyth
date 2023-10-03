@@ -362,10 +362,9 @@ int main(int argc, char **argv)
   kmyth_log(LOG_DEBUG, "PCR selection and policy digest counts match");
 
   // verify none of the PCR selections are "empty" (no PCRs selected)
-  // (as kmyth policy-OR criteria are PCR-based, this invalidates the
-  // need for a policy-OR since the empty PCR case negates the need to
-  // specify alternate digests due to scenarios that produce PCR value
-  // changes)
+  // as kmyth policy-OR criteria are PCR-based, empty PCR selections
+  // invalidate the need for a policy-OR (the empty PCR case means that
+  // the overall policy has no PCR dependencies)
   for (size_t i = 0; i < pcrs.count; i++)
   {
     if (isEmptyPcrSelection(&(pcrs.pcrs[i])))
