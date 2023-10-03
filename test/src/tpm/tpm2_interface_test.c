@@ -571,14 +571,15 @@ void test_create_policy_digest(void)
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
   init_tpm2_connection(&sapi_ctx);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  PCR_SELECTIONS pcrs_struct = {.count = 0, };
   TPML_DIGEST pOR_digests_struct = {.count = 0, };
 
   //Valid test with no PCRs selected
   TPM2B_DIGEST out;
 
+  init_pcr_selection(NULL, &pcrs_struct);
   CU_ASSERT(create_policy_digest(sapi_ctx,
-                                 &pcrs_struct,
+                                 &(pcrs_struct.pcrs[0]),
                                  &pOR_digests_struct,
                                  &out) == 0);
   CU_ASSERT(out.size != 0);
@@ -587,12 +588,10 @@ void test_create_policy_digest(void)
   memcpy(pcr0_buf, out.buffer, KMYTH_DIGEST_SIZE);
 
   //Valid test with one PCR selected
-  int pcrs[2] = { };
-  pcrs[0] = 5;
-  init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+  init_pcr_selection("0", &pcrs_struct);
   out.size = 0;
   CU_ASSERT(create_policy_digest(sapi_ctx,
-                                 &pcrs_struct,
+                                 &(pcrs_struct.pcrs[0]),
                                  &pOR_digests_struct,
                                  &out) == 0);
   CU_ASSERT(out.size != 0);
@@ -602,10 +601,9 @@ void test_create_policy_digest(void)
 
   //Valid test with multiple PCRs selected
   out.size = 0;
-  pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
+  init_pcr_selection("0,1", &pcrs_struct);
   CU_ASSERT(create_policy_digest(sapi_ctx,
-                                 &pcrs_struct,
+                                 &(pcrs_struct.pcrs[0]),
                                  &pOR_digests_struct,
                                  &out) == 0);
   CU_ASSERT(out.size != 0);
@@ -620,7 +618,7 @@ void test_create_policy_digest(void)
 
   //Failure with null sapi_ctx
   CU_ASSERT(create_policy_digest(NULL,
-                                 &pcrs_struct,
+                                 &(pcrs_struct.pcrs[0]),
                                  &pOR_digests_struct,
                                  &out) != 0);
 
@@ -695,7 +693,8 @@ void test_apply_policy(void)
 
   //Valid test
   create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  PCR_SELECTION pcrs_struct = {.count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct);
   TPML_DIGEST pOR_digests_struct = {.count = 0, };
 
   CU_ASSERT(apply_policy(sapi_ctx,
@@ -807,9 +806,7 @@ void test_apply_policy_or(void)
     TPM2B_DIGEST policy2 = {.size = 0, };
     TPM2B_DIGEST policyOR = {.size = 0, };
 
-    int pcrs[1] = { };
-    pcrs[0] = 23;
-    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    init_pcr_selection("23", &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx,
                                    &pcrs_struct,
                                    &pHashList,
@@ -818,7 +815,7 @@ void test_apply_policy_or(void)
 
     if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
     {
-      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+      init_pcr_selection("23", &pcrs_struct);
       CU_ASSERT(create_policy_digest(sapi_ctx,
                                      &pcrs_struct,
                                      &pHashList,

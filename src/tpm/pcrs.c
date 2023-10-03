@@ -85,14 +85,6 @@ int init_pcr_selection(char * pcrs_string_in,
     return 1;
   }
 
-  // initialize PCR selection list to point at next empty entry
-  size_t list_index = pcrs_struct_out->count;
-  if (list_index >= MAX_POLICY_OR_CNT)
-  {
-    kmyth_log(LOG_ERR, "attempting to initialize PCR selection in full list");
-    return 1;
-  }
-
   // init connection to the resource manager
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
@@ -120,8 +112,13 @@ int init_pcr_selection(char * pcrs_string_in,
   }
   uint8_t selSize = (uint8_t) maskSize;
 
-  // increment PCR selection criteria count
-  pcrs_struct_out->count++;
+  // initialize PCR selection list to point at next empty entry
+  if (pcrs_struct_out->count >= MAX_POLICY_OR_CNT)
+  {
+    kmyth_log(LOG_ERR, "attempting to initialize PCR selection in full list");
+    return 1;
+  }
+  size_t list_index = pcrs_struct_out->count;
 
   // kmyth employs single sets of PCRs from the KMYTH_HASH_ALG 'bank'
   // Note: initialize PCR bank count to zero, default is no PCR criteria
@@ -157,21 +154,26 @@ int init_pcr_selection(char * pcrs_string_in,
     }
   }
 
-  // If the user specified PCRs, update the empty PCR Selection
-  // structure appropriately
-  if (pcrs)
+  // if configuring an empty set of PCR selections, index must be zero
+  if ((!pcrs) || (pcrs_len == 0))
   {
-    // check that user specified non-zero sized set of PCRs
-    if (pcrs_len == 0)
+    if (list_index > 0)
     {
-      kmyth_log(LOG_ERR, "non-NULL, zero-size PCRs input array");
+      kmyth_log(LOG_ERR, "empty PCR mask at index = %zu", list_index);
       free(pcrs);
       free_tpm2_resources(&sapi_ctx);
       return 1;
     }
-  
-    // as we are about to specify PCR selections, update PCR 'bank' count
-    // to reflect non-empty PCR selection criteria
+  }
+
+  // If the user specified PCRs, update empty PCR Selection structure
+  else
+  {
+
+    // as we are about to specify PCR selections:
+    //   - increment PCR selection criteria count (appending)
+    //   - update PCR 'bank' count to reflect non-empty criteria
+    pcrs_struct_out->count++;
     pcrs_struct_out->pcrs[list_index].count = 1;
 
     for (size_t i = 0; i < pcrs_len; i++)
