@@ -107,7 +107,7 @@ void test_get_pcr_count(void)
     return;
   }
 
-  int count = 0;
+  uint32_t count = 0;
 
   //Valid get count
   CU_ASSERT(get_pcr_count(sapi_ctx, &count) == 0);

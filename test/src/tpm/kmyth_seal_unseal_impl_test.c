@@ -84,12 +84,12 @@ void test_tpm2_kmyth_seal(void)
   size_t output_len = 0;
 
   char *auth_string = NULL;
-
   char *owner_auth_string = NULL;
 
-  char *pcrs_string = NULL;
+  PCR_SELECTIONS pcrs_struct = { .count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct);
 
-  char *expected_policy_string = NULL;
+  TPML_DIGEST digests_struct = { .count = 0, };
 
   uint8_t bool_trial_only = 0;
 
@@ -101,9 +101,9 @@ void test_tpm2_kmyth_seal(void)
                             &output_len,
                             auth_string,
                             owner_auth_string,
-                            pcrs_string,
                             "fake_cipher",
-                            expected_policy_string,
+                            &pcrs_struct,
+                            &digests_struct,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -116,9 +116,9 @@ void test_tpm2_kmyth_seal(void)
                             &output_len,
                             auth_string,
                             owner_auth_string,
-                            pcrs_string,
-                            NULL,
-                            expected_policy_string,
+                            KMYTH_DEFAULT_CIPHER,
+                            &pcrs_struct,
+                            &digests_struct,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -131,9 +131,9 @@ void test_tpm2_kmyth_seal(void)
                             &output_len,
                             auth_string,
                             owner_auth_string,
-                            pcrs_string,
-                            NULL,
-                            expected_policy_string,
+                            KMYTH_DEFAULT_CIPHER,
+                            &pcrs_struct,
+                            &digests_struct,
                             bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -146,23 +146,29 @@ void test_tpm2_kmyth_seal(void)
                             &output_len,
                             auth_string,
                             owner_auth_string,
-                            pcrs_string,
-                            NULL,
-                            expected_policy_string,
+                            KMYTH_DEFAULT_CIPHER,
+                            &pcrs_struct,
+                            &digests_struct,
                             bool_trial_only) == 0 );
 
   uint8_t *plaintext = NULL;
   size_t plaintext_len = 0;
+  char * cipherString = NULL;
+  pcrs_struct.count = 0;
 
   CU_ASSERT(tpm2_kmyth_unseal(output,
                               output_len,
                               &plaintext,
                               &plaintext_len,
                               auth_string,
-                              owner_auth_string) == 0);
+                              owner_auth_string,
+                              &cipherString,
+                              &pcrs_struct,
+                              &digests_struct) == 0);
   CU_ASSERT(plaintext_len == input_len);
   CU_ASSERT(memcmp(plaintext, input, input_len) == 0);
 
+  free(cipherString);
   free(output);
   free(plaintext);
 }
@@ -181,13 +187,23 @@ void test_tpm2_kmyth_unseal(void)
 
   char *owner_auth_string = NULL;
 
+  char * cipherString = NULL;
+
+  PCR_SELECTIONS pcrs_struct = { .count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct);
+
+  TPML_DIGEST digests_struct = { .count = 0, };
+
   // Check a NULL input with 0 length fails and output is not changed
   CU_ASSERT(tpm2_kmyth_unseal(NULL,
                               0,
                               &output,
                               &output_len,
                               auth_string,
-                              owner_auth_string) == 1);
+                              owner_auth_string,
+                              &cipherString,
+                              &pcrs_struct,
+                              &digests_struct) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -197,7 +213,10 @@ void test_tpm2_kmyth_unseal(void)
                               &output,
                               &output_len,
                               auth_string,
-                              owner_auth_string) == 1);
+                              owner_auth_string,
+                              &cipherString,
+                              &pcrs_struct,
+                              &digests_struct) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -207,10 +226,14 @@ void test_tpm2_kmyth_unseal(void)
                               &output,
                               &output_len,
                               auth_string,
-                              owner_auth_string) == 1);
+                              owner_auth_string,
+                              &cipherString,
+                              &pcrs_struct,
+                              &digests_struct) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
+  free(cipherString);
   // Note we're not testing the seal/unseal combination here because it's tested with the
   // tests for tpm2_kmyth_seal.
 }
@@ -221,12 +244,17 @@ void test_tpm2_kmyth_unseal(void)
 void test_tpm2_kmyth_seal_file(void)
 {
   char fake_input_path[] = "fake input path";
-  uint8_t *output = NULL;
+  uint8_t * output = NULL;
   size_t output_len = 0;
-  char *auth_string = NULL;
-  char *owner_auth_string = NULL;
-  char *pcrs_string = NULL;
-  char *expected_policy_string = NULL;
+  char * auth_string = NULL;
+  char * owner_auth_string = NULL;
+  char * cipher_string = NULL;
+
+  PCR_SELECTIONS pcrs_struct = { .count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct);
+
+  TPML_DIGEST digests_struct = { .count = 0, };
+
   uint8_t bool_trial_only = 0;
 
   // Check a NULL input path fails and doesn't change output.
@@ -235,9 +263,9 @@ void test_tpm2_kmyth_seal_file(void)
                                  &output_len,
                                  auth_string,
                                  owner_auth_string,
-                                 pcrs_string,
-                                 NULL,
-                                 expected_policy_string,
+                                 KMYTH_DEFAULT_CIPHER,
+                                 &pcrs_struct,
+                                 &digests_struct,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -248,9 +276,9 @@ void test_tpm2_kmyth_seal_file(void)
                                  &output_len,
                                  auth_string,
                                  owner_auth_string,
-                                 pcrs_string,
-                                 NULL,
-                                 expected_policy_string,
+                                 cipher_string,
+                                 &pcrs_struct,
+                                 &digests_struct,
                                  bool_trial_only) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
@@ -262,17 +290,26 @@ void test_tpm2_kmyth_seal_file(void)
 void test_tpm2_kmyth_unseal_file(void)
 {
   char fake_input_path[] = "fake input path";
-  uint8_t *output = NULL;
+  uint8_t * output = NULL;
   size_t output_len = 0;
-  char *auth_string = NULL;
-  char *owner_auth_string = NULL;
+  char * auth_string = NULL;
+  char * owner_auth_string = NULL;
+  char * cipher_string = NULL;
+
+  PCR_SELECTIONS pcrs_struct = { .count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct);
+
+  TPML_DIGEST digests_struct = { .count = 0, };
 
   // Check a NULL input path fails and doesn't change output.
   CU_ASSERT(tpm2_kmyth_unseal_file(NULL,
                                    &output,
                                    &output_len,
                                    auth_string,
-                                   owner_auth_string) == 1);
+                                   owner_auth_string,
+                                   &cipher_string,
+                                   &pcrs_struct,
+                                   &digests_struct) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
 
@@ -281,9 +318,14 @@ void test_tpm2_kmyth_unseal_file(void)
                                    &output,
                                    &output_len,
                                    auth_string,
-                                   owner_auth_string) == 1);
+                                   owner_auth_string,
+                                   &cipher_string,
+                                   &pcrs_struct,
+                                   &digests_struct) == 1);
   CU_ASSERT(output == NULL);
   CU_ASSERT(output_len == 0);
+
+  free(cipher_string);
 }
 
 //--------------------------------------------------------------------------------
@@ -299,7 +341,7 @@ void test_tpm2_kmyth_seal_data(void)
   TPM2B_AUTH authVal = {.size = 0 };
   create_authVal(NULL, &authVal);
 
-  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_sel.pcrs[0]));
+  init_pcr_selection(NULL, &(ski.pcr_sel));
 
   TPM2B_DIGEST authPolicy = {.size = 0 };
   create_policy_digest(sapi_ctx,
@@ -405,7 +447,7 @@ void test_tpm2_kmyth_unseal_data(void)
 
   TPM2B_DIGEST authPolicy = {.size = 0, };
 
-  init_pcr_selection(sapi_ctx, NULL, 0, &(ski.pcr_sel.pcrs[0]));
+  init_pcr_selection(NULL, &(ski.pcr_sel));
 
   create_policy_digest(sapi_ctx,
                        &(ski.pcr_sel.pcrs[0]),

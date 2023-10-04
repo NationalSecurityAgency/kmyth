@@ -85,7 +85,7 @@
 int tpm2_kmyth_seal(uint8_t * input,
                     size_t input_len,
                     uint8_t ** output,
-                    size_t *output_len,
+                    size_t * output_len,
                     char * auth_string,
                     char * owner_auth_string,
                     char * cipher_string,

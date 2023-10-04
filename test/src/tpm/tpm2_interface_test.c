@@ -9,11 +9,12 @@
 #include <string.h>
 #include <CUnit/CUnit.h>
 
+#include "defines.h"
+#include "formatting_tools.h"
+#include "kmyth_log.h"
+#include "pcrs.h"
 #include "tpm2_interface.h"
 #include "tpm2_interface_test.h"
-#include "pcrs.h"
-#include "defines.h"
-#include "kmyth_log.h"
 
 //----------------------------------------------------------------------------
 // tpm2_interface_add_tests()
@@ -601,6 +602,7 @@ void test_create_policy_digest(void)
 
   //Valid test with multiple PCRs selected
   out.size = 0;
+  pcrs_struct.count = 0;
   init_pcr_selection("0,1", &pcrs_struct);
   CU_ASSERT(create_policy_digest(sapi_ctx,
                                  &(pcrs_struct.pcrs[0]),
@@ -689,85 +691,105 @@ void test_apply_policy(void)
   SESSION session;
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
 
-  init_tpm2_connection(&sapi_ctx);
+  //Preconfigure PCR selections (need separate TPM sessions)
+  //  - pcrs_struct_1 (empty)
+  //  - pcrs_struct_2 (non-empty)
+  //  - pcrs_struct_3 (policy-OR)
+  PCR_SELECTIONS pcrs_struct_1 = {.count = 0, };
+  init_pcr_selection(NULL, &pcrs_struct_1);
+  CU_ASSERT(pcrs_struct_1.count == 0);
+  PCR_SELECTIONS pcrs_struct_2 = {.count = 0, };
+  init_pcr_selection("5,3", &pcrs_struct_2);
+  CU_ASSERT(pcrs_struct_2.count == 1);
+  PCR_SELECTIONS pcrs_struct_3 = {.count = 0, };
+  init_pcr_selection("23", &pcrs_struct_3);
+  init_pcr_selection("23", &pcrs_struct_3);
+  CU_ASSERT(pcrs_struct_3.count == 2);
 
-  //Valid test
-  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
-  PCR_SELECTION pcrs_struct = {.count = 0, };
-  init_pcr_selection(NULL, &pcrs_struct);
+  //Start with empty policy digest list (no policy-OR)
   TPML_DIGEST pOR_digests_struct = {.count = 0, };
 
+  init_tpm2_connection(&sapi_ctx);
+  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
+
+  //Valid test
   CU_ASSERT(apply_policy(sapi_ctx,
                          session.sessionHandle,
-                         &pcrs_struct,
+                         &(pcrs_struct_1.pcrs[0]),
                          &pOR_digests_struct) == 0);
 
   //NULL context
   CU_ASSERT(apply_policy(NULL,
                          session.sessionHandle,
-                         &pcrs_struct,
+                         &(pcrs_struct_1.pcrs[0]),
                          &pOR_digests_struct) != 0);
 
   //Invalid Handle
   CU_ASSERT(apply_policy(sapi_ctx,
                          0,
-                         &pcrs_struct,
+                         &(pcrs_struct_1.pcrs[0]),
                          &pOR_digests_struct) != 0);
 
   //Multiple pcrs
-  int pcrs[2] = { };
-  pcrs[0] = 5;
-  pcrs[1] = 3;
-  init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct);
   CU_ASSERT(apply_policy(sapi_ctx,
                          session.sessionHandle,
-                         &pcrs_struct,
+                         &(pcrs_struct_2.pcrs[0]),
                          &pOR_digests_struct) == 0);
 
   //Policy-OR policy
   //  - these tests require TPM2_ALG_SHA256 so we don't want to run them
   //    if this changes
   if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
-  {
-    TPM2B_DIGEST policy1;
-    TPM2B_DIGEST policy2;
-    policy1.size = 0;
-    policy2.size = 0;
-    int pcrs[1] = { };
-    pcrs[0] = 23;
+  { 
+    TPM2B_DIGEST policy1 = {.size = 0, };
+    TPM2B_DIGEST policy2 = {.size = 0, };
+    TPM2B_DIGEST policy3 = {.size = 0, };
 
-    init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+    // create policy digest for first policy branch
     CU_ASSERT(create_policy_digest(sapi_ctx,
-                                   &pcrs_struct,
+                                   &(pcrs_struct_3.pcrs[0]),
                                    &pOR_digests_struct,
                                    &policy1) == 0);
-    CU_ASSERT(policy1.size != 0);
+    CU_ASSERT(policy1.size == KMYTH_DIGEST_SIZE);
+    char policy1_str[(KMYTH_DIGEST_SIZE * 2) + 1];
+    convert_digest_to_string(&policy1, policy1_str);
 
     if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
     {
-      pcrs[0] = 23;
-      init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
+      // create policy digest for second policy branch
       CU_ASSERT(create_policy_digest(sapi_ctx,
-                                     &pcrs_struct,
+                                     &(pcrs_struct_3.pcrs[1]),
                                      &pOR_digests_struct,
                                      &policy2) == 0);
-      CU_ASSERT(policy2.size != 0);
+      CU_ASSERT(policy2.size == KMYTH_DIGEST_SIZE);
+      char policy2_str[(KMYTH_DIGEST_SIZE * 2) + 1];
+      convert_digest_to_string(&policy2, policy2_str);
+      CU_ASSERT(strncmp(policy1_str,
+                        policy2_str,
+                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
 
-      //pOR_digests_struct.digests[0] = policy1;
-      //pOR_digests_struct.count++;
-      //pOR_digests_struct.digests[1] = policy2;
-      //pOR_digests_struct.count++;
+      // create policy-OR digest list
+      pOR_digests_struct.count++;
+      pOR_digests_struct.digests[0] = policy1;
+      pOR_digests_struct.count++;
+      pOR_digests_struct.digests[1] = policy2;
+      CU_ASSERT(pOR_digests_struct.count == 2);
 
-      //printf("pOR_digests_struct.count = %d\n", pOR_digests_struct.count);
+      // create policy digest with policy-OR authorization criteria
+      CU_ASSERT(create_policy_digest(sapi_ctx,
+                                     &(pcrs_struct_3.pcrs[0]),
+                                     &pOR_digests_struct,
+                                     &policy3) == 0);
+      CU_ASSERT(policy3.size == KMYTH_DIGEST_SIZE);
 
-      system("tpm2_pcrreset 23");
-
-      //pcrs[0] = 23;
-      //init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct);
-      //CU_ASSERT(apply_policy(sapi_ctx,
-      //                       session.sessionHandle,
-      //                       &pcrs_struct,
-      //                       &pOR_digests_struct) == 0);
+      char policy3_str[(KMYTH_DIGEST_SIZE * 2) + 1];
+      convert_digest_to_string(&policy3, policy3_str);
+      CU_ASSERT(strncmp(policy1_str,
+                        policy3_str,
+                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
+      CU_ASSERT(strncmp(policy2_str,
+                        policy3_str,
+                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
     }
     else
     {
@@ -796,7 +818,7 @@ void test_apply_policy_or(void)
     SESSION policySessionOR;
 
     init_tpm2_connection(&sapi_ctx);
-    TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+    PCR_SELECTIONS pcrs_struct = {.count = 0, };
 
     TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
     TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
@@ -808,7 +830,7 @@ void test_apply_policy_or(void)
 
     init_pcr_selection("23", &pcrs_struct);
     CU_ASSERT(create_policy_digest(sapi_ctx,
-                                   &pcrs_struct,
+                                   &(pcrs_struct.pcrs[0]),
                                    &pHashList,
                                    &policy1) == 0);
     CU_ASSERT(policy1.size != 0);
@@ -817,7 +839,7 @@ void test_apply_policy_or(void)
     {
       init_pcr_selection("23", &pcrs_struct);
       CU_ASSERT(create_policy_digest(sapi_ctx,
-                                     &pcrs_struct,
+                                     &(pcrs_struct.pcrs[1]),
                                      &pHashList,
                                      &policy2) == 0);
       CU_ASSERT(policy2.size != 0);

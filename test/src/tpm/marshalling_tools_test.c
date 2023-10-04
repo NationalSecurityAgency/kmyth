@@ -1288,9 +1288,10 @@ void test_pack_unpack_pcr(void)
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(packed_size == sizeof(uint8_t));
 
-  // check that unwrapping previous result errors (invalid .count)
+  // check unwrap of the previous result
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data, packed_size, 0);
-  CU_ASSERT(ret_val != 0);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(test_out.count == 0);
 
   // check that zero-size byte array input to unpack_pcr() errors
   ret_val = unpack_pcr(&test_out, test_packed_pcr_data, 0, 0);
@@ -1333,8 +1334,15 @@ void test_pack_unpack_pcr(void)
                        test_packed_pcr_offset);
   CU_ASSERT(ret_val != 0);
 
-  // check unpacking with offset too small offset errors (or could
-  // possibly return wrong result if shifted decode is valid)
+  // check that unpacking with too large an offset produces an error
+  ret_val = unpack_pcr(&test_out,
+                       test_packed_pcr_data,
+                       test_packed_pcr_size,
+                       test_packed_pcr_offset + 4);
+  CU_ASSERT(ret_val != 0);
+
+  // check unpacking with offset too small offset errors could
+  // possibly return wrong result if shifted decode is valid
   test_packed_pcr_data[test_packed_pcr_offset - 1] = (uint8_t) 1;
   test_packed_pcr_data[test_packed_pcr_offset] = (uint8_t) 0;
   test_packed_pcr_data[test_packed_pcr_offset + 1] = (uint8_t) 0;
@@ -1345,17 +1353,8 @@ void test_pack_unpack_pcr(void)
                        test_packed_pcr_data,
                        test_packed_pcr_size,
                        test_packed_pcr_offset - 1);
-  if (ret_val == 0)
-  {
-    CU_ASSERT(!match_pcrSelect(test_out, test_in));
-  }
-
-  // check that unpacking with too large an offset produces an error
-  ret_val = unpack_pcr(&test_out,
-                       test_packed_pcr_data,
-                       test_packed_pcr_size,
-                       test_packed_pcr_offset + 1);
-  CU_ASSERT(ret_val != 0);
+  CU_ASSERT(ret_val == 0);
+  CU_ASSERT(!match_pcrSelect(test_out, test_in));
 
   // check that a non-zero-sized, but too small, output array errors pack
   CU_ASSERT(test_packed_pcr_size > 0);
