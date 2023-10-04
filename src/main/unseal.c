@@ -158,6 +158,7 @@ int main(int argc, char **argv)
   }
 
   // Call top-level "kmyth-unseal" function
+  char * ski_cipherString = NULL;
   PCR_SELECTIONS ski_pcrs = { 0 };
   TPML_DIGEST ski_digests = { 0 };
 
@@ -169,6 +170,7 @@ int main(int argc, char **argv)
                              &output_length,
                              authString,
                              ownerAuthPasswd,
+                             &ski_cipherString,
                              &ski_pcrs,
                              &ski_digests))
   {

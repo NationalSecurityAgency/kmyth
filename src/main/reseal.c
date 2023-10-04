@@ -34,7 +34,6 @@ static void usage(const char *prog)
           "options are: \n\n"
           " -a or --auth_string     String used to create 'authVal' digest.\n"
           "                         Defaults to empty string.\n"
-          "                         Defaults to \'%s\'\n"
           " -e or --expected_policy Specifies pairs of additional PCR\n"
           "                         selection and policy digest values to\n"
           "                         include as alternative criteria for a\n"
@@ -59,8 +58,7 @@ static void usage(const char *prog)
           "                         authorization. Defaults to emptyAuth\n"
           "                         to match TPM default.\n"
           " -v or --verbose         Enable detailed logging.\n",
-          prog,
-          cipher_list[0].cipher_name);
+          prog);
 }
 
 const struct option longopts[] = {
@@ -205,6 +203,7 @@ int main(int argc, char **argv)
   uint8_t *unseal_output = NULL;
   size_t unseal_output_len = 0;
 
+  char * cipherString = NULL;
   PCR_SELECTIONS pcrs = { 0 };
   TPML_DIGEST digests = { 0 };
 
@@ -214,6 +213,7 @@ int main(int argc, char **argv)
                              &unseal_output_len,
                              authString,
                              ownerAuthPasswd,
+                             &cipherString,
                              &pcrs,
                              &digests))
   {
@@ -385,7 +385,6 @@ int main(int argc, char **argv)
 
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
-  char *cipherString = NULL;
 
   // Call top-level "kmyth-seal" function
   if (tpm2_kmyth_seal(unseal_output,

@@ -999,7 +999,7 @@ int unpack_pcr(PCR_SELECTIONS * pcr_select_out,
     return 1;
   }
   uint8_t temp_byte = packed_data_in[packed_data_in_offset];
-  if ((temp_byte < 1) || (temp_byte > MAX_POLICY_OR_CNT))
+  if (temp_byte > MAX_POLICY_OR_CNT)
   {
     kmyth_log(LOG_ERR, "unpacked invalid TPML_PCR_SELECTION struct count (%u)",
                        temp_byte);

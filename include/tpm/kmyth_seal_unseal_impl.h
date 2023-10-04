@@ -122,6 +122,14 @@ int tpm2_kmyth_seal(uint8_t * input,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
+ * @param[out] cipher_string_out In a "reseal" scenario, the currently sealed
+ *                               input specified a symmetric cipher. In order
+ *                               to facilitate 'kmyth-resealing' using the
+ *                               same cipher, we provide the cipher string
+ *                               parsed from the input .ski file to support
+ *                               its re-use in kmyth-reseal's  call to
+ *                               kmyth-seal(). Passed as pointer to string.
+ * 
  * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
  *                               input may have been sealed with PCR criteria
  *                               (perhaps even multiple PCR selection criterion
@@ -148,6 +156,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       size_t *output_len,
                       char * auth_string,
                       char * owner_auth_string,
+                      char ** cipher_string_out,
                       PCR_SELECTIONS * pcrs_out,
                       TPML_DIGEST * digests_out);
 
@@ -235,6 +244,14 @@ int tpm2_kmyth_seal_file(char * input_path,
  *                               the user specified authorization value for
  *                               the TPM's 'owner' hierarchy.
  *
+ * @param[out] cipher_string_out In a "reseal" scenario, the currently sealed
+ *                               input specified a symmetric cipher. In order
+ *                               to facilitate 'kmyth-resealing' using the
+ *                               same cipher, we provide the cipher string
+ *                               parsed from the input .ski file to support
+ *                               its re-use in kmyth-reseal's  call to
+ *                               kmyth-seal(). passed as pointer to string.
+ * 
  * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
  *                               input may have been sealed with PCR criteria
  *                               (perhaps even multiple PCR selection criterion
@@ -260,6 +277,7 @@ int tpm2_kmyth_unseal_file(char * input_path,
                            size_t * output_length,
                            char * auth_string,
                            char * owner_auth_string,
+                           char ** cipher_string_out,
                            PCR_SELECTIONS * pcrs_out,
                            TPML_DIGEST * digests_out);
 

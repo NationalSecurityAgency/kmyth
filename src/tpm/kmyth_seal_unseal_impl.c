@@ -374,6 +374,7 @@ int tpm2_kmyth_unseal(uint8_t * input,
                       size_t *output_len,
                       char * auth_string,
                       char * owner_auth_string,
+                      char ** cipher_string_out,
                       PCR_SELECTIONS * pcrs_out,
                       TPML_DIGEST * digests_out)
 {
@@ -452,7 +453,15 @@ int tpm2_kmyth_unseal(uint8_t * input,
   }
   kmyth_log(LOG_DEBUG, "parsed input .ski file");
 
-  // assign parsed PCR and policy digest criteria to output parameters
+  // assign parsed cipher name, PCR, and policy digest criteria output params
+  size_t cipher_str_len = strlen(ski.cipher.cipher_name);
+  *cipher_string_out = realloc(*cipher_string_out, cipher_str_len*sizeof(char));
+  if (*cipher_string_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "failed to (re)allocate output cipher string");
+    return 1;
+  }
+  strncpy(*cipher_string_out, ski.cipher.cipher_name, cipher_str_len);
   *pcrs_out = ski.pcr_sel;
   *digests_out = ski.policy_or;
 
@@ -688,6 +697,7 @@ int tpm2_kmyth_unseal_file(char *input_path,
                            size_t * output_length,
                            char * auth_string,
                            char * owner_auth_string,
+                           char ** cipher_string_out,
                            PCR_SELECTIONS * pcrs_out,
                            TPML_DIGEST * digests_out)
 {
@@ -706,6 +716,7 @@ int tpm2_kmyth_unseal_file(char *input_path,
                         output_length,
                         auth_string,
                         owner_auth_string,
+                        cipher_string_out,
                         pcrs_out,
                         digests_out))
   {

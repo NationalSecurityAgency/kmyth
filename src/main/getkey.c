@@ -250,6 +250,7 @@ int main(int argc, char **argv)
   char *sdo_orig_fn = NULL;
   uint8_t *clientPrivateKey_data = NULL;
   size_t clientPrivateKey_size = 0;
+  char * ski_cipherString = NULL;
   PCR_SELECTIONS ski_pcrs = { 0 };
   TPML_DIGEST ski_digests = { 0 };
 
@@ -258,6 +259,7 @@ int main(int argc, char **argv)
                              &clientPrivateKey_size,
                              authString,
                              ownerAuthPasswd,
+                             &ski_cipherString,
                              &ski_pcrs,
                              &ski_digests))
   {
