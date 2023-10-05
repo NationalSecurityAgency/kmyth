@@ -21,14 +21,17 @@
 /**
  * @brief 'kmyth-seal' wrapper function
  *
- * @param[in]  input_path        Filename for file containing data to be
- *                               kmyth-sealed (string value)
+ * @param[in]  input             Byte (uint8_t) buffer containing data to
+ *                               be kmyth-sealed
  * 
- * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
+ * @param[out] input_len         Pointer to length (in bytes) of input data
+ *                               buffer
+ * 
+ * @param[out] output            Pointer to byte-array to hold 'kmyth-seal'
  *                               result (.ski formatted data)
  *
- * @param[out] output_length     Pointer to length (in bytes) of output
- *                               buffer containing 'kmyth-unseal' result
+ * @param[out] output_len        Pointer to length (in bytes) of output
+ *                               buffer containing 'kmyth-seal' result
  * 
  * @param[in]  auth_string       User specified authorization string to be
  *                               included as a criteria in the authorization
@@ -41,36 +44,15 @@
  *                               parameter is required.
  *
  * @param[in]  cipher_string     User specified string that identifies the
- *                               symmetric cipher to be used by kmyth-seal
+ *                               symmetric cipher to be used.
  * 
- * @param[in]  pcrs_string       User specified PCR selection string (used to
- *                               set the criteria for which, if any, PCRs
- *                               should be applied to authorization policy)
+ * @param[in]  pcrs_in           This parameter is used to pass in a set of
+ *                               PCR selections that kmyth-seal can use for
+ *                               policy-based authorization.
  * 
- * @param[in]  exp_policy_string If the "-e" (expected policy digest) option
- *                               was invoked by the user, this parameter is
- *                               used to pass the specified hexadecimal
- *                               string so that it can be used for one of
- *                               the policy digests for a policy-OR
- *                               authorization criteria. If not needed
- *                               (i.e., policy-OR criteria not specified),
- *                               a NULL pointer value should be provided.
- *
- * @param[in]  pcrs_in           In a "reseal" scenario, the currently sealed
- *                               input may have been sealed with PCR criteria
- *                               (perhaps even multiple PCR selection criterion
- *                               if a policy-OR based authorization was used).
- *                               This parameter, therefore, supports passing in
- *                               an existing set of PCR selections that
- *                               kmyth-seal can re-use and/or extend.
- * 
- * @param[in]  digests_in        In a "reseal" scenario, the currently sealed
- *                               input will have been sealed with policy digest
- *                               criteria (perhaps even multiple policy digest
- *                               values if a policy-OR based authorization was
- *                               used). This parameter, therefore, supports
- *                               passing in an existing set of policy digests
- *                               that kmyth-seal can re-use and/or extend.
+ * @param[in]  digests_in        This parameter is used to pass in a set pf
+ *                               policy digests that kmyth-seal can use fpr
+ *                               a policy-OR based authorization.
  * 
  * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
  *                               "-g" option (get expected policy digest) was
@@ -96,21 +78,21 @@ int tpm2_kmyth_seal(uint8_t * input,
 /**
  * @brief 'kmyth-unseal' wrapper function
  *
- * @param[in]  input_path        Filename for file containing data to be
- *                               kmyth-sealed (string value)
+ * @param[in]  input             Byte (uint8_t) buffer containing data to
+ *                               be kmyth-unsealed
  * 
- * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
- *                               result.
+ * @param[out] input_len         Pointer to length (in bytes) of input data
+ *                               buffer
+ * 
+ * @param[out] output            Pointer to byte-array that will hold the
+ *                               kmyth-unseal result.
  *
- * @param[out] output_length     Pointer to length (in bytes) of output
+ * @param[out] output_len        Pointer to length (in bytes) of output
  *                               buffer containing 'kmyth-unseal' result
  * 
- * @param[in]  auth_bytes        Byte array containing user specified
- *                               authorization value needed to satisfy
- *                               the authorization policy.
- *
- * @param[in]  auth_bytes_len    Length (in bytes) fpr the user specified
- *                               authorization value byte buffer.
+ * @param[in]  auth_string       User specified authorization string to be
+ *                               included as a criteria in the authorization
+ *                               policy.
  *
  * @param[in]  owner_auth_string User specified authorization string for the
  *                               TPM's 'owner' (storage) hierarchy. If the
@@ -118,35 +100,24 @@ int tpm2_kmyth_seal(uint8_t * input,
  *                               hierarchy in this manner, specifying this
  *                               parameter is required.
  *
- * @param[in]  oa_bytes_len      Length (in bytes) for the buffer containing
- *                               the user specified authorization value for
- *                               the TPM's 'owner' hierarchy.
+ * @param[out] cipher_string_out Provides the cipher string parsed from the
+ *                               input .ski data. Supports re-use in a
+ *                               subsequent kmyth-seal operation (e.g., in a
+ *                               kmyth-reseal scenario). Passed as pointer to
+ *                               string.
  *
- * @param[out] cipher_string_out In a "reseal" scenario, the currently sealed
- *                               input specified a symmetric cipher. In order
- *                               to facilitate 'kmyth-resealing' using the
- *                               same cipher, we provide the cipher string
- *                               parsed from the input .ski file to support
- *                               its re-use in kmyth-reseal's  call to
- *                               kmyth-seal(). Passed as pointer to string.
+ * @param[out] pcrs_out          Provides the PCR selection data parsed from
+ *                               the input .ski data. Supports re-use in a
+ *                               subsequent kmyth-seal operation (e.g., in a
+ *                               kmyth-reseal scenario). Passed as a pointer
+ *                               to the struct.
  * 
- * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
- *                               input may have been sealed with PCR criteria
- *                               (perhaps even multiple PCR selection criterion
- *                               if a policy-OR based authorization was used).
- *                               This parameter, therefore, supports
- *                               kmyth-unseal recovering an existing set of
- *                               PCR selections that can then be passed to
- *                               kmyth-seal to re-use and/or extend.
- * 
- * @param[out] digests_out       In a "reseal" scenario, the currently sealed
- *                               input will have been sealed with policy digest
- *                               criteria (perhaps even multiple policy digest
- *                               values if a policy-OR based authorization was
- *                               used). This parameter, therefore, supports
- *                               kmyth-unseal recovering an existing set of
- *                               policy digests that can then be passed to
- *                               kmyth-seal to re-use and/or extend.
+ * @param[out] digests_out       Provides a set of policy digests for a
+ *                               policy-OR authorization criteria that was
+ *                               parsed from the input ski data.  Supports
+ *                               re-use in a subsequent kmyth-seal operation
+ *                               (e.g., in a kmyth-reseal scenario). Passed
+ *                               as a pointer to the struct.
  * 
  * @return 0 on success, 1 on error
  */
@@ -184,18 +155,14 @@ int tpm2_kmyth_unseal(uint8_t * input,
  * @param[in]  cipher_string     User specified string that identifies the
  *                               symmetric cipher to be used by kmyth-seal
  * 
- * @param[in]  pcrs_string       User specified PCR selection string (used to
+ * @param[in]  pcrs_in           List of PCR selection sets (used to
  *                               set the criteria for which, if any, PCRs
  *                               should be applied to authorization policy)
  * 
- * @param[in]  exp_policy_string If the "-e" (expected policy digest) option
- *                               was invoked by the user, this parameter is
- *                               used to pass the specified hexadecimal
- *                               string so that it can be used for one of
- *                               the policy digests for a policy-OR
- *                               authorization criteria. If not needed
- *                               (i.e., policy-OR criteria not specified),
- *                               a NULL pointer value should be provided.
+ * @param[in]  digests_in        List of policy digests. If non-empty, used
+ *                               (in conjunction with the pcrs_in struct)
+ *                               to specify a policy-OR based authorization
+ *                               criteria.
  *
  * @param[in]  bool_trial_only   Boolean parameter used to indicate that the
  *                               "-g" option (get expected policy digest) was
@@ -221,7 +188,7 @@ int tpm2_kmyth_seal_file(char * input_path,
  * @brief 'kmyth-unseal' file (.ski formatted) using TPM 2.0.
  *
  * @param[in]  input_path        Filename for file containing data to be
- *                               kmyth-sealed (string value)
+ *                               kmyth-unsealed (string value)
  * 
  * @param[out] output            Pointer to byte-array holding 'kmyth-unseal'
  *                               result.
@@ -229,46 +196,34 @@ int tpm2_kmyth_seal_file(char * input_path,
  * @param[out] output_length     Pointer to length (in bytes) of output
  *                               buffer containing 'kmyth-unseal' result
  * 
- * @param[in]  auth_bytes        Byte array containing user specified
- *                               authorization value needed to satisfy
- *                               the authorization policy.
+ * @param[in]  auth_string       User specified authorization string to be
+ *                               included as a criteria in the authorization
+ *                               policy.
  *
- * @param[in]  auth_bytes_len    Length (in bytes) fpr the user specified
- *                               authorization value byte buffer.
+ * @param[in]  owner_auth_string User specified authorization string for the
+ *                               TPM's 'owner' (storage) hierarchy. If the
+ *                               user has secured the TPM's owner (storage)
+ *                               hierarchy in this manner, specifying this
+ *                               parameter is required.
  *
- * @param[in]  owner_auth_bytes  Byte array containing the user specified
- *                               authorization value for the TPM's 'owner'
- *                               hierarchy.
+ * @param[out] cipher_string_out Provides the cipher string parsed from the
+ *                               input .ski data. Supports re-use in a
+ *                               subsequent kmyth-seal operation (e.g., in a
+ *                               kmyth-reseal scenario). Passed as pointer to
+ *                               string.
  *
- * @param[in]  oa_bytes_len      Length (in bytes) for the buffer containing
- *                               the user specified authorization value for
- *                               the TPM's 'owner' hierarchy.
- *
- * @param[out] cipher_string_out In a "reseal" scenario, the currently sealed
- *                               input specified a symmetric cipher. In order
- *                               to facilitate 'kmyth-resealing' using the
- *                               same cipher, we provide the cipher string
- *                               parsed from the input .ski file to support
- *                               its re-use in kmyth-reseal's  call to
- *                               kmyth-seal(). passed as pointer to string.
+ * @param[out] pcrs_out          Provides the PCR selection data parsed from
+ *                               the input .ski data. Supports re-use in a
+ *                               subsequent kmyth-seal operation (e.g., in a
+ *                               kmyth-reseal scenario). Passed as a pointer
+ *                               to the struct.
  * 
- * @param[out] pcrs_out          In a "reseal" scenario, the currently sealed
- *                               input may have been sealed with PCR criteria
- *                               (perhaps even multiple PCR selection criterion
- *                               if a policy-OR based authorization was used).
- *                               This parameter, therefore, supports
- *                               kmyth-unseal recovering an existing set of
- *                               PCR selections that can then be passed to
- *                               kmyth-seal to re-use and/or extend.
- * 
- * @param[out] digests_out       In a "reseal" scenario, the currently sealed
- *                               input will have been sealed with policy digest
- *                               criteria (perhaps even multiple policy digest
- *                               values if a policy-OR based authorization was
- *                               used). This parameter, therefore, supports
- *                               kmyth-unseal recovering an existing set of
- *                               policy digests that can then be passed to
- *                               kmyth-seal to re-use and/or extend.
+ * @param[out] digests_out       Provides a set of policy digests for a
+ *                               policy-OR authorization criteria that was
+ *                               parsed from the input ski data.  Supports
+ *                               re-use in a subsequent kmyth-seal operation
+ *                               (e.g., in a kmyth-reseal scenario). Passed
+ *                               as a pointer to the struct.
  * 
  * @return 0 on success, 1 on error
  */

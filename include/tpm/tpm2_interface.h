@@ -83,23 +83,6 @@ typedef struct
 } SESSION;
 
 /**
- * @brief Policy-OR authorizations specify a policy digest list
- *        for different branches of the policy-OR criteria. This
- *        typedef specifies a struct that can be used to store a
- *        list of policy digest values that make up the criteria.
- *        A boolean indicating whether or not a policy-OR criteria
- *        is specified, is also included.
- * 
- */
-typedef struct
-{
-  bool isPolicyOR;
-
-  TPML_DIGEST * digestList;
-
-} POLICY_OR_DATA;
-
-/**
  * @brief Initializes TPM 2.0 connection to resource manager. 
  *
  * Will error if resource manager is not running. 
@@ -410,7 +393,8 @@ int create_authVal(char * auth_string,
 int compute_cpHash(TPM2_CC cmdCode,
                    TPM2B_NAME authEntityName,
                    uint8_t * cmdParams,
-                   size_t cmdParams_size, TPM2B_DIGEST * cpHash_out);
+                   size_t cmdParams_size,
+                   TPM2B_DIGEST * cpHash_out);
 
 /**
  * @brief Computes response parameter hash that is one of the inputs to the
@@ -446,7 +430,8 @@ int compute_cpHash(TPM2_CC cmdCode,
 int compute_rpHash(TPM2_RC rspCode,
                    TPM2_CC cmdCode,
                    uint8_t * cmdParams,
-                   size_t cmdParams_size, TPM2B_DIGEST * rpHash_out);
+                   size_t cmdParams_size,
+                   TPM2B_DIGEST * rpHash_out);
 
 /**
  * @brief Computes the authorization HMAC value required for command and
@@ -547,7 +532,8 @@ int init_policy_or(char * exp_policy_string,
  * @return 0 if success, 1 if error
  */
 int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                        SESSION * policySession, TPM2_SE session_type);
+                        SESSION * policySession,
+                        TPM2_SE session_type);
 
 /**
  * @brief Initiates (starts) a new authorization session (called by
@@ -568,7 +554,8 @@ int create_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
  * @return 0 if success, 1 if error. 
  */
 int start_policy_auth_session(TSS2_SYS_CONTEXT * sapi_ctx,
-                              SESSION * session, TPM2_SE session_type);
+                              SESSION * session,
+                              TPM2_SE session_type);
 
 /**
  * @brief Executes the Kmyth-specific authorization policy steps and updates
