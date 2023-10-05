@@ -348,8 +348,8 @@ int main(int argc, char **argv)
   if (expPolicyString != NULL)
   {
     size_t expPolicyStrCnt = 0;
-    char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
-    char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
+    char ** pString = NULL;
+    char ** dString = NULL;
 
     if (parse_exp_policy_string_pairs(expPolicyString,
                                       &expPolicyStrCnt,

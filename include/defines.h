@@ -93,6 +93,8 @@
  */
 #define MAX_POLICY_OR_CNT 8
 
+#define MAX_EXP_POLICY_PAIR_STR_LEN 1152
+
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)
  * buffer can be set to zero at creation time. As this is the only time

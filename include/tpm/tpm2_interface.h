@@ -497,26 +497,26 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
  * @brief Configures lists of paired PCR selection and policy digests used to
  *        specify a policy-OR authorization criteria.
  *
- * @param[in]     exp_policy_string   String, supplied as a command-line
- *                                    option by the user, that specifies pairs
- *                                    of alternative PCR selections and policy
- *                                    digests to be used in a policy-OR
- *                                    authorization criteria.
+ * @param[in]     expPolicyPairCount
+ * 
+ * @param[in]     pcrsStrings
+ * 
+ * @param[in]     digestStrings
+ * 
+ * @param[in/out] pcrSelections       Pointer to PCR Selections List structure
+ *                                    used in an authorization policy.
  *
- * @param[in/out] pcrs_struct         Pointer to PCR Selections List structure
- *                                    used in an authorization policy. In a
- *                                    policy-OR scenario, the PCR selection
- *                                    structs contained at indices > 0. 
- *
- * @param[out]    digests_struct      Pointer to a list of policy digests
+ * @param[in/out] policyDigestList    Pointer to a list of policy digests
  *                                    struct to be configured for a policy-OR
  *                                    authorization criteria.
  *
  * @return 0 if success, 1 if error. 
  */
-int init_policy_or(char * exp_policy_string,
-                   PCR_SELECTIONS * pcrs_struct,
-                   TPML_DIGEST * digests_struct);
+int init_policyOR(size_t expPolicyPairCnt,
+                  char ** pcrsStrings,
+                  char ** digestStrings,
+                  PCR_SELECTIONS * pcrSelections,
+                  TPML_DIGEST * policyDigestList);
 
 /**
  * @brief Creates a session used to authorize kmyth objects

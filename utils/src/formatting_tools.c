@@ -548,6 +548,13 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
 {
   *pair_count = 0;
 
+  // expects allocated "array of string pointer" output parameters
+  if ((pcrs_strings == NULL) || (digest_strings == NULL))
+  {
+    kmyth_log(LOG_ERR, "output array of string pointer param unallocated");
+    return 1;
+  }
+
   if (exp_policy_string == NULL)
   {
     kmyth_log(LOG_DEBUG, "NULL expected policy string ... nothing to parse");
@@ -558,29 +565,24 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
 
   char * token = NULL;
-  char * pair_vals[MAX_POLICY_OR_CNT - 1];
-  size_t pair_cnt = 0;
+  char pair_vals[MAX_POLICY_OR_CNT-1][MAX_EXP_POLICY_PAIR_STR_LEN] = {{ 0 }};
 
   // parse out the "pair values" from the input string
-  token = strtok(exp_policy_string, ";");
-  while ((pair_cnt < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
+  token = strtok(exp_policy_string, ",");
+  while ((*pair_count < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
   {
-    pair_vals[pair_cnt] = malloc (strlen(token) + 1);
-    if (pair_vals[pair_cnt] == NULL)
+    if (strlen(token) >= MAX_EXP_POLICY_PAIR_STR_LEN)
     {
-      kmyth_log(LOG_ERR, "malloc() of expected policy pair error");
-      for (size_t i = 0; i < pair_cnt; i++)
-      {
-        free(pair_vals[i]);
-      }
+      kmyth_log(LOG_ERR, "token (pair) size is %d chars (max is %u)",
+                         strlen(token), MAX_EXP_POLICY_PAIR_STR_LEN);
       return 1;
     }
-    memcpy(pair_vals[pair_cnt], token, strlen(token) + 1);
-    pair_cnt++;
+    memcpy(pair_vals[*pair_count], token, strlen(token) + 1);
+    (*pair_count)++;
     token = strtok(NULL, ";");
   }
 
-  if (pair_cnt == 0)
+  if (*pair_count == 0)
   {
     kmyth_log(LOG_ERR, "no expected policy pairs parsed");
     return 1;
@@ -589,19 +591,12 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   if (token != NULL) 
   {
     kmyth_log(LOG_ERR, "expected policy pair count exceeded");
-    for (size_t i = 0; i < pair_cnt; i++)
-    {
-      free(pair_vals[i]);
-    }
     return 1;
   }
 
-  // assign recovered pair value count to output parameter
-  *pair_count = pair_cnt;
-
   // parse all of the recovered string "pairs" that should be of form:
   //   '<PCR selection string>':<policy digest string>
-  for (size_t i = 0; i < pair_cnt; i++)
+  for (size_t i = 0; i < *pair_count; i++)
   {
     // parse on ':' as delimiter
     token = strtok(pair_vals[i], ":");
@@ -609,6 +604,11 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     {
       kmyth_log(LOG_ERR, "pcrs string parse error (%s)",
                          pair_vals[i]);
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        free(digest_strings[j]);
+      }
       return 1;
     }
 
@@ -617,13 +617,10 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     if (pcrs_strings[i] == NULL)
     {
       kmyth_log(LOG_ERR, "malloc() of pcrs string error");
-      for (size_t j = 0; j < pair_cnt; i++)
-      {
-        free(pair_vals[j]);
-      }
-      for (size_t j = 0; j < i; j++)
+      for(size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
+        free(digest_strings[j]);
       }
       return 1;
     }
@@ -648,6 +645,12 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     {
       kmyth_log(LOG_ERR, "digest string parse error (%s)",
                          pair_vals[i]);
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        free(digest_strings[j]);
+      }
+      free(pcrs_strings[i]);
       return 1;
     }
 
@@ -656,15 +659,12 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     if (digest_strings[i] == NULL)
     {
       kmyth_log(LOG_ERR, "malloc() of digest string error");
-      for (size_t j = 0; j < pair_cnt; i++)
+      for(size_t j = 0; j < i; j++)
       {
-        free(pair_vals[j]);
         free(pcrs_strings[j]);
-      }
-      for (size_t j = 0; j < i; j++)
-      {
         free(digest_strings[j]);
       }
+      free(pcrs_strings[i]);
       return 1;
     }
 
@@ -689,9 +689,16 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     {
       kmyth_log(LOG_ERR, "pair string parse error (%s)",
                          pair_vals[i]);
+      for(size_t j = 0; j <= i; j++)
+      {
+        free(pcrs_strings[j]);
+        free(digest_strings[j]);
+      }
       return 1;
     }
   }
+
+  free(token);
 
   return 0;
 }

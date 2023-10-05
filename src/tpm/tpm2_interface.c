@@ -452,6 +452,75 @@ const char *getErrorString(TSS2_RC err)
 }
 
 //############################################################################
+// init_policyOR()
+//############################################################################
+int init_policyOR(size_t expPolicyPairCnt,
+                  char ** pcrsStrings,
+                  char ** digestStrings,
+                  PCR_SELECTIONS * pcrSelections,
+                  TPML_DIGEST * policyDigestList)
+{
+  // Validate  that requested policy-OR criteria will not violate branch limit
+  if ((expPolicyPairCnt + policyDigestList->count) > MAX_POLICY_OR_CNT)
+  {
+    kmyth_log(LOG_ERR, "policy-OR branches (%zu + %u) would exceed limit (%u)",
+                       expPolicyPairCnt,
+                       policyDigestList->count,
+                       MAX_POLICY_OR_CNT);
+    return 1;
+  }
+
+  // As we are about to configure a policy-OR digest list, it will be
+  // non-empty. The first location (index = 0), though, will contain the
+  // "current" policy digest that will be computed later. If the input
+  // policy digest list is empty (no policy-OR criteria) we will set the
+  // digest list count to one, therefore, to create a placeholder for the
+  // "current" policy digest where it will be place (or overwritten) later.
+  // If the input policy-OR digest list is non-empty, the slot at index = 0 
+  // was initialized by a previous kmyth-seal() so no action is needed here.
+  if (policyDigestList->count == 0)
+  {
+    policyDigestList->count = 1;
+  }
+
+  // Verify the input PCR selections and policy digest lists are compatible
+  if (pcrSelections->count != policyDigestList->count)
+  {
+    kmyth_log(LOG_ERR, "different sized input lists (PCRs(%u) vs digests(%u)",
+                       pcrSelections->count,
+                       policyDigestList->count);
+    return 1;
+  }
+
+  for (size_t i = 0; i < expPolicyPairCnt; i++)
+  {
+    size_t index = i + pcrSelections->count;
+
+    // extend list of PCR selections for each provided policy-OR criteria
+    kmyth_log(LOG_DEBUG, "policy-OR PCR selections string #%zu = %s",
+                         i + 1, pcrsStrings[i]);
+    if (init_pcr_selection(pcrsStrings[i], pcrSelections) != 0)
+    {
+      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", index - 1);
+      return 1;
+    }
+    kmyth_log(LOG_DEBUG, "PCRs initialized--policy branch #%zu", index);
+
+    // configure policy-OR digest list struct with user input value
+    kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, digestStrings[i]);
+    if (convert_string_to_digest(digestStrings[i],
+                                 &(policyDigestList->digests[index])) != 0)
+    {
+      kmyth_log(LOG_ERR, "string (%s) to digest error", digestStrings[i]);
+      return 1;
+    }
+    policyDigestList->count++;
+  }
+
+  return 0;
+}
+
+//############################################################################
 // init_password_cmd_auth()
 //############################################################################
 int init_password_cmd_auth(TPM2B_AUTH * authEntityAuthVal,
