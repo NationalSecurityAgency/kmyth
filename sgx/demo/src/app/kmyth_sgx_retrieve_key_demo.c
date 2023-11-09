@@ -45,9 +45,9 @@
 #define demo_log(...) log_event(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 // Client (enclave) private key / certificate and Server certificate filenames
-#define CLIENT_PRIVATE_KEY_FILE "demo/data/client_priv_test.pem"
-#define CLIENT_PUBLIC_CERT_FILE "demo/data/client_cert_test.pem"
-#define SERVER_PUBLIC_CERT_FILE "demo/data/proxy_cert_test.pem"
+#define CLIENT_PRIVATE_KEY_FILE "demo/data/client_test.key"
+#define CLIENT_PUBLIC_CERT_FILE "demo/data/client_test.crt"
+#define SERVER_PUBLIC_CERT_FILE "demo/data/proxy_test.crt"
 
 /* These parameters are hard-coded for now. */
 #define SERVER_HOST "localhost"

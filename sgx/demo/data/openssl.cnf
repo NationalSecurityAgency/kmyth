@@ -1,0 +1,26 @@
+##############################################################################
+#           X509 "extensions" for kmyth ECDH demo certificates               #
+##############################################################################
+
+[ v3_ca ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid,issuer
+basicConstraints        = CA:true
+keyUsage                = keyCertSign
+
+[ v3_client ]
+subjectKeyIdentifier    = hash
+basicConstraints        = CA:false
+subjectAltName          = IP:127.0.0.1
+
+[ v3_proxy ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid,issuer
+basicConstraints        = CA:false
+subjectAltName          = DNS:localhost
+
+[ v3_server ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid,issuer
+basicConstraints        = CA:false
+subjectAltName          = IP:127.0.0.1

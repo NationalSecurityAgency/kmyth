@@ -1,75 +1,73 @@
+# setup CA resources, if not previously configured
+touch index.txt
+touch index.txt.attr
+
 # create key and certificate for test "Certificate Authority (CA)"
 openssl ecparam -name secp521r1 \
                 -genkey \
                 -noout \
-                -out ca_priv_test.pem
+                -out ca_test.key
+
 openssl req -new \
             -x509 \
-            -key ca_priv_test.pem \
+            -config openssl.cnf \
+            -extensions v3_ca \
             -subj "/C=US/O=Kmyth/CN=TestCA" \
+            -key ca_test.key \
             -sha256 \
             -days 365 \
-            -out ca_cert_test.pem
+            -out ca_test.crt
 
 # create key and certificate for test "client"
 openssl ecparam -name secp521r1 \
                 -genkey \
                 -noout \
-                -out client_priv_test.pem
+                -out client_test.key
+
 openssl req -new \
-            -key client_priv_test.pem \
+            -x509 \
+            -key client_test.key \
             -subj "/C=US/O=Kmyth/CN=TestClient" \
-            -addext "subjectAltName = IP:127.0.0.1" \
+            -config openssl.cnf \
+            -extensions v3_client \
+            -CA ca_test.crt \
+            -CAkey ca_test.key \
             -sha256 \
-            -out client_cert_test.csr
-openssl x509 -req \
-             -in client_cert_test.csr \
-             -CA ca_cert_test.pem \
-             -CAkey ca_priv_test.pem \
-             -copy_extensions copy \
-             -CAcreateserial \
-             -sha256 \
-             -days 365 \
-             -out client_cert_test.pem
+            -days 365 \
+            -out client_test.crt
 
 # create key and certificate for test "ECDH proxy"
 openssl ecparam -name secp521r1 \
                 -genkey \
                 -noout \
-                -out proxy_priv_test.pem
+                -out proxy_test.key
+
 openssl req -new \
-            -key proxy_priv_test.pem \
+            -x509 \
+            -key proxy_test.key \
             -subj "/C=US/O=Kmyth/CN=TestProxy" \
-            -addext "subjectAltName = IP:127.0.0.1" \
+            -config openssl.cnf \
+            -extensions v3_proxy \
+            -CA ca_test.crt \
+            -CAkey ca_test.key \
             -sha256 \
-            -out proxy_cert_test.csr
-openssl x509 -req \
-             -in proxy_cert_test.csr \
-             -CA ca_cert_test.pem \
-             -CAkey ca_priv_test.pem \
-             -copy_extensions copy \
-             -CAcreateserial \
-             -sha256 \
-             -days 365 \
-             -out proxy_cert_test.pem
+            -days 365 \
+            -out proxy_test.crt
 
 # create key and certificate for test "key server"
 openssl ecparam -name secp521r1 \
                 -genkey \
                 -noout \
-                -out server_priv_test.pem
+                -out server_test.key
+
 openssl req -new \
-            -key server_priv_test.pem \
+            -x509 \
+            -key server_test.key \
             -subj "/C=US/O=Kmyth/CN=TestServer" \
-            -addext "subjectAltName = IP:127.0.0.1" \
+            -config openssl.cnf \
+            -extensions v3_server \
+            -CA ca_test.crt \
+            -CAkey ca_test.key \
             -sha256 \
-            -out server_cert_test.csr
-openssl x509 -req \
-             -in server_cert_test.csr \
-             -CA ca_cert_test.pem \
-             -CAkey ca_priv_test.pem \
-             -copy_extensions copy \
-             -CAcreateserial \
-             -sha256 \
-             -days 365 \
-             -out server_cert_test.pem
+            -days 365 \
+            -out server_test.crt
