@@ -66,7 +66,7 @@
  *        if too long). This maximum does not apply to user-specified
  *        filename values.
  */
-#define KMYTH_MAX_DEFAULT_FILENAME_LEN 25
+#define KMYTH_MAX_DEFAULT_FILENAME_LEN 64
 
 /**
  * @brief Default extension value/length for an output kmyth file produced
