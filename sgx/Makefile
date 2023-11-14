@@ -352,7 +352,7 @@ endif
 
 demo-test-keys-certs: demo/data/ca_priv.pem \
                       demo/data/ca_cert.pem \
-					  demo/data/client_priv.pem \
+                      demo/data/client_priv.pem \
                       demo/data/client_cert.pem \
                       demo/data/proxy_priv.pem \
                       demo/data/proxy_cert.pem \
