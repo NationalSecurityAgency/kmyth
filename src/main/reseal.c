@@ -383,9 +383,10 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
   kmyth_clear(ownerAuthPasswd, oa_passwd_len);
 
   // rename input file to <input filename>.orig to preserve it
-  char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
+  size_t renamePath_len = strlen(inPath) + strlen(".orig") + 1;
+  char * renamePath = malloc(renamePath_len);
   strncpy(renamePath, inPath, strlen(inPath));
-  strncat(renamePath, ".orig", 5);
+  strncat(renamePath, ".orig", renamePath_len);
   if (!stat(renamePath, &st) && !forceOverwrite)
   {
     kmyth_log(LOG_ERR,

@@ -269,7 +269,13 @@ int main(int argc, char **argv)
   // Some options don't do anything with -g, so warn about that now.
   if(boolTrialOnly)
   {
-    if(authString != NULL || ownerAuthPasswd != "" || outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
+    if(authString != NULL ||
+       (strcmp(ownerAuthPasswd, "") != 0) ||
+       outPath != NULL ||
+       inPath != NULL ||
+       cipherString != NULL ||
+       forceOverwrite ||
+       expected_policy != NULL)
     {
       kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
     }
@@ -297,7 +303,12 @@ int main(int argc, char **argv)
   if (outPath == NULL && !boolTrialOnly)
   {
     // create buffer to hold default filename derived from input filename
-    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
+    //    size = string length of basename +
+    //           string length of delimiter ('.') +
+    //           string length of file extension +
+    //           extra byte for null terminator
+    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN +
+                    KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 2];
     memset(default_fn, '\0', sizeof(default_fn));
 
     // Initialize default filename to basename() of input path, truncating if
@@ -328,7 +339,7 @@ int main(int argc, char **argv)
     if (ext_ptr == NULL)
     {
       // no filename extension found - just add trailing '.'
-      strncat(default_fn, ".", 1);
+      strncat(default_fn, ".", strlen(default_fn)+2);
     }
     else
     {
@@ -341,8 +352,9 @@ int main(int argc, char **argv)
     }
 
     // concatenate default filename root and extension
-    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
-                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
+    strncat(default_fn,
+            KMYTH_DEFAULT_SEAL_OUT_EXT,
+            strlen(default_fn) + KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 2);
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
