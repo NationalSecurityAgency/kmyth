@@ -303,7 +303,7 @@ int main(int argc, char **argv)
   if (outPath == NULL && !boolTrialOnly)
   {
     // create buffer to hold default filename derived from input filename
-    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN];
+    char default_fn[KMYTH_MAX_DEFAULT_FILENAME_LEN + 1];
     memset(default_fn, '\0', sizeof(default_fn));
 
     // Initialize default filename to basename() of input path, truncating if
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
     // to add a '.' delimiter (1 byte) and the default extension
     // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes), leaving a null termination.
     size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
-    max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 2;
+    max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
     strncpy(default_fn, basename(inPath), max_root_len);
 
     // remove any leading '.'s
