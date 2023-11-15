@@ -110,10 +110,9 @@ Ski get_default_ski(void);
  *                                             the destination buffer for the
  *                                             PCR selection struct data.
  * 
- * @param[in] policy_or_struct                 Pointer to POLICY_OR_DATA struct
- *                                             encapsulating the TPM2 digest
- *                                             list (TPML_DIGEST) struct to be
- *                                             packed.
+ * @param[in] policy_or_struct                 Pointer to TPML_DIGEST struct
+ *                                             containing the list of policy
+ *                                             digests to be packed.
  *
  * @param[out] policy_or_data                  Pointer to a pointer to the
  *                                             location where the marshaled
@@ -236,12 +235,11 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  * @brief Unmarshals byte arrays (read from .ski file blocks) into
           appropriate TPM2 structures.
  *
- * @param[out] pcr_selection_struct            TPM 2.0 PCR selection list
- *                                             struct to hold unpacked PCR
- *                                             selection data - passed as
- *                                             a pointer to the struct.
+ * @param[out] pcr_selection_struct            PCR_SELECTIONS struct to hold
+ *                                             unpacked PCR selection data -
+ *                                             passed as a pointer to struct.
  *
- * @param[in] pcr_selection_data        `       Pointer to byte array containing
+ * @param[in] pcr_selection_data        `      Pointer to byte array containing
  *                                             the marshaled PCR selection list
  *                                             data.
  *
@@ -252,10 +250,9 @@ int marshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
  *                                             the destination buffer for the
  *                                             PCR selection struct data.
  *
- * @param[out] policy_or_struct                Pointer to POLICY_OR_DATA struct
- *                                             to hold list (TPM2 TPML_DIGEST
- *                                             struct) with unpacked policy-OR
- *                                             digest values.
+ * @param[out] policy_or_struct                Pointer to TPM2 TPML_DIGEST
+ *                                             struct to hold upacked list
+ *                                             of policy digest values.
  *
  * @param[in] policy_or_data                   Pointer to the marshaled
  *                                             policy-OR digest list data.
@@ -363,17 +360,17 @@ int unmarshal_skiObjects(PCR_SELECTIONS * pcr_selection_struct,
                          size_t sym_key_private_data_offset);
 
 /**
- * @brief This function packs an input TPM 2.0 PCR selection list structure
- *        (TPML_PCR_SELECTION)  into a platform independent format, which,
- *        for Kmyth, facilitates writing this data to a .ski output file.
+ * @brief This function packs an input PCR_SELECTIONS struct, containing a
+ *        list of TPML_PCR_SELECTION structs, into a platform independent
+ *        format, which, for Kmyth, facilitates writing this data to a
+ *        .ski output file.
  *
  * This function uses the TSS2 API for marshaling data to obtain
  * the packed, platform independent result.
  *
- * @param[in]  pcr_select_in          TPM 2.0 PCR selection list struct to be
- *                                    packed - passed as a pointer to the
- *                                    TPML_PCR_SELECTION struct containing
- *                                    PCR selection information.
+ * @param[in]  pcr_select_in          PCR_SELECTIONS struct to be packed -
+ *                                    passed as a pointer to the struct
+ *                                    containing PCR selection information.
  *
  * @param[out] packed_data_out        Data buffer for packed result - passed
  *                                    as a pointer to the output byte array
@@ -404,9 +401,8 @@ int pack_pcr(PCR_SELECTIONS * pcr_select_in,
  * This function uses the TSS2 API for unmarshalling data to obtain the unpacked,
  * platform dependent result.
  *
- * @param[out] pcr_select_out        TPM 2.0 PCR selection list struct
- *                                   (TPML_PCR_SELECTION) to hold the unpacked
- *                                   PCR selection list result.
+ * @param[out] pcr_select_out        Pointer to PCR_SELECTIONS struct to hold
+ *                                   unpacked list of PCR selections result.
  * 
  * @param[in]  packed_data_in        Data buffer holding the packed PCR
  *                                   selection list input - passed as a ptr.
