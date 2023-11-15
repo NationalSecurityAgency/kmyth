@@ -53,7 +53,7 @@ bool isEmptyPcrSelection(TPML_PCR_SELECTION * pcrs_struct)
   }
 
   // although kmyth should not do this, a PCR 'bank' could be set to
-  // an empty mask, hence, interate through configured PCR select mask bytes
+  // an empty mask, hence, iterate through configured PCR select mask bytes
   for (int i = 0; i < pcrs_struct->count; i++)
   {
     for (int j = 0; j < pcrs_struct->pcrSelections[i].sizeofSelect; j++)
