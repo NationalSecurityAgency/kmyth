@@ -270,7 +270,7 @@ int main(int argc, char **argv)
   if(boolTrialOnly)
   {
     if(authString != NULL ||
-       (strcmp(ownerAuthPasswd, "") != 0) ||
+       (strnlen(ownerAuthPasswd, 1) != 0) ||
        outPath != NULL ||
        inPath != NULL ||
        cipherString != NULL ||
