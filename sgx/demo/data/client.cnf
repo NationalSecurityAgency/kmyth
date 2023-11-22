@@ -1,0 +1,21 @@
+##############################################################################
+#       X509 configuration for kmyth ECDH demo TestClient certificate        #
+##############################################################################
+
+[req]
+md                      = sha256
+prompt                  = no
+distinguished_name      = dn
+req_extensions          = v3_ext
+
+[dn]
+C                       = "US"
+O                       = "kmyth"
+CN                      = "TestClient"
+
+[ v3_ext ]
+subjectAltName          = @alt_names
+
+[ alt_names ]
+IP.0                    = 127.0.0.1
+DNS.0                   = localhost

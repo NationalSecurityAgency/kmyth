@@ -262,6 +262,7 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
     log_openssl_error("SSL_set1_host()");
     return -1;
   }
+  kmyth_log(LOG_DEBUG, "cert verification hostname: %s", tls_clnt->host);
 
   return 0;
 }
