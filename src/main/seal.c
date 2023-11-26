@@ -269,7 +269,13 @@ int main(int argc, char **argv)
   // Some options don't do anything with -g, so warn about that now.
   if(boolTrialOnly)
   {
-    if(authString != NULL || ownerAuthPasswd != "" || outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
+    if(authString != NULL ||
+       (strnlen(ownerAuthPasswd, 1) != 0) ||
+       outPath != NULL ||
+       inPath != NULL ||
+       cipherString != NULL ||
+       forceOverwrite ||
+       expected_policy != NULL)
     {
       kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
     }
@@ -303,7 +309,7 @@ int main(int argc, char **argv)
     // Initialize default filename to basename() of input path, truncating if
     // necessary. The maximum size of this "root" value is the must allow space
     // to add a '.' delimiter (1 byte) and the default extension
-    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
+    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes), leaving a null termination.
     size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
     max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
     strncpy(default_fn, basename(inPath), max_root_len);
@@ -328,7 +334,7 @@ int main(int argc, char **argv)
     if (ext_ptr == NULL)
     {
       // no filename extension found - just add trailing '.'
-      strncat(default_fn, ".", 1);
+      strncat(default_fn, ".", 2);
     }
     else
     {
@@ -341,8 +347,9 @@ int main(int argc, char **argv)
     }
 
     // concatenate default filename root and extension
-    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
-                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
+    strncat(default_fn,
+            KMYTH_DEFAULT_SEAL_OUT_EXT,
+            KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1);
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
@@ -357,7 +364,7 @@ int main(int argc, char **argv)
     }
 
     // Go ahead and make the default value the output path
-    outPath_size = strlen(default_fn);
+    outPath_size = strlen(default_fn) + 1;
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, default_fn, outPath_size);
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);

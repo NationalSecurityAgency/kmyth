@@ -384,8 +384,8 @@ if (tpm2_kmyth_seal(unseal_output, unseal_output_len, &seal_output, &seal_output
 
   // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
-  strncpy(renamePath, inPath, strlen(inPath));
-  strncat(renamePath, ".orig", 5);
+  strncpy(renamePath, inPath, strlen(inPath) + 1);
+  strncat(renamePath, ".orig", strlen(".orig") + 1);
   if (!stat(renamePath, &st) && !forceOverwrite)
   {
     kmyth_log(LOG_ERR,
