@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <CUnit/CUnit.h>
+#include <tss2/tss2_mu.h>
+#include <tss2/tss2_rc.h>
 
 #include "defines.h"
 #include "formatting_tools.h"
@@ -140,6 +142,11 @@ int tpm2_interface_add_tests(CU_pSuite suite)
   if (NULL ==
       CU_add_test(suite, "start_policy_auth_session() Tests",
                   test_start_policy_auth_session))
+  {
+    return 1;
+  }
+  
+  if (NULL == CU_add_test(suite, "init_policy_or() Tests", test_init_policy_or))
   {
     return 1;
   }
@@ -682,119 +689,430 @@ void test_start_policy_auth_session(void)
 
   free_tpm2_resources(&sapi_ctx);
 }
+//----------------------------------------------------------------------------
+// test_init_policy_or
+//----------------------------------------------------------------------------
+void test_init_policy_or(void)
+{
+  //SESSION session;
+  //TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+
+  //PCR_SELECTIONS pcrs_struct = { .count = 0 };
+  //TPML_DIGEST digests_struct = { .count = 0 };
+
+}
 
 //----------------------------------------------------------------------------
 // test_apply_policy
 //----------------------------------------------------------------------------
 void test_apply_policy(void)
 {
-  SESSION session;
+  //Connect to TPM
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  init_tpm2_connection(&sapi_ctx);
 
-  //Preconfigure PCR selections (need separate TPM sessions)
-  //  - pcrs_struct_1 (empty)
-  //  - pcrs_struct_2 (non-empty)
-  //  - pcrs_struct_3 (policy-OR)
+  //Configure authorization for TPM commands on PCR #23 (application specific)
+  //  - PCR #23 allows the user to reset it (most other PCRs do not)
+  //  - By default, the TPM storage hierarchy (owner) authorization is empty
+  //  - if TPM is configured differently, this test will fail unless changes
+  //    are made to address different PCR entity authorization criteria
+  TPMI_DH_PCR pcr23 = TPM2_PT_TPM2_PCR_FIRST + 23;
+  
+  TSS2L_SYS_AUTH_COMMAND pcrCmdAuths = {.count = 1, };
+  TSS2L_SYS_AUTH_RESPONSE pcrRspAuths = { .count = 1, };
+  pcrCmdAuths.auths[0].sessionHandle = TPM2_RS_PW;
+  pcrCmdAuths.auths[0].sessionAttributes = 0;
+  pcrCmdAuths.auths[0].hmac.size = 0;
+  
+  //Reset PCR used for tests (#23) to known (all-zero) initial value
+  CU_ASSERT(Tss2_Sys_PCR_Reset(sapi_ctx,
+                               pcr23,
+                               &pcrCmdAuths,
+                               &pcrRspAuths) == 0);
+
+  //Create PCR selection input structs for three test scenarios:
+  //  - no PCR selections (pcrs_struct1)
+  //  - single PCR selection mask (pcrs_struct2)
+  //  - policyOR (PCR based) criteria (pcrs_struct3)
   PCR_SELECTIONS pcrs_struct_1 = {.count = 0, };
   init_pcr_selection(NULL, &pcrs_struct_1);
   CU_ASSERT(pcrs_struct_1.count == 0);
   PCR_SELECTIONS pcrs_struct_2 = {.count = 0, };
-  init_pcr_selection("5,3", &pcrs_struct_2);
+  init_pcr_selection("23", &pcrs_struct_2);
   CU_ASSERT(pcrs_struct_2.count == 1);
   PCR_SELECTIONS pcrs_struct_3 = {.count = 0, };
   init_pcr_selection("23", &pcrs_struct_3);
   init_pcr_selection("23", &pcrs_struct_3);
   CU_ASSERT(pcrs_struct_3.count == 2);
 
-  //Start with empty policy digest list (no policy-OR)
-  TPML_DIGEST pOR_digests_struct = {.count = 0, };
+  //Compute serialized version of PCR selection struct (selecting PCR #23)
+  //  (need for independent computation of policy digests)
+  size_t pcrs_buf_len = sizeof(TPML_PCR_SELECTION);
+  uint8_t pcrs[pcrs_buf_len];
+  memset(pcrs, 0, pcrs_buf_len);
+  size_t pcrs_offset = 0;
+  Tss2_MU_TPML_PCR_SELECTION_Marshal(&pcrs_struct_2.pcrs[0],
+                                     pcrs,
+                                     pcrs_buf_len,
+                                     &pcrs_offset);
+  CU_ASSERT(pcrs_offset > 0);
+  size_t pcrs_size = pcrs_offset;
 
-  init_tpm2_connection(&sapi_ctx);
-  create_auth_session(sapi_ctx, &session, TPM2_SE_POLICY);
+  //Initialize input policy digest list initially for non-policyOR scenario
+  TPML_DIGEST pOR_digests_struct = { .count = 0, };
 
-  //Valid test
-  CU_ASSERT(apply_policy(sapi_ctx,
-                         session.sessionHandle,
-                         &(pcrs_struct_1.pcrs[0]),
-                         &pOR_digests_struct) == 0);
-
-  //NULL context
+  
+  //Initiate 'trial' policy session
+  SESSION session;
+  create_auth_session(sapi_ctx, &session, TPM2_SE_TRIAL);
+  
+  //Declare "null" command/response authorization areas as properly typed
+  //parameters for TPM commands with no authorization requirements
+  TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
+  TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
+  
+  //Obtain current policy digest (should be all-zero digest)
+  TPM2B_DIGEST orig_pd = { .size = 0, };
+  size_t digest_size = KMYTH_DIGEST_SIZE;
+  CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                     session.sessionHandle,
+                                     nullCmdAuths,
+                                     &orig_pd,
+                                     nullRspAuths) == 0);
+  CU_ASSERT(orig_pd.size == digest_size);
+  bool match = true;
+  for (int i = 0; i < orig_pd.size; i++)
+  {
+    if (orig_pd.buffer[i] != 0)
+    {
+      match = false;
+    }
+  }
+  CU_ASSERT(match == true);
+  
+  //NULL context scenario test (should fail)
   CU_ASSERT(apply_policy(NULL,
                          session.sessionHandle,
                          &(pcrs_struct_1.pcrs[0]),
                          &pOR_digests_struct) != 0);
 
-  //Invalid Handle
+  //Invalid session handle scenario test (should fail)
   CU_ASSERT(apply_policy(sapi_ctx,
                          0,
                          &(pcrs_struct_1.pcrs[0]),
                          &pOR_digests_struct) != 0);
 
-  //Multiple pcrs
-  CU_ASSERT(apply_policy(sapi_ctx,
-                         session.sessionHandle,
-                         &(pcrs_struct_2.pcrs[0]),
-                         &pOR_digests_struct) == 0);
-
-  //Policy-OR policy
-  //  - these tests require TPM2_ALG_SHA256 so we don't want to run them
-  //    if this changes
+  //Remaining apply_policy() tests assume that kmyth configured to use SHA256
+  //If configured to use a different hash, skip (or update) these tests
   if (KMYTH_HASH_ALG == TPM2_ALG_SHA256)
   { 
-    TPM2B_DIGEST policy1 = {.size = 0, };
-    TPM2B_DIGEST policy2 = {.size = 0, };
-    TPM2B_DIGEST policy3 = {.size = 0, };
+    //-----------------------------------------------------------------------
+    //Compute "expected" values that can be used to validate test results
+    //-----------------------------------------------------------------------
+    
+    //Setup a buffer to hold the input data to be hashed when computing
+    //policy digest values (must be sized for largest scenario)
+    size_t data_size_pcr_ext = 2 * digest_size;
+    size_t data_size_authVal_only_pd = digest_size + sizeof(TPM2_CC);
+    size_t data_size_authVal_pcr_pd = (2 * digest_size) +
+                                      sizeof(TPM2_CC) + pcrs_size;
+    size_t data_size_policyOR_pd = (3 * digest_size) + sizeof(TPM2_CC);
+    size_t buf_size = data_size_policyOR_pd;
+    uint8_t buf[buf_size];
 
-    // create policy digest for first policy branch
+    //Compute digest of PCR #23 contents in original (reset to all-zero) state
+    TPM2B_DIGEST digestTPM_orig = { .size = (uint16_t) digest_size, };
+    CU_ASSERT(EVP_Digest(orig_pd.buffer,
+                         digest_size,
+                         digestTPM_orig.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //Compute expected digest for extended (by all-zero digest) PCR #23
+    TPM2B_DIGEST pcr23_ext_hash = { .size = (uint16_t) digest_size, };
+    memcpy(buf, orig_pd.buffer, digest_size);
+    memcpy(buf + digest_size, orig_pd.buffer, digest_size);
+    CU_ASSERT(EVP_Digest(buf,
+                         data_size_pcr_ext,
+                         pcr23_ext_hash.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //Compute digest of PCR #23 in extended state
+    TPM2B_DIGEST digestTPM_ext = { .size = (uint16_t) digest_size, };
+    CU_ASSERT(EVP_Digest(pcr23_ext_hash.buffer,
+                         digest_size,
+                         digestTPM_ext.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //Compute expected policy digest for no PCR criteria scenario
+    TPM2B_DIGEST authVal_only_pd = { .size = (uint16_t) digest_size, };
+    memcpy(buf, &orig_pd.buffer, digest_size);
+    buf[digest_size] = (uint8_t) ((TPM2_CC_PolicyAuthValue >> 24) & 0xFF);
+    buf[digest_size + 1] = (uint8_t) ((TPM2_CC_PolicyAuthValue >> 16) & 0xFF);
+    buf[digest_size + 2] = (uint8_t) ((TPM2_CC_PolicyAuthValue >> 8) & 0xFF);
+    buf[digest_size + 3] = (uint8_t) (TPM2_CC_PolicyAuthValue & 0xFF);
+    CU_ASSERT(EVP_Digest(buf,
+                         data_size_authVal_only_pd,
+                         authVal_only_pd.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0)
+    
+    //Compute expected policy digest authVal with PCR criteria scenario
+    //  - PCR #23 in original (reset) state
+    //  - PCR #23 in extended state
+    TPM2B_DIGEST authVal_pcr23_orig_pd = { .size = (uint16_t) digest_size, };
+    memcpy(buf, authVal_only_pd.buffer, digest_size);
+    buf[digest_size] = (uint8_t) ((TPM2_CC_PolicyPCR >> 24) & 0xFF);
+    buf[digest_size + 1] = (uint8_t) ((TPM2_CC_PolicyPCR >> 16) & 0xFF);
+    buf[digest_size + 2] = (uint8_t) (TPM2_CC_PolicyPCR >> 8) & 0xFF;
+    buf[digest_size + 3] = (uint8_t) (TPM2_CC_PolicyPCR & 0xFF);
+    memcpy(buf + digest_size + sizeof(TPM2_CC), pcrs, pcrs_size);
+    memcpy(buf + digest_size + sizeof(TPM2_CC) + pcrs_size,
+           digestTPM_orig.buffer,
+           digest_size);
+    CU_ASSERT(EVP_Digest(buf,
+                         data_size_authVal_pcr_pd,
+                         authVal_pcr23_orig_pd.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    TPM2B_DIGEST authVal_pcr23_ext_pd = { .size = (uint16_t) digest_size, };
+    memcpy(buf + digest_size + sizeof(TPM2_CC) + pcrs_size,
+           digestTPM_ext.buffer,
+           digest_size);
+    CU_ASSERT(EVP_Digest(buf,
+                         data_size_authVal_pcr_pd,
+                         authVal_pcr23_ext_pd.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //Compute expected policy digest for policy-OR criteria scenario:
+    //  - policy branch 1 digest = authVal_pcr23_orig_pd
+    //  - policy branch 1 digest = authVal_pcr23_ext_pd
+    TPM2B_DIGEST policyOR_pd = { .size = (uint16_t) digest_size, };
+    memcpy(buf, orig_pd.buffer, digest_size);
+    buf[digest_size] = (uint8_t) ((TPM2_CC_PolicyOR >> 24) & 0xFF);
+    buf[digest_size + 1] = (uint8_t) ((TPM2_CC_PolicyOR >> 16) & 0xFF);
+    buf[digest_size + 2] = (uint8_t) (TPM2_CC_PolicyOR >> 8) & 0xFF;
+    buf[digest_size + 3] = (uint8_t) (TPM2_CC_PolicyOR & 0xFF);   
+    memcpy(buf + digest_size + sizeof(TPM2_CC),
+           authVal_pcr23_orig_pd.buffer,
+           digest_size);
+    memcpy(buf + (2 * digest_size) + sizeof(TPM2_CC),
+           authVal_pcr23_ext_pd.buffer,
+           digest_size);
+    CU_ASSERT(EVP_Digest(buf,
+                         data_size_policyOR_pd,
+                         policyOR_pd.buffer,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //-----------------------------------------------------------------------
+    //Execute test scenarios
+    //-----------------------------------------------------------------------
+
+    //Empty PCR selections (authVal only policy) scenario test
+    CU_ASSERT(apply_policy(sapi_ctx,
+                           session.sessionHandle,
+                           &(pcrs_struct_1.pcrs[0]),
+                           &pOR_digests_struct) == 0);
+
+    TPM2B_DIGEST test_pd = { .size = 0, };
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       session.sessionHandle,
+                                       nullCmdAuths,
+                                       &test_pd,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(test_pd.size == digest_size);
+    match = true;
+    for (int i = 0; i < test_pd.size; i++)
+    {
+      if (test_pd.buffer[i] != authVal_only_pd.buffer[i])
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Restart policy session (reset policy digest)
+    CU_ASSERT(Tss2_Sys_PolicyRestart(sapi_ctx,
+                                     session.sessionHandle,
+                                     nullCmdAuths,
+                                     nullRspAuths) == 0);
+    
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       session.sessionHandle,
+                                       nullCmdAuths,
+                                       &orig_pd,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(orig_pd.size == digest_size);
+    match = true;
+    for (int i = 0; i < orig_pd.size; i++)
+    {
+      if (orig_pd.buffer[i] != 0)
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Single PCR selections mask (authVal with PCR policy) scenario test
+    CU_ASSERT(apply_policy(sapi_ctx,
+                           session.sessionHandle,
+                           &(pcrs_struct_2.pcrs[0]),
+                           &pOR_digests_struct) == 0);
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       session.sessionHandle,
+                                       nullCmdAuths,
+                                       &test_pd,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(test_pd.size != 0);
+    match = true;
+    for (int i = 0; i < test_pd.size; i++)
+    {
+      if (test_pd.buffer[i] != authVal_pcr23_orig_pd.buffer[i])
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Restart policy session (reset policy digest)
+    CU_ASSERT(Tss2_Sys_PolicyRestart(sapi_ctx,
+                                     session.sessionHandle,
+                                     nullCmdAuths,
+                                     nullRspAuths) == 0);
+    
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       session.sessionHandle,
+                                       nullCmdAuths,
+                                       &orig_pd,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(orig_pd.size == digest_size);
+    match = true;
+    for (int i = 0; i < orig_pd.size; i++)
+    {
+      if (orig_pd.buffer[i] != 0)
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Policy-OR scenario test
+
+    //Use TPM to compute policy digest for first policy branch
+    TPM2B_DIGEST branch1_pd = { .size = 0, };
     CU_ASSERT(create_policy_digest(sapi_ctx,
                                    &(pcrs_struct_3.pcrs[0]),
                                    &pOR_digests_struct,
-                                   &policy1) == 0);
-    CU_ASSERT(policy1.size == KMYTH_DIGEST_SIZE);
-    char policy1_str[(KMYTH_DIGEST_SIZE * 2) + 1];
-    convert_digest_to_string(&policy1, policy1_str);
-
-    if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
+                                   &branch1_pd) == 0);
+    CU_ASSERT(branch1_pd.size == digest_size);
+    match = true;
+    for (int i = 0; i < branch1_pd.size; i++)
     {
-      // create policy digest for second policy branch
-      CU_ASSERT(create_policy_digest(sapi_ctx,
-                                     &(pcrs_struct_3.pcrs[1]),
-                                     &pOR_digests_struct,
-                                     &policy2) == 0);
-      CU_ASSERT(policy2.size == KMYTH_DIGEST_SIZE);
-      char policy2_str[(KMYTH_DIGEST_SIZE * 2) + 1];
-      convert_digest_to_string(&policy2, policy2_str);
-      CU_ASSERT(strncmp(policy1_str,
-                        policy2_str,
-                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
-
-      // create policy-OR digest list
-      pOR_digests_struct.count++;
-      pOR_digests_struct.digests[0] = policy1;
-      pOR_digests_struct.count++;
-      pOR_digests_struct.digests[1] = policy2;
-      CU_ASSERT(pOR_digests_struct.count == 2);
-
-      // create policy digest with policy-OR authorization criteria
-      CU_ASSERT(create_policy_digest(sapi_ctx,
-                                     &(pcrs_struct_3.pcrs[0]),
-                                     &pOR_digests_struct,
-                                     &policy3) == 0);
-      CU_ASSERT(policy3.size == KMYTH_DIGEST_SIZE);
-
-      char policy3_str[(KMYTH_DIGEST_SIZE * 2) + 1];
-      convert_digest_to_string(&policy3, policy3_str);
-      CU_ASSERT(strncmp(policy1_str,
-                        policy3_str,
-                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
-      CU_ASSERT(strncmp(policy2_str,
-                        policy3_str,
-                        (KMYTH_DIGEST_SIZE * 2) + 1) != 0);
+      if (branch1_pd.buffer[i] != authVal_pcr23_orig_pd.buffer[i])
+      {
+        match = false;
+      }
     }
-    else
+    CU_ASSERT(match == true);
+
+    //Update PCR #23 value in TPM (for test using all-zero digest to extend)
+    TPML_DIGEST_VALUES pcrExtensionDigest = { .count = 1, };
+    pcrExtensionDigest.digests[0].hashAlg = TPM2_ALG_SHA256;
+    memset(pcrExtensionDigest.digests[0].digest.sha256, 0, digest_size);
+    CU_ASSERT(Tss2_Sys_PCR_Extend(sapi_ctx,
+                                  pcr23,
+                                  &pcrCmdAuths,
+                                  &pcrExtensionDigest,
+                                  &pcrRspAuths) == 0);
+
+    //Verify TPM's extended PCR #23 digest matches expected value
+    TPML_PCR_SELECTION pcrSel_out = { .count = 0, };
+    uint32_t pcrUpdateCount = 0;
+    TPML_DIGEST pcrVals = { .count = 0, };  
+    CU_ASSERT(Tss2_Sys_PCR_Read(sapi_ctx,
+                                nullCmdAuths,
+                                &(pcrs_struct_2.pcrs[0]),
+                                &pcrUpdateCount,
+                                &pcrSel_out,
+                                &pcrVals,
+                                nullRspAuths) == 0);
+    CU_ASSERT(pcrVals.count == 1);
+    CU_ASSERT(pcrVals.digests[0].size == digest_size);
+    match = true;
+    for (int i = 0; i < pcrVals.digests[0].size; i++)
     {
-      CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+      if (pcrVals.digests[0].buffer[i] != pcr23_ext_hash.buffer[i])
+      {
+        match = false;
+      }
     }
+    CU_ASSERT(match == true);
+    
+    //Use TPM to compute policy digest for second policy branch
+    TPM2B_DIGEST branch2_pd = { .size = 0, };
+    CU_ASSERT(create_policy_digest(sapi_ctx,
+                                   &(pcrs_struct_3.pcrs[1]),
+                                   &pOR_digests_struct,
+                                   &branch2_pd) == 0);
+    CU_ASSERT(branch2_pd.size == digest_size);
+    match = true;
+    for (int i = 0; i < branch2_pd.size; i++)
+    {
+      if (branch2_pd.buffer[i] != authVal_pcr23_ext_pd.buffer[i])
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Add policy digest for two policy branches to "digest list" struct
+    pOR_digests_struct.count++;
+    pOR_digests_struct.digests[0].size = (uint16_t) digest_size;
+    memcpy(pOR_digests_struct.digests[0].buffer,
+           branch1_pd.buffer,
+           branch1_pd.size);
+    pOR_digests_struct.count++;
+    pOR_digests_struct.digests[1].size = (uint16_t) digest_size;
+    memcpy(pOR_digests_struct.digests[1].buffer,
+           branch2_pd.buffer,
+           branch2_pd.size);
+    CU_ASSERT(pOR_digests_struct.count == 2);
+
+    //Apply policy with policy-OR criteria scenario test
+    CU_ASSERT(apply_policy(sapi_ctx,
+                           session.sessionHandle,
+                           &(pcrs_struct_3.pcrs[0]),
+                           &pOR_digests_struct) == 0);
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       session.sessionHandle,
+                                       nullCmdAuths,
+                                       &test_pd,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(test_pd.size != 0);
+    match = true;
+    for (int i = 0; i < test_pd.size; i++)
+    {
+      if (test_pd.buffer[i] != policyOR_pd.buffer[i])
+      {
+        match = false;
+      }
+    }
+    CU_ASSERT(match == true);
+
+    //Done with policy session
+    CU_ASSERT(Tss2_Sys_FlushContext(sapi_ctx, session.sessionHandle) == 0);
   }
   else
   {
@@ -818,55 +1136,88 @@ void test_apply_policy_or(void)
     SESSION policySessionOR;
 
     init_tpm2_connection(&sapi_ctx);
-    PCR_SELECTIONS pcrs_struct = {.count = 0, };
+    create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
 
     TSS2L_SYS_AUTH_COMMAND const *nullCmdAuths = NULL;
     TSS2L_SYS_AUTH_RESPONSE *nullRspAuths = NULL;
 
+    //Zero-length input policy digest list should fail
     TPML_DIGEST pHashList = {.count = 0, };
-    TPM2B_DIGEST policy1 = {.size = 0, };
-    TPM2B_DIGEST policy2 = {.size = 0, };
-    TPM2B_DIGEST policyOR = {.size = 0, };
-
-    init_pcr_selection("23", &pcrs_struct);
-    CU_ASSERT(create_policy_digest(sapi_ctx,
-                                   &(pcrs_struct.pcrs[0]),
-                                   &pHashList,
-                                   &policy1) == 0);
-    CU_ASSERT(policy1.size != 0);
-
-    if (system("tpm2_pcrextend 23:sha256=0000000000000000000000000000000000000000000000000000000000000001") != -1)
+    CU_ASSERT(apply_policy_or(sapi_ctx,
+                              policySessionOR.sessionHandle,
+                              &pHashList) == 1);
+    
+    //Input policy digest list with only one digest should fail
+    pHashList.count = 1;
+    CU_ASSERT(apply_policy_or(sapi_ctx,
+                              policySessionOR.sessionHandle,
+                              &pHashList) == 1);
+    
+    //Input policy digest list with greater than eight digests should fail
+    pHashList.count = 9;
+    CU_ASSERT(apply_policy_or(sapi_ctx,
+                              policySessionOR.sessionHandle,
+                              &pHashList) == 1);
+       
+    //Setup test input digest list (two contrived policy digests used for test)
+    size_t digest_size = TPM2_SHA256_DIGEST_SIZE;
+    TPM2B_DIGEST policy1 = {.size = (uint16_t) digest_size, };
+    TPM2B_DIGEST policy2 = {.size = (uint16_t) digest_size, };
+    TPM2B_DIGEST policyOR = {.size = (uint16_t) digest_size, };
+    for (uint8_t i = 0; i < policy1.size; i++)
     {
-      init_pcr_selection("23", &pcrs_struct);
-      CU_ASSERT(create_policy_digest(sapi_ctx,
-                                     &(pcrs_struct.pcrs[1]),
-                                     &pHashList,
-                                     &policy2) == 0);
-      CU_ASSERT(policy2.size != 0);
-
-      pHashList.digests[0] = policy1;
-      pHashList.count++;
-      pHashList.digests[1] = policy2;
-      pHashList.count++;
-
-      create_auth_session(sapi_ctx, &policySessionOR, TPM2_SE_TRIAL);
-      CU_ASSERT(apply_policy_or(sapi_ctx,
-                                policySessionOR.sessionHandle,
-                                &pHashList) == 0);
-      CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
-                                         policySessionOR.sessionHandle,
-                                         nullCmdAuths,
-                                         &policyOR,
-                                         nullRspAuths) == 0);
-      CU_ASSERT(policyOR.size != 0);
-      Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
-
-      system("tpm2_pcrreset 23");
+      policy1.buffer[i] = i;
+      policy2.buffer[i] = (uint8_t) (policy2.size - i);
     }
-    else
+    pHashList.count = 2;
+    pHashList.digests[0] = policy1;
+    pHashList.digests[1] = policy2;
+
+    //Compute expected policy-OR digest result:
+    //  SHA256( 0..0 || TPM2_CC_PolicyOR || policy1.digest || policy2.digest)
+    uint8_t digestOR[digest_size];
+    size_t buf_size = (3 * digest_size) + sizeof(TPM2_CC);
+    uint8_t buf[buf_size];
+
+    memset(buf, 0, buf_size);
+    buf[digest_size] = (uint8_t) ((TPM2_CC_PolicyOR >> 24) & 0xFF);
+    buf[digest_size + 1] = (uint8_t) ((TPM2_CC_PolicyOR >> 16) & 0xFF);
+    buf[digest_size + 2] = (uint8_t) ((TPM2_CC_PolicyOR >> 8) & 0xFF);
+    buf[digest_size + 3] = (uint8_t) (TPM2_CC_PolicyOR & 0xFF);
+    memcpy(buf + digest_size + sizeof(TPM2_CC),
+           pHashList.digests[0].buffer,
+           digest_size);
+    memcpy(buf + (2 * digest_size) + sizeof(TPM2_CC),
+           pHashList.digests[1].buffer,
+           digest_size);
+    CU_ASSERT(EVP_Digest(buf,
+                         buf_size,
+                         digestOR,
+                         NULL,
+                         EVP_sha256(),
+                         NULL) != 0);
+
+    //Valid inputs should produce expected results
+    CU_ASSERT(apply_policy_or(sapi_ctx,
+                              policySessionOR.sessionHandle,
+                              &pHashList) == 0);
+    CU_ASSERT(Tss2_Sys_PolicyGetDigest(sapi_ctx,
+                                       policySessionOR.sessionHandle,
+                                       nullCmdAuths,
+                                       &policyOR,
+                                       nullRspAuths) == 0);
+    CU_ASSERT(policyOR.size != 0);
+    bool match = true;
+    for (int i = 0; i < policyOR.size; i++)
     {
-      CU_FAIL("TPM2 Tools (tpm2_pcrextend) system call setting up test failed");
+      if (policyOR.buffer[i] != digestOR[i])
+      {
+        match = false;
+      }
     }
+    CU_ASSERT(match == true);
+
+    Tss2_Sys_FlushContext(sapi_ctx, policySessionOR.sessionHandle);
 
     free_tpm2_resources(&sapi_ctx);
   }

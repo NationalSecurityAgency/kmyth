@@ -41,6 +41,7 @@ void test_compute_authHMAC(void);
 void test_create_policy_digest(void);
 void test_create_policy_auth_session(void);
 void test_start_policy_auth_session(void);
+void test_init_policy_or(void);
 void test_apply_policy(void);
 void test_create_caller_nonce(void);
 void test_rollNonces(void);
