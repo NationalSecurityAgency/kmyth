@@ -100,9 +100,11 @@ int main(int argc, char **argv)
   int options;
   int option_index;
 
-  while ((options =
-          getopt_long(argc, argv, "a:c:e:i:o:p:w:x:fhlv", longopts,
-                      &option_index)) != -1)
+  while ((options = getopt_long(argc,
+                                argv,
+                                "a:e:i:o:w:x:fhv",
+                                longopts,
+                                &option_index)) != -1)
   {
     switch (options)
     {
@@ -139,18 +141,16 @@ int main(int argc, char **argv)
     }
   }
 
+  // Since these originate in main() we know they are null terminated
+  size_t authString_len = (authString == NULL) ? 0 : strlen(authString);
+  size_t oaPasswd_len = (ownerAuthPasswd==NULL) ? 0 : strlen(ownerAuthPasswd);
+
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     return 1;
   }
 
@@ -158,14 +158,8 @@ int main(int argc, char **argv)
   if (expPolicyDigestString == NULL)
   {
     kmyth_log(LOG_ERR, "no expected policy specified ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     return 1;
   }
 
@@ -188,14 +182,8 @@ int main(int argc, char **argv)
         kmyth_log(LOG_ERR,
                   "output filename (%s) already exists ... exiting",
                    outPath);
-        if (authString != NULL)
-        {
-          kmyth_clear(authString, strlen(authString));
-        }
-        if (ownerAuthPasswd != NULL)
-        {
-          kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-        }
+        kmyth_clear(authString, authString_len);
+        kmyth_clear(ownerAuthPasswd, oaPasswd_len);
         return 1;
       }
     }
@@ -219,15 +207,9 @@ int main(int argc, char **argv)
                              &digests))
   {
     kmyth_log(LOG_ERR, "kmyth-unseal error ... exiting");
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     kmyth_clear_and_free(unseal_output, unseal_output_len);
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
     return 1;
   }
 
@@ -238,15 +220,9 @@ int main(int argc, char **argv)
   if (pcrs.count == 0)
   {
     kmyth_log(LOG_ERR, "input does not employ PCR-based policy ... exiting");
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     kmyth_clear_and_free(unseal_output, unseal_output_len);
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
     return 1;
   }
 
@@ -262,13 +238,19 @@ int main(int argc, char **argv)
                                     dString) != 0)
   {
     kmyth_log(LOG_ERR, "error parsing policy-OR data string");
-    if (authString != NULL)
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
+    for (size_t i = 0; i < expPolicyStrCnt; i++)
     {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
+      if (pString[i] != NULL)
+      {
+        free(pString[i]);
+      }
+      if (dString[i] != NULL)
+      {
+        free(dString[i]);
+      }
     }
     return 1;
   }
@@ -282,6 +264,14 @@ int main(int argc, char **argv)
                     &digests) != 0)
   {
     kmyth_log(LOG_ERR, "init_policyOR() failed");
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+    kmyth_clear_and_free(unseal_output, unseal_output_len);
+    for (size_t i = 0; i < expPolicyStrCnt; i++)
+    {
+      free(pString[i]);
+      free(dString[i]);
+    }
     return 1;
   }
   for (size_t i = 0; i < expPolicyStrCnt; i++)
@@ -290,47 +280,6 @@ int main(int argc, char **argv)
     free(dString[i]);
   }
   
-  // verify PCR selections and policy digests were encoded as matched pairs
-  if(pcrs.count != digests.count)
-  {
-    kmyth_log(LOG_ERR,
-              "mismatched PCR selection (%u) and policy digest (%u) counts",
-              pcrs.count,
-              digests.count);
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "PCR selection and policy digest counts match");
-
-  // verify none of the PCR selections are "empty" (no PCRs selected)
-  // as kmyth policy-OR criteria are PCR-based, empty PCR selections
-  // invalidate the need for a policy-OR (the empty PCR case means that
-  // the overall policy has no PCR dependencies)
-  for (size_t i = 0; i < pcrs.count; i++)
-  {
-    if (isEmptyPcrSelection(&(pcrs.pcrs[i])))
-    {
-      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections", i);
-      if (authString != NULL)
-      {
-        kmyth_clear(authString, strlen(authString));
-      }
-      if (ownerAuthPasswd != NULL)
-      {
-        kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-      }
-      return 1;
-    }
-  }
-  kmyth_log(LOG_DEBUG, "no policy-OR branch with empty PCR selections");
-
   uint8_t *seal_output = NULL;
   size_t seal_output_len = 0;
 
@@ -347,28 +296,15 @@ int main(int argc, char **argv)
                       false) != 0)
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, strlen(authString));
-    }
-    if (ownerAuthPasswd != NULL)
-    {
-      kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-    }
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     kmyth_clear_and_free(unseal_output, unseal_output_len);
-    free(seal_output);
+    kmyth_clear_and_free(seal_output, seal_output_len);
     return 1;
   }
-
+  kmyth_clear(authString, authString_len);
+  kmyth_clear(ownerAuthPasswd, oaPasswd_len);
   kmyth_clear_and_free(unseal_output, unseal_output_len);
-  if (authString != NULL)
-  {
-    kmyth_clear(authString, strlen(authString));
-  }
-  if (ownerAuthPasswd != NULL)
-  {
-    kmyth_clear(ownerAuthPasswd, strlen(ownerAuthPasswd));
-  }
 
   // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
@@ -379,7 +315,7 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR,
           "output filename (%s) already exists ... exiting",
           renamePath);
-    free(seal_output);
+    kmyth_clear_and_free(seal_output, seal_output_len);
     free(renamePath);
     return 1;
   }
@@ -387,7 +323,7 @@ int main(int argc, char **argv)
   if (rename((const char *) inPath, (const char *) renamePath) != 0)
   {
     kmyth_log(LOG_ERR, "renaming of input file failed ... exiting");
-    free(seal_output);
+    kmyth_clear_and_free(seal_output, seal_output_len);
     free(renamePath);
     return 1;
   }
@@ -395,9 +331,8 @@ int main(int argc, char **argv)
   if (write_bytes_to_file(outPath, seal_output, seal_output_len))
   {
     kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
-    free(seal_output);
+    kmyth_clear_and_free(seal_output, seal_output_len);
   }
-
   kmyth_clear_and_free(seal_output, seal_output_len);
 
   return 0;

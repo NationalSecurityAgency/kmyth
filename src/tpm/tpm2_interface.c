@@ -460,6 +460,13 @@ int init_policyOR(size_t expPolicyPairCnt,
                   PCR_SELECTIONS * pcrSelections,
                   TPML_DIGEST * policyDigestList)
 {
+  // Verify at list one string pair specifying policy-OR criteria was supplied
+  if (expPolicyPairCnt == 0)
+  {
+    kmyth_log(LOG_ERR, "cannot configure policy-OR without input criteria");
+    return 1;
+  }
+
   // Validate  that requested policy-OR criteria will not violate branch limit
   if ((expPolicyPairCnt + policyDigestList->count) > MAX_POLICY_OR_CNT)
   {
@@ -467,6 +474,20 @@ int init_policyOR(size_t expPolicyPairCnt,
                        expPolicyPairCnt,
                        policyDigestList->count,
                        MAX_POLICY_OR_CNT);
+    return 1;
+  }
+
+  // Check that input "string list" pointers are non-NULL
+  if ((pcrsStrings == NULL) || (digestStrings == NULL))
+  {
+    kmyth_log(LOG_ERR, "NULL 'string list' input parameter pointer");
+    return 1;
+  }
+
+  // Make sure output parameters are non-NULL (i.e., point to valid structs)
+  if ((pcrSelections == NULL) || (digestStrings == NULL))
+  {
+    kmyth_log(LOG_ERR, "NULL output parameter, need to specify valid struct");
     return 1;
   }
 
@@ -492,6 +513,7 @@ int init_policyOR(size_t expPolicyPairCnt,
     return 1;
   }
 
+  // use parsed PCR/policy digest strings to add specified policy-OR criteria
   for (size_t i = 0; i < expPolicyPairCnt; i++)
   {
     size_t index = i + pcrSelections->count;
@@ -516,6 +538,30 @@ int init_policyOR(size_t expPolicyPairCnt,
     }
     policyDigestList->count++;
   }
+
+  // verify PCR selections and policy digests were encoded as matched pairs
+  if (pcrSelections->count != policyDigestList->count)
+  {
+    kmyth_log(LOG_ERR,
+              "mismatched PCR selection (%u) and policy digest (%u) result",
+              pcrSelections->count,
+              policyDigestList->count);
+    return 1;
+  }
+
+  // verify none of the PCR selections are "empty" (no PCRs selected) -
+  // as kmyth policy-OR criteria are PCR-based, empty PCR selections
+  // invalidate the need for a policy-OR (the empty PCR case means that
+  // the overall policy has no PCR dependencies)
+  for (size_t i = 0; i < pcrSelections->count; i++)
+  {
+    if (isEmptyPcrSelection(&(pcrSelections->pcrs[i])))
+    {
+      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections", i);
+      return 1;
+    }
+  }
+  kmyth_log(LOG_DEBUG, "no policy-OR branch with empty PCR selections");
 
   return 0;
 }
@@ -1067,100 +1113,6 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
   }
   kmyth_log(LOG_DEBUG, "flushed trial policy session "
             "(handle = 0x%08X)", trialPolicySession.sessionHandle);
-
-  return 0;
-}
-
-//############################################################################
-// init_policy_or()
-//############################################################################
-int init_policy_or(char * exp_policy_string,
-                   PCR_SELECTIONS * pcrs_struct,
-                   TPML_DIGEST * digests_struct)
-{
-  size_t expPolicyStrCnt = 0;
-  char * pString[MAX_POLICY_OR_CNT-1] = { NULL };
-  char * dString[MAX_POLICY_OR_CNT-1] = { NULL };
-
-  if (parse_exp_policy_string_pairs(exp_policy_string,
-                                    &expPolicyStrCnt,
-                                    pString,
-                                    dString) != 0)
-  {
-    kmyth_log(LOG_ERR, "error parsing policy-OR data string");
-    return 1;
-  }
-  kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
-                        expPolicyStrCnt);
-    
-  if ((expPolicyStrCnt > MAX_POLICY_OR_CNT))
-  {
-    kmyth_log(LOG_ERR, "digest count (%zu) would exceed limit (%u)",
-                        expPolicyStrCnt, MAX_POLICY_OR_CNT);
-    return 1;
-  }
-
-  for (size_t i = 0; i < expPolicyStrCnt; i++)
-  {
-    // extend list of PCR selections for each provided policy-OR criteria
-    kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
-                          i + 1, pString[i]);
-
-    if (init_pcr_selection(pString[i], pcrs_struct) != 0)
-    {
-      kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
-      for (size_t j = i; j < expPolicyStrCnt; j++)
-      {
-        free(pString[j]);
-        free(dString[j]);
-      }
-      return 1;
-    }
-
-    // cleanup parsed PCR selection string just re-formatted
-    free(pString[i]);
-
-    // configure policy-OR digest list struct with user input value
-    kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
-
-    if (convert_string_to_digest(dString[i],
-                                 &(digests_struct->digests[i+1])) != 0)
-    {
-      kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
-      free(dString[i]);
-      for (size_t j = i + 1; j < expPolicyStrCnt; j++)
-      {
-        free(pString[j]);
-        free(dString[j]);
-      }
-      return 1;
-    }
-    digests_struct->count++;
-
-    // cleanup parsed digest hex-string just processed
-    free(dString[i]);
-  }
-
-  // verify PCR selections and policy digests were encoded as matched pairs
-  if(pcrs_struct->count != digests_struct->count)
-  {
-    kmyth_log(LOG_ERR, "mismatched PCR selection and policy digest counts");
-    return 1;
-  }
-
-  // verify none of the PCR selections are "empty" (no PCRs selected)
-  // (as kmyth policy-OR criteria are PCR-based, this invalidates the
-  // need for a policy-OR since the empty PCR case negates the need to
-  // specify alternate digests due to scenarios that produce PCR value
-  // changes)
-  for (size_t i = 0; i < pcrs_struct->count; i++)
-  {
-    if (isEmptyPcrSelection(&(pcrs_struct->pcrs[i])))
-    {
-      kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections");
-      return 1;
-    }
-  }
 
   return 0;
 }

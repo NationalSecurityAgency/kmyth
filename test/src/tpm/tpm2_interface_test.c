@@ -35,15 +35,14 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return (0);
   }
 
-  if (NULL ==
-      CU_add_test(suite, "init_tpm2_connection() Tests",
-                  test_init_tpm2_connection))
+  if (NULL == CU_add_test(suite, "init_tpm2_connection() Tests",
+                                 test_init_tpm2_connection))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "init_tcti_abrmd() Tests", test_init_tcti_abrmd))
+  if (NULL == CU_add_test(suite, "init_tcti_abrmd() Tests",
+                                 test_init_tcti_abrmd))
   {
     return 1;
   }
@@ -53,9 +52,8 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "free_tpm2_resources() Tests",
-                  test_free_tpm2_resources))
+  if (NULL == CU_add_test(suite, "free_tpm2_resources() Tests",
+                                 test_free_tpm2_resources))
   {
     return 1;
   }
@@ -65,15 +63,14 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "get_tpm2_properties() Tests",
-                  test_get_tpm2_properties))
+  if (NULL == CU_add_test(suite, "get_tpm2_properties() Tests",
+                                 test_get_tpm2_properties))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "get_tpm2_impl_type() Tests", test_get_tpm2_impl_type))
+  if (NULL == CU_add_test(suite, "get_tpm2_impl_type() Tests",
+                                 test_get_tpm2_impl_type))
   {
     return 1;
   }
@@ -83,23 +80,25 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "init_password_cmd_auth() Tests",
-                  test_init_password_cmd_auth))
+  if (NULL == CU_add_test(suite, "init_policyOR() Tests", test_init_policyOR))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "init_policy_cmd_auth() Tests",
-                  test_init_policy_cmd_auth))
+  if (NULL == CU_add_test(suite, "init_password_cmd_auth() Tests",
+                                 test_init_password_cmd_auth))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "check_response_auth() Tests",
-                  test_check_response_auth))
+  if (NULL == CU_add_test(suite, "init_policy_cmd_auth() Tests",
+                                 test_init_policy_cmd_auth))
+  {
+    return 1;
+  }
+
+  if (NULL == CU_add_test(suite, "check_response_auth() Tests",
+                                 test_check_response_auth))
   {
     return 1;
   }
@@ -119,38 +118,30 @@ int tpm2_interface_add_tests(CU_pSuite suite)
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "compute_authHMAC() Tests", test_compute_authHMAC))
+  if (NULL == CU_add_test(suite, "compute_authHMAC() Tests",
+                                 test_compute_authHMAC))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "create_policy_digest() Tests",
-                  test_create_policy_digest))
+  if (NULL == CU_add_test(suite, "create_policy_digest() Tests",
+                                 test_create_policy_digest))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "create_policy_auth_session() Tests",
-                  test_create_policy_auth_session))
+  if (NULL == CU_add_test(suite, "create_policy_auth_session() Tests",
+                                 test_create_policy_auth_session))
   {
     return 1;
   }
 
-  if (NULL ==
-      CU_add_test(suite, "start_policy_auth_session() Tests",
-                  test_start_policy_auth_session))
+  if (NULL == CU_add_test(suite, "start_policy_auth_session() Tests",
+                                 test_start_policy_auth_session))
   {
     return 1;
   }
   
-  if (NULL == CU_add_test(suite, "init_policy_or() Tests", test_init_policy_or))
-  {
-    return 1;
-  }
-
   if (NULL == CU_add_test(suite, "apply_policy() Tests", test_apply_policy))
   {
     return 1;
@@ -329,6 +320,14 @@ void test_getErrorString(void)
 
   CU_ASSERT(memcmp(getErrorString(err_num), err_str, strlen(err_str)) == 0);
   CU_ASSERT(strlen(getErrorString(err_num)) == strlen(err_str));
+}
+
+//----------------------------------------------------------------------------
+// test_init_policyOR
+//----------------------------------------------------------------------------
+void test_init_policyOR(void)
+{
+
 }
 
 //----------------------------------------------------------------------------
@@ -688,18 +687,6 @@ void test_start_policy_auth_session(void)
   CU_ASSERT(start_policy_auth_session(NULL, &session, TPM2_SE_TRIAL) != 0);
 
   free_tpm2_resources(&sapi_ctx);
-}
-//----------------------------------------------------------------------------
-// test_init_policy_or
-//----------------------------------------------------------------------------
-void test_init_policy_or(void)
-{
-  //SESSION session;
-  //TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
-  //PCR_SELECTIONS pcrs_struct = { .count = 0 };
-  //TPML_DIGEST digests_struct = { .count = 0 };
-
 }
 
 //----------------------------------------------------------------------------

@@ -17,6 +17,7 @@
 #include "kmyth_seal_unseal_impl.h"
 #include "memory_util.h"
 #include "pcrs.h"
+#include "tpm2_interface.h"
 
 #include "cipher/cipher.h"
 
@@ -348,9 +349,9 @@ int main(int argc, char **argv)
   if (expPolicyString != NULL)
   {
     size_t expPolicyStrCnt = 0;
-    char ** pString = NULL;
-    char ** dString = NULL;
-
+    char * pString[MAX_POLICY_OR_CNT - 1] = { NULL };
+    char * dString[MAX_POLICY_OR_CNT - 1] = { NULL };
+    
     if (parse_exp_policy_string_pairs(expPolicyString,
                                       &expPolicyStrCnt,
                                       pString,
@@ -364,98 +365,29 @@ int main(int argc, char **argv)
     }
     kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
                          expPolicyStrCnt);
-    
-    if ((expPolicyStrCnt > MAX_POLICY_OR_CNT))
+
+                         
+    if (init_policyOR(expPolicyStrCnt,
+                      pString,
+                      dString,
+                      &pcrSelections,
+                      &policyOR_digests) != 0)
     {
-      kmyth_log(LOG_ERR, "digest count (%zu) would exceed limit (%u)",
-                         expPolicyStrCnt, MAX_POLICY_OR_CNT);
+      kmyth_log(LOG_ERR, "init_policyOR() failed");
       kmyth_clear(authString, authString_len);
       kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       free(outPath);
+      for (size_t i = 0; i < expPolicyStrCnt; i++)
+      {
+        free(pString[i]);
+        free(dString[i]);
+      }
       return 1;
     }
-
-    // As we are about to configure a policy-OR digest list, it will be
-    // non-empty. The first location (index = 0), though, will contain the
-    // "current" policy digest that will be computed later. We will set the
-    // digest list count to one, therefore, to create a placeholder.
-    policyOR_digests.count = 1;
-
     for (size_t i = 0; i < expPolicyStrCnt; i++)
     {
-      // extend list of PCR selections for each provided policy-OR criteria
-      kmyth_log(LOG_DEBUG, "policy-OR PCR select string #%zu = %s",
-                           i + 1, pString[i]);
-
-      if (init_pcr_selection(pString[i], &pcrSelections) != 0)
-      {
-        kmyth_log(LOG_ERR, "PCRs init error - policy branch  #%zu", i + 1);
-        kmyth_clear(authString, authString_len);
-        kmyth_clear(ownerAuthPasswd, oaPasswd_len);
-        free(outPath);
-        for (size_t j = i; j < expPolicyStrCnt; j++)
-        {
-          free(pString[j]);
-          free(dString[j]);
-        }
-        return 1;
-      }
-
-      // cleanup parsed PCR selection string just re-formatted
       free(pString[i]);
-
-      // configure policy-OR digest list struct with user input value
-      kmyth_log(LOG_DEBUG, "digest string #%zu = %s", i + 1, dString[i]);
-
-      if (convert_string_to_digest(dString[i],
-                                   &(policyOR_digests.digests[i+1])) != 0)
-      {
-        kmyth_log(LOG_ERR, "convert string (%s) to digest error", dString[i]);
-        kmyth_clear(authString, authString_len);
-        kmyth_clear(ownerAuthPasswd, oaPasswd_len);
-        free(outPath);
-        free(dString[i]);
-        for (size_t j = i + 1; j < expPolicyStrCnt; j++)
-        {
-          free(pString[j]);
-          free(dString[j]);
-        }
-        return 1;
-      }
-      policyOR_digests.count++;
-
-      // cleanup parsed digest hex-string just processed
       free(dString[i]);
-    }
-
-    // verify PCR selections and policy digests were encoded as matched pairs
-    if(pcrSelections.count != policyOR_digests.count)
-    {
-      kmyth_log(LOG_ERR,
-                "mismatched PCR selection (%u) and policy digest (%u) counts",
-                pcrSelections.count,
-                policyOR_digests.count);
-      kmyth_clear(authString, authString_len);
-      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
-      free(outPath);
-      return 1;
-    }
-
-    // verify none of the PCR selections are "empty" (no PCRs selected)
-    // (as kmyth policy-OR criteria are PCR-based, this invalidates the
-    // need for a policy-OR since the empty PCR case negates the need to
-    // specify alternate digests due to scenarios that produce PCR value
-    // changes)
-    for (size_t i = 0; i < pcrSelections.count; i++)
-    {
-      if (isEmptyPcrSelection(&(pcrSelections.pcrs[i])))
-      {
-        kmyth_log(LOG_ERR, "policy-OR branch #%zu has empty PCR selections");
-        kmyth_clear(authString, authString_len);
-        kmyth_clear(ownerAuthPasswd, oaPasswd_len);
-        free(outPath);
-        return 1;
-      }
     }
   }
 
@@ -479,11 +411,10 @@ int main(int argc, char **argv)
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
     kmyth_clear(authString, authString_len);
     kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+    kmyth_clear_and_free(output, output_length);
     free(outPath);
-    free(output);
     return 1;
   }
-
   kmyth_clear(authString, authString_len);
   kmyth_clear(ownerAuthPasswd, oaPasswd_len);
 
@@ -493,13 +424,13 @@ int main(int argc, char **argv)
     if (write_bytes_to_file(outPath, output, output_length))
     {
       kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+      kmyth_clear_and_free(output, output_length);
       free(outPath);
-      free(output);
       return 1;
     }
   }
-
+  kmyth_clear_and_free(output, output_length);
   free(outPath);
-  free(output);
+
   return 0;
 }
