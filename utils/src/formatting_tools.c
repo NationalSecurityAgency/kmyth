@@ -565,7 +565,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
 
   char * token = NULL;
-  char pair_vals[MAX_POLICY_OR_CNT-1][MAX_EXP_POLICY_PAIR_STR_LEN] = {{ 0 }};
+  char pair_vals[MAX_POLICY_OR_CNT-1][MAX_EXP_POLICY_PAIR_STR_LEN+1] = {{ 0 }};
 
   // parse out the "pair values" from the input string
   token = strtok(exp_policy_string, ",");
@@ -579,13 +579,13 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     }
     memcpy(pair_vals[*pair_count], token, strlen(token) + 1);
     (*pair_count)++;
-    token = strtok(NULL, ";");
+    token = strtok(NULL, ",");
   }
 
   if (*pair_count == 0)
   {
     kmyth_log(LOG_ERR, "no expected policy pairs parsed");
-    return 1;
+    return 0;
   }
 
   if (token != NULL) 
@@ -607,7 +607,9 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       for(size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
         free(digest_strings[j]);
+        digest_strings[j] = NULL;
       }
       return 1;
     }
@@ -620,7 +622,9 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       for(size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
         free(digest_strings[j]);
+        digest_strings[j] = NULL;
       }
       return 1;
     }
@@ -648,9 +652,12 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       for(size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
         free(digest_strings[j]);
+        digest_strings[j] = NULL;
       }
       free(pcrs_strings[i]);
+      pcrs_strings[i] = NULL;
       return 1;
     }
 
@@ -662,9 +669,12 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       for(size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
         free(digest_strings[j]);
+        digest_strings[j] = NULL;
       }
       free(pcrs_strings[i]);
+      pcrs_strings[i] = NULL;
       return 1;
     }
 
@@ -692,7 +702,9 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       for(size_t j = 0; j <= i; j++)
       {
         free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
         free(digest_strings[j]);
+        digest_strings[j] = NULL;
       }
       return 1;
     }
