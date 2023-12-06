@@ -497,11 +497,17 @@ int create_policy_digest(TSS2_SYS_CONTEXT * sapi_ctx,
  * @brief Configures lists of paired PCR selection and policy digests used to
  *        specify a policy-OR authorization criteria.
  *
- * @param[in]     expPolicyPairCount
+ * @param[in]     expPolicyPairCount  Count of PCR selections / policy digest
+ *                                    pairs being passed in to configure the
+ *                                    policy-OR authorization criteria
  * 
- * @param[in]     pcrsStrings
+ * @param[in]     pcrsStrings         Array of strings containing PCR selection
+ *                                    criteria (paired with digestStrings by
+ *                                    index into array)
  * 
- * @param[in]     digestStrings
+ * @param[in]     digestStrings       Array of strings containing policy
+ *                                    digests in hexadecimal notation (paired
+ *                                    with pcrsStrings by index into array) 
  * 
  * @param[in/out] pcrSelections       Pointer to PCR Selections List structure
  *                                    used in an authorization policy.

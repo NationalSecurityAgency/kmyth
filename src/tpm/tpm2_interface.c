@@ -514,10 +514,9 @@ int init_policyOR(size_t expPolicyPairCnt,
   }
 
   // use parsed PCR/policy digest strings to add specified policy-OR criteria
+  size_t index = pcrSelections->count;
   for (size_t i = 0; i < expPolicyPairCnt; i++)
   {
-    size_t index = i + pcrSelections->count;
-
     // extend list of PCR selections for each provided policy-OR criteria
     kmyth_log(LOG_DEBUG, "policy-OR PCR selections string #%zu = %s",
                          i + 1, pcrsStrings[i]);
@@ -537,6 +536,7 @@ int init_policyOR(size_t expPolicyPairCnt,
       return 1;
     }
     policyDigestList->count++;
+    index++;
   }
 
   // verify PCR selections and policy digests were encoded as matched pairs

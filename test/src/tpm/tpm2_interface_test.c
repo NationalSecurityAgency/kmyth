@@ -327,7 +327,194 @@ void test_getErrorString(void)
 //----------------------------------------------------------------------------
 void test_init_policyOR(void)
 {
+  // declare / configure required function parameters
+  size_t policyPairCount = 0;
 
+  // test was written when MAX_POLICY_OR_CNT=8, so test values were generated
+  // under that assumption
+  char * pcrSelStrings[7] = {"23", "23", "23", "23", "23", "23", "23"};
+  char * digestStrings[7] =
+         {
+           "5555555555555555555555555555555555555555555555555555555555555555",
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+           "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+           "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+           "fedbca9876543210fedbca9876543210fedbca9876543210fedbca9876543210",
+           "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
+         };
+
+  PCR_SELECTIONS pcrs_struct = { .count = 0, };
+  CU_ASSERT(init_pcr_selection("23", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 1);
+
+  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
+  init_tpm2_connection(&sapi_ctx);
+
+  TPML_DIGEST pd_struct = { .count = 0, };
+  TPM2B_DIGEST test_pd = { .size = 0, };
+  CU_ASSERT(create_policy_digest(sapi_ctx,
+                                 &(pcrs_struct.pcrs[0]),
+                                 &pd_struct,
+                                 &test_pd) == 0);
+  CU_ASSERT(test_pd.size == KMYTH_DIGEST_SIZE);
+  pd_struct.count++;
+  pd_struct.digests[0].size = test_pd.size;
+  memcpy(pd_struct.digests[0].buffer, test_pd.buffer, test_pd.size);
+  CU_ASSERT(pd_struct.count == 1);
+  char test_pd_str[65] = { 0 };
+  CU_ASSERT(convert_digest_to_string(&test_pd, test_pd_str) == 0);
+  
+  free_tpm2_resources(&sapi_ctx);
+
+  // zero policy pair count should error
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) != 0);
+
+  // NULL input PCR selections strings parameter should error
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) NULL,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) != 0);
+
+  // NULL input policy digest strings parameter should error
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) NULL,
+                          &pcrs_struct,
+                          &pd_struct) != 0);
+
+  // NULL PCR selections list struct output parameter should error
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          NULL,
+                          &pd_struct) != 0);
+
+  // NULL policy digest list struct output parameter should error
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          NULL) != 0);
+
+  // Non-null, but empty, PCR selections struct should error
+  policyPairCount = 1;
+  PCR_SELECTIONS empty_pcrs_struct = { .count = 0, };
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &empty_pcrs_struct,
+                          &pd_struct) != 0);
+
+  // Empty policy digest list struct, with other valid inputs is OK
+  // (as policy digest at index = 0 is overwritten, init_policyOR() should
+  // just increment the digest count to one, leaving space for the 'current'
+  // policy digest to be added later)
+  TPML_DIGEST empty_pd_struct = { .count = 0, };
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &empty_pd_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 2);
+  CU_ASSERT(empty_pd_struct.count == 2);
+
+  // Policy digest list struct with combination of single policy digest
+  // and single PCR selections list is also OK
+  pcrs_struct.count = 1;
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 2);
+  CU_ASSERT(pd_struct.count == 2);
+
+  // Any other mismatched combination of PCR selection and policy digest
+  // structs should error
+  pcrs_struct.count = 1;
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) != 0);
+
+  // Adding more policy-OR criteria (up to the TSS2 limit) is OK
+  pcrs_struct.count = 1;
+  pd_struct.count = 1;
+  policyPairCount = 7;
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 8);
+  CU_ASSERT(pd_struct.count == 8);
+  CU_ASSERT(pcrs_struct.pcrs[0].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[0].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[0].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[0].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[1].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[1].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[1].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[1].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[2].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[2].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[2].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[2].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[3].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[3].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[3].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[3].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[4].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[4].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[4].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[4].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[5].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[5].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[5].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[5].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[6].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[6].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[6].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[6].pcrSelections[0].pcrSelect[0] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[7].count == 1);
+  CU_ASSERT(pcrs_struct.pcrs[7].pcrSelections[0].pcrSelect[2] == 0x80);
+  CU_ASSERT(pcrs_struct.pcrs[7].pcrSelections[0].pcrSelect[1] == 0);
+  CU_ASSERT(pcrs_struct.pcrs[7].pcrSelections[0].pcrSelect[0] == 0);
+  char pd_buf[65] = { 0 };
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[0]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, test_pd_str, 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[1]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[0], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[2]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[1], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[3]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[2], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[4]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[3], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[5]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[4], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[6]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[5], 64) == 0);
+  CU_ASSERT(convert_digest_to_string(&(pd_struct.digests[7]), pd_buf) == 0);
+  CU_ASSERT(strncmp(pd_buf, digestStrings[6], 64) == 0);
+
+  // verify that attempting to exceed the MAX_POLICY_OR_CNT (8) policy branch
+  // limit errors and leaves the output struct parameters unchanged
+  policyPairCount = 1;
+  CU_ASSERT(init_policyOR(policyPairCount,
+                          (char **) pcrSelStrings,
+                          (char **) digestStrings,
+                          &pcrs_struct,
+                          &pd_struct) != 0);
+  CU_ASSERT(pcrs_struct.count == 8);
+  CU_ASSERT(pd_struct.count == 8);
 }
 
 //----------------------------------------------------------------------------
@@ -1097,6 +1284,12 @@ void test_apply_policy(void)
       }
     }
     CU_ASSERT(match == true);
+
+    //Return PCR used for tests (#23) to known (all-zero) initial value
+    CU_ASSERT(Tss2_Sys_PCR_Reset(sapi_ctx,
+                                 pcr23,
+                                 &pcrCmdAuths,
+                                 &pcrRspAuths) == 0);
 
     //Done with policy session
     CU_ASSERT(Tss2_Sys_FlushContext(sapi_ctx, session.sessionHandle) == 0);

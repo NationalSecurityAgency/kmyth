@@ -562,13 +562,13 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   }
 
   // input string should be of form:
-  //   "<pair 1>, ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
+  //   "<pair 1>; ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
 
   char * token = NULL;
   char pair_vals[MAX_POLICY_OR_CNT-1][MAX_EXP_POLICY_PAIR_STR_LEN+1] = {{ 0 }};
 
   // parse out the "pair values" from the input string
-  token = strtok(exp_policy_string, ",");
+  token = strtok(exp_policy_string, "/");
   while ((*pair_count < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
   {
     if (strlen(token) >= MAX_EXP_POLICY_PAIR_STR_LEN)
@@ -579,7 +579,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     }
     memcpy(pair_vals[*pair_count], token, strlen(token) + 1);
     (*pair_count)++;
-    token = strtok(NULL, ",");
+    token = strtok(NULL, "/");
   }
 
   if (*pair_count == 0)
@@ -678,8 +678,8 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       return 1;
     }
 
-    // trim leading and trailing whitespace and assign
-    // recovered pcrs string to output parameter
+    // trim leading and trailing whitespace, trim '0x' prefix if present,
+    // and assign recovered digest string to output parameter
     idx1 = 0;
     idx2 = strlen(token);
     memset(digest_strings[i], '\0', idx2 + 1);
@@ -690,6 +690,10 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     while (isspace(token[idx2 - 1]))
     {
       idx2--;
+    }
+    if (strncmp(token + idx1, "0x", 2) == 0)
+    {
+      idx1 += 2;
     }
     memcpy(digest_strings[i], token + idx1, idx2 - idx1);
 
