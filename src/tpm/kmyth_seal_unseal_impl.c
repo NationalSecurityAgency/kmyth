@@ -649,7 +649,7 @@ int tpm2_kmyth_seal_file(char * input_path,
       kmyth_log(LOG_ERR, "seal input data file read error");
       if (data != NULL)
       {
-	      free(data);
+        free(data);
       }
       return 1;
     }
