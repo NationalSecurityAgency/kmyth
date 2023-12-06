@@ -170,7 +170,7 @@ int tpm2_kmyth_seal(uint8_t * input,
 
   if (bool_trial_only == true)
   {
-    // create stack variable for digest hex-string
+    // create temporary variable to facilitate displaying digest hex-string
     //   - each byte of the digest requires 2 characters for the hex
     //     string representation
     //   - additional byte required at end for null termination
