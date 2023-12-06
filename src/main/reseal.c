@@ -311,8 +311,8 @@ int main(int argc, char **argv)
 
   // rename input file to <input filename>.orig to preserve it
   char * renamePath = malloc(strlen(inPath) + strlen(".orig") + 1);
-  strncpy(renamePath, inPath, strlen(inPath));
-  strncat(renamePath, ".orig", 5);
+  strncpy(renamePath, inPath, strlen(inPath) + 1);
+  strncat(renamePath, ".orig", strlen(".orig") + 1);
   if (!stat(renamePath, &st) && !forceOverwrite)
   {
     kmyth_log(LOG_ERR,

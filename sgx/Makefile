@@ -350,12 +350,14 @@ demo-all: demo-pre demo/enclave/$(Demo_Signed_Enclave_Name) $(Demo_App_Name) $(S
 endif
 
 
-demo-test-keys-certs: demo/data/client_priv_test.pem \
-                      demo/data/client_cert_test.pem \
-                      demo/data/proxy_priv_test.pem  \
-                      demo/data/proxy_cert_test.pem  \
-                      demo/data/server_priv_test.pem \
-                      demo/data/server_cert_test.pem
+demo-test-keys-certs: demo/data/ca_priv.pem \
+                      demo/data/ca_cert.pem \
+                      demo/data/client_priv.pem \
+                      demo/data/client_cert.pem \
+                      demo/data/proxy_priv.pem \
+                      demo/data/proxy_cert.pem \
+                      demo/data/server_priv.pem \
+                      demo/data/server_cert.pem
 
 demo: demo-all demo-test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
@@ -363,9 +365,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "==================================================================================================="
 	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
 	@echo "===================================================================================================\n"
-	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv_test.pem -c demo/data/server_cert_test.pem -C demo/data/ca_cert_test.pem -p 7001 &
+	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv.pem -c demo/data/server_cert.pem -C demo/data/ca_cert.pem -p 7001 &
 	@sleep 1
-	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv_test.pem -c demo/data/proxy_cert_test.pem -u demo/data/client_cert_test.pem -p 7000 -R demo/data/proxy_priv_test.pem -U demo/data/proxy_cert_test.pem -C demo/data/ca_cert_test.pem -I 127.0.0.1 -P 7001 -m 1 &
+	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv.pem -c demo/data/proxy_cert.pem -u demo/data/client_cert.pem -p 7000 -R demo/data/proxy_priv.pem -U demo/data/proxy_cert.pem -C demo/data/ca_cert.pem -I localhost -P 7001 -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@sleep 1
@@ -707,11 +709,15 @@ demo/enclave/$(Demo_Signed_Enclave_Name): demo/enclave/$(Demo_Enclave_Lib) $(Enc
 	                            -out $@ \
 	                            -config demo/enclave/$(Demo_Enclave_Config_File)
 	@echo "SIGN =>  $@"
-
-demo/data/client_priv_test.pem \
-demo/data/client_cert_test.pem \
-demo/data/server_priv_test.pem \
-demo/data/server_cert_test.pem: demo/data/gen_test_keys_certs.bash
+	
+demo/data/ca_priv.pem \
+demo/data/ca_cert.pem \
+demo/data/client_priv.pem \
+demo/data/client_cert.pem \
+demo/data/proxy_priv.pem \
+demo/data/proxy_cert.pem \
+demo/data/server_priv.pem \
+demo/data/server_cert.pem: demo/data/gen_test_keys_certs.bash
 	@cd demo/data && ./gen_test_keys_certs.bash
 	@echo "GEN => Test Key/Cert Files"
 
