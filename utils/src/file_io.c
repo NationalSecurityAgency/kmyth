@@ -188,6 +188,7 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     {
       kmyth_log(LOG_ERR, "error freeing BIO");
     }
+    free(*data);
     return 1;
   }
   
@@ -200,11 +201,13 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
     {
       kmyth_log(LOG_ERR, "error freeing BIO");
     }
+    free(*data);
     return 1;
   }
   if (!BIO_free(bio))
   {
-    kmyth_log(LOG_ERR, "error freeing BIO");
+    kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+    free(*data);
     return 1;
   }
   *data_length = (size_t)length_read;
