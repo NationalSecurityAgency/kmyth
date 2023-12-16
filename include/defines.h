@@ -66,7 +66,7 @@
  *        if too long). This maximum does not apply to user-specified
  *        filename values.
  */
-#define KMYTH_MAX_DEFAULT_FILENAME_LEN 25
+#define KMYTH_MAX_DEFAULT_FILENAME_LEN 64
 
 /**
  * @brief Default extension value/length for an output kmyth file produced
@@ -82,6 +82,18 @@
  * retry attempts.
  */
 #define MAX_RETRIES 3
+
+/**
+ * Kmyth supports PCR-based policy-OR authorization criteria. This constant
+ * defines the maximum number of policy-OR criteria supported, which maps to
+ * both the number of PCR criteria supported (used to size the array of
+ * TPML_PCR_SELECTION structs than can be encapsulated within a
+ * PCR_SELECTIONS struct) and the number of policy digests that can be
+ * specified (limited to eight by the TPML_DIGEST struct).
+ */
+#define MAX_POLICY_OR_CNT 8
+
+#define MAX_EXP_POLICY_PAIR_STR_LEN 1152
 
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)

@@ -25,5 +25,6 @@ int pcrs_add_tests(CU_pSuite suite);
 //****************************************************************************
 void test_init_pcr_selection(void);
 void test_get_pcr_count(void);
+void test_isEmptyPcrSelection(void);
 
 #endif

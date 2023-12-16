@@ -35,7 +35,7 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (get_existing_srk_handle(sapi_ctx, srk_handle, &next_persistent_handle))
   {
-    kmyth_log(LOG_ERR, "error retrieving SRK handle from TPM ... exiting");
+    kmyth_log(LOG_ERR, "error retrieving SRK handle from TPM");
     return 1;
   }
 
@@ -47,9 +47,10 @@ int get_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   {
     *srk_handle = next_persistent_handle;
     if (put_srk_into_persistent_storage(sapi_ctx,
-                                        *srk_handle, *storage_hierarchy_auth))
+                                        *srk_handle,
+                                        storage_hierarchy_auth))
     {
-      kmyth_log(LOG_ERR, "error reinstalling SRK in TPM ... exiting");
+      kmyth_log(LOG_ERR, "error reinstalling SRK in TPM");
       return 1;
     }
   }
@@ -70,7 +71,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (sapi_ctx == NULL)
   {
-    kmyth_log(LOG_ERR, "SAPI context not initialized ... exiting");
+    kmyth_log(LOG_ERR, "SAPI context not initialized");
     return 1;
   }
 
@@ -105,9 +106,10 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if (get_tpm2_properties(sapi_ctx,
                           TPM2_CAP_HANDLES,
                           TPM2_HR_PERSISTENT,
-                          TPM2_MAX_CAP_HANDLES, &persistent_handle_list))
+                          TPM2_MAX_CAP_HANDLES,
+                          &persistent_handle_list))
   {
-    kmyth_log(LOG_ERR, "error getting list of persistent handles ... exiting");
+    kmyth_log(LOG_ERR, "error getting list of persistent handles");
     return 1;
   }
 
@@ -128,11 +130,11 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
     bool SRK_flag = false;
 
     if (check_if_srk(sapi_ctx,
-                     persistent_handle_list.data.handles.handle[i], &SRK_flag))
+                     persistent_handle_list.data.handles.handle[i],
+                     &SRK_flag))
     {
-      kmyth_log(LOG_ERR,
-                "error checking if handle = 0x%08X references SRK ... exiting",
-                persistent_handle_list.data.handles.handle[i]);
+      kmyth_log(LOG_ERR, "error checking if handle = 0x%08X references SRK",
+                         persistent_handle_list.data.handles.handle[i]);
       return 1;
     }
     if (SRK_flag)
@@ -150,9 +152,10 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if (get_tpm2_properties(sapi_ctx,
                           TPM2_CAP_TPM_PROPERTIES,
                           TPM2_PT_HR_PERSISTENT_AVAIL,
-                          TPM2_MAX_TPM_PROPERTIES, &property_list))
+                          TPM2_MAX_TPM_PROPERTIES,
+                          &property_list))
   {
-    kmyth_log(LOG_ERR, "error getting TPM properties ... exiting");
+    kmyth_log(LOG_ERR, "error getting TPM properties");
     return 1;
   }
 
@@ -162,7 +165,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (ptype != TPM2_PT_HR_PERSISTENT_AVAIL)
   {
-    kmyth_log(LOG_ERR, "retrieved unexpected (0x%08X) property ... exiting",
+    kmyth_log(LOG_ERR, "retrieved unexpected (0x%08X) property",
               ptype);
     return 1;
   }
@@ -221,7 +224,7 @@ int get_existing_srk_handle(TSS2_SYS_CONTEXT * sapi_ctx,
   if ((*srkHandle == 0) && (*nextSrkHandle == 0))
   {
     kmyth_log(LOG_ERR, "SRK must be re-derived, but TPM cannot support %s"
-              "loading additional persistent objects ... exiting");
+              "loading additional persistent objects");
     return 1;
   }
 
@@ -366,8 +369,12 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
   TPM2_ALG_ID qname_algID = htons(KMYTH_HASH_ALG);
 
   memcpy(qname_buf, &qname_algID, sizeof(TPM2_ALG_ID));
-  EVP_Digest(name_buf, name_buf_len, qname_buf + sizeof(TPM2_ALG_ID), NULL,
-             KMYTH_OPENSSL_HASH, NULL);
+  EVP_Digest(name_buf,
+             name_buf_len,
+             qname_buf + sizeof(TPM2_ALG_ID),
+             NULL,
+             KMYTH_OPENSSL_HASH,
+             NULL);
   kmyth_log(LOG_DEBUG, "hashed name: 0x%02X..%02X", qname_buf[0],
             qname_buf[qname_buf_len - 1]);
   kmyth_log(LOG_DEBUG, "qualified name: 0x%02X..%02X",
@@ -407,15 +414,16 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK)
 // put_srk_into_persistent_storage()
 //############################################################################
 int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    TPM2_HANDLE srkHandle, TPM2B_AUTH sps_auth)
+                                    TPM2_HANDLE srkHandle,
+                                    TPM2B_AUTH * sps_auth)
 {
-  kmyth_log(LOG_DEBUG, "deriving SRK ..");
+  kmyth_log(LOG_DEBUG, "deriving SRK");
 
   // Check that the handle passed in is within persistent range
   if ((srkHandle < TPM2_PERSISTENT_FIRST) || (srkHandle > TPM2_PERSISTENT_LAST))
   {
     kmyth_log(LOG_ERR,
-              "SRK handle (0x%08X) out of persistent range ... exiting",
+              "SRK handle (0x%08X) out of persistent range",
               srkHandle);
     return 1;
   }
@@ -430,7 +438,7 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
   //   - For a key object, we specify the data size as zero to leave the data
   //     buffer empty.
   TPM2B_SENSITIVE_CREATE srk_sensitive;
-  uint8_t *object_data = NULL;
+  uint8_t * object_data = NULL;
   size_t object_data_size = 0;
 
   srk_sensitive.sensitive.data.size = 0;
@@ -438,9 +446,10 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
 
   if (init_kmyth_object_sensitive(sps_auth,
                                   object_data,
-                                  object_data_size, &srk_sensitive))
+                                  object_data_size,
+                                  &srk_sensitive))
   {
-    kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
+    kmyth_log(LOG_ERR, "error initializing sensitive data");
     return 1;
   }
 
@@ -451,10 +460,10 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
   srk_template.size = 0;
   empty_policy_digest.size = 0;
   if (init_kmyth_object_template(true,
-                                 empty_policy_digest,
+                                 &empty_policy_digest,
                                  &(srk_template.publicArea)))
   {
-    kmyth_log(LOG_ERR, "create SRK template error ... exiting");
+    kmyth_log(LOG_ERR, "create SRK template error");
     return 1;
   }
 
@@ -470,13 +479,14 @@ int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
                           nullSession,
                           TPM2_RH_OWNER,
                           sps_auth,
-                          emptyPCRList,
-                          srk_sensitive,
-                          srk_template,
-                          emptyPCRList,
-                          srkHandle, nullPrivateBlob, nullPublicBlob))
+                          &srk_sensitive,
+                          &srk_template,
+                          &emptyPCRList,
+                          srkHandle,
+                          nullPrivateBlob,
+                          nullPublicBlob))
   {
-    kmyth_log(LOG_ERR, "error deriving SRK ... exiting");
+    kmyth_log(LOG_ERR, "error deriving SRK");
     return 1;
   }
 
@@ -493,7 +503,8 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
                        TPML_PCR_SELECTION sk_pcrList,
                        TPM2B_DIGEST sk_authPolicy,
                        TPM2_HANDLE * sk_handle,
-                       TPM2B_PRIVATE * sk_private, TPM2B_PUBLIC * sk_public)
+                       TPM2B_PRIVATE * sk_private,
+                       TPM2B_PUBLIC * sk_public)
 {
   // Create and set up sensitive data input for new storage key object:
   //   - The authVal (hash of user specified authorization string or default
@@ -507,9 +518,9 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sk_sensitive.sensitive.data.size = 0;
   sk_sensitive.sensitive.userAuth.size = 0;
-  if (init_kmyth_object_sensitive(sk_authVal, skd, skd_size, &sk_sensitive))
+  if (init_kmyth_object_sensitive(&sk_authVal, skd, skd_size, &sk_sensitive))
   {
-    kmyth_log(LOG_ERR, "error initializing sensitive data ... exiting");
+    kmyth_log(LOG_ERR, "error initializing sensitive data");
     return 1;
   }
 
@@ -518,29 +529,29 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
 
   sk_template.size = 0;
   if (init_kmyth_object_template(true,
-                                 sk_authPolicy, &(sk_template.publicArea)))
+                                 &sk_authPolicy,
+                                 &(sk_template.publicArea)))
   {
-    kmyth_log(LOG_ERR, "SK create template error ... exiting");
+    kmyth_log(LOG_ERR, "SK create template error");
     return 1;
   }
 
   // Create new storage key
   SESSION *nullSession = NULL;  // SRK (parent) auth is not policy based
   TPM2_HANDLE unusedHandle = 0; // creating SK, not loading
-  TPML_PCR_SELECTION emptyPCRList;  // SRK (parent) has no PCR-based auth
-
-  emptyPCRList.count = 0;       // no auth policy session means no PCR criteria
 
   if (create_kmyth_object(sapi_ctx,
                           nullSession,
                           srk_handle,
-                          srk_authVal,
-                          emptyPCRList,
-                          sk_sensitive,
-                          sk_template,
-                          sk_pcrList, unusedHandle, sk_private, sk_public))
+                          &srk_authVal,
+                          &sk_sensitive,
+                          &sk_template,
+                          &sk_pcrList,
+                          unusedHandle,
+                          sk_private,
+                          sk_public))
   {
-    kmyth_log(LOG_ERR, "error creating storage key ... exiting");
+    kmyth_log(LOG_ERR, "error creating storage key");
     return 1;
   }
 
@@ -548,10 +559,12 @@ int create_and_load_sk(TSS2_SYS_CONTEXT * sapi_ctx,
   if (load_kmyth_object(sapi_ctx,
                         nullSession,
                         srk_handle,
-                        srk_authVal,
-                        emptyPCRList, sk_private, sk_public, sk_handle))
+                        &srk_authVal,
+                        sk_private,
+                        sk_public,
+                        sk_handle))
   {
-    kmyth_log(LOG_ERR, "failed to load storage key ... exiting");
+    kmyth_log(LOG_ERR, "failed to load storage key");
     return 1;
   }
 

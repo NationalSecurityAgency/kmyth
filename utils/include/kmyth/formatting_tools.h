@@ -26,23 +26,16 @@ extern "C" {
 /** 
  * @ingroup block_delim
  *
- * @brief   Indicates the start of the PCR selection list block
+ * @brief   Indicates the start of the PCR selections block
  */
-#define KMYTH_DELIM_PCR_SELECTION_LIST "-----PCR SELECTION LIST-----\n"
+#define KMYTH_DELIM_PCR_SELECTIONS "-----PCR SELECTIONS-----\n"
 
 /**
  * @ingroup block_delim
  *
- * @brief   Indicates the one of two policy branches used in a compound policy, PolicyOR
+ * @brief   Indicates the start of the Policy-OR data (digest list) block
  */
-#define KMYTH_DELIM_POLICY_BRANCH_1 "-----POLICY BRANCH 1-----\n"
-
-/**
- * @ingroup block_delim
- *
- * @brief   Indicates the second of two policy branches used in a compound policy, PolicyOR
- */
-#define KMYTH_DELIM_POLICY_BRANCH_2 "-----POLICY BRANCH 2-----\n"
+#define KMYTH_DELIM_POLICY_OR "-----POLICY OR-----\n"
 
 /** 
  * @ingroup block_delim
@@ -256,6 +249,57 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest);
  */
 int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf);
 
+/**
+ * @brief Converts a user specified (command-line parameter) PCR selection
+ *        string into an integer array.
+ *
+ * @param[in]  pcrs_string A string specifying comma separated integers that
+ *                         will be used to select which TPM 2.0 PCRs should
+ *                         be applied to the authorization policy.
+ * 
+ * @param[out] pcrs        An array containing integers specifying which 
+ *                         PCRs to apply.
+ *
+ * @param[out] pcrs_len    The length of the PCR selection integer array.
+ *
+ * @return 0 if success, 1 if error
+ */
+int convert_pcrs_string_to_int_array(char * pcrs_string,
+                                     int ** pcrs,
+                                     size_t * pcrs_len);
+
+/**
+ * @brief Represents a TPMS_PCR_SELECTION criteria as a hexstring of its
+ *        PCR selections mask 
+ *
+ * @param[in]  mask_in   Pointer to a TPMS_PCR_SELECTIONS struct used to
+ *                       configure selections for a Platform Configuration
+ *                       Register (PCR) bank within the TPM
+ *
+ * @param[out] hex_out   Allocated character buffer that will be used to
+ *                       "return" output hexstring result
+ *
+ * @return 0 if success, 1 if error
+ */
+int pcrs2hex(TPMS_PCR_SELECTION *mask_in, char * hex_out);
+
+/**
+ * @brief 
+ *
+ * @param[in]  exp_policy_string
+ * 
+ * @param[out] pair_count
+ * 
+ * @param[out] pcrs_strings
+ * 
+ * @param[out] digest_strings
+ *
+ * @return 0 if success, 1 if error
+ */
+int parse_exp_policy_string_pairs(char * exp_policy_string,
+                                  size_t * pair_count,
+                                  char ** pcrs_strings,
+                                  char ** digest_strings);
 
 #ifdef __cplusplus
 }

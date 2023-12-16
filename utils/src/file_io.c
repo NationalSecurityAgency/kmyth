@@ -29,7 +29,7 @@ int verifyInputFilePath(char *path)
   // check that file exists
   if (access(path, F_OK) == -1)
   {
-    kmyth_log(LOG_ERR, "input file (%s) not found ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) not found", path);
     return 1;
   }
 
@@ -37,21 +37,19 @@ int verifyInputFilePath(char *path)
   struct stat buffer = { 0 };
   if (stat(path, &buffer) == -1)
   {
-    kmyth_log(LOG_ERR,
-              "input file (%s) stats could not be retrieved ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) stats could not be retrieved", path);
     return 1;
   }
   if (S_ISREG(buffer.st_mode) == 0)
   {
-    kmyth_log(LOG_ERR,
-              "input file (%s) is not a regular file ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) is not a regular file", path);
     return 1;
   }
 
   // check that permission allow reading
   if (access(path, R_OK) == -1)
   {
-    kmyth_log(LOG_ERR, "input file (%s) not readable ... exiting", path);
+    kmyth_log(LOG_ERR, "input file (%s) not readable", path);
     return 1;
   }
 
@@ -66,7 +64,7 @@ int verifyOutputFilePath(char *path)
   //  check for non-NULL output path
   if (path == NULL)
   {
-    kmyth_log(LOG_ERR, "NULL output path ... exiting");
+    kmyth_log(LOG_ERR, "NULL output path");
     return 1;
   }
 
@@ -75,13 +73,13 @@ int verifyOutputFilePath(char *path)
 
   if (asprintf(&path_copy, "%s", path) < 0)
   {
-    kmyth_log(LOG_ERR, "unable to copy output file path ... exiting");
+    kmyth_log(LOG_ERR, "unable to copy output file path");
     return 1;
   }
   struct stat buffer = { 0 };
   if (stat(dirname(path_copy), &buffer))
   {
-    kmyth_log(LOG_ERR, "output path (%s) not found ... exiting", path);
+    kmyth_log(LOG_ERR, "output path (%s) not found", path);
     free(path_copy);
     return 1;
   }
@@ -89,7 +87,7 @@ int verifyOutputFilePath(char *path)
   // check that specified output path directory is actually a directory
   if (!S_ISDIR(buffer.st_mode))
   {
-    kmyth_log(LOG_ERR, "output directory (%s) not valid ... exiting",
+    kmyth_log(LOG_ERR, "output directory (%s) not valid",
               dirname(path_copy));
     free(path_copy);
     return 1;
@@ -101,8 +99,7 @@ int verifyOutputFilePath(char *path)
   {
     if (S_ISREG(buffer.st_mode) == 0)
     {
-      kmyth_log(LOG_ERR,
-                "output path (%s) is not a regular file ... exiting", path);
+      kmyth_log(LOG_ERR, "output path (%s) is not a regular file", path);
       return 1;
     }
   }
@@ -112,7 +109,7 @@ int verifyOutputFilePath(char *path)
   {
     if (access(path, W_OK) == -1)
     {
-      kmyth_log(LOG_ERR, "output file (%s) not writeable ... exiting", path);
+      kmyth_log(LOG_ERR, "output file (%s) not writeable", path);
       return 1;
     }
   }
@@ -132,17 +129,17 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
 
   if ((bio = BIO_new(BIO_s_file())) == NULL)
   {
-    kmyth_log(LOG_ERR, "unable to create BIO ... exiting");
+    kmyth_log(LOG_ERR, "unable to create BIO");
     return 1;
   }
 
   // Assign the input file to the BIO 
   if (!BIO_read_filename(bio, input_path))
   {
-    kmyth_log(LOG_ERR, "error opening input file: %s ... exiting", input_path);
+    kmyth_log(LOG_ERR, "error opening input file: %s", input_path);
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     return 1;
   }
@@ -152,12 +149,10 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
 
   if (stat(input_path, &st) == -1)
   {
-    kmyth_log(LOG_ERR,
-              "input file (%s) stats could not be retrieved ... exiting",
-              input_path);
+    kmyth_log(LOG_ERR, "input file (%s) stats not retrieved", input_path);
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     return 1;
   }
@@ -166,7 +161,7 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
   {
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     *data_length = 0;
     *data = NULL;
@@ -178,20 +173,20 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
   *data = (uint8_t *) malloc(input_size);
   if (*data == NULL)
   {
-    kmyth_log(LOG_ERR, "could not allocate memory to read file ... exiting");
+    kmyth_log(LOG_ERR, "could not allocate memory to read file");
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     return 1;
   }
   int length_read = BIO_read(bio, *data, (int)input_size);
   if (length_read <= 0)
   {
-    kmyth_log(LOG_ERR, "no data read from input file ... exiting");
+    kmyth_log(LOG_ERR, "no data read from input file");
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     free(*data);
     return 1;
@@ -200,11 +195,11 @@ int read_bytes_from_file(char *input_path, uint8_t ** data,
 
   if ((size_t)length_read != input_size)
   {
-    kmyth_log(LOG_ERR, "file size = %d bytes, buffer size = %d bytes "
-              "... exiting", input_size, *data_length);
+    kmyth_log(LOG_ERR, "file size = %d bytes, buffer size = %d bytes",
+                       input_size, *data_length);
     if (!BIO_free(bio))
     {
-      kmyth_log(LOG_ERR, "error freeing BIO ... exiting");
+      kmyth_log(LOG_ERR, "error freeing BIO");
     }
     free(*data);
     return 1;
@@ -227,21 +222,21 @@ int write_bytes_to_file(char *output_path, uint8_t * bytes, size_t bytes_length)
   // validate that file path exists and can be written to and open for writing
   if (verifyOutputFilePath(output_path))
   {
-    kmyth_log(LOG_ERR, "invalid output path (%s) ... exiting", output_path);
+    kmyth_log(LOG_ERR, "invalid output path (%s)", output_path);
     return 1;
   }
   FILE *file = fopen(output_path, "w");
 
   if (file == NULL)
   {
-    kmyth_log(LOG_ERR, "unable to open file: %s ... exiting", output_path);
+    kmyth_log(LOG_ERR, "unable to open file: %s", output_path);
     return 1;
   }
   kmyth_log(LOG_DEBUG, "opened file \"%s\" for writing", output_path);
 
   if (fwrite(bytes, sizeof(uint8_t), bytes_length, file) != bytes_length)
   {
-    kmyth_log(LOG_ERR, "Error writing file ... exiting");
+    kmyth_log(LOG_ERR, "Error writing file");
     return 1;
   }
 
@@ -258,7 +253,7 @@ int print_to_stdout(unsigned char *data, size_t data_size)
 {
   if(data_size > INT_MAX)
   {
-    kmyth_log(LOG_ERR, "data size exceeds INT_MAX ... exiting");
+    kmyth_log(LOG_ERR, "data size exceeds INT_MAX");
     return 1;
   }
   BIO *bdata;
@@ -267,14 +262,14 @@ int print_to_stdout(unsigned char *data, size_t data_size)
   //   - BIO_NOCLOSE flag - don't want to close stdout when BIO is destroyed
   if ((bdata = BIO_new_fd(STDOUT_FILENO, BIO_NOCLOSE)) == NULL)
   {
-    kmyth_log(LOG_ERR, "error creating stdout file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error creating stdout file BIO");
     return 1;
   }
 
   // Write out data
   if (BIO_write(bdata, data, (int)data_size) != (int)data_size)
   {
-    kmyth_log(LOG_ERR, "error writing data to file BIO ... exiting");
+    kmyth_log(LOG_ERR, "error writing data to file BIO");
     BIO_free_all(bdata);
     return 1;
   }

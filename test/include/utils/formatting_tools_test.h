@@ -35,5 +35,6 @@ void test_encodeBase64Data(void);
 void test_decodeBase64Data(void);
 void test_concat(void);
 void test_verifyStringDigestConversion(void);
+void test_parse_exp_policy_string_pairs(void);
 
 #endif

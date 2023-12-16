@@ -7,8 +7,10 @@
 #include "formatting_tools.h"
 #include "tpm2_interface.h"
 
-#include <string.h>
+#include <ctype.h>
 #include <malloc.h>
+#include <stdio.h>
+#include <string.h>
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -29,7 +31,7 @@ int get_block_bytes(char **contents,
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, delim_len))
   {
-    kmyth_log(LOG_ERR, "unexpected delimiter ... exiting");
+    kmyth_log(LOG_ERR, "unexpected delimiter");
     return 1;
   }
   *contents += delim_len;
@@ -40,7 +42,7 @@ int get_block_bytes(char **contents,
 
   if (next_delim_len > *remaining)
   {
-    kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
+    kmyth_log(LOG_ERR, "unexpectedly reached end of file");
     return 1;
   }
   while (strncmp(*contents + size, next_delim, next_delim_len))
@@ -48,7 +50,7 @@ int get_block_bytes(char **contents,
     size++;
     if (size + next_delim_len > *remaining)
     {
-      kmyth_log(LOG_ERR, "unexpectedly reached end of file ... exiting");
+      kmyth_log(LOG_ERR, "unexpectedly reached end of file");
       return 1;
     }
   }
@@ -56,7 +58,7 @@ int get_block_bytes(char **contents,
   // check that the block is not empty
   if (size == 0)
   {
-    kmyth_log(LOG_ERR, "empty block ... exiting");
+    kmyth_log(LOG_ERR, "empty block");
     return 1;
   }
 
@@ -72,7 +74,7 @@ int get_block_bytes(char **contents,
     *block = (uint8_t *) malloc(size);
     if (*block == NULL)
     {
-      kmyth_log(LOG_ERR, "malloc (%d bytes) error ... exiting", size);
+      kmyth_log(LOG_ERR, "malloc (%d bytes) error", size);
       return 1;
     }
 
@@ -99,7 +101,7 @@ int create_nkl_bytes(uint8_t * input, size_t input_length,
   // validate that all data to be written is non-NULL and non-empty
   if (input == NULL || input_length == 0)
   {
-    kmyth_log(LOG_ERR, "cannot write empty sections ... exiting");
+    kmyth_log(LOG_ERR, "cannot write empty sections");
     return 1;
   }
 
@@ -109,7 +111,7 @@ int create_nkl_bytes(uint8_t * input, size_t input_length,
 
   if (encodeBase64Data(input, input_length, &nkl_data, &nkl_data_size))
   {
-    kmyth_log(LOG_ERR, "error base64 encoding nkl string ... exiting");
+    kmyth_log(LOG_ERR, "error base64 encoding nkl string");
     free(nkl_data);
     return 1;
   }
@@ -139,17 +141,18 @@ int create_nkl_bytes(uint8_t * input, size_t input_length,
 //############################################################################
 int encodeBase64Data(uint8_t * raw_data,
                      size_t raw_data_size,
-                     uint8_t ** base64_data, size_t * base64_data_size)
+                     uint8_t ** base64_data,
+                     size_t * base64_data_size)
 {
   // check that there is actually data to encode, return error if not
   if (raw_data == NULL || raw_data_size == 0)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
+    kmyth_log(LOG_ERR, "no input data");
     return 1;
   }
   if(raw_data_size > INT_MAX)
   {
-    kmyth_log(LOG_ERR, "raw data too large ... exiting");
+    kmyth_log(LOG_ERR, "raw data too large");
     return 1;
   }
 
@@ -160,14 +163,14 @@ int encodeBase64Data(uint8_t * raw_data,
   // create a base64 encoding filter BIO
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
-    kmyth_log(LOG_ERR, "create base64 filter BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create base64 filter BIO error");
     return 1;
   }
 
   // create a 'sink' BIO to write to memory
   if ((bio_mem = BIO_new(BIO_s_mem())) == NULL)
   {
-    kmyth_log(LOG_ERR, "create read/write memory sink BIO error" "... exiting");
+    kmyth_log(LOG_ERR, "create read/write memory sink BIO error");
     BIO_free_all(bio64);
     return 1;
   }
@@ -178,7 +181,7 @@ int encodeBase64Data(uint8_t * raw_data,
   // write the input 'raw data' to the BIO chain
   if (BIO_write(bio64, raw_data, (int)raw_data_size) != (int)raw_data_size)
   {
-    kmyth_log(LOG_ERR, "BIO_write() error ... exiting");
+    kmyth_log(LOG_ERR, "BIO_write() error");
     BIO_free_all(bio64);
     return 1;
   }
@@ -186,7 +189,7 @@ int encodeBase64Data(uint8_t * raw_data,
   // ensure all written data is flushed all the way through chain
   if (BIO_flush(bio64) != 1)
   {
-    kmyth_log(LOG_ERR, "BIO_flush() error ... exiting");
+    kmyth_log(LOG_ERR, "BIO_flush() error");
     BIO_free_all(bio64);
     return 1;
   }
@@ -195,7 +198,7 @@ int encodeBase64Data(uint8_t * raw_data,
   BIO_get_mem_ptr(bio64, &bioptr);
   if (bioptr == NULL)
   {
-    kmyth_log(LOG_ERR, "no underlying BIO_MEM structure ... exiting");
+    kmyth_log(LOG_ERR, "no underlying BIO_MEM structure");
     BIO_free_all(bio64);
     return 1;
   }
@@ -207,7 +210,7 @@ int encodeBase64Data(uint8_t * raw_data,
   *base64_data = (uint8_t *) malloc(*base64_data_size + 1);
   if (*base64_data == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error (%lu bytes) ... exiting",
+    kmyth_log(LOG_ERR, "malloc error (%lu bytes)",
               base64_data_size);
     BIO_free_all(bio64);
     return 1;
@@ -230,12 +233,13 @@ int encodeBase64Data(uint8_t * raw_data,
 //############################################################################
 int decodeBase64Data(uint8_t * base64_data,
                      size_t base64_data_size,
-                     uint8_t ** raw_data, size_t * raw_data_size)
+                     uint8_t ** raw_data,
+                     size_t * raw_data_size)
 {
   // check that there is actually data to decode, return error if not
   if (base64_data == NULL || base64_data_size == 0)
   {
-    kmyth_log(LOG_ERR, "no input data ... exiting");
+    kmyth_log(LOG_ERR, "no input data");
     return 1;
   }
 
@@ -243,7 +247,7 @@ int decodeBase64Data(uint8_t * base64_data,
   if (base64_data_size > INT_MAX)
   {
     kmyth_log(LOG_ERR,
-              "encoded data length (%lu bytes) > max (%d bytes) ... exiting",
+              "encoded data length (%lu bytes) > max (%d bytes)",
               base64_data_size, INT_MAX);
     return 1;
   }
@@ -252,7 +256,7 @@ int decodeBase64Data(uint8_t * base64_data,
   *raw_data = (uint8_t *) malloc(base64_data_size);
   if (*raw_data == NULL)
   {
-    kmyth_log(LOG_ERR, "malloc error (%lu bytes) for b64 decode ... exiting",
+    kmyth_log(LOG_ERR, "malloc error (%lu bytes) for b64 decode",
               base64_data_size);
     return 1;
   }
@@ -262,7 +266,7 @@ int decodeBase64Data(uint8_t * base64_data,
 
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
-    kmyth_log(LOG_ERR, "create base64 filter BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create base64 filter BIO error");
     return 1;
   }
 
@@ -271,7 +275,7 @@ int decodeBase64Data(uint8_t * base64_data,
 
   if ((bio_mem = BIO_new_mem_buf(base64_data, (int)base64_data_size)) == NULL)
   {
-    kmyth_log(LOG_ERR, "create source BIO error ... exiting");
+    kmyth_log(LOG_ERR, "create source BIO error");
     BIO_free_all(bio64);
     return 1;
   }
@@ -284,7 +288,7 @@ int decodeBase64Data(uint8_t * base64_data,
 
   if (bytes_read < 0)
   {
-    kmyth_log(LOG_ERR, "error reading bytes from BIO chain ... exiting");
+    kmyth_log(LOG_ERR, "error reading bytes from BIO chain");
     BIO_free_all(bio64);
     return 1;
   }
@@ -313,13 +317,13 @@ int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
 
   if (new_dest_len < *dest_length)  //if we have an overflow
   {
-    kmyth_log(LOG_ERR, "Maximum array size exceeded ... exiting");
+    kmyth_log(LOG_ERR, "Maximum array size exceeded");
     return (1);
   }
 
   if ((new_dest = (uint8_t *) realloc(*dest, new_dest_len)) == NULL)
   {
-    kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
+    kmyth_log(LOG_ERR, "Ran out of memory");
     return (1);
   }
 
@@ -342,13 +346,13 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
 
   if (strlength != (size_t) (2 * KMYTH_DIGEST_SIZE) )
   {
-    kmyth_log(LOG_ERR, "invalid input string length ... exiting");
+    kmyth_log(LOG_ERR, "invalid input string length");
     return 1;
   }
 
   if (digest == NULL || digest->buffer == NULL )
   {
-    kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
+    kmyth_log(LOG_ERR, "invalid digest argument");
     return 1;
   }
 
@@ -357,7 +361,7 @@ int convert_string_to_digest(char *str, TPM2B_DIGEST * digest)
   unsigned char *expectedPolicyBuffer = (unsigned char *) malloc( KMYTH_DIGEST_SIZE + 1 );
   if( expectedPolicyBuffer == NULL )
   {
-    kmyth_log(LOG_ERR, "unable to reserve intermediate buffer ... exiting");
+    kmyth_log(LOG_ERR, "unable to reserve intermediate buffer");
     return 1;
   }
 
@@ -390,12 +394,12 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
 
   if (string_buf == NULL)
   {
-     kmyth_log(LOG_ERR, "NULL output buffer ... exiting");
+     kmyth_log(LOG_ERR, "NULL output buffer");
      return 1;
   }
   if (digest == NULL || digest->buffer == NULL)
   {
-     kmyth_log(LOG_ERR, "invalid digest argument ... exiting");
+     kmyth_log(LOG_ERR, "invalid digest argument");
      return 1;
   }
 
@@ -413,3 +417,304 @@ int convert_digest_to_string(TPM2B_DIGEST * digest, char *string_buf)
   return 0;
 }
 
+//############################################################################
+// convert_pcrs_string_to_int_array()
+//############################################################################
+int convert_pcrs_string_to_int_array(char * pcrs_string,
+                                     int ** pcrs,
+                                     size_t * pcrs_len)
+{
+  *pcrs_len = 0;
+
+  if (pcrs_string == NULL)
+  {
+    return 0;
+  }
+
+  kmyth_log(LOG_DEBUG, "parsing PCR selection string");
+
+  *pcrs = NULL;
+  size_t pcrs_array_size = 24;
+  *pcrs = malloc(pcrs_array_size * sizeof(int));
+
+  if (pcrs == NULL)
+  {
+    kmyth_log(LOG_ERR,
+              "failed to allocate memory to parse PCR string");
+    return 1;
+  }
+
+  char *pcrs_string_cur = pcrs_string;
+  char *pcrs_string_next = NULL;
+
+  long pcrIndex;
+
+  while (*pcrs_string_cur != '\0')
+  {
+    pcrIndex = strtol(pcrs_string_cur, &pcrs_string_next, 10);
+
+    // Check for overflow or underflow on the strtol call. There
+    // really shouldn't be, because the number of PCRs is small.
+    if ((pcrIndex == LONG_MIN) || (pcrIndex == LONG_MAX))
+    {
+      kmyth_log(LOG_ERR, "invalid PCR value specified");
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Check that strtol didn't fail to parse an integer, which is the only
+    // condition that would cause the pointers to match.
+    if (pcrs_string_cur == pcrs_string_next)
+    {
+      kmyth_log(LOG_ERR, "error parsing PCR string");
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Look at the first invalid character from the last call to strtol
+    // and confirm it's a blank, a comma, or '\0'. If not there's a disallowed
+    // character in the PCR string.
+    if (!isblank(*pcrs_string_next) && (*pcrs_string_next != ',')
+        && (*pcrs_string_next != '\0'))
+    {
+      kmyth_log(LOG_ERR, "invalid character (%c) in PCR string",
+                *pcrs_string_next);
+      free(*pcrs);
+      *pcrs_len = 0;
+      return 1;
+    }
+
+    // Step past the invalid characters, checking not to skip past the
+    // end of the string.
+    while ((*pcrs_string_next != '\0')
+           && (isblank(*pcrs_string_next) || (*pcrs_string_next == ',')))
+    {
+      pcrs_string_next++;
+    }
+
+    if (*pcrs_len == pcrs_array_size)
+    {
+      int *new_pcrs = NULL;
+
+      new_pcrs = realloc(*pcrs, pcrs_array_size * 2);
+      if (new_pcrs == NULL)
+      {
+        kmyth_log(LOG_ERR, "Ran out of memory");
+        free(*pcrs);
+        *pcrs_len = 0;
+        return 1;
+      }
+      *pcrs = new_pcrs;
+      pcrs_array_size *= 2;
+    }
+    (*pcrs)[*pcrs_len] = (int) pcrIndex;
+    (*pcrs_len)++;
+    pcrs_string_cur = pcrs_string_next;
+    pcrs_string_next = NULL;
+  }
+
+  return 0;
+}
+
+//############################################################################
+// pcrs2hex()
+//############################################################################
+int pcrs2hex(TPMS_PCR_SELECTION *mask_in, char * hex_out)
+{
+  if (hex_out == NULL)
+  {
+    kmyth_log(LOG_ERR, "unallocated hexstring buffer parameter");
+    return 1;
+  }
+
+  for (int i = 0; i < mask_in->sizeofSelect; i++)
+  {
+    sprintf(&(hex_out[i*2]), "%02X", mask_in->pcrSelect[i]);
+  }
+  hex_out[mask_in->sizeofSelect * 2] = '\0';
+
+  return 0;
+}
+
+//############################################################################
+// parse_exp_policy_string_pairs()
+//############################################################################
+int parse_exp_policy_string_pairs(char * exp_policy_string,
+                                  size_t * pair_count,
+                                  char ** pcrs_strings,
+                                  char ** digest_strings)
+{
+  *pair_count = 0;
+
+  // expects allocated "array of string pointer" output parameters
+  if ((pcrs_strings == NULL) || (digest_strings == NULL))
+  {
+    kmyth_log(LOG_ERR, "output array of string pointer param unallocated");
+    return 1;
+  }
+
+  if (exp_policy_string == NULL)
+  {
+    kmyth_log(LOG_DEBUG, "NULL expected policy string ... nothing to parse");
+    return 0;
+  }
+
+  // input string should be of form:
+  //   "<pair 1>; ... <pair n>" - where 1 <= n <= (MAX_PCR_SEL_CNT - 1)
+
+  char * token = NULL;
+  char pair_vals[MAX_POLICY_OR_CNT-1][MAX_EXP_POLICY_PAIR_STR_LEN+1] = {{ 0 }};
+
+  // parse out the "pair values" from the input string
+  token = strtok(exp_policy_string, "/");
+  while ((*pair_count < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
+  {
+    if (strlen(token) >= MAX_EXP_POLICY_PAIR_STR_LEN)
+    {
+      kmyth_log(LOG_ERR, "token (pair) size is %d chars (max is %u)",
+                         strlen(token), MAX_EXP_POLICY_PAIR_STR_LEN);
+      return 1;
+    }
+    memcpy(pair_vals[*pair_count], token, strlen(token) + 1);
+    (*pair_count)++;
+    token = strtok(NULL, "/");
+  }
+
+  if (*pair_count == 0)
+  {
+    kmyth_log(LOG_ERR, "no expected policy pairs parsed");
+    return 0;
+  }
+
+  if (token != NULL) 
+  {
+    kmyth_log(LOG_ERR, "expected policy pair count exceeded");
+    return 1;
+  }
+
+  // parse all of the recovered string "pairs" that should be of form:
+  //   '<PCR selection string>':<policy digest string>
+  for (size_t i = 0; i < *pair_count; i++)
+  {
+    // parse on ':' as delimiter
+    token = strtok(pair_vals[i], ":");
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "pcrs string parse error (%s)",
+                         pair_vals[i]);
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      return 1;
+    }
+
+    // allocate memory for recovered pcrs string 
+    pcrs_strings[i] = malloc(strlen(token) + 1);
+    if (pcrs_strings[i] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of pcrs string error");
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      return 1;
+    }
+
+    // trim leading and trailing whitespace and assign
+    // recovered pcrs string to output parameter
+    size_t idx1 = 0, idx2 = strlen(token);
+    memset(pcrs_strings[i], '\0', idx2 + 1);
+    while (isspace(token[idx1]))
+    {
+      idx1++;
+    }
+    while (isspace(token[idx2 -1]))
+    {
+      idx2--;
+    }
+    memcpy(pcrs_strings[i], token + idx1, idx2 - idx1);
+
+    // recover digest string 
+    token = strtok(NULL, ":");
+    if (token == NULL)
+    {
+      kmyth_log(LOG_ERR, "digest string parse error (%s)",
+                         pair_vals[i]);
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      free(pcrs_strings[i]);
+      pcrs_strings[i] = NULL;
+      return 1;
+    }
+
+    // allocate memory for recovered digest string
+    digest_strings[i] = malloc(strlen(token) + 1); 
+    if (digest_strings[i] == NULL)
+    {
+      kmyth_log(LOG_ERR, "malloc() of digest string error");
+      for(size_t j = 0; j < i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      free(pcrs_strings[i]);
+      pcrs_strings[i] = NULL;
+      return 1;
+    }
+
+    // trim leading and trailing whitespace, trim '0x' prefix if present,
+    // and assign recovered digest string to output parameter
+    idx1 = 0;
+    idx2 = strlen(token);
+    memset(digest_strings[i], '\0', idx2 + 1);
+    while (isspace(token[idx1]))
+    {
+      idx1++;
+    }
+    while (isspace(token[idx2 - 1]))
+    {
+      idx2--;
+    }
+    if (strncmp(token + idx1, "0x", 2) == 0)
+    {
+      idx1 += 2;
+    }
+    memcpy(digest_strings[i], token + idx1, idx2 - idx1);
+
+    // check for additional (invalid) tokens
+    token = strtok(NULL, ":");
+    if (token != NULL)
+    {
+      kmyth_log(LOG_ERR, "pair string parse error (%s)",
+                         pair_vals[i]);
+      for(size_t j = 0; j <= i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      return 1;
+    }
+  }
+
+  free(token);
+
+  return 0;
+}

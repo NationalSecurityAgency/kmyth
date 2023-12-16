@@ -27,6 +27,11 @@ int pcrs_add_tests(CU_pSuite suite)
   {
     return 1;
   }
+  if (NULL == CU_add_test(suite, "isEmptyPcrSelection() Tests",
+                          test_isEmptyPcrSelection))
+  {
+    return 1;
+  }
 
   return 0;
 }
@@ -47,35 +52,48 @@ void test_init_pcr_selection(void)
     return;
   }
 
-  int pcrs[2] = { };
-  TPML_PCR_SELECTION pcrs_struct = {.count = 0, };
+  PCR_SELECTIONS pcrs_struct = {.count = 0, };
 
-  //No PCRs selected
-  CU_ASSERT(init_pcr_selection(sapi_ctx, NULL, 0, &pcrs_struct) == 0);
+  //No PCRs selected - NULL PCRs selection string
+  CU_ASSERT(init_pcr_selection(NULL, &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 0);
+
+  //No PCRs selected - empty PCRs selection string
+  pcrs_struct.count = 0;
+  CU_ASSERT(init_pcr_selection("", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 0);
 
   //One PCR selected
-  pcrs[0] = 5;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 0);
+  pcrs_struct.count = 0;
+  CU_ASSERT(init_pcr_selection("5", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 1);
 
-  //Multiple PCRS selected
-  pcrs[1] = 3;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 0);
+  //Multiple PCRS selected, appended (input PCRs struct non-empty)
+  CU_ASSERT(init_pcr_selection("5,3", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 2);
 
-  //Invalid PCR selected
-  pcrs[0] = -3;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 1, &pcrs_struct) == 1);
+  //Multiple PCRS selected (with extra whitespace)
+  pcrs_struct.count = 0;
+  CU_ASSERT(init_pcr_selection(" 5 , 3 ", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 1);
 
-  //Valid AND invalid PCRs
-  pcrs[0] = 2;
-  pcrs[1] = -4;
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 2, &pcrs_struct) == 1);
+  //Appending empty PCR criteria to non-empty PCR selections struct
+  CU_ASSERT(init_pcr_selection(NULL, &pcrs_struct) == 1);
 
-  //Check for length 0 with non-NULL pcrs array
-  pcrs[1] = 3;                  //make all entries valid
-  CU_ASSERT(init_pcr_selection(sapi_ctx, pcrs, 0, &pcrs_struct) == 1);
+  //Invalid PCR selection string
+  pcrs_struct.count = 0;
+  CU_ASSERT(init_pcr_selection("-3", &pcrs_struct) == 1);
+  CU_ASSERT(init_pcr_selection("1025", &pcrs_struct) == 1);
+  CU_ASSERT(init_pcr_selection("2,-4", &pcrs_struct) == 1);
 
-  //NULL TPM context
-  CU_ASSERT(init_pcr_selection(NULL, pcrs, 2, &pcrs_struct) != 0);
+  //Same PCR value selected multiple times
+  pcrs_struct.count = 0;
+  CU_ASSERT(init_pcr_selection("1,1,15,15", &pcrs_struct) == 0);
+  CU_ASSERT(pcrs_struct.count == 1);
+
+  //Init of full PCRs struct
+  pcrs_struct.count = MAX_POLICY_OR_CNT;
+  CU_ASSERT(init_pcr_selection("0", &pcrs_struct) == 1);
 }
 
 //----------------------------------------------------------------------------
@@ -94,7 +112,7 @@ void test_get_pcr_count(void)
     return;
   }
 
-  int count = 0;
+  uint32_t count = 0;
 
   //Valid get count
   CU_ASSERT(get_pcr_count(sapi_ctx, &count) == 0);
@@ -102,4 +120,32 @@ void test_get_pcr_count(void)
 
   //Test NULL context
   CU_ASSERT(get_pcr_count(NULL, &count) == 1);
+}
+
+//----------------------------------------------------------------------------
+// test_isEmptyPcrSelection
+//----------------------------------------------------------------------------
+void test_isEmptyPcrSelection(void)
+{
+  TPML_PCR_SELECTION empty_pcrs = { 0 };
+
+  TPML_PCR_SELECTION nonempty_pcrs={ .count=1,
+                                     .pcrSelections[0]={ .sizeofSelect=3,
+                                                         .pcrSelect[0]=0x80,
+                                                         .pcrSelect[1]=0x00,
+                                                         .pcrSelect[2]=0x00 }};
+
+  //Empty PCR selection list
+  CU_ASSERT(isEmptyPcrSelection(&empty_pcrs) == true);
+
+  //PCR selection list with non-zero count but clear mask
+  empty_pcrs.count = 1;
+  CU_ASSERT(isEmptyPcrSelection(&empty_pcrs) == true);
+
+  //Non-empty PCR selection list
+  CU_ASSERT(isEmptyPcrSelection(&nonempty_pcrs) == false);
+
+  //Empty PCR selection list with unclear mask
+  nonempty_pcrs.count = 0;
+  CU_ASSERT(isEmptyPcrSelection(&nonempty_pcrs) == true);
 }

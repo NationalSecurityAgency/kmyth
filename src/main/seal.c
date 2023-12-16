@@ -12,9 +12,12 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "kmyth.h"
+#include "formatting_tools.h"
 #include "kmyth_log.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "memory_util.h"
+#include "pcrs.h"
+#include "tpm2_interface.h"
 
 #include "cipher/cipher.h"
 
@@ -24,123 +27,54 @@
  */
 extern const cipher_t cipher_list[];
 
-//############################################################################
-// parse_pcrs_string()
-//############################################################################
-static int parse_pcrs_string(char *pcrs_string, int **pcrs, int *pcrs_len)
-{
-  *pcrs_len = 0;
-
-  if (pcrs_string == NULL)
-  {
-    return 0;
-  }
-
-  kmyth_log(LOG_DEBUG, "parsing PCR selection string");
-
-  *pcrs = NULL;
-  *pcrs = malloc(24 * sizeof(int));
-  size_t pcrs_array_size = 24;
-
-  if (pcrs == NULL)
-  {
-    kmyth_log(LOG_ERR,
-              "failed to allocate memory to parse PCR string ... exiting");
-    return 1;
-  }
-
-  char *pcrs_string_cur = pcrs_string;
-  char *pcrs_string_next = NULL;
-
-  long pcrIndex;
-
-  while (*pcrs_string_cur != '\0')
-  {
-    pcrIndex = strtol(pcrs_string_cur, &pcrs_string_next, 10);
-
-    // Check for overflow or underflow on the strtol call. There
-    // really shouldn't be, because the number of PCRs is small.
-    if ((pcrIndex == LONG_MIN) || (pcrIndex == LONG_MAX))
-    {
-      kmyth_log(LOG_ERR, "invalid PCR value specified ... exiting");
-      free(*pcrs);
-      *pcrs_len = 0;
-      return 1;
-    }
-
-    // Check that strtol didn't fail to parse an integer, which is the only
-    // condition that would cause the pointers to match.
-    if (pcrs_string_cur == pcrs_string_next)
-    {
-      kmyth_log(LOG_ERR, "error parsing PCR string ... exiting");
-      free(*pcrs);
-      *pcrs_len = 0;
-      return 1;
-    }
-
-    // Look at the first invalid character from the last call to strtol
-    // and confirm it's a blank, a comma, or '\0'. If not there's a disallowed
-    // character in the PCR string.
-    if (!isblank(*pcrs_string_next) && (*pcrs_string_next != ',')
-        && (*pcrs_string_next != '\0'))
-    {
-      kmyth_log(LOG_ERR, "invalid character (%c) in PCR string ... exiting",
-                *pcrs_string_next);
-      free(*pcrs);
-      *pcrs_len = 0;
-      return 1;
-    }
-
-    // Step past the invalid characters, checking not to skip past the
-    // end of the string.
-    while ((*pcrs_string_next != '\0')
-           && (isblank(*pcrs_string_next) || (*pcrs_string_next == ',')))
-    {
-      pcrs_string_next++;
-    }
-
-    if (*pcrs_len == pcrs_array_size)
-    {
-      int *new_pcrs = NULL;
-
-      new_pcrs = realloc(*pcrs, pcrs_array_size * 2);
-      if (new_pcrs == NULL)
-      {
-        kmyth_log(LOG_ERR, "Ran out of memory ... exiting");
-        free(*pcrs);
-        *pcrs_len = 0;
-        return 1;
-      }
-      *pcrs = new_pcrs;
-      pcrs_array_size *= 2;
-    }
-    (*pcrs)[*pcrs_len] = (int) pcrIndex;
-    (*pcrs_len)++;
-    pcrs_string_cur = pcrs_string_next;
-    pcrs_string_next = NULL;
-  }
-
-  return 0;
-}
-
 static void usage(const char *prog)
 {
   fprintf(stdout,
           "\nusage: %s [options] \n\n"
           "options are: \n\n"
-          " -a or --auth_string     String used to create 'authVal' digest. Defaults to empty string (all-zero digest).\n"
-          " -i or --input           Path to file containing the data to be sealed.\n"
-          " -o or --output          Destination path for the sealed file. Defaults to <filename>.ski in the CWD.\n"
-          " -f or --force           Force the overwrite of an existing .ski file when using default output.\n"
-          " -p or --pcrs_list       List of TPM platform configuration registers (PCRs) to apply to authorization policy.\n"
-          "                         Defaults to no PCRs specified. Encapsulate in quotes (e.g. \"0, 1, 2\").\n"
-          " -c or --cipher          Specifies the cipher type to use. Defaults to \'%s\'\n"
-          " -g or --get_exp_policy  Retrieves the PolicyPCR digest associated with the current value of pcr registers \n"
-          " -e or --expected_policy Specifies an alternative digest value that can satisfy the authorization policy. \n"
+          " -a or --auth_string     String used to create 'authVal' digest.\n"
+          "                         Defaults to empty string.\n"
+          " -c or --cipher          Specifies the cipher type to use.\n"
+          "                         Defaults to \'%s\'\n"
+          " -e or --expected_policy Specifies pairs of additional PCR\n"
+          "                         selection and policy digest values to\n"
+          "                         include as alternative criteria for a\n"
+          "                         policy-OR based authorization.\n"
+          "                         PCR selections are specified as comma\n"
+          "                         separated integers and policy digests\n"
+          "                         are specified as hexadecimal strings.\n"
+          "                         Delimit entries within a pair using a\n"
+          "                         colon, and delimit pair values using\n"
+          "                         forward slashes (e.g.,\n"
+          "                         \'0, 1 : 0x5a..7b / 1, 2 : db..01\').\n"
+          "                         Empty or missing PCR selection criteria\n"
+          "                         is invalid (negates need for policy-OR).\n"
+          "                         More than seven pair values is invalid\n"
+          "                         (TPM only supports up to eight policy-OR\n"
+          "                         branches).\n"
+          " -f or --force           Force the overwrite of an existing .ski\n"
+          "                         file when using default output.\n"
+          " -g or --get_exp_policy  Retrieves the policy digest associated\n"
+          "                         with the specified authorization string,\n"
+          "                         specified PCR selections, and/or current\n"
+          "                         system configuration (PCR values)\n"
+          "                         authorization. Defaults to emptyAuth\n"
+          "                         to match TPM default. Policy digest is\n"
+          "                         presented as a hexadecimal string.\n"
+          " -h or --help            Help (displays this usage).\n"
+          " -i or --input           Path to file containing the data to be\n"
+          "                         sealed.\n"
           " -l or --list_ciphers    Lists all valid ciphers and exits.\n"
-          " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy authorization. Defaults to emptyAuth to match TPM default.\n"
-          " -v or --verbose         Enable detailed logging.\n"
-          " -h or --help            Help (displays this usage).\n", prog,
+          " -o or --output          Destination path for the sealed file.\n"
+          "                         Defaults to <filename>.ski in the CWD.\n"
+          " -p or --pcrs_list       List of TPM platform configuration\n"
+          "                         registers (PCRs) to apply to\n"
+          "                         authorization policy. Defaults to no\n"
+          "                         PCRs specified. Delimit integer values\n"
+          "                         using commas. (e.g. \'0, 1, 2\').\n"
+          " -w or --owner_auth      TPM 2.0 storage (owner) hierarchy\n"
+          " -v or --verbose         Enable detailed logging.\n",
+          prog,
           cipher_list[0].cipher_name);
 }
 
@@ -193,24 +127,26 @@ int main(int argc, char **argv)
   set_applog_path(KMYTH_APPLOG_PATH);
 
   // Initialize parameters that might be modified by command line options
-  char *inPath = NULL;
-  char *outPath = NULL;
+  char * inPath = NULL;
+  char * outPath = NULL;
   size_t outPath_size = 0;
-  char *authString = NULL;
-  char *ownerAuthPasswd = "";
-  char *pcrsString = NULL;
-  char *cipherString = NULL;
+  char * authString = NULL;
+  char * ownerAuthPasswd = "";
+  char * pcrsString = NULL;
+  char * cipherString = NULL;
+  char * expPolicyString = NULL;
   bool forceOverwrite = false;
-  char *expected_policy = NULL;
   bool boolTrialOnly = false;
 
   // Parse and apply command line options
   int options;
   int option_index;
 
-  while ((options =
-          getopt_long(argc, argv, "a:e:i:o:c:p:w:fghlv", longopts,
-                      &option_index)) != -1)
+  while ((options = getopt_long(argc,
+                                argv,
+                                "a:c:e:i:o:p:w:fghlv",
+                                longopts,
+                                &option_index)) != -1)
   {
     switch (options)
     {
@@ -220,9 +156,24 @@ int main(int argc, char **argv)
     case 'c':
       cipherString = optarg;
       break;
+    case 'e':
+      expPolicyString = optarg;
+      break;
+    case 'f':
+      forceOverwrite = true;
+      break;
+    case 'g':
+      boolTrialOnly = true;
+      break;
+    case 'h':
+      usage(argv[0]);
+      return 0;
     case 'i':
       inPath = optarg;
       break;
+    case 'l':
+      list_ciphers();
+      return 0;
     case 'o':
       // make outPath a copy of the argument for consistency with case
       // where we assign a default outPath value - always allocate memory
@@ -234,20 +185,8 @@ int main(int argc, char **argv)
         memcpy(outPath, optarg, outPath_size);
       }
       break;
-    case 'f':
-      forceOverwrite = true;
-      break;
-    case 'g':
-      boolTrialOnly = true;
-      break;
-    case 'e':
-      expected_policy = optarg;
-      break;
     case 'p':
       pcrsString = optarg;
-      break;
-    case 'w':
-      ownerAuthPasswd = optarg;
       break;
     case 'v':
       // always display all log messages (severity threshold = LOG_DEBUG)
@@ -255,44 +194,45 @@ int main(int argc, char **argv)
       set_applog_severity_threshold(LOG_DEBUG);
       set_applog_output_mode(0);
       break;
-    case 'h':
-      usage(argv[0]);
-      return 0;
-    case 'l':
-      list_ciphers();
-      return 0;
+    case 'w':
+      ownerAuthPasswd = optarg;
+      break;
     default:
       return 1;
     }
   }
 
+  // Since these originate in main() we know they are null terminated
+  size_t authString_len = (authString == NULL) ? 0 : strlen(authString);
+  size_t oaPasswd_len = (ownerAuthPasswd==NULL) ? 0 : strlen(ownerAuthPasswd);
+
   // Some options don't do anything with -g, so warn about that now.
-  if(boolTrialOnly)
+  if (boolTrialOnly)
   {
-    if(authString != NULL || ownerAuthPasswd != "" || outPath != NULL || inPath != NULL || cipherString != NULL || forceOverwrite || expected_policy != NULL)
+    if (authString != NULL ||
+       strlen(ownerAuthPasswd) != 0 ||
+       outPath != NULL ||
+       inPath != NULL ||
+       cipherString != NULL ||
+       forceOverwrite ||
+       expPolicyString != NULL)
     {
-      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have no effect when combined with -g");
+      kmyth_log(LOG_WARNING, "-a, -c, -e, -f, -i, -o, and -w have ",
+                             "no effect when combined with -g");
     }
   }
-  //Since these originate in main() we know they are null terminated
-  size_t auth_string_len = (authString == NULL) ? 0 : strlen(authString);
-  size_t oa_passwd_len =
-    (ownerAuthPasswd == NULL) ? 0 : strlen(ownerAuthPasswd);
 
   // Check that input path (file to be sealed) was specified
   if (inPath == NULL && !boolTrialOnly)
   {
     kmyth_log(LOG_ERR, "no input (file to be sealed) specified ... exiting");
-    if (authString != NULL)
-    {
-      kmyth_clear(authString, auth_string_len);
-    }
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     free(outPath);
     return 1;
   }
 
-  // If output file not specified, set output path to basename(inPath) with
+  // If output file not specified, set output path to basename (inPath) with
   // a .ski extension in the directory that the application is being run from.
   if (outPath == NULL && !boolTrialOnly)
   {
@@ -303,7 +243,7 @@ int main(int argc, char **argv)
     // Initialize default filename to basename() of input path, truncating if
     // necessary. The maximum size of this "root" value is the must allow space
     // to add a '.' delimiter (1 byte) and the default extension
-    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes).
+    // (KMYTH_DEFAULT_SEAL_OUT_EXT_LEN bytes), leaving a null termination.
     size_t max_root_len = KMYTH_MAX_DEFAULT_FILENAME_LEN;
     max_root_len -= KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1;
     strncpy(default_fn, basename(inPath), max_root_len);
@@ -318,8 +258,8 @@ int main(int argc, char **argv)
     if (strlen(default_fn) == 0)
     {
       kmyth_log(LOG_ERR, "invalid/empty default filename root ... exiting");
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       return 1;
     }
 
@@ -328,7 +268,7 @@ int main(int argc, char **argv)
     if (ext_ptr == NULL)
     {
       // no filename extension found - just add trailing '.'
-      strncat(default_fn, ".", 1);
+      strncat(default_fn, ".", 2);
     }
     else
     {
@@ -341,8 +281,9 @@ int main(int argc, char **argv)
     }
 
     // concatenate default filename root and extension
-    strncat(default_fn, KMYTH_DEFAULT_SEAL_OUT_EXT,
-                        KMYTH_DEFAULT_SEAL_OUT_EXT_LEN);
+    strncat(default_fn,
+            KMYTH_DEFAULT_SEAL_OUT_EXT,
+            KMYTH_DEFAULT_SEAL_OUT_EXT_LEN + 1);
 
     // Make sure default filename we constructed doesn't already exist
     struct stat st = { 0 };
@@ -351,50 +292,135 @@ int main(int argc, char **argv)
       kmyth_log(LOG_ERR,
                 "default output filename (%s) already exists ... exiting",
                 default_fn);
-      kmyth_clear(authString, auth_string_len);
-      kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
       return 1;
     }
 
     // Go ahead and make the default value the output path
-    outPath_size = strlen(default_fn);
+    outPath_size = strlen(default_fn) + 1;
     outPath = malloc(outPath_size * sizeof(char));
     memcpy(outPath, default_fn, outPath_size);
     kmyth_log(LOG_WARNING, "output file not specified, default = %s", outPath);
   }
 
-  uint8_t *output = NULL;
-  size_t output_length = 0;
+  // For more flexible PCR-based policies, kmyth utilizes a
+  // PCR_SELECTIONS struct, which encapsulates a list of up to
+  // eight (8) TPML_PCR_SELECTION structs:
+  //
+  // - The first TPML_PCR_SELECTION struct in this list (index = 0) contains
+  //   the current PCR selections (i.e., those specified by the user in a
+  //   command-line option string). While this struct may be configured with
+  //   an empty mask (no PCRs selected), it must exist even if no PCR criteria
+  //   is specified by the user. In addition to its use in specifying an
+  //   authorization policy, this set of PCRs (even if empty) is incorporated
+  //   in object creation data.
+  //
+  // - The remaining TPML_PCR_SELECTIONS structs (index = 1-7), if present,
+  //   support policy-OR authorization based on multiple PCR criteria. A
+  //   policy-OR criteria where one of the policy branches has no PCRs
+  //   selected does not make sense for the current kmyth implementation
+  //   supporting only PCR-based policy-OR criteria, so, if a policy-OR
+  //   criteria is specified, all 'branches' of the policy must specify a
+  //   non-empty set of PCR selections.
+  PCR_SELECTIONS pcrSelections = { .count = 0, };
 
-  int *pcrs = NULL;
-  int pcrs_len = 0;
-
-  if (parse_pcrs_string(pcrsString, &pcrs, &pcrs_len) != 0 || pcrs_len < 0)
+  // configure PCR selections struct using string, if any, supplied by user
+  //
+  // Note: passing init_pcr_selections() an empty PCR_SELECTIONS struct will
+  //       inititialize the first (index = 0) set of PCR selections with the
+  //       "current" settings specified on the command line (null pcrsString
+  //       initializes to an empty mask)
+  if (init_pcr_selection(pcrsString, &pcrSelections) != 0)
   {
-    kmyth_log(LOG_ERR, "failed to parse PCR string %s ... exiting", pcrsString);
+    kmyth_log(LOG_ERR, "error configuring PCR_SELECTIONS struct");
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
     free(outPath);
-    free(output);
     return 1;
   }
+  kmyth_log(LOG_DEBUG, "configured 'current' PCR selections");
+
+  // configure policy-OR digest list struct:
+  //
+  //   - if policy-OR criteria specified on the command line, parse it
+  //     and use it to configure the policy-OR digest list struct
+  //
+  //   - if no policy-OR criteria is specified on the command line,
+  //     leave the struct as initialized (an empty list)
+  TPML_DIGEST policyOR_digests = { .count = 0, };
+
+  if (expPolicyString != NULL)
+  {
+    size_t expPolicyStrCnt = 0;
+    char * pString[MAX_POLICY_OR_CNT - 1] = { NULL };
+    char * dString[MAX_POLICY_OR_CNT - 1] = { NULL };
+    
+    if (parse_exp_policy_string_pairs(expPolicyString,
+                                      &expPolicyStrCnt,
+                                      pString,
+                                      dString) != 0)
+    {
+      kmyth_log(LOG_ERR, "error parsing policy-OR data string");
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+      free(outPath);
+      return 1;
+    }
+    kmyth_log(LOG_DEBUG, "parsed %zu policy-OR pcrs:digest string pairs",
+                         expPolicyStrCnt);
+
+                         
+    if (init_policyOR(expPolicyStrCnt,
+                      pString,
+                      dString,
+                      &pcrSelections,
+                      &policyOR_digests) != 0)
+    {
+      kmyth_log(LOG_ERR, "init_policyOR() failed");
+      kmyth_clear(authString, authString_len);
+      kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+      free(outPath);
+      for (size_t i = 0; i < expPolicyStrCnt; i++)
+      {
+        free(pString[i]);
+        free(dString[i]);
+      }
+      return 1;
+    }
+    for (size_t i = 0; i < expPolicyStrCnt; i++)
+    {
+      free(pString[i]);
+      free(dString[i]);
+    }
+  }
+
+  // declare memory buffer to contain kmyth-sealed result data
+  // Note: memory will be allocated as a result of calling
+  //       tpm2_kmyth_seal_file() and must be cleared by the caller.
+  uint8_t * output = NULL;
+  size_t output_length = 0;
 
   // Call top-level "kmyth-seal" function
-  if (tpm2_kmyth_seal_file(inPath, &output, &output_length,
-                           (uint8_t *) authString, auth_string_len,
-                           (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                           pcrs, (size_t)pcrs_len, cipherString, expected_policy,
+  if (tpm2_kmyth_seal_file(inPath,
+                           &output,
+                           &output_length,
+                           authString,
+                           ownerAuthPasswd,
+                           cipherString,
+                           &pcrSelections,
+                           &policyOR_digests,
                            boolTrialOnly))
   {
     kmyth_log(LOG_ERR, "kmyth-seal error ... exiting");
-    kmyth_clear(authString, auth_string_len);
-    kmyth_clear(ownerAuthPasswd, oa_passwd_len);
-    free(pcrs);
+    kmyth_clear(authString, authString_len);
+    kmyth_clear(ownerAuthPasswd, oaPasswd_len);
+    kmyth_clear_and_free(output, output_length);
     free(outPath);
-    free(output);
     return 1;
   }
-
-  kmyth_clear(authString, auth_string_len);
-  kmyth_clear(ownerAuthPasswd, oa_passwd_len);
+  kmyth_clear(authString, authString_len);
+  kmyth_clear(ownerAuthPasswd, oaPasswd_len);
 
   // only create output file if -g option is NOT passed
   if (boolTrialOnly == 0)
@@ -402,15 +428,13 @@ int main(int argc, char **argv)
     if (write_bytes_to_file(outPath, output, output_length))
     {
       kmyth_log(LOG_ERR, "error writing data to .ski file ... exiting");
+      kmyth_clear_and_free(output, output_length);
       free(outPath);
-      free(output);
-      free(pcrs);
       return 1;
     }
   }
-
-  free(pcrs);
+  kmyth_clear_and_free(output, output_length);
   free(outPath);
-  free(output);
+
   return 0;
 }

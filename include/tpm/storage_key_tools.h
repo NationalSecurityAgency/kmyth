@@ -92,13 +92,15 @@ int check_if_srk(TSS2_SYS_CONTEXT * sapi_ctx, TPM2_HANDLE handle, bool *isSRK);
  *
  * @param[in]  srkHandle TPM 2.0 handle for SRK to be loaded under
  *
- * @param[in]  sps_auth   TPM 2.0 Storage Primary Seed authentication
- *                        value (e.g., storage hierarchy password).     
+ * @param[in]  sps_auth   Pointer to TPM 2.0 Storage Primary Seed
+ *                        authorization value (e.g., storage
+ *                        hierarchy password).     
  *
  * @return 0 if success, 1 if error. 
  */
 int put_srk_into_persistent_storage(TSS2_SYS_CONTEXT * sapi_ctx,
-                                    TPM2_HANDLE srkHandle, TPM2B_AUTH sps_auth);
+                                    TPM2_HANDLE srkHandle,
+                                    TPM2B_AUTH * sps_auth);
 
 /**
  * @brief Creates and loads, into the TPM, a new storage key (SK) under the
