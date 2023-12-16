@@ -15,7 +15,7 @@
 
 #include "defines.h"
 #include "file_io.h"
-#include "kmyth.h"
+#include "kmyth_seal_unseal_impl.h"
 #include "kmyth_log.h"
 #include "memory_util.h"
 #include "tls_util.h"
@@ -250,15 +250,18 @@ int main(int argc, char **argv)
   char *sdo_orig_fn = NULL;
   uint8_t *clientPrivateKey_data = NULL;
   size_t clientPrivateKey_size = 0;
-
-  // use bool_policy_or = 1 to unseal objects that are sealed with a compound "policy or" policy
-  uint8_t bool_policy_or = 0;
+  char * ski_cipherString = NULL;
+  PCR_SELECTIONS ski_pcrs = { 0 };
+  TPML_DIGEST ski_digests = { 0 };
 
   if (tpm2_kmyth_unseal_file(inPath,
-                             &clientPrivateKey_data, &clientPrivateKey_size,
-                             (uint8_t *) authString, auth_string_len,
-                             (uint8_t *) ownerAuthPasswd, oa_passwd_len,
-                             bool_policy_or))
+                             &clientPrivateKey_data,
+                             &clientPrivateKey_size,
+                             authString,
+                             ownerAuthPasswd,
+                             &ski_cipherString,
+                             &ski_pcrs,
+                             &ski_digests))
   {
     kmyth_log(LOG_ERR, "Unable to unseal the certificate's private key.");
     kmyth_clear_and_free(clientPrivateKey_data, clientPrivateKey_size);

@@ -57,11 +57,15 @@ void test_init_kmyth_object_sensitive(void)
   TPM2B_SENSITIVE_CREATE sensitiveArea = { 0 };
 
   // A null sensitive area should produce an error
-  CU_ASSERT(init_kmyth_object_sensitive(object_auth, (uint8_t *) NULL, 0,
+  CU_ASSERT(init_kmyth_object_sensitive(&object_auth,
+                                        (uint8_t *) NULL,
+                                        0,
                                         (TPM2B_SENSITIVE_CREATE *) NULL) == 1);
 
   // Empty object auth and data should yield a valid sensitive area
-  CU_ASSERT(init_kmyth_object_sensitive(object_auth, (uint8_t *) NULL, 0,
+  CU_ASSERT(init_kmyth_object_sensitive(&object_auth,
+                                        (uint8_t *) NULL,
+                                        0,
                                         &sensitiveArea) == 0);
   CU_ASSERT(sensitiveArea.sensitive.userAuth.size == object_auth.size);
   CU_ASSERT(sensitiveArea.sensitive.data.size == 0);
@@ -72,13 +76,17 @@ void test_init_kmyth_object_sensitive(void)
   uint8_t object_data[] = { 1, 2, 3, 4 };
   size_t object_dataSize = 4;
 
-  CU_ASSERT(init_kmyth_object_sensitive(object_auth, object_data,
-                                        object_dataSize, &sensitiveArea) == 0);
+  CU_ASSERT(init_kmyth_object_sensitive(&object_auth,
+                                        object_data,
+                                        object_dataSize,
+                                        &sensitiveArea) == 0);
   CU_ASSERT(sensitiveArea.sensitive.userAuth.size == object_auth.size);
-  CU_ASSERT(memcmp(object_auth.buffer, sensitiveArea.sensitive.userAuth.buffer,
+  CU_ASSERT(memcmp(object_auth.buffer,
+                   sensitiveArea.sensitive.userAuth.buffer,
                    object_auth.size) == 0);
   CU_ASSERT(sensitiveArea.sensitive.data.size == object_dataSize);
-  CU_ASSERT(memcmp(object_data, sensitiveArea.sensitive.data.buffer,
+  CU_ASSERT(memcmp(object_data,
+                   sensitiveArea.sensitive.data.buffer,
                    object_dataSize) == 0);
   CU_ASSERT(sensitiveArea.size == (object_auth.size + object_dataSize + 4));
 }
@@ -93,11 +101,14 @@ void test_init_kmyth_object_template(void)
   static const TPMT_PUBLIC emptyPubArea = { 0 };
 
   // A null public area should produce an error
-  CU_ASSERT(init_kmyth_object_template(false, emptyAuthPolicy,
+  CU_ASSERT(init_kmyth_object_template(false,
+                                       &emptyAuthPolicy,
                                        (TPMT_PUBLIC *) NULL) == 1);
 
   // An object template for a non-key should be initialized in a certain way
-  CU_ASSERT(init_kmyth_object_template(false, emptyAuthPolicy, &pubArea) == 0);
+  CU_ASSERT(init_kmyth_object_template(false,
+                                       &emptyAuthPolicy,
+                                       &pubArea) == 0);
   CU_ASSERT(pubArea.type == KMYTH_DATA_PUBKEY_ALG);
   CU_ASSERT(pubArea.nameAlg == KMYTH_HASH_ALG);
   CU_ASSERT(pubArea.authPolicy.size == 0);
@@ -106,11 +117,14 @@ void test_init_kmyth_object_template(void)
   // a non-empty auth policy
   pubArea = emptyPubArea;
   TPM2B_DIGEST authPolicy = {.size = 4,.buffer = {1, 2, 3, 4} };
-  CU_ASSERT(init_kmyth_object_template(true, authPolicy, &pubArea) == 0);
+  CU_ASSERT(init_kmyth_object_template(true,
+                                       &authPolicy,
+                                       &pubArea) == 0);
   CU_ASSERT(pubArea.type == KMYTH_KEY_PUBKEY_ALG);
   CU_ASSERT(pubArea.nameAlg == KMYTH_HASH_ALG);
   CU_ASSERT(pubArea.authPolicy.size == authPolicy.size);
-  CU_ASSERT(memcmp(authPolicy.buffer, pubArea.authPolicy.buffer,
+  CU_ASSERT(memcmp(authPolicy.buffer,
+                   pubArea.authPolicy.buffer,
                    authPolicy.size) == 0);
 }
 

@@ -16,7 +16,7 @@
 /**
  * @brief Fill in sensitive data input used for Kmyth object creation.
  *
- * @param[in]  object_auth     Authorization value to be applied to
+ * @param[in]  object_auth     Pointer to authorization value to be applied to
  *                             authorization policy for Kmyth object
  *
  * @param[in]  object_data     Data to be sealed:
@@ -45,7 +45,7 @@
  *
  * @return 0 if success, 1 if error.
  */
-int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
+int init_kmyth_object_sensitive(TPM2B_AUTH * object_auth,
                                 uint8_t * object_data,
                                 size_t object_dataSize,
                                 TPM2B_SENSITIVE_CREATE * sensitiveArea);
@@ -59,22 +59,23 @@ int init_kmyth_object_sensitive(TPM2B_AUTH object_auth,
  *   <LI> algorithm options </LI>
  * </UL>
  *
- * @param[in]  isKey       Boolean flag indicating whether or not
- *                         object is a key:
- *                         <UL>
- *                           <LI> true = object is a key </LI>
- *                           <LI> false = object is a blob </LI>
- *                         </UL>
+ * @param[in]  isKey         Boolean flag indicating whether or not
+ *                           object is a key:
+ *                           <UL>
+ *                             <LI> true = object is a key </LI>
+ *                             <LI> false = object is a blob </LI>
+ *                           </UL>
  * 
- * @param[in]  auth_policy Authorization policy digest for object -
- *                         passed as a pointer to this buffer
+ * @param[in]  auth_policy   Pointer to authorization policy digest for object
+ *                           passed as a pointer to this buffer
  *
- * @param[out] pubArea:    Public template (TPMT_PUBLIC) to be initialized -
- *                         passed as a pointer to this structure
+ * @param[out] pubArea:      Public template (TPMT_PUBLIC) to be initialized -
+ *                           passed as a pointer to this structure
  *
  * @return 0 if success, 1 if error. 
  */
-int init_kmyth_object_template(bool isKey, TPM2B_DIGEST auth_policy,
+int init_kmyth_object_template(bool isKey,
+                               TPM2B_DIGEST * auth_policy,
                                TPMT_PUBLIC * pubArea);
 
 /**
@@ -213,7 +214,7 @@ int init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
  *                                       </LI>
  *                                     </UL> 
  *
-  * @param[in]  parent_auth             Creation of a new object requires the
+  * @param[in]  parent_auth            Creation of a new object requires the
  *                                     authorization criteria of the parent
  *                                     object it is to be created under:
  *                                     <UL>
@@ -236,23 +237,6 @@ int init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
  *                                            </UL>
  *                                       </LI>
  *                                     </UL>
- *
- * @param[in]  parent_pcrList          Creation of a new object requires the
- *                                     authorization criteria of the parent
- *                                     object it is to be created under:
- *                                     <UL>
- *                                       <LI> If creating either an SRK or an
- *                                            SK, this value must contain an
- *                                            empty PCR selection list
- *                                       </LI>
- *                                       <LI> If creating a 'data' blob, the SK
- *                                            parent object's authorization
- *                                            policy requires the PCR Select
- *                                            structure indicating the PCR
- *                                            values that must match
- *                                       </LI>
- *                                     </UL>
- *
  *
  * @param[in]  object_sensitive        Initialized TPM2B_SENSITIVE_CREATE
  *                                     structure containing:
@@ -317,11 +301,10 @@ int init_kmyth_object_unique(TPMI_ALG_PUBLIC objectType,
 int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * createObjectAuthSession,
                         TPM2_HANDLE parent_handle,
-                        TPM2B_AUTH parent_auth,
-                        TPML_PCR_SELECTION parent_pcrList,
-                        TPM2B_SENSITIVE_CREATE object_sensitive,
-                        TPM2B_PUBLIC object_template,
-                        TPML_PCR_SELECTION object_pcrSelect,
+                        TPM2B_AUTH * parent_auth,
+                        TPM2B_SENSITIVE_CREATE * object_sensitive,
+                        TPM2B_PUBLIC * object_template,
+                        TPML_PCR_SELECTION * object_pcrSelect,
                         TPM2_HANDLE object_dest_handle,
                         TPM2B_PRIVATE * object_private,
                         TPM2B_PUBLIC * object_public);
@@ -359,12 +342,12 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   authorization criteria of the parent
  *                                   be satisfied by the caller.
  * 
- * @param[in]  parent_auth           Authorization value for the parent (SRK
- *                                   if a SK is being loaded or SK if a data
- *                                   object is being loaded). In the case that
- *                                   the parent is an SRK, this should
- *                                   respresent the password for the owner
- *                                   (storage) hierarchy. Alternatively,
+ * @param[in]  parent_auth           Pointer to authorization value for the
+ *                                   parent (SRK if a SK is being loaded or SK
+ *                                   if a data object is being loaded). In the
+ *                                   case that the parent is an SRK, this
+ *                                   should respresent the password for the
+ *                                   owner (storage) hierarchy. Alternatively,
  *                                   if the parent is an SK, this should be
  *                                   the hash of the authorization bytes,
  *                                   which are empty (all-zero hash) by default.
@@ -373,12 +356,6 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
  *                                   values that the parent (SRK if a SK is
  *                                   being loaded or SK if a data object is
  *                                   being loaded) was sealed to.
- *
- * @param[in]  policyBranch1         1 of 2 optional policy branch arguments
- *                                   needed for compound policy calculations
- *
- * @param[in]  policyBranch2         2 of 2 optional policy branch arguments
- *                                   needed for compound policy calculations
  *
  * @param[in]  in_private            Encrypted TPM 2.0 "private blob" for
  *                                   object to be loaded - passed as a pointer
@@ -400,10 +377,10 @@ int create_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
 int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                       SESSION * loadObjectAuthSession,
                       TPM2_HANDLE parent_handle,
-                      TPM2B_AUTH parent_auth,
-                      TPML_PCR_SELECTION parent_pcrList,
+                      TPM2B_AUTH * parent_auth,
                       TPM2B_PRIVATE * in_private,
-                      TPM2B_PUBLIC * in_public, TPM2_HANDLE * object_handle);
+                      TPM2B_PUBLIC * in_public,
+                      TPM2_HANDLE * object_handle);
 
 /**
  * @brief Unseals a Kmyth TPM data object 
@@ -419,22 +396,22 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
  * @param[in]  object_handle              Handle of the TPM 2.0 data object to
  *                                        be unsealed.
  *
- * @param[in]  object_auth                Authorization value associated with
- *                                        the data object when it was created
- *                                        and now needed to unseal it. Should
- *                                        be hash of the authorization bytes or
- *                                        the default all-zero hash associated
- *                                        with empty authorization bytes.
+ * @param[in]  object_auth                Pointer to authorization value
+ *                                        associated with the data object when
+ *                                        it was created and now needed to
+ *                                        unseal it. Should be hash of the
+ *                                        authorization bytes or the default
+ *                                        all-zero hash associated with empty
+ *                                        authorization bytes.
  *
- * @param[in]  policyBranch1              1 of 2 optional policy branch arguments
- *                                        needed for compound policy calculations
+ * @param[in]  pDigestList                Pointer to policy digest list
+ *                                        containing optional policy branch
+ *                                        arguments needed for compound
+ *                                        policy calculations.
  *
- * @param[in]  policyBranch2              2 of 2 optional policy branch arguments
- *                                        needed for compound policy calculations
- *
- * @param[in]  object_pcrList             PCR List structure indicating the PCR
- *                                        values to which the data object was
- *                                        sealed.
+ * @param[in]  pcrList                    Pointer to PCR List structure
+ *                                        indicating the PCR values to
+ *                                        which the data object was sealed.
  *
  * @param[out] object_sensitive           The unsealed (unencrypted) result.
  *
@@ -443,10 +420,9 @@ int load_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
 int unseal_kmyth_object(TSS2_SYS_CONTEXT * sapi_ctx,
                         SESSION * unsealObjectAuthSession,
                         TPM2_HANDLE object_handle,
-                        TPM2B_AUTH object_auth,
-                        TPM2B_DIGEST policyBranch1,
-                        TPM2B_DIGEST policyBranch2,
-                        TPML_PCR_SELECTION object_pcrList,
+                        TPM2B_AUTH * object_auth,
+                        TPML_DIGEST * pDigestList,
+                        TPML_PCR_SELECTION * pcrList,
                         TPM2B_SENSITIVE_DATA * object_sensitive);
 
 #endif /* OBJECT_TOOLS_H */

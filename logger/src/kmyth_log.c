@@ -182,6 +182,14 @@ void set_applog_severity_threshold(int new_severity_threshold)
 }
 
 //############################################################################
+// get_applog_severity_threshold()
+//############################################################################
+int get_applog_severity_threshold()
+{
+  return log_settings.applog_severity_threshold;
+}
+
+//############################################################################
 // set_syslog_facility()
 //   - valid values: 0 - (LOG_NFACILITIES-1) << 3
 //                   Typically 0-23 << 3 (LOG_NFACILITIES = 24)

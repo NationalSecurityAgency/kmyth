@@ -31,6 +31,7 @@ void test_startup_tpm2(void);
 void test_get_tpm2_properties(void);
 void test_get_tpm2_impl_type(void);
 void test_getErrorString(void);
+void test_init_policyOR(void);
 void test_init_password_cmd_auth(void);
 void test_init_policy_cmd_auth(void);
 void test_check_response_auth(void);

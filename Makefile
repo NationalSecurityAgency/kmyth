@@ -49,8 +49,8 @@ PROTOCOL_INC_DIR = $(INC_DIR)/protocol
 PROTOCOL_HEADERS = $(wildcard $(PROTOCOL_INC_DIR)/*.h)
 PROTOCOL_OBJ_DIR = $(OBJ_DIR)/protocol
 PROTOCOL_OBJECTS = $(subst $(PROTOCOL_SRC_DIR), \
-                          $(PROTOCOL_OBJ_DIR), \
-                          $(PROTOCOL_SOURCES:%.c=%.o))
+                           $(PROTOCOL_OBJ_DIR), \
+                           $(PROTOCOL_SOURCES:%.c=%.o))
 
 # Specify Kmyth TPM 2.0 utility directories/files
 TPM_SRC_DIR = $(SRC_DIR)/tpm
@@ -318,16 +318,16 @@ $(LIB_DIR)/libkmyth-logger.so: $(LOGGER_OBJECTS) | $(LIB_DIR)
 	      -o $(LOGGER_LIB_LOCAL_DEST)
 
 $(LIB_DIR)/libkmyth-tpm.so: $(CIPHER_OBJECTS) \
-	                          $(NETWORK_OBJECTS) \
-														$(PROTOCOL_OBJECTS) \
+                            $(NETWORK_OBJECTS) \
+                            $(PROTOCOL_OBJECTS) \
                             $(TPM_OBJECTS) \
                             $(LIB_DIR)/libkmyth-utils.so \
                             $(LIB_DIR)/libkmyth-logger.so | \
                             $(LIB_DIR)
 	$(CC) $(SOFLAGS) \
 	      $(CIPHER_OBJECTS) \
-				$(NETWORK_OBJECTS) \
-				$(PROTOCOL_OBJECTS) \
+	      $(NETWORK_OBJECTS) \
+	      $(PROTOCOL_OBJECTS) \
 	      $(TPM_OBJECTS) \
 	      -o $(TPM_LIB_LOCAL_DEST) \
 	      $(LDFLAGS) \
@@ -408,7 +408,7 @@ $(UTILS_OBJ_DIR)/%.o: $(UTILS_SRC_DIR)/%.c \
                       $(UTILS_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) \
 	      $(KMYTH_INCLUDE_FLAGS) \
-				-I$(UTILS_INC_DIR) \
+	      -I$(UTILS_INC_DIR) \
 	      $< \
 	      -o $@
 
@@ -492,12 +492,12 @@ $(DOC_DIR):
 .PHONY: docs
 docs: $(HEADER_FILES) \
       $(SOURCE_FILES) \
-			$(UTILS_HEADERS) \
-			$(UTILS_SOURCES) \
-			$(LOGGER_HEADERS) \
-			$(LOGGER_SOURCES) \
+      $(UTILS_HEADERS) \
+      $(UTILS_SOURCES) \
+      $(LOGGER_HEADERS) \
+      $(LOGGER_SOURCES) \
       Doxyfile | \
-		  $(DOC_DIR)
+      $(DOC_DIR)
 	doxygen Doxyfile
 
 .PHONY: test
@@ -505,7 +505,7 @@ test: clean-backups $(BIN_DIR)/kmyth-test
 	./bin/kmyth-test 2>/dev/null
 
 $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
-	                     $(LIB_DIR)/libkmyth-utils.so \
+                       $(LIB_DIR)/libkmyth-utils.so \
                        $(LIB_DIR)/libkmyth-tpm.so | \
                        $(BIN_DIR)
 	$(CC) $(TEST_OBJECTS) \
@@ -513,8 +513,9 @@ $(BIN_DIR)/kmyth-test: $(TEST_OBJECTS) \
 	      $(LDFLAGS) \
 	      $(LDLIBS) \
 	      -lcunit \
-				-lkmyth-utils \
-	      -lkmyth-tpm
+		  -lkmyth-utils \
+	      -lkmyth-tpm \
+		  -lkmyth-logger
 
 $(TEST_OBJ_DIR)/kmyth-test.o: $(TEST_SRC_DIR)/kmyth-test.c | $(TEST_OBJ_DIR)
 	$(CC) $(KMYTH_CFLAGS) $(KMYTH_INCLUDE_FLAGS) $(TEST_INCLUDE_FLAGS) $< -o $@

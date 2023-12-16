@@ -13,6 +13,7 @@
 #include "tpm2_interface.h"
 #include "formatting_tools_test.h"
 #include "formatting_tools.h"
+#include "marshalling_tools_test.h"
 #include "object_tools.h"
 #include "defines.h"
 
@@ -55,6 +56,12 @@ int formatting_tools_add_tests(CU_pSuite suite)
   {
     return 1;
   }
+  
+  if (NULL == CU_add_test(suite, "parse_exp_policy_string_pairs() Tests",
+                          test_parse_exp_policy_string_pairs))
+  {
+    return 1;
+  }
 
   return 0;
 }
@@ -67,162 +74,128 @@ void test_get_block_bytes(void)
   //NOTE: We do not test every required block here, because each specific 
   //      block is tested in parse_ski_bytes.
 
-const char *CONST_SKI_BYTES = "\
------PCR SELECTION LIST-----\n\
-AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
------STORAGE KEY PUBLIC-----\n\
-AToAAQALAAMAcgAgcnAGdT2tfu/ZnZHE4WPOMJSz3gJgW40hgL+QrfFxCYsABgCA\n\
-AEMAEAgAAAAAAAEArdcEDo+56w/VbgFyKes4ckyuenee13iZ8v1XKgdqPdtwST4m\n\
-Hj9wfrHBxqjkGHX7TFb7uxsRCB6sMoRAyWptkoiOFa0HtD3M3ba7OytC32z4hGoM\n\
-nZOR4+vYSWl7fpddPcJKmCAXGCYgKsyDk+DbZPspsTWqCwmNaxuJz2Hp4t1wMnqW\n\
-5VB+hA0Wd2/+alM0RMDHMZwGYlq92V227bL0H9iQGMu76xnmLY8U2fqYSC+OOw0n\n\
-8zOMxAMLnRz6A5cOjgDFWkEDIk2qxBD4TBssBXIrlaEWFNFQW9pcIt/mJV7/81lr\n\
-XJb4L9ZUt3yXy4ONZKg4aW3kfmJQtNthrX7VjQ==\n\
------STORAGE KEY ENC PRIVATE-----\n\
-AP4AIFBZmN3PX8YZNyWYKAJnfPf5QtXMPmXrzExLKot8uh9KABDZW0vb/GLwMj4x\n\
-YrRRF3YBQHmTcy5sc7CfvaqKNiyWcFO1s/uRUDF7WDQrlHHUKaNHXUyoPuFsmR/w\n\
-p5P6nSWcc/IBTQ24uUVHTqhDcxAgR51PfXefpiyP5oUeG6eOacTAjyuIUufALRdT\n\
-IvKmfGRW8ubGIn3W1U/lGs/pi7eOTaSYFBbQrnw9y9VEqEo0IVJgWUmUJ6yF4Gdh\n\
-squWofLQ9MBFzrCo3ErrWYtUJjRh0zKPSQKsQXHFyT7caY/Kr6kH61KzY6GR8lgR\n\
-qKENvBDt+93KHiPutl59sg==\n\
------CIPHER SUITE-----\n\
-AES/GCM/NoPadding/256\n\
------SYM KEY PUBLIC-----\n\
-AE4ACAALAAAAUgAgcnAGdT2tfu/ZnZHE4WPOMJSz3gJgW40hgL+QrfFxCYsAEAAg\n\
-2Q6eibPyxc2Mdz1bwauQJPy8bMWVCUEb1j5ji+I1BHw=\n\
------SYM KEY ENC PRIVATE-----\n\
-AJ4AIOy/btaxKHMDW9wUvCSiKRuBPoVm5E1BL4JSui8L1FKvABBDuE3PdIHsD5Wy\n\
-Zay95le0ytJu+Wf9ACc1WBUMtzRZikYUFHrlw+ujJU70gbOrmq6OD0XwVlwfjA+/\n\
-AkbYa8d1Mhs1Dxqxp0gnpNPCwFGt0SCipy8WtcdwXlFbZNrBO+Zqw9SbzMGnZGMi\n\
-lYUkqJ/V5ZBlLek/ufMxMg==\n\
------ENC DATA-----\n\
-j53ixEuUSZcgOBkv9bSQkH1WXo7IWKsMP/XfevBjYhl/RBAmxpZeXLao2uCA8cc=\n\
------FILE END-----\n";
-
-const char *RAW_PCR64 =
-  "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+const char * RAW_PCR64 = "AQAAAAEACwMAAAA=\n";
 
   size_t sb_len = strlen(CONST_SKI_BYTES);
-  uint8_t *sb = malloc(sb_len * sizeof(char));
+  uint8_t * sb = malloc(sb_len * sizeof(uint8_t));
 
-  memcpy(sb, CONST_SKI_BYTES, sb_len);
+  strncpy((char *) sb, CONST_SKI_BYTES, sb_len);
+
+  //memcpy(sb, CONST_SKI_BYTES, sb_len);
 
   uint8_t *position = sb;
   size_t remaining = sb_len;
-  uint8_t *raw_pcr_select_list_data = NULL;
-  size_t raw_pcr_select_list_size = 0;
+  uint8_t *raw_pcr_select_data = NULL;
+  size_t raw_pcr_select_size = 0;
 
-  //Valid parse test
+  // Valid parse test
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
-  CU_ASSERT(raw_pcr_select_list_size == strlen(RAW_PCR64));
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
+                            strlen(KMYTH_DELIM_POLICY_OR)) == 0);
+  CU_ASSERT(raw_pcr_select_size == strlen(RAW_PCR64));
   CU_ASSERT(memcmp
-            (raw_pcr_select_list_data, RAW_PCR64,
-             raw_pcr_select_list_size) == 0);
-  free(raw_pcr_select_list_data);
-  raw_pcr_select_list_data = NULL;
+            (raw_pcr_select_data, RAW_PCR64,
+             raw_pcr_select_size) == 0);
+  free(raw_pcr_select_data);
+  raw_pcr_select_data = NULL;
 
   //Invalid first delim
   position = sb;
   remaining = sb_len;
-  raw_pcr_select_list_size = 0;
+  raw_pcr_select_size = 0;
   sb[0] = '!';
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
-  CU_ASSERT(raw_pcr_select_list_data == NULL);
-  CU_ASSERT(raw_pcr_select_list_size == 0);
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
+                            strlen(KMYTH_DELIM_POLICY_OR)) == 1);
+  CU_ASSERT(raw_pcr_select_data == NULL);
+  CU_ASSERT(raw_pcr_select_size == 0);
   position = sb;
   remaining = sb_len;
   sb[0] = '-';
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
-  free(raw_pcr_select_list_data);
-  raw_pcr_select_list_data = NULL;
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
+                            strlen(KMYTH_DELIM_POLICY_OR)) == 0);
+  free(raw_pcr_select_data);
+  raw_pcr_select_data = NULL;
 
   //Invalid second delim
   position = sb;
   remaining = sb_len;
-  raw_pcr_select_list_size = 0;
-  sb[208] = '!';
+  raw_pcr_select_size = 0;
+  sb[42] = '!';
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
-  CU_ASSERT(raw_pcr_select_list_data == NULL);
-  CU_ASSERT(raw_pcr_select_list_size == 0);
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
+                            strlen(KMYTH_DELIM_POLICY_OR)) == 1);
+  CU_ASSERT(raw_pcr_select_data == NULL);
+  CU_ASSERT(raw_pcr_select_size == 0);
   position = sb;
   remaining = sb_len;
-  sb[208] = '-';
+  sb[42] = '-';
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
-                            strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 0);
-  free(raw_pcr_select_list_data);
-  raw_pcr_select_list_data = NULL;
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
+                            strlen(KMYTH_DELIM_POLICY_OR)) == 0);
+  free(raw_pcr_select_data);
+  raw_pcr_select_data = NULL;
 
   //Check to verify unexpected end of file
   position = sb;
   remaining = sb_len;
-  raw_pcr_select_list_size = 0;
+  raw_pcr_select_size = 0;
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
-                            KMYTH_DELIM_STORAGE_KEY_PUBLIC,
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
+                            KMYTH_DELIM_POLICY_OR,
                             remaining + 1) == 1);
 
   //next_delim_len > remaining
-  CU_ASSERT(raw_pcr_select_list_data == NULL);
-  CU_ASSERT(raw_pcr_select_list_size == 0);
+  CU_ASSERT(raw_pcr_select_data == NULL);
+  CU_ASSERT(raw_pcr_select_size == 0);
 
   //Test empty block
   const char *empty_block =
-    "-----PCR SELECTION LIST-----\n-----STORAGE KEY PUBLIC-----\n";
+    "-----PCR SELECTIONS-----\n-----POLICY OR-----\n";
   position = (uint8_t *) empty_block;
   remaining = strlen(empty_block);
-  raw_pcr_select_list_size = 0;
+  raw_pcr_select_size = 0;
   CU_ASSERT(get_block_bytes((char **) &position,
                             &remaining,
-                            &raw_pcr_select_list_data,
-                            &raw_pcr_select_list_size,
-                            KMYTH_DELIM_PCR_SELECTION_LIST,
-                            strlen(KMYTH_DELIM_PCR_SELECTION_LIST),
+                            &raw_pcr_select_data,
+                            &raw_pcr_select_size,
+                            KMYTH_DELIM_PCR_SELECTIONS,
+                            strlen(KMYTH_DELIM_PCR_SELECTIONS),
                             KMYTH_DELIM_STORAGE_KEY_PUBLIC,
                             strlen(KMYTH_DELIM_STORAGE_KEY_PUBLIC)) == 1);
-  CU_ASSERT(raw_pcr_select_list_data == NULL);
-  CU_ASSERT(raw_pcr_select_list_size == 0);
+  CU_ASSERT(raw_pcr_select_data == NULL);
+  CU_ASSERT(raw_pcr_select_size == 0);
+
   free(sb);
 }
 
@@ -494,3 +467,165 @@ void test_verifyStringDigestConversion(void)
   }
 }
 
+//----------------------------------------------------------------------------
+// test_parse_exp_policy_string_pairs()
+//----------------------------------------------------------------------------
+void test_parse_exp_policy_string_pairs(void)
+{
+  char * pcrSelStrings[MAX_POLICY_OR_CNT-1] = { NULL };
+  char * digestStrings[MAX_POLICY_OR_CNT-1] = { NULL };
+
+  char expPolicyString[MAX_POLICY_OR_CNT * (MAX_EXP_POLICY_PAIR_STR_LEN + 8)] = { 0 };
+  sprintf(expPolicyString, "%d:%064x", 23, 0);
+  size_t policyPairCount = 1;
+
+  // NULL PCR selection string list output parameter should error
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) NULL,
+                                          (char **) digestStrings) != 0);
+  
+  // NULL policy digest string list output parameter should error
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) NULL) != 0);
+                                                                                   
+  // NULL input string (expected policy string to be parsed) should return
+  // normally, but report an expected policy pair count of zero
+  policyPairCount = 255;
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) NULL,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) == 0);
+  CU_ASSERT(policyPairCount == 0);
+
+  // Empty input string should also return a zero pair count without error
+  policyPairCount = 7;
+  CU_ASSERT(parse_exp_policy_string_pairs("",
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) == 0);
+  CU_ASSERT(policyPairCount == 0);
+  
+  // Passing expected policy string where one of the pair values (second of
+  // two in this test case) exceeds the length restriction, should fail
+  sprintf(expPolicyString, "%s/16,23:", expPolicyString);
+  for (int i = 74; i < (MAX_EXP_POLICY_PAIR_STR_LEN + 75); i++)
+  {
+    expPolicyString[i] = 'a';
+  }
+  expPolicyString[MAX_EXP_POLICY_PAIR_STR_LEN + 75] = '\0';
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // policy entry with no PCR selections string / digests string delimiter
+  // should error
+  sprintf(expPolicyString, "%d", 23);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+  sprintf(expPolicyString, "%d:%064x/%064x", 23, 10000, 100000);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // policy entry with invalid PCR/digest string delimiter should fail
+  sprintf(expPolicyString, "%d-%064x", 23, 0);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+  
+  // policy entry with invalid string pair delimiter should fail
+  sprintf(expPolicyString, "%d,%d:%064x;%d,%d:%064x", 0, 1, 2, 3, 4, 5);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // policy entry with more than two (PCR/digest) elements should fail
+  sprintf(expPolicyString, "%d:%d:%064x", 0, 1, 2);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // input string with more than 7 string pairs should fail
+  sprintf(expPolicyString,
+          "%d:%064x/%d:%064x/%d:%064x/%d:%064x/"
+          "%d:%064x/%d:%064x/%d:%064x/%d:%064x",
+          1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+  
+  // should successfully parse 7 string pairs from valid example input string
+  sprintf(expPolicyString,
+          "%d:%064x/%d:%064x/%d:%064x/%d:%064x/"
+          "%d:%064x/%d:%064x/%d:%064x",
+          23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10);
+  policyPairCount = 0;
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) == 0);
+  CU_ASSERT(policyPairCount == 7);
+  CU_ASSERT(strcmp(pcrSelStrings[0], "23") == 0);
+  CU_ASSERT(strcmp(pcrSelStrings[1], "21") == 0); 
+  CU_ASSERT(strcmp(pcrSelStrings[2], "19") == 0);
+  CU_ASSERT(strcmp(pcrSelStrings[3], "17") == 0);
+  CU_ASSERT(strcmp(pcrSelStrings[4], "15") == 0); 
+  CU_ASSERT(strcmp(pcrSelStrings[5], "13") == 0);
+  CU_ASSERT(strcmp(pcrSelStrings[6], "11") == 0);
+  char testDigestString[65];
+  sprintf(testDigestString, "%064x", 22);
+  CU_ASSERT(strcmp(digestStrings[0], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 20);
+  CU_ASSERT(strcmp(digestStrings[1], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 18);
+  CU_ASSERT(strcmp(digestStrings[2], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 16);
+  CU_ASSERT(strcmp(digestStrings[3], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 14);
+  CU_ASSERT(strcmp(digestStrings[4], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 12);
+  CU_ASSERT(strcmp(digestStrings[5], testDigestString) == 0);
+  sprintf(testDigestString, "%064x", 10);
+  CU_ASSERT(strcmp(digestStrings[6], testDigestString) == 0);
+  for (int i = 0; i < 7; i++)
+  {
+    free(pcrSelStrings[i]);
+    pcrSelStrings[i] = NULL;
+    free(digestStrings[i]);
+    digestStrings[i] = NULL;
+  }
+
+  // should properly remove leading and/or trailing whitespace and prefixes
+  sprintf(expPolicyString, "   %d, %d   :  0x%064lx   /  %d , %d:0x%064lx   ",
+          16, 23, 0x123456789ABCDEF, 23, 16, 0xFEDCBA987654321);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) == 0);
+  CU_ASSERT(policyPairCount == 2);
+  CU_ASSERT(strcmp(pcrSelStrings[0], "16, 23") == 0);
+  CU_ASSERT(strcmp(pcrSelStrings[1], "23 , 16") == 0);
+  sprintf(testDigestString, "%064lx", 0x123456789ABCDEF);
+  CU_ASSERT(strcmp(digestStrings[0], testDigestString) == 0);
+  sprintf(testDigestString, "%064lx", 0xFEDCBA987654321);
+  CU_ASSERT(strcmp(digestStrings[1], testDigestString) == 0);
+  free(pcrSelStrings[0]);
+  pcrSelStrings[0] = NULL;
+  free(pcrSelStrings[1]);
+  pcrSelStrings[1] = NULL;
+  free(digestStrings[0]);
+  digestStrings[0] = NULL;
+  free(digestStrings[1]);
+  digestStrings[1] = NULL;
+}
