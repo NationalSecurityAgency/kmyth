@@ -35,15 +35,21 @@ void demo_tls_cleanup(TLSPeer * tlsconn)
   }
 
   // clean up 'host' / 'IP' string for TLS interface
-  if (tlsconn->host != NULL)
+  if (tlsconn->rmt_svr_host_ip != NULL)
   {
-    free(tlsconn->host);
+    free(tlsconn->rmt_svr_host_ip);
+  }
+  
+  // clean up 'name' string for TLS interface
+  if (tlsconn->rmt_svr_func_name != NULL)
+  {
+    free(tlsconn->rmt_svr_func_name);
   }
 
   // clean up 'port' string for TLS interface
-  if (tlsconn->port != NULL)
+  if (tlsconn->conn_port != NULL)
   {
-    free(tlsconn->port);
+    free(tlsconn->conn_port);
   }
 
   // clean up CA certificate file path string for TLS interface
@@ -63,8 +69,6 @@ void demo_tls_cleanup(TLSPeer * tlsconn)
   {
     free(tlsconn->local_cert_path);
   }
-
-  demo_tls_init(false, tlsconn);
 }
 
 /*****************************************************************************
@@ -141,8 +145,14 @@ int demo_tls_config_ctx(TLSPeer * tlsconn)
   }
 
   // enable certificate verification
+  //   - SSL_VERIFY_PEER: client verifies server cert, server sends cert
+  //                      request to client and verifies cert.
+  //   - SSL_VERIFY_FAIL_IF_NO_PEER_CERT - 'handshake failure' if server
+  //                                       does not receive client cert
   //   - can set a callback function here for advanced debugging
-  SSL_CTX_set_verify(tlsconn->ctx, SSL_VERIFY_PEER, NULL);
+  SSL_CTX_set_verify(tlsconn->ctx,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     NULL);
   SSL_CTX_set_verify_depth(tlsconn->ctx, 5);
 
   // enable custom or default certificate authorities
@@ -210,10 +220,12 @@ int demo_tls_config_ctx(TLSPeer * tlsconn)
  ****************************************************************************/
 int demo_tls_config_client_connect(TLSPeer * tls_clnt)
 {
+  kmyth_log(LOG_DEBUG, "tls_config_client_connect()");
+
   // verify that this configuration is correctly for a client connection
   if (!tls_clnt->isClient)
   {
-    kmyth_log(LOG_ERR, "client config inappropriate for server connection");
+    kmyth_log(LOG_ERR, "client node configured as a TLS server");
     return -1;
   }
 
@@ -226,14 +238,14 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
   }
 
   // set the port number for the connection
-  if (1 != BIO_set_conn_port(tls_clnt->bio, tls_clnt->port))
+  if (1 != BIO_set_conn_port(tls_clnt->bio, tls_clnt->conn_port))
   {
     log_openssl_error("BIO_set_conn_port()");
     return -1;
   }
 
   // configure server hostname settings
-  if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->host))
+  if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->rmt_svr_host_ip))
   {
     log_openssl_error("BIO_set_conn_hostname()");
     return -1;
@@ -249,20 +261,49 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
     return -1;
   }
 
-  // set hostname for Server Name Indication
-  if (1 != SSL_set_tlsext_host_name(ssl, tls_clnt->host))
+  // compute expected server name (as specified in server's cert)
+  //   - expected to be <IP address or hostname string>.<name string>
+  //     (e.g., localhost.demoServer, 127.0.0.1.server, ...)
+  char * server_name = NULL;
+  unsigned int server_name_size = strlen(tls_clnt->rmt_svr_host_ip) + 1;
+  if (tls_clnt->rmt_svr_func_name != NULL)
   {
-    log_openssl_error("SSL_set_tlsext_host_name()");
+    server_name_size += (strlen(tls_clnt->rmt_svr_func_name) + 1);
+  }
+  server_name = calloc(server_name_size, sizeof(char));
+  int bytes_needed = 0;
+  if (tls_clnt->rmt_svr_func_name == NULL)
+  {
+    bytes_needed = snprintf(server_name,
+                            server_name_size,
+                            "%s",
+                            tls_clnt->rmt_svr_host_ip);
+  }
+  else
+  {
+    bytes_needed = snprintf(server_name,
+                            server_name_size,
+                            "%s.%s",
+                            tls_clnt->rmt_svr_host_ip,
+                            tls_clnt->rmt_svr_func_name);
+  }
+  if (bytes_needed > server_name_size)
+  {
+    kmyth_log(LOG_ERR, "truncated server certificate verification name");
+    free(server_name);
     return -1;
   }
 
-  // set hostname for certificate verification
-  if (1 != SSL_set1_host(ssl, tls_clnt->host))
+  // set host name for server certificate verification
+  if (1 != SSL_set1_host(ssl, server_name))
   {
     log_openssl_error("SSL_set1_host()");
+    free(server_name);
     return -1;
   }
-  kmyth_log(LOG_DEBUG, "cert verification hostname: %s", tls_clnt->host);
+  kmyth_log(LOG_DEBUG, "name for server cert verification: %s", server_name);
+
+  free(server_name);
 
   return 0;
 }
@@ -294,7 +335,7 @@ int demo_tls_config_server_accept(TLSPeer * tls_svr)
   SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
   // creates new accept BIO to accept client connection to the server
-  BIO *abio = BIO_new_accept(tls_svr->port);
+  BIO *abio = BIO_new_accept(tls_svr->conn_port);
   if (abio == NULL)
   {
     kmyth_log(LOG_ERR, "failed to create new accept BIO");
@@ -326,7 +367,7 @@ int demo_tls_client_connect(TLSPeer * tls_clnt)
 {
   if (1 != BIO_do_connect(tls_clnt->bio))
   {
-    // both connection failures and certificate verification failures are caught here. */
+    // both connection and cert verification failures caught here
     log_openssl_error("BIO_do_connect()");
     tls_get_verify_error(tls_clnt);
     return -1;
@@ -342,12 +383,11 @@ int demo_tls_server_accept(TLSPeer * tls_svr)
 {
   if (1 != BIO_do_accept(tls_svr->bio))
   {
-    // Both connection and certificate verification failures caught here
-    kmyth_log(LOG_ERR, "error accepting client connection");
-    log_openssl_error("BIO_do_accept()");
-    tls_get_verify_error(tls_svr);
+    // connection failures caught here
+    log_openssl_error("BIO_do_accept");
     return -1;
   }
+  kmyth_log(LOG_DEBUG, "accepted client connection");
 
   return 0;
 }

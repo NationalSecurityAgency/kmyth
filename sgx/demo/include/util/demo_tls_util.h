@@ -63,8 +63,9 @@ typedef struct TLSMessage {
 typedef struct TLSPeer
 {
   bool isClient;
-  char *host;
-  char *port;
+  char *rmt_svr_host_ip;
+  char *rmt_svr_func_name; 
+  char *conn_port;
   char *ca_cert_path;
   char *local_key_path;
   char *local_cert_path;

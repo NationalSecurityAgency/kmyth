@@ -7,6 +7,8 @@
 
 #include "demo_kmip_server.h"
 
+#include "demo_tls_util.h"
+
 #ifndef DEMO_LOG_LEVEL
 #define DEMO_LOG_LEVEL LOG_DEBUG
 #endif
@@ -19,6 +21,16 @@ static unsigned char demo_op_key_val[DEMO_OP_KEY_VAL_LEN] = DEMO_OP_KEY_VAL;
 static void demo_kmip_server_init(DemoServer * demo_server)
 {
   secure_memset(demo_server, 0, sizeof(DemoServer));
+
+  // specify 'server' mode TLS parameters
+  //   - isClient boolean is initialized to false to indicate 'server' mode
+  //   - a hostname or IP address and functional name are not needed by the
+  //     server to construct a DNS name for validating the certificate
+  //     supplied by a connecting client - initialized to NULL pointers
+  //     (server-side checks validate only the CA-chain of the client cert)
+  demo_server->tlsconn.isClient = false;
+  demo_server->tlsconn.rmt_svr_host_ip = NULL;
+  demo_server->tlsconn.rmt_svr_func_name = NULL;
 }
 
 /*****************************************************************************
@@ -29,6 +41,8 @@ static void demo_kmip_server_cleanup(DemoServer * demo_server)
   demo_tls_cleanup(&(demo_server->tlsconn));
 
   demo_kmip_server_init(demo_server);
+
+  kmyth_log(LOG_DEBUG, "demo KMIP server (simple) memory/resources reset");
 }
 
 /*****************************************************************************
@@ -75,9 +89,6 @@ static void demo_kmip_server_get_options(DemoServer * demo_server,
   int options;
   int option_index = 0;
 
-  // 'host' struct member is unused by server
-  demo_server->tlsconn.host = NULL;
-
   while ((options =
           getopt_long(argc, argv, "k:c:C:p:m:h",
                       demo_kmip_server_longopts, &option_index)) != -1)
@@ -96,11 +107,12 @@ static void demo_kmip_server_get_options(DemoServer * demo_server,
       break;
     // network Connection
     case 'p':
-      demo_server->tlsconn.port = strdup(optarg);
+      demo_server->tlsconn.conn_port = strdup(optarg);
       break;
     // Misc
     case 'h':
       demo_kmip_server_usage(argv[0]);
+      demo_kmip_server_cleanup(demo_server);
       exit(EXIT_SUCCESS);
     default:
       demo_kmip_server_error(demo_server);
@@ -115,14 +127,19 @@ static void demo_kmip_server_check_options(DemoServer * demo_server)
 {
   bool err = false;
 
-  if (demo_server->tlsconn.host != NULL)
+  if (demo_server->tlsconn.rmt_svr_host_ip != NULL)
   {
-    fprintf(stderr, "'host' member should be NULL for server\n");
+    fprintf(stderr, "remote 'host' member should be NULL for server\n");
     err = true;
   }
-  if (demo_server->tlsconn.port == NULL)
+  if (demo_server->tlsconn.rmt_svr_func_name != NULL)
   {
-    fprintf(stderr, "port (server listen) number argument required\n");
+    fprintf(stderr, "remote 'functional name' member should be NULL for server\n");
+    err = true;
+  }
+  if (demo_server->tlsconn.conn_port == NULL)
+  {
+    fprintf(stderr, "network port (server listen) argument required\n");
     err = true;
   }
   if (demo_server->tlsconn.local_key_path == NULL)
@@ -132,7 +149,7 @@ static void demo_kmip_server_check_options(DemoServer * demo_server)
   }
   if (demo_server->tlsconn.local_cert_path == NULL)
   {
-    fprintf(stderr, "file path for server's certificate required\n");
+    fprintf(stderr, "file path for server's public certificate required\n");
     err = true;
   }
 
@@ -148,10 +165,6 @@ static void demo_kmip_server_check_options(DemoServer * demo_server)
  ****************************************************************************/
 static void demo_kmip_server_setup(DemoServer *demo_server)
 {
-  // specify 'server' mode TLS parameters
-  demo_server->tlsconn.isClient = false;
-  demo_server->tlsconn.host = NULL;
-
   // specify demonstration key to be served
   memcpy(demo_server->demo_key_id,
          (unsigned char[DEMO_OP_KEY_ID_LEN]) DEMO_OP_KEY_ID,
@@ -184,7 +197,7 @@ static void demo_kmip_server_setup(DemoServer *demo_server)
     demo_kmip_server_error(demo_server);
   }
 
-  // prepare the server's to accept TLS connections from client
+  // prepare the server to accept TLS connections from client
   if (EXIT_SUCCESS != demo_tls_config_server_accept(&demo_server->tlsconn))
   {
     kmyth_log(LOG_ERR, "error preparing server to 'accept' TLS connections");
@@ -200,9 +213,15 @@ static int demo_kmip_server_receive_get_key_request(DemoServer *demo_server,
                                                     size_t *req_len)
 {
   kmyth_log(LOG_DEBUG, "waiting to accept TLS connection with client");
-  if (BIO_do_handshake(demo_server->tlsconn.bio) <= 0)
+  if (demo_tls_server_accept(&(demo_server->tlsconn)) != 0)
   {
-    kmyth_log(LOG_ERR, "error completing TLS handshake");
+    kmyth_log(LOG_ERR, "error accepting client connection");
+    return EXIT_FAILURE; 
+  }
+  
+  if (BIO_do_handshake(demo_server->tlsconn.bio) != 1)
+  {
+    log_openssl_error("BIO_do_handshake");
     return EXIT_FAILURE;
   }
   kmyth_log(LOG_DEBUG, "TLS client connection - completed handshake");
@@ -215,7 +234,8 @@ static int demo_kmip_server_receive_get_key_request(DemoServer *demo_server,
                             KMYTH_TLS_MAX_MSG_SIZE);
   if (bytes_read <= 0)
   {
-    kmyth_log(LOG_ERR, "error reading KMIP 'get key' request");
+    // client cert verification (and other read errors) caught here
+    log_openssl_error("BIO_read");
     return EXIT_FAILURE;
   }
 
@@ -444,7 +464,7 @@ int main(int argc, char **argv)
 
   demo_kmip_server_cleanup(&demo_server);
 
-  kmyth_log(LOG_DEBUG, "normal termination ...");
+  kmyth_log(LOG_DEBUG, "normal termination");
 
   return EXIT_SUCCESS;
 }
