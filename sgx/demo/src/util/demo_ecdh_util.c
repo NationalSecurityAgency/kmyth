@@ -111,6 +111,8 @@ void demo_ecdh_cleanup(ECDHPeer * ecdhconn)
     kmyth_clear_and_free(ecdhconn->session.proto.key_response.body,
                          ecdhconn->session.proto.key_response.hdr.msg_size);
   }
+
+  demo_ecdh_init(ecdhconn->config.isClient, ecdhconn);
 }
 
 /*****************************************************************************

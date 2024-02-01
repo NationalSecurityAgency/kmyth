@@ -69,6 +69,8 @@ void demo_tls_cleanup(TLSPeer * tlsconn)
   {
     free(tlsconn->local_cert_path);
   }
+
+  demo_tls_init(tlsconn->isClient, tlsconn);
 }
 
 /*****************************************************************************
