@@ -377,7 +377,9 @@ int send_kmip_get_key_response(DemoServer *server,
 
 int main(int argc, char **argv)
 {
+  // initialize demo server context
   DemoServer demo_server;
+  demo_kmip_server_init(&demo_server); 
 
   // setup default logging parameters
   set_app_name("             server ");
