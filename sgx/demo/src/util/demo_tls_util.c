@@ -35,15 +35,15 @@ void demo_tls_cleanup(TLSPeer * tlsconn)
   }
 
   // clean up 'host' / 'IP' string for TLS interface
-  if (tlsconn->rmt_svr_host_ip != NULL)
+  if (tlsconn->remote_server != NULL)
   {
-    free(tlsconn->rmt_svr_host_ip);
+    free(tlsconn->remote_server);
   }
   
   // clean up 'name' string for TLS interface
-  if (tlsconn->rmt_svr_func_name != NULL)
+  if (tlsconn->remote_server_func != NULL)
   {
-    free(tlsconn->rmt_svr_func_name);
+    free(tlsconn->remote_server_func);
   }
 
   // clean up 'port' string for TLS interface
@@ -247,7 +247,7 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
   }
 
   // configure server hostname settings
-  if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->rmt_svr_host_ip))
+  if (1 != BIO_set_conn_hostname(tls_clnt->bio, tls_clnt->remote_server))
   {
     log_openssl_error("BIO_set_conn_hostname()");
     return -1;
@@ -267,27 +267,27 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
   //   - expected to be <IP address or hostname string>.<name string>
   //     (e.g., localhost.demoServer, 127.0.0.1.server, ...)
   char * server_name = NULL;
-  unsigned int server_name_size = strlen(tls_clnt->rmt_svr_host_ip) + 1;
-  if (tls_clnt->rmt_svr_func_name != NULL)
+  unsigned int server_name_size = strlen(tls_clnt->remote_server) + 1;
+  if (tls_clnt->remote_server_func != NULL)
   {
-    server_name_size += (strlen(tls_clnt->rmt_svr_func_name) + 1);
+    server_name_size += (strlen(tls_clnt->remote_server_func) + 1);
   }
   server_name = calloc(server_name_size, sizeof(char));
   int bytes_needed = 0;
-  if (tls_clnt->rmt_svr_func_name == NULL)
+  if (tls_clnt->remote_server_func == NULL)
   {
     bytes_needed = snprintf(server_name,
                             server_name_size,
                             "%s",
-                            tls_clnt->rmt_svr_host_ip);
+                            tls_clnt->remote_server);
   }
   else
   {
     bytes_needed = snprintf(server_name,
                             server_name_size,
                             "%s.%s",
-                            tls_clnt->rmt_svr_host_ip,
-                            tls_clnt->rmt_svr_func_name);
+                            tls_clnt->remote_server,
+                            tls_clnt->remote_server_func);
   }
   if (bytes_needed > server_name_size)
   {

@@ -29,8 +29,8 @@ static void demo_kmip_server_init(DemoServer * demo_server)
   //     supplied by a connecting client - initialized to NULL pointers
   //     (server-side checks validate only the CA-chain of the client cert)
   demo_server->tlsconn.isClient = false;
-  demo_server->tlsconn.rmt_svr_host_ip = NULL;
-  demo_server->tlsconn.rmt_svr_func_name = NULL;
+  demo_server->tlsconn.remote_server = NULL;
+  demo_server->tlsconn.remote_server_func = NULL;
 }
 
 /*****************************************************************************
@@ -127,12 +127,12 @@ static void demo_kmip_server_check_options(DemoServer * demo_server)
 {
   bool err = false;
 
-  if (demo_server->tlsconn.rmt_svr_host_ip != NULL)
+  if (demo_server->tlsconn.remote_server != NULL)
   {
     fprintf(stderr, "remote 'host' member should be NULL for server\n");
     err = true;
   }
-  if (demo_server->tlsconn.rmt_svr_func_name != NULL)
+  if (demo_server->tlsconn.remote_server_func != NULL)
   {
     fprintf(stderr, "remote 'functional name' member should be NULL for server\n");
     err = true;

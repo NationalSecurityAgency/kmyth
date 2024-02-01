@@ -139,10 +139,10 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       break;
     // TLS Connection
     case 'I':
-      proxy->tlsconn.rmt_svr_host_ip = strdup(optarg);
+      proxy->tlsconn.remote_server = strdup(optarg);
       break;
     case 'N':
-      proxy->tlsconn.rmt_svr_func_name = strdup(optarg);
+      proxy->tlsconn.remote_server_func = strdup(optarg);
       break;
     case 'P':
       proxy->tlsconn.conn_port = strdup(optarg);
@@ -179,7 +179,7 @@ static void proxy_check_options(TLSProxy * proxy)
 
   bool err = false;
 
-  if (proxy->tlsconn.rmt_svr_host_ip == NULL)
+  if (proxy->tlsconn.remote_server == NULL)
   {
     fprintf(stderr, "remote server IP or hostname arg (-I) is required.\n");
     err = true;
