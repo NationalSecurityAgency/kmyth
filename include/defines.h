@@ -92,8 +92,12 @@
  * specified (limited to eight by the TPML_DIGEST struct).
  */
 #define MAX_POLICY_OR_CNT 8
-
-#define MAX_EXP_POLICY_PAIR_STR_LEN 1152
+#define MAX_POLICY_DIGEST_STR_LEN 128  // 2 chars/byte, 512-bit (64-byte) hash
+#define MAX_POLICY_PCR_SEL_STR_LEN 120
+#define MAX_EXP_POLICY_DELIM_STR_LEN 8
+#define MAX_EXP_POLICY_PAIR_STR_LEN MAX_POLICY_DIGEST_STR_LEN + \
+                                    MAX_EXP_POLICY_DELIM_STR_LEN + \
+                                    MAX_POLICY_PCR_SEL_STR_LEN
 
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)
