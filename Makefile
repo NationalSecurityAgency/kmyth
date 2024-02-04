@@ -595,8 +595,6 @@ endif
 ifeq ($(wildcard $(TPM_LIB_LOCAL_DEST)), $(TPM_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(TPM_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
-	install -d $(DESTDIR)$(PREFIX)/include/kmyth
-	install -m 644 $(INC_DIR)/kmyth.h $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
 endif
 ifeq ($(wildcard $(BIN_DIR)/kmyth-seal), $(BIN_DIR)/kmyth-seal)
@@ -617,7 +615,6 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(UTILS_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
-	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/file_io.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/formatting_tools.h
