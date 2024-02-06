@@ -13,9 +13,13 @@
 
 #include <tss2/tss2_sys.h>
 
+#define MAX_TEST_POLICY_PAIR_STRLEN (MAX_EXP_POLICY_PAIR_STR_LEN + 8)
+#define MAX_TEST_POLICY_STRLEN (MAX_POLICY_OR_CNT * \
+                                MAX_TEST_POLICY_PAIR_STRLEN)
+
 /**
- * This function adds all of the tests contained in formatting_tools_test.c to a
- * test suite parameter passed in by the caller. This allows a top-level
+ * This function adds all of the tests contained in formatting_tools_test.c to
+ * a test suite parameter passed in by the caller. This allows a top-level
  * 'test-runner' application to include them in the set of tests that it runs.
  *
  * @param[out] suite  CUnit test suite function that will add all the tests

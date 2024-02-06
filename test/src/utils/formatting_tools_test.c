@@ -475,9 +475,15 @@ void test_parse_exp_policy_string_pairs(void)
   char * pcrSelStrings[MAX_POLICY_OR_CNT-1] = { NULL };
   char * digestStrings[MAX_POLICY_OR_CNT-1] = { NULL };
 
-  char expPolicyString[MAX_POLICY_OR_CNT * (MAX_EXP_POLICY_PAIR_STR_LEN + 8)] = { 0 };
-  sprintf(expPolicyString, "%d:%064x", 23, 0);
+  char expPolicyString[MAX_TEST_POLICY_STRLEN + 1] = { 0 };
+
+  // valid, simple expected policy string should parse correctly
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN, "%d:%#064x", 23, 0);
   size_t policyPairCount = 1;
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) == 0);
 
   // NULL PCR selection string list output parameter should error
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
@@ -508,55 +514,65 @@ void test_parse_exp_policy_string_pairs(void)
                                           (char **) digestStrings) == 0);
   CU_ASSERT(policyPairCount == 0);
   
-  // Passing expected policy string where one of the pair values (second of
-  // two in this test case) exceeds the length restriction, should fail
-  sprintf(expPolicyString, "%s/16,23:", expPolicyString);
-  for (int i = 74; i < (MAX_EXP_POLICY_PAIR_STR_LEN + 75); i++)
-  {
-    expPolicyString[i] = 'a';
-  }
-  expPolicyString[MAX_EXP_POLICY_PAIR_STR_LEN + 75] = '\0';
+  // Passing expected policy string exceding length restriction should fail
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
+           "%-120s%-9s%0128x",
+           "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, "
+           "13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23",
+           ":", 0);
+  CU_ASSERT(strlen(expPolicyString) > MAX_EXP_POLICY_PAIR_STR_LEN);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
 
-  // policy entry with no PCR selections string / digests string delimiter
-  // should error
-  sprintf(expPolicyString, "%d", 23);
-  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
-                                          &policyPairCount,
-                                          (char **) pcrSelStrings,
-                                          (char **) digestStrings) != 0);
-  sprintf(expPolicyString, "%d:%064x/%064x", 23, 10000, 100000);
+  // Passing expected policy digest exceding length restriction should fail
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
+           "%s%s%#0131x", "17, 23", ":", 1023);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
 
-  // policy entry with invalid PCR/digest string delimiter should fail
-  sprintf(expPolicyString, "%d-%064x", 23, 0);
+  // policy entry with only PCR selections should error
+  snprintf(expPolicyString,  MAX_TEST_POLICY_STRLEN, "%d", 23);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // policy entry with only digest (second pair in this example) should error
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
+           "%d:%064x/%064x", 23, 10000, 100000);
+  CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
+                                          &policyPairCount,
+                                          (char **) pcrSelStrings,
+                                          (char **) digestStrings) != 0);
+
+  // policy entry with invalid PCR/digest delimiter should fail
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN, "%d-%064x", 23, 0);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
   
-  // policy entry with invalid string pair delimiter should fail
-  sprintf(expPolicyString, "%d,%d:%064x;%d,%d:%064x", 0, 1, 2, 3, 4, 5);
+  // policy entry with invalid policy string pair delimiter should fail
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
+           "%d,%d:%064x;%d,%d:%064x", 0, 1, 2, 3, 4, 5);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
 
   // policy entry with more than two (PCR/digest) elements should fail
-  sprintf(expPolicyString, "%d:%d:%064x", 0, 1, 2);
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN, "%d:%d:%064x", 0, 1, 2);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
 
-  // input string with more than 7 string pairs should fail
-  sprintf(expPolicyString,
+  // input string with more than MAX_POLICY_OR_CNT-1 (7) pairs should fail
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
           "%d:%064x/%d:%064x/%d:%064x/%d:%064x/"
           "%d:%064x/%d:%064x/%d:%064x/%d:%064x",
           1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8);
@@ -565,8 +581,9 @@ void test_parse_exp_policy_string_pairs(void)
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) != 0);
   
-  // should successfully parse 7 string pairs from valid example input string
-  sprintf(expPolicyString,
+  // should successfully and correctly parse MAX_POLICY_OR_CNT-1 (7)
+  // expected policy string pairs from valid example input string
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
           "%d:%064x/%d:%064x/%d:%064x/%d:%064x/"
           "%d:%064x/%d:%064x/%d:%064x",
           23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10);
@@ -607,8 +624,9 @@ void test_parse_exp_policy_string_pairs(void)
   }
 
   // should properly remove leading and/or trailing whitespace and prefixes
-  sprintf(expPolicyString, "   %d, %d   :  0x%064lx   /  %d , %d:0x%064lx   ",
-          16, 23, 0x123456789ABCDEF, 23, 16, 0xFEDCBA987654321);
+  snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,
+           "   %d, %d   :  0x%064lx   /  %d , %d:0x%064lx   ",
+           16, 23, 0x123456789ABCDEF, 23, 16, 0xFEDCBA987654321);
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,

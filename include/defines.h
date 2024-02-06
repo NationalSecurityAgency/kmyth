@@ -93,7 +93,31 @@
  */
 #define MAX_POLICY_OR_CNT 8
 
-#define MAX_EXP_POLICY_PAIR_STR_LEN 1152
+/**
+ * These constants provide size limits on an "expected policy" string used to
+ * specify a single policy-OR criterion. They support checks on 1) the length
+ * of a single policy-OR criterion entered by the user as part of the raw
+ * input string used to specify the "-e" ("--expected_policy") command line
+ * option and 2) the length of the parsed, trimmed hex string specifing the
+ * digest (hash) value portion of the policy-OR criterion.
+ *   - The 'PCR selection string length limit is not directly enforced, but is
+ *     used as a factor in computing an overall "expected policy" string limit.
+ *   - The 'delimiter' string length is also not directly enforced, but is also
+ *     used as a factor in computing an overall "expected policy" string limit.
+ *   - For the digest string, the user may include a prefix ('0x') and/or
+ *     trailing/leading whitespace when entering a value on the command line.
+ *     While the maximum specified here does not account for these bytes,
+ *     whitespace allowances for the 'PCR selection' and delimiter strings can
+ *     be applied with a corresponding reduction in whitespace allowances
+ *     for the 'PCR Selection' and/or delimiter string elements.
+ */
+#define MAX_POLICY_DIGEST_SIZE TPM2_SHA512_DIGEST_SIZE
+#define MAX_POLICY_DIGEST_STR_LEN (2 * MAX_POLICY_DIGEST_SIZE)
+#define MAX_POLICY_PCR_SEL_STR_LEN 120
+#define MAX_EXP_POLICY_DELIM_STR_LEN 8
+#define MAX_EXP_POLICY_PAIR_STR_LEN (MAX_POLICY_DIGEST_STR_LEN + \
+                                     MAX_EXP_POLICY_DELIM_STR_LEN + \
+                                     MAX_POLICY_PCR_SEL_STR_LEN)
 
 /**
  * In TPM 2.0, the size value for a key or data value (unique parameter)

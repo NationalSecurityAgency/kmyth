@@ -571,7 +571,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
   token = strtok(exp_policy_string, "/");
   while ((*pair_count < (MAX_POLICY_OR_CNT - 1)) && (token != NULL))
   {
-    if (strlen(token) >= MAX_EXP_POLICY_PAIR_STR_LEN)
+    if (strlen(token) > MAX_EXP_POLICY_PAIR_STR_LEN)
     {
       kmyth_log(LOG_ERR, "token (pair) size is %d chars (max is %u)",
                          strlen(token), MAX_EXP_POLICY_PAIR_STR_LEN);
@@ -604,7 +604,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     {
       kmyth_log(LOG_ERR, "pcrs string parse error (%s)",
                          pair_vals[i]);
-      for(size_t j = 0; j < i; j++)
+      for (size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
         pcrs_strings[j] = NULL;
@@ -619,7 +619,7 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
     if (pcrs_strings[i] == NULL)
     {
       kmyth_log(LOG_ERR, "malloc() of pcrs string error");
-      for(size_t j = 0; j < i; j++)
+      for (size_t j = 0; j < i; j++)
       {
         free(pcrs_strings[j]);
         pcrs_strings[j] = NULL;
@@ -696,6 +696,20 @@ int parse_exp_policy_string_pairs(char * exp_policy_string,
       idx1 += 2;
     }
     memcpy(digest_strings[i], token + idx1, idx2 - idx1);
+
+    // verify that the parsed digest string is within limits
+    if (strlen(digest_strings[i]) > MAX_POLICY_DIGEST_STR_LEN)
+    {
+      kmyth_log(LOG_ERR, "parsed expected policy digest string is too long");
+      for (size_t j = 0; j <= i; j++)
+      {
+        free(pcrs_strings[j]);
+        pcrs_strings[j] = NULL;
+        free(digest_strings[j]);
+        digest_strings[j] = NULL;
+      }
+      return 1;
+    }
 
     // check for additional (invalid) tokens
     token = strtok(NULL, ":");
