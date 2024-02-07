@@ -79,84 +79,115 @@ static void demo_kmip_server_usage(const char *prog)
 static void demo_kmip_server_get_options(DemoServer * demo_server,
                                          int argc, char **argv)
 {
-  // Exit early if there are no arguments.
+  // exit early if there are no arguments.
   if (1 == argc)
   {
     demo_kmip_server_usage(argv[0]);
     exit(EXIT_SUCCESS);
   }
 
+  // validate input 'DemoServer' context struct configuration
+  if ((demo_server->tlsconn.remote_server != NULL) ||
+      (demo_server->tlsconn.remote_server_func != NULL))
+  {
+    kmyth_log(LOG_ERR, "'client-specific' server settings detected");
+    demo_kmip_server_error(demo_server);
+  }
+
   int options;
   int option_index = 0;
 
+  bool invalid_options = false;
+
+  char * server_key_path = NULL;
+  char * server_cert_path = NULL;
+  char * ca_cert_path = NULL;
+  char * port_string = NULL;
+  bool help_flag = false;
+
+  // parse command-line options, but do not yet process them
   while ((options =
-          getopt_long(argc, argv, "k:c:C:p:m:h",
+          getopt_long(argc, argv, "k:c:C:p:h",
                       demo_kmip_server_longopts, &option_index)) != -1)
   {
     switch (options)
     {
     // key and certificate files
     case 'k':
-      demo_server->tlsconn.local_key_path = strdup(optarg);
+      server_key_path = optarg;
       break;
     case 'c':
-      demo_server->tlsconn.local_cert_path = strdup(optarg);
+      server_cert_path = optarg;
       break;
     case 'C':
-      demo_server->tlsconn.ca_cert_path = strdup(optarg);
+      ca_cert_path = optarg;
       break;
     // network Connection
     case 'p':
-      demo_server->tlsconn.conn_port = strdup(optarg);
+      port_string = optarg;
       break;
     // Misc
     case 'h':
-      demo_kmip_server_usage(argv[0]);
-      demo_kmip_server_cleanup(demo_server);
-      exit(EXIT_SUCCESS);
+      help_flag = true;
+      break;
     default:
-      demo_kmip_server_error(demo_server);
+      invalid_options = true;
     }
   }
-}
 
-/*****************************************************************************
- * demo_kmip_server_get_options()
- ****************************************************************************/
-static void demo_kmip_server_check_options(DemoServer * demo_server)
-{
-  bool err = false;
-
-  if (demo_server->tlsconn.remote_server != NULL)
+  // process and validate command-line options in a specific order
+  //   1) help
+  //   2) required options
+  //   3) discretionary options
+  if (help_flag)
   {
-    fprintf(stderr, "remote 'host' member should be NULL for server\n");
-    err = true;
-  }
-  if (demo_server->tlsconn.remote_server_func != NULL)
-  {
-    fprintf(stderr, "remote 'functional name' member should be NULL for server\n");
-    err = true;
-  }
-  if (demo_server->tlsconn.conn_port == NULL)
-  {
-    fprintf(stderr, "network port (server listen) argument required\n");
-    err = true;
-  }
-  if (demo_server->tlsconn.local_key_path == NULL)
-  {
-    fprintf(stderr, "file path for server's private key required\n");
-    err = true;
-  }
-  if (demo_server->tlsconn.local_cert_path == NULL)
-  {
-    fprintf(stderr, "file path for server's public certificate required\n");
-    err = true;
+      demo_kmip_server_usage(argv[0]);
+      if (invalid_options)
+      {
+        demo_kmip_server_error(demo_server);
+      }
+      exit(EXIT_SUCCESS);
   }
 
-  if (err)
+  if (server_key_path == NULL)
   {
-    kmyth_log(LOG_ERR, "Invalid command-line arguments.");
+    kmyth_log(LOG_ERR, "path for server's private key required");
+    invalid_options = true;
+  }
+  else
+  {
+    demo_server->tlsconn.local_key_path = strdup(server_key_path);
+  }
+
+  if (server_cert_path == NULL)
+  {
+    kmyth_log(LOG_ERR, "path for server's public certificate required");
+    invalid_options = true;
+  }
+  else
+  {
+    demo_server->tlsconn.local_cert_path = strdup(server_cert_path);
+  }
+
+  if (port_string == NULL)
+  {
+    kmyth_log(LOG_ERR, "network port (server listen) argument required");
+    invalid_options = true;
+  }
+  else
+  {
+    demo_server->tlsconn.conn_port = strdup(port_string);
+  }
+
+  // consolidated error exit point => all detected invalid options first logged
+  if (invalid_options)
+  {
     demo_kmip_server_error(demo_server);
+  }
+
+  if (ca_cert_path != NULL)
+  {
+    demo_server->tlsconn.ca_cert_path = strdup(ca_cert_path);
   }
 }
 
@@ -390,7 +421,6 @@ int main(int argc, char **argv)
 
   // process command-line options
   demo_kmip_server_get_options(&demo_server, argc, argv);
-  demo_kmip_server_check_options(&demo_server);
 
   // some initializtion for demo KMIP server
   demo_kmip_server_setup(&demo_server);
