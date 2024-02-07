@@ -289,6 +289,12 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
                             tls_clnt->remote_server,
                             tls_clnt->remote_server_func);
   }
+  if (bytes_needed < 0)
+  {
+    kmyth_log(LOG_ERR, "error creating server certificate verification name");
+    free(server_name);
+    return -1;
+  }
   if (bytes_needed > server_name_size)
   {
     kmyth_log(LOG_ERR, "truncated server certificate verification name");
