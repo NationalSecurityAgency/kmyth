@@ -3,7 +3,7 @@
 ##############################################################################
 
 [req]
-md                      = sha256
+md                      = sha512
 prompt                  = no
 distinguished_name      = dn
 req_extensions          = v3_ext
@@ -18,4 +18,4 @@ subjectAltName          = @alt_names
 
 [ alt_names ]
 IP.0                    = 127.0.0.1
-DNS.0                   = localhost
+DNS.0                   = localhost.proxy

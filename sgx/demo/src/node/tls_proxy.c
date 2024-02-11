@@ -36,6 +36,8 @@ static void proxy_cleanup(TLSProxy * proxy)
   demo_tls_cleanup(&(proxy->tlsconn));
 
   proxy_init(proxy);
+
+  kmyth_log(LOG_DEBUG, "proxy (pid=%d) memory/resources reset", getpid());
 }
 
 /*****************************************************************************
@@ -62,8 +64,23 @@ static void proxy_usage(const char *prog)
     "  -u or --public          Remote public cert PEM file used to validate ECDH connections.\n"
     "TLS Connection Information --\n"
     "  -I or --remote-ip       The IP address or hostname of the remote server\n"
+    "                          (i.e., address/name used for network connection)\n"
+    "  -N or --remote-name     In some cases, the server that the proxy connects to may\n"
+    "                          reside on the same network node. In order to better\n"
+    "                          differentiate endpoints, an additional 'functional name'\n"
+    "                          can be specified for the remote server. This proxy\n"
+    "                          implements the convention of concatenating the network\n"
+    "                          address/name with this 'functional name' using a 'dot'\n"
+    "                          delimiter (<IP address or hostname>.<functional name>)\n"
+    "                          and using that extended name for certificate validation.\n"
+    "                          If no 'functional name' is specified, the address/name\n"
+    "                          value specified with the '-I' (--remote-ip) option is used\n"
+    "                          directly for server certificate verification.\n"
+    "                            Note: the remote server's certificate must use, or\n"
+    "                                  define as a Subject Alternate Name (SAN), the\n"
+    "                                  configured certificate verification name\n"
     "  -P or --remote-port     The port number to use when connecting to the remote server\n"
-    "  -C or --ca-path         Optional certificate file used to verify the remote server\n"
+    "  -C or --ca-path         Optional CA certificate file used to verify the remote server\n"
     "                          (if not specified, the default system CA chain will be used instead)\n"
     "  -R or --client-key      Local (client) private key (for TLS connection) PEM file name\n"
     "  -U or --client-cert     Local (client) certificate (for TLS connection) PEM file name\n"
@@ -91,7 +108,7 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
   int option_index = 0;
 
   while ((options =
-          getopt_long(argc, argv, "r:c:u:p:I:P:C:R:U:m:h",
+          getopt_long(argc, argv, "r:c:u:p:I:N:P:C:R:U:m:h",
                       proxy_longopts, &option_index)) != -1)
   {
     switch (options)
@@ -132,10 +149,13 @@ static void proxy_get_options(TLSProxy * proxy, int argc, char **argv)
       break;
     // TLS Connection
     case 'I':
-      proxy->tlsconn.host = strdup(optarg);
+      proxy->tlsconn.remote_server = strdup(optarg);
+      break;
+    case 'N':
+      proxy->tlsconn.remote_server_func = strdup(optarg);
       break;
     case 'P':
-      proxy->tlsconn.port = strdup(optarg);
+      proxy->tlsconn.conn_port = strdup(optarg);
       break;
     case 'C':
       proxy->tlsconn.ca_cert_path = strdup(optarg);
@@ -169,14 +189,14 @@ static void proxy_check_options(TLSProxy * proxy)
 
   bool err = false;
 
-  if (proxy->tlsconn.host == NULL)
+  if (proxy->tlsconn.remote_server == NULL)
   {
-    fprintf(stderr, "Remote IP argument (-I) is required.\n");
+    fprintf(stderr, "remote server IP or hostname arg (-I) is required.\n");
     err = true;
   }
-  if (proxy->tlsconn.port == NULL)
+  if (proxy->tlsconn.conn_port == NULL)
   {
-    fprintf(stderr, "Remote port number argument (-P) is required.\n");
+    fprintf(stderr, "TLS connection port number argument (-P) is required.\n");
     err = true;
   }
   if (err)
@@ -488,6 +508,15 @@ static void proxy_handle_session(TLSProxy * proxy)
                            bytes_read, "ignored");
     }
   }
+
+  kmyth_log(LOG_DEBUG, "ECDH session complete");
+
+  proxy_cleanup(proxy);
+
+  kmyth_log(LOG_DEBUG, "child process (pid=%d) terminating", getpid());
+
+  exit(EXIT_SUCCESS);
+
 }
 
 /*****************************************************************************
@@ -531,25 +560,35 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
     {
       // forked child process handles accepted connection from ECDH client
       close(ecdh_svr->config.listen_socket_fd);
-      kmyth_log(LOG_DEBUG, "proxy (child) handling ECDH session #%d",
-                           session_count);
+      kmyth_log(LOG_DEBUG, "proxy (child, pid=%d) handling ECDH session #%d",
+                           getpid(), session_count);
       return EXIT_SUCCESS;
     }
     else
     {
       // parent process loops to accept more connections or exits
       // if session limit has been reached
+      kmyth_log(LOG_DEBUG, "proxy (parent, pid=%d) managing ECDH sessions",
+                           getpid());
       close(clnt_conn->session_socket_fd);
       if ((ecdh_svr->config.session_limit != 0) &&
           (session_count >= ecdh_svr->config.session_limit))
       {
         kmyth_log(LOG_DEBUG, "proxy ECDH session count reached limit (%d)",
                              ecdh_svr->config.session_limit);
-      
+
+        // close socket parent process uses to listen for new connections
         close(ecdh_svr->config.listen_socket_fd);
-        while (wait(NULL) > 0);
+
+        // parent process waits until forked child process done with session
+        kmyth_log(LOG_DEBUG, "parent process (pid=%d) waiting", getpid());
+        wait(NULL);
+        kmyth_log(LOG_DEBUG, "waiting parent process (pid=%d) resumes", getpid());
+
+        // done, so cleanup before exit
         proxy_cleanup(proxy);
       
+        kmyth_log(LOG_DEBUG, "normal termination (parent, pid = %d)", getpid());
         exit(EXIT_SUCCESS);
       }
     }
@@ -602,9 +641,12 @@ int main(int argc, char **argv)
   // handle ECDH client connection - facilitate 'retrieve key' protocol
   proxy_handle_session(&proxy);
 
+  // if this code is reached, something has gone wrong
+  //   - main (parent) process should exit from
+  //     proxy_manage_ecdh_client_connections()
+  //   - forked child processes should exit from proxy_handle_session()
+  kmyth_log(LOG_ERR, "unexpected process termination in main()");
   proxy_cleanup(&proxy);
 
-  kmyth_log(LOG_DEBUG, "normal termination ...");
-
-  return EXIT_SUCCESS;
+  return EXIT_FAILURE;
 }

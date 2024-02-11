@@ -365,9 +365,22 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "==================================================================================================="
 	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
 	@echo "===================================================================================================\n"
-	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv.pem -c demo/data/server_cert.pem -C demo/data/ca_cert.pem -p 7001 &
+	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv.pem \
+	                          -c demo/data/server_cert.pem \
+	                          -C demo/data/ca_cert.pem \
+	                          -p 7001 &
 	@sleep 1
-	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv.pem -c demo/data/proxy_cert.pem -u demo/data/client_cert.pem -p 7000 -R demo/data/proxy_priv.pem -U demo/data/proxy_cert.pem -C demo/data/ca_cert.pem -I localhost -P 7001 -m 1 &
+	@$(CURDIR)/$(Proxy_Name) -r demo/data/proxy_priv.pem \
+	                         -c demo/data/proxy_cert.pem \
+	                         -u demo/data/client_cert.pem \
+	                         -p 7000 \
+	                         -R demo/data/proxy_priv.pem \
+	                         -U demo/data/proxy_cert.pem \
+	                         -C demo/data/ca_cert.pem \
+	                         -I localhost \
+	                         -N demoServer \
+	                         -P 7001 \
+	                         -m 1 &
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@sleep 1
