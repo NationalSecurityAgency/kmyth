@@ -595,6 +595,10 @@ endif
 ifeq ($(wildcard $(TPM_LIB_LOCAL_DEST)), $(TPM_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(TPM_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth
+	install -m 644 $(TPM_HEADERS) \
+	               $(DESTDIR)$(PREFIX)/include/kmyth/
+	ldconfig
 	ldconfig
 endif
 ifeq ($(wildcard $(BIN_DIR)/kmyth-seal), $(BIN_DIR)/kmyth-seal)
