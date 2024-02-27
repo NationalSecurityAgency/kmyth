@@ -171,7 +171,7 @@
 /**
  * OpenSSL EVP hashing algorithm / message digest
  * 
- * including options from:
+ * includes options from:
  * <UL>
  *   <LI> SHA1 </LI>
  *   <LI> SHA2 </LI>
@@ -188,7 +188,9 @@
 #define KMYTH_OPENSSL_EVP_MAC_DIGEST "SHA-256"
 
 /**
- * OpenSSL EVP Message Authentication Code (MAC) algorithm options:
+ * OpenSSL EVP Message Authentication Code (MAC) algorithm
+ * 
+ * options such as:
  * <UL>
  *   <LI> BLAKE2 </LI>
  *   <LI> CMAC </LI>
