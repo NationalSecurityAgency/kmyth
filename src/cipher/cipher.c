@@ -17,11 +17,13 @@
 
 // Check for supported OpenSSL version
 //   - OpenSSL v1.1.x required for AES KeyWrap RFC5649 w/ padding
+//   - OpenSSL v3.x required for 'EVP_MAC' API
+//   - OpenSSL v3.0.0 is a LTS version supported until 2026-09-07
 //   - OpenSSL v1.1.1 is a LTS version supported until 2023-09-11
 //   - OpenSSL v1.1.0 is not a supported version after 2019-09-11
 //   - OpenSSL v1.0.2 is not a supported version after 2019-12-31
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
-#error OpenSSL version 1.1.1 or newer is required
+#if !(OPENSSL_VERSION_PREREQ(3, 0))
+#error OpenSSL version 3.0.x or newer is required
 #endif
 
 // cipher_list[] - array of structs that is used to specify all valid
