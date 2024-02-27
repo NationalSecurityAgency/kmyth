@@ -185,7 +185,7 @@
  *
  * @brief OpenSSL EVP_MAC "digest" specification
  */
-#define KMYTH_OPENSSL_EVP_MAC_DIGEST "SHA3-256"
+#define KMYTH_OPENSSL_EVP_MAC_DIGEST "SHA-256"
 
 /**
  * OpenSSL EVP Message Authentication Code (MAC) algorithm options:
