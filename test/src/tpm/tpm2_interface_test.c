@@ -525,7 +525,6 @@ void test_init_password_cmd_auth(void)
   TSS2L_SYS_AUTH_COMMAND cmd_out;
   TSS2L_SYS_AUTH_RESPONSE res_out;
 
-
   //Valid test for NULL auth
   TPM2B_AUTH auth = {.size = 0, };
   CU_ASSERT(init_password_cmd_auth(&auth, &cmd_out, &res_out) == 0);
