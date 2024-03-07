@@ -576,10 +576,12 @@ $(TEST_TPM_OBJ_DIR):
 
 .PHONY: install
 install:
+	install -d $(DESTDIR)$(PREFIX)/include/kmyth
+	install -m 644 $(INC_DIR)/defines.h \
+	               $(DESTDIR)$(PREFIX)/include/kmyth/
 ifeq ($(wildcard $(UTILS_LIB_LOCAL_DEST)), $(UTILS_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(UTILS_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
-	install -d $(DESTDIR)$(PREFIX)/include/kmyth
 	install -m 644 $(UTILS_HEADERS) \
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
@@ -587,7 +589,6 @@ endif
 ifeq ($(wildcard $(LOGGER_LIB_LOCAL_DEST)), $(LOGGER_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(LOGGER_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
-	install -d $(DESTDIR)$(PREFIX)/include/kmyth
 	install -m 644 $(LOGGER_INC_DIR)/kmyth_log.h \
 	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
@@ -595,6 +596,8 @@ endif
 ifeq ($(wildcard $(TPM_LIB_LOCAL_DEST)), $(TPM_LIB_LOCAL_DEST))
 	install -d $(DESTDIR)$(PREFIX)/lib
 	install -m 755 $(TPM_LIB_LOCAL_DEST) $(DESTDIR)$(PREFIX)/lib/
+	install -m 644 $(TPM_HEADERS) \
+	               $(DESTDIR)$(PREFIX)/include/kmyth/
 	ldconfig
 endif
 ifeq ($(wildcard $(BIN_DIR)/kmyth-seal), $(BIN_DIR)/kmyth-seal)
@@ -615,10 +618,17 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(UTILS_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(TPM_LIB_SONAME)
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(LOGGER_LIB_SONAME)
-	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/defines.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/file_io.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/formatting_tools.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_log.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/kmyth_seal_unseal_impl.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/marshalling_tools.h
 	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/memory_util.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/object_tools.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/pcrs.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/storage_key_tools.h
+	rm -f $(DESTDIR)$(PREFIX)/include/kmyth/tpm2_interface.h
 ifeq ($(wildcard $(DESTDIR)$(PREFIX)/include/kmyth/*.h),)
 	rm -rf $(DESTDIR)$(PREFIX)/include/kmyth
 endif
