@@ -101,8 +101,8 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   // extract client (enclave) ID (subject name) bytes from cert
   X509_NAME *client_id = NULL;
 
-  if (EXIT_SUCCESS != extract_identity_bytes_from_x509(client_sign_cert,
-                                                       &client_id))
+  int ret = extract_identity_bytes_from_x509(client_sign_cert, &client_id);
+  if (ret != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "failed to extract ID from certificate");
     if (client_id != NULL)
@@ -116,9 +116,9 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   unsigned char *client_id_bytes = NULL;
   size_t client_id_len = 0;
 
-  int ret = marshal_x509_name_to_der(client_id,
-                                     &client_id_bytes,
-                                     (int *) &client_id_len);
+  ret = marshal_x509_name_to_der(client_id,
+                                 &client_id_bytes,
+                                 (int *) &client_id_len);
   if (ret != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR, "error marshalling client ID");
@@ -131,30 +131,19 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   }
   X509_NAME_free(client_id);
 
-  // Convert client's ephemeral public key to octet string
+  // convert client's ephemeral public key to DER formatted byte array
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
-  
-  EC_KEY *client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
-  if (client_eph_ec_pubkey == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "error extracting EC_KEY from EVP_PKEY struct");
-    free(client_id_bytes);
-    return EXIT_FAILURE;
-  } 
-  
-  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_ec_pubkey,
-                                         POINT_CONVERSION_UNCOMPRESSED,
-                                         &client_eph_pubkey_bytes,
-                                         NULL);
+
+  client_eph_pubkey_len = i2d_PUBKEY(client_eph_pubkey,
+                                     &client_eph_pubkey_bytes);
+
   if ((client_eph_pubkey_bytes == NULL) || (client_eph_pubkey_len == 0))
   {
-    kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
+    kmyth_sgx_log(LOG_ERR, "serialize client ephemeral key failed");
     kmyth_clear_and_free(client_id_bytes, client_id_len);
-    EC_KEY_free(client_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(client_eph_ec_pubkey);
 
   // allocate memory for 'Client Hello' message body byte array
   //  - Client ID size (two-byte unsigned integer)
@@ -340,55 +329,22 @@ int parse_client_hello_msg(ECDHMessage * msg_in,
   EVP_PKEY_free(client_sign_pubkey);
   free(msg_sig_bytes);
 
-  // check that the buffer parameter for the public key (EVP_PKEY struct)
-  // was not yet allocated. If it was (e.g., from a previous session), 
-  // free the allocated memory and reset it to a NULL pointer before
-  // creating an empty EVP_PKEY struct.
+  // convert received client ephemeral public key bytes to EVP_PKEY struct
   if (*client_eph_pubkey != NULL)
   {
     kmyth_sgx_log(LOG_ERR, "resetting previously allocated EVP_PKEY struct");
     free(*client_eph_pubkey);
     *client_eph_pubkey = NULL;
   }
-  *client_eph_pubkey = EVP_PKEY_new();
-
-  // initialize an EC_KEY struct for the right elliptic curve
-  EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (client_eph_ec_pubkey == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "error initializing output EC_KEY struct");
-    free(client_eph_pub_bytes);
-    return EXIT_FAILURE;
-  } 
-
-  // convert DER-formatted byte array to EC_KEY struct
-  if (1 != EC_KEY_oct2key(client_eph_ec_pubkey,
-                          client_eph_pub_bytes,
-                          client_eph_pub_len,
-                          NULL))
-  {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of client ephemeral public key failed");
-    free(client_eph_pub_bytes);
-    return EXIT_FAILURE;
-  }
+  const unsigned char * buf_ptr = client_eph_pub_bytes;
+  *client_eph_pubkey = d2i_PUBKEY(NULL, &buf_ptr, client_eph_pub_len);
   free(client_eph_pub_bytes);
-
-  // check parsed, received ephemeral public key
-  if (1 != EC_KEY_check_key(client_eph_ec_pubkey))
+  if (*client_eph_pubkey == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "checks on client ephemeral public key failed");
+    kmyth_sgx_log(LOG_ERR, "client ephemeral data import error");
+    free(*client_eph_pubkey);
     return EXIT_FAILURE;
   }
-
-  // encapsulate client ephemeral public key in EVP_PKEY struct
-  if (1 != EVP_PKEY_set1_EC_KEY(*client_eph_pubkey,
-                                client_eph_ec_pubkey))
-  {
-    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
-    EC_KEY_free(client_eph_ec_pubkey);
-    return EXIT_FAILURE;
-  }
-  EC_KEY_free(client_eph_ec_pubkey);
 
   return EXIT_SUCCESS;
 }                                 
@@ -434,46 +390,32 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   }
   X509_NAME_free(server_id);
 
-  // Convert client-side ephemeral public key to octet string
+  // convert client-side ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
   size_t client_eph_pubkey_len = 0;
-
-  EC_KEY *client_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  client_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(client_eph_pubkey);
-  client_eph_pubkey_len = EC_KEY_key2buf(client_eph_ec_pubkey,
-                                         POINT_CONVERSION_UNCOMPRESSED,
-                                         &client_eph_pubkey_bytes,
-                                         NULL);
+  client_eph_pubkey_len = i2d_PUBKEY(client_eph_pubkey,
+                                     &client_eph_pubkey_bytes);
   if ((client_eph_pubkey_bytes == NULL) || (client_eph_pubkey_len == 0))
   {
-    kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
+    kmyth_sgx_log(LOG_ERR, "error serializing client ephemeral public key");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
-    EC_KEY_free(client_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(client_eph_ec_pubkey);
 
-  // Convert server's ephemeral public key to octet string
+  // convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
   size_t server_eph_pubkey_len = 0;
-
-  EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_pubkey);
-  server_eph_pubkey_len = EC_KEY_key2buf(server_eph_ec_pubkey,
-                                         POINT_CONVERSION_UNCOMPRESSED,
-                                         &server_eph_pubkey_bytes,
-                                         NULL);
+  server_eph_pubkey_len = i2d_PUBKEY(server_eph_pubkey,
+                                     &server_eph_pubkey_bytes);
   if ((server_eph_pubkey_bytes == NULL) || (server_eph_pubkey_len == 0))
   {
-    kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
+    kmyth_sgx_log(LOG_ERR, "error serializing server ephemeral public key");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
     kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
     kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
-    EC_KEY_free(server_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(server_eph_ec_pubkey);
 
   // allocate memory for 'Server Hello' message body byte array
   //  - Server ID size (two-byte unsigned integer)
@@ -711,89 +653,44 @@ int parse_server_hello_msg(ECDHMessage * msg_in,
   free(msg_sig_bytes);
   EVP_PKEY_free(server_sign_pubkey);
 
-  // convert received client ephemeral public bytes to EVP_PKEY struct format
-  EC_KEY *rcvd_client_eph_ec_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (rcvd_client_eph_ec_pub == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
-    free(client_eph_pub_bytes);
-    free(server_eph_pub_bytes);
-    return EXIT_FAILURE;
-  } 
-  if (1 != EC_KEY_oct2key(rcvd_client_eph_ec_pub,
-                          client_eph_pub_bytes,
-                          client_eph_pub_len,
-                          NULL))
-  {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of client ephemeral public key failed");
-    free(client_eph_pub_bytes);
-    free(server_eph_pub_bytes);
-    EC_KEY_free(rcvd_client_eph_ec_pub);
-    return EXIT_FAILURE;
-  }
+  // convert received client ephemeral public bytes to EVP_PKEY struct
+  const unsigned char *buf_ptr = client_eph_pub_bytes;
+  EVP_PKEY *rcvd_client_eph_pubkey = d2i_PUBKEY(NULL,
+                                                &buf_ptr,
+                                                client_eph_pub_len);
   free(client_eph_pub_bytes);
-  EVP_PKEY *rcvd_client_eph_pub = EVP_PKEY_new();
-  if (1 != EVP_PKEY_set1_EC_KEY(rcvd_client_eph_pub, rcvd_client_eph_ec_pub))
+  if (rcvd_client_eph_pubkey == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY in EVP_PKEY");
+    kmyth_sgx_log(LOG_ERR, "error importing client ephemeral public key");
     free(server_eph_pub_bytes);
-    EC_KEY_free(rcvd_client_eph_ec_pub);
-    EVP_PKEY_free(rcvd_client_eph_pub);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(rcvd_client_eph_ec_pub);
-
 
   // check received client ephemeral public matches expected value
-  if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_client_eph_pub,
-                        (const EVP_PKEY *) client_eph_pubkey))
+  if (1 != EVP_PKEY_eq((const EVP_PKEY *) rcvd_client_eph_pubkey,
+                       (const EVP_PKEY *) client_eph_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "client ephemeral public mismatch");
     free(server_eph_pub_bytes);
-    EVP_PKEY_free(rcvd_client_eph_pub);
+    EVP_PKEY_free(rcvd_client_eph_pubkey);
     return EXIT_FAILURE;
   }
-  EVP_PKEY_free(rcvd_client_eph_pub);
+  EVP_PKEY_free(rcvd_client_eph_pubkey);
 
-  // convert DER-formatted byte array to EC_KEY struct
-  EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (1 != EC_KEY_oct2key(server_eph_ec_pubkey,
-                          server_eph_pub_bytes,
-                          server_eph_pub_len,
-                          NULL))
-  {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
-    free(server_eph_pub_bytes);
-    EC_KEY_free(server_eph_ec_pubkey);
-    return EXIT_FAILURE;
-  }
-  free(server_eph_pub_bytes);
-
-  // check parsed, received ephemeral public key
-  if (1 != EC_KEY_check_key(server_eph_ec_pubkey))
-  {
-    kmyth_sgx_log(LOG_ERR, "checks on received ephemeral public key failed");
-    EC_KEY_free(server_eph_ec_pubkey);
-    return EXIT_FAILURE;
-  }
-
-  // create empty EVP_PKEY struct, if previously allocated, free memory first
+  // convert DER-formatted byte array to EVP_PKEY struct
   if (*server_eph_pubkey != NULL)
   {
     EVP_PKEY_free(*server_eph_pubkey);
     *server_eph_pubkey = NULL;
   }
-  *server_eph_pubkey = EVP_PKEY_new();
-
-  // encapsulate server ephemeral public key in EVP_PKEY struct
-  if (1 != EVP_PKEY_set1_EC_KEY(*server_eph_pubkey,
-                                server_eph_ec_pubkey))
+  buf_ptr = server_eph_pub_bytes;
+  *server_eph_pubkey = d2i_PUBKEY(NULL, &buf_ptr, server_eph_pub_len);
+  free(server_eph_pub_bytes);
+  if (*server_eph_pubkey == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY within EVP_PKEY");
-    EC_KEY_free(server_eph_ec_pubkey);
+    kmyth_sgx_log(LOG_ERR, "error importing server ephemeral public key");
     return EXIT_FAILURE;
   }
-  EC_KEY_free(server_eph_ec_pubkey);
 
   return EXIT_SUCCESS;
 }                                 
@@ -830,30 +727,23 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   }
   kmip_destroy(&kmip_context);
 
-  // Convert server's ephemeral public key to octet string
+  // convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
   size_t server_eph_pubkey_len = 0;
-
-  EC_KEY *server_eph_ec_pubkey = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  server_eph_ec_pubkey = EVP_PKEY_get1_EC_KEY(server_eph_pubkey);
-  server_eph_pubkey_len = EC_KEY_key2buf(server_eph_ec_pubkey,
-                                         POINT_CONVERSION_UNCOMPRESSED,
-                                         &server_eph_pubkey_bytes,
-                                         NULL);
+  server_eph_pubkey_len = i2d_PUBKEY(server_eph_pubkey,
+                                     &server_eph_pubkey_bytes);
   if ((server_eph_pubkey_bytes == NULL) || (server_eph_pubkey_len == 0))
   {
-    kmyth_sgx_log(LOG_ERR, "EC_KEY to octet string conversion failed");
+    kmyth_sgx_log(LOG_ERR, "error serializing server ephemeral public key");
     free(kmip_key_request_bytes);
-    EC_KEY_free(server_eph_ec_pubkey);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(server_eph_ec_pubkey);
 
   // allocate memory for 'Key Request' message body byte array
   //  - KMIP key request size (two-byte unsigned integer)
   //  - KMIP key request bytes (byte array)
   //  - Server ephemeral size (two-byte unsigned integer)
-  //  - Server ephemeral value (DER formatted EC_KEY byte array)
+  //  - Server ephemeral value (DER formatted EC public key byte array)
   ECDHMessage pt_msg = { 0 };
   // TODO: Check for overflow
   pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_key_request_len +
@@ -1050,54 +940,32 @@ int parse_key_request_msg(X509 * client_sign_cert,
   // done with signature, clean-up memory
   free(msg_sig_bytes);
 
-  // convert received client ephemeral public bytes to EVP_PKEY struct format
-  EC_KEY *rcvd_server_eph_ec_pub = EC_KEY_new_by_curve_name(KMYTH_EC_NID);
-  if (rcvd_server_eph_ec_pub == NULL)
-  {
-    kmyth_sgx_log(LOG_ERR, "error initializing EC_KEY struct");
-    free(kmip_request->buffer);
-    kmyth_clear(kmip_request, sizeof(ByteBuffer));
-    free(server_eph_pub_bytes);
-    return EXIT_FAILURE;
-  } 
-  if (1 != EC_KEY_oct2key(rcvd_server_eph_ec_pub,
-                          server_eph_pub_bytes,
-                          server_eph_pub_len,
-                          NULL))
-  {
-    kmyth_sgx_log(LOG_ERR, "unmarshal of server ephemeral public key failed");
-    free(kmip_request->buffer);
-    kmyth_clear(kmip_request, sizeof(ByteBuffer));
-    free(server_eph_pub_bytes);
-    EC_KEY_free(rcvd_server_eph_ec_pub);
-    return EXIT_FAILURE;
-  }
+  // convert received client ephemeral public bytes to EVP_PKEY struct
+  const unsigned char *buf_ptr = server_eph_pub_bytes;
+  EVP_PKEY *rcvd_server_eph_pubkey = d2i_PUBKEY(NULL,
+                                                &buf_ptr,
+                                                server_eph_pub_len);
   free(server_eph_pub_bytes);
-
-  EVP_PKEY *rcvd_server_eph_pub = EVP_PKEY_new();
-  if (1 != EVP_PKEY_set1_EC_KEY(rcvd_server_eph_pub, rcvd_server_eph_ec_pub))
+  if (rcvd_server_eph_pubkey == NULL)
   {
-    kmyth_sgx_log(LOG_ERR, "error encapsulating EC_KEY in EVP_PKEY");
+    kmyth_sgx_log(LOG_ERR, "error importing received server ephemeral pubkey");
     free(kmip_request->buffer);
     kmyth_clear(kmip_request, sizeof(ByteBuffer));
-    EC_KEY_free(rcvd_server_eph_ec_pub);
-    EVP_PKEY_free(rcvd_server_eph_pub);
     return EXIT_FAILURE;
   }
-  EC_KEY_free(rcvd_server_eph_ec_pub);
 
   // check received server ephemeral public matches expected value
   // (Note: EVP_PKEY_cmp() compares public parameters and components)
-  if (1 != EVP_PKEY_cmp((const EVP_PKEY *) rcvd_server_eph_pub,
-                        (const EVP_PKEY *) server_eph_pubkey))
+  if (1 != EVP_PKEY_eq((const EVP_PKEY *) rcvd_server_eph_pubkey,
+                       (const EVP_PKEY *) server_eph_pubkey))
   {
     kmyth_sgx_log(LOG_ERR, "server ephemeral public mismatch");
     free(kmip_request->buffer);
     kmyth_clear(kmip_request, sizeof(ByteBuffer));
-    EVP_PKEY_free(rcvd_server_eph_pub);
+    EVP_PKEY_free(rcvd_server_eph_pubkey);
     return EXIT_FAILURE;
   }
-  EVP_PKEY_free(rcvd_server_eph_pub);
+  EVP_PKEY_free(rcvd_server_eph_pubkey);
 
   return EXIT_SUCCESS;
 }
