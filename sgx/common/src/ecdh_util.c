@@ -208,7 +208,9 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   }
 
   // set 'salt' value for HKDF
-  if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, "kmyth", 5) != 1)
+  const unsigned char *salt_val = (const unsigned char *) "kmyth";
+  size_t salt_len = strlen((const char *) salt_val);
+  if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt_val, (int) salt_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF 'salt' value");
     EVP_PKEY_CTX_free(pctx);
@@ -216,7 +218,9 @@ int compute_ecdh_session_key(unsigned char * secret_in_bytes,
   }
 
   // set input key value for HKDF
-  if (EVP_PKEY_CTX_set1_hkdf_key(pctx, secret_in_bytes, (int)secret_in_len) != 1)
+  if (EVP_PKEY_CTX_set1_hkdf_key(pctx,
+                                 secret_in_bytes,
+                                 (int) secret_in_len) != 1)
   {
     kmyth_sgx_log(LOG_ERR, "failed to set HKDF input key bytes");
     EVP_PKEY_CTX_free(pctx);

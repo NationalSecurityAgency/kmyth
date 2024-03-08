@@ -65,14 +65,16 @@ int send_ecdh_msg(int socket_fd, unsigned char *buf, size_t len)
 {
   struct ECDHMessageHeader header;
 
-  if (len > KMYTH_ECDH_MAX_MSG_SIZE)
+  if ((len > KMYTH_ECDH_MAX_MSG_SIZE) || (len > UINT16_MAX))
   {
     kmyth_log(LOG_ERR, "ECDH message exceeds size limit");
     return EXIT_FAILURE;
   }
+  uint16_t temp_len = (uint16_t) len;
 
   secure_memset(&header, 0, sizeof(header));
-  header.msg_size = htons(len);
+
+  header.msg_size = htons(temp_len);
 
   ssize_t bytes_sent = write(socket_fd, &header, sizeof(header));
   if ((bytes_sent <= 0) || ((size_t)bytes_sent != sizeof(header)))
