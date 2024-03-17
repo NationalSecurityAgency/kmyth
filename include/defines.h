@@ -169,6 +169,43 @@
 #define KMYTH_OPENSSL_HASH EVP_sha256()
 
 /**
+ * OpenSSL EVP hashing algorithm / message digest
+ * 
+ * includes options from:
+ * <UL>
+ *   <LI> SHA1 </LI>
+ *   <LI> SHA2 </LI>
+ *   <LI> SHA3 </LI>
+ *   <LI> KECCAK </LI>
+ *   <LI> KECCAK-KMAC </LI>
+ *   <LI> SHAKE </LI>
+ *   <LI> BLAKE2 </LI>
+ *   <LI> ... </LI>
+ * </UL>
+ *
+ * @brief OpenSSL EVP_MAC "digest" specification
+ */
+#define KMYTH_OPENSSL_EVP_MAC_DIGEST "SHA-256"
+
+/**
+ * OpenSSL EVP Message Authentication Code (MAC) algorithm
+ * 
+ * options such as:
+ * <UL>
+ *   <LI> BLAKE2 </LI>
+ *   <LI> CMAC </LI>
+ *   <LI> GMAC </LI>
+ *   <LI> HMAC </LI>
+ *   <LI> KMAC </LI>
+ *   <LI> SIPHASH </LI>
+ *   <LI> POLY1305 </LI>
+ * </UL>
+ *
+ * @brief OpenSSL EVP_MAC "type" specification
+ */
+#define KMYTH_OPENSSL_EVP_MAC_ALG "HMAC"
+
+/**
  * TPM 2.0 hash algorithm digest size options:
  * <UL>
  *   <LI> TPM2_SHA1_DIGEST_SIZE </LI>

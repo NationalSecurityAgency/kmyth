@@ -985,67 +985,82 @@ int compute_authHMAC(SESSION auth_session,
   }
 
   // initialize authHMAC (authValue is key for computing the keyed hash)
-  HMAC_CTX *hmac_ctx = HMAC_CTX_new();
+  EVP_MAC *hmac = EVP_MAC_fetch(NULL,
+                                KMYTH_OPENSSL_EVP_MAC_ALG,
+                                NULL);
+  EVP_MAC_CTX *hmac_ctx = NULL;
+  hmac_ctx = EVP_MAC_CTX_new(hmac);
+  EVP_MAC_free(hmac);
 
-  if (!HMAC_Init_ex(hmac_ctx,
+  OSSL_PARAM params[2] = { 0 };
+  params[0] = OSSL_PARAM_construct_utf8_string("digest",
+                                               KMYTH_OPENSSL_EVP_MAC_DIGEST,
+                                               0);
+  params[1] = OSSL_PARAM_construct_end();
+
+  if (!EVP_MAC_init(hmac_ctx,
                     auth_authValue->buffer,
                     auth_authValue->size,
-                    KMYTH_OPENSSL_HASH,
-                    NULL))
+                    params))
   {
     kmyth_log(LOG_ERR, "error initializing HMAC");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
-
+  
   // update with authorized command hash
-  if (!HMAC_Update(hmac_ctx, auth_pHash.buffer, auth_pHash.size))
+  if (!EVP_MAC_update(hmac_ctx, auth_pHash.buffer, auth_pHash.size))
   {
     kmyth_log(LOG_ERR,
               "error updating HMAC with authorized command hash");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
 
   // update with nonceNewer
-  if (!HMAC_Update(hmac_ctx, auth_session.nonceNewer.buffer,
-                   auth_session.nonceNewer.size))
+  if (!EVP_MAC_update(hmac_ctx, auth_session.nonceNewer.buffer,
+                      auth_session.nonceNewer.size))
   {
     kmyth_log(LOG_ERR, "error updating HMAC with new nonce");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
 
   // update with nonceOlder
-  if (!HMAC_Update(hmac_ctx, auth_session.nonceOlder.buffer,
-                   auth_session.nonceOlder.size))
+  if (!EVP_MAC_update(hmac_ctx, auth_session.nonceOlder.buffer,
+                      auth_session.nonceOlder.size))
   {
     kmyth_log(LOG_ERR, "error updating HMAC with old nonce");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
 
   // update with session attributes
-  if (!HMAC_Update(hmac_ctx, &auth_sessionAttributes, sizeof(TPMA_SESSION)))
+  if (!EVP_MAC_update(hmac_ctx, &auth_sessionAttributes,
+                      sizeof(TPMA_SESSION)))
   {
     kmyth_log(LOG_ERR,
               "error updating HMAC with session attributes");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
 
   // finalize hash
   uint8_t authHMAC_result[KMYTH_DIGEST_SIZE];
-  unsigned int authHMAC_result_size = KMYTH_DIGEST_SIZE;
+  size_t authHMAC_result_size = KMYTH_DIGEST_SIZE;
+  size_t hmac_final_size = 0;
 
-  if (!HMAC_Final(hmac_ctx, authHMAC_result, &authHMAC_result_size))
+  if (!EVP_MAC_final(hmac_ctx, authHMAC_result,
+                     &hmac_final_size, authHMAC_result_size) ||
+      (hmac_final_size != authHMAC_result_size))
   {
     kmyth_log(LOG_ERR, "error finalizing HMAC");
-    HMAC_CTX_free(hmac_ctx);
+    EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
-  HMAC_CTX_free(hmac_ctx);
-  hmac_ctx = NULL;
+
+  EVP_MAC_CTX_free(hmac_ctx);
+
   kmyth_log(LOG_DEBUG, "authHMAC: 0x%02X..%02X", authHMAC_result[0],
             authHMAC_result[authHMAC_result_size - 1]);
 
