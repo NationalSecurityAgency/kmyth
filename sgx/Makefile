@@ -51,12 +51,12 @@ else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
 endif
 
 ifeq ($(SGX_ARCH), x86)
-	SGX_COMMON_CFLAGS := -m32
+	SGX_COMMON_FLAGS := -m32
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
-	SGX_COMMON_CFLAGS := -m64
+	SGX_COMMON_FLAGS := -m64
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
@@ -69,10 +69,29 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-	SGX_COMMON_CFLAGS += -O0 -g
+	SGX_COMMON_FLAGS += -O0 -g
 else
-	SGX_COMMON_CFLAGS += -O2
+	SGX_COMMON_FLAGS += -O2
 endif
+
+SGX_COMMON_FLAGS += -Wextra
+SGX_COMMON_FLAGS += -Winit-self
+SGX_COMMON_FLAGS += -Wpointer-arith
+SGX_COMMON_FLAGS += -Wreturn-type
+SGX_COMMON_FLAGS += -Waddress
+SGX_COMMON_FLAGS += -Wsequence-point
+SGX_COMMON_FLAGS += -Wformat
+SGX_COMMON_FLAGS += -Wformat-security
+SGX_COMMON_FLAGS += -Wmissing-include-dirs
+SGX_COMMON_FLAGS += -Wfloat-equal
+SGX_COMMON_FLAGS += -Wundef
+SGX_COMMON_FLAGS += -Wshadow
+SGX_COMMON_FLAGS += -Wcast-align
+SGX_COMMON_FLAGS += -Wcast-qual
+SGX_COMMON_FLAGS += -Wconversion
+SGX_COMMON_FLAGS += -Wredundant-decls
+
+SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS)
 
 ######## App (untrusted code) Build Settings ########
 
