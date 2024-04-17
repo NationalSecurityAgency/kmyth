@@ -240,6 +240,8 @@ void test_seal_unseal_nkl(void)
                                key_policy,
                                attribute_mask) == 0);
 
+  free(data_bytes);
+
   kmyth_unsealed_data_table_initialize(eid, &sgx_ret_int);
   CU_ASSERT(sgx_ret_int == 0);
 
