@@ -64,7 +64,7 @@ void test_enclave_seal_unseal(void)
   attribute_mask.flags = 0;
   attribute_mask.xfrm = 0;
 
-  enc_get_sealed_size(eid, &sgx_ret, in_size, & out_size);
+  enc_get_sealed_size(eid, &sgx_ret, in_size, &out_size);
   CU_ASSERT(sgx_ret == 0);
 
   in_data = (uint8_t *) calloc(in_size, 1);
@@ -180,9 +180,11 @@ void test_unseal_and_export(void)
   cipher_data_decrypted = (uint8_t *) malloc(plain_size);
   for (size_t i = 0; i < num_ciphertexts; i++)
   {
-    kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size_t,
+    kmyth_sgx_test_export_from_enclave(eid,
+                                       &sgx_ret_size_t,
                                        handles[num_ciphertexts - 1 - i],
-                                       plain_size, cipher_data_decrypted);
+                                       plain_size,
+                                       cipher_data_decrypted);
     CU_ASSERT(sgx_ret_size_t == plain_size);
 
     size_t val = num_ciphertexts - 1 - i;
@@ -274,27 +276,31 @@ int main(void)
 
   CU_pSuite kmyth_sgx_test_suite = NULL;
 
-  kmyth_sgx_test_suite =
-    CU_add_suite("Kmyth SGX Enclave Test Suite", init_suite, clean_suite);
+  kmyth_sgx_test_suite = CU_add_suite("Kmyth SGX Enclave Test Suite",
+                                      init_suite,
+                                      clean_suite);
   if (NULL == kmyth_sgx_test_suite)
   {
     CU_cleanup_registry();
     return CU_get_error();
   }
   if (NULL ==
-      CU_add_test(kmyth_sgx_test_suite, "Test enclave seal/unseal",
+      CU_add_test(kmyth_sgx_test_suite,
+                  "Test enclave seal/unseal",
                   test_enclave_seal_unseal))
   {
     CU_cleanup_registry();
     return CU_get_error();
   }
-  if (NULL == CU_add_test(kmyth_sgx_test_suite, "Test enclave unseal table",
+  if (NULL == CU_add_test(kmyth_sgx_test_suite,
+                          "Test enclave unseal table",
                           test_unseal_and_export))
   {
     CU_cleanup_registry();
     return CU_get_error();
   }
-  if (NULL == CU_add_test(kmyth_sgx_test_suite, "Test seal/unseal nkl",
+  if (NULL == CU_add_test(kmyth_sgx_test_suite,
+                          "Test seal/unseal nkl",
                           test_seal_unseal_nkl))
   {
     CU_cleanup_registry();
