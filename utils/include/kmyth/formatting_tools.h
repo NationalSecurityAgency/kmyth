@@ -138,10 +138,13 @@ extern "C" {
  * @return 0 on success, 1 on failure
  */
 int get_block_bytes(char **contents,
-                    size_t * remaining, unsigned char **block,
-                    size_t * blocksize,
-                    char *delim, size_t delim_len,
-                    char *next_delim, size_t next_delim_len);
+                    size_t *remaining,
+                    unsigned char **block,
+                    size_t *blocksize,
+                    const char *delim,
+                    size_t delim_len,
+                    const char *next_delim,
+                    size_t next_delim_len);
 
 /**
  * @brief Creates a byte array in .nkl format from a input string
@@ -156,8 +159,10 @@ int get_block_bytes(char **contents,
  *
  * @return 0 on success, 1 on error
  */
-int create_nkl_bytes(uint8_t * input, size_t input_length,
-                     uint8_t ** output, size_t * output_length);
+int create_nkl_bytes(uint8_t * input,
+                     size_t input_length,
+                     uint8_t ** output,
+                     size_t * output_length);
 
 /**
  * @brief Encodes a base-64 encoded version of the "raw" hex bytes contained
@@ -180,7 +185,8 @@ int create_nkl_bytes(uint8_t * input, size_t input_length,
  * @return 0 if success, 1 if error
  */
 int encodeBase64Data(uint8_t * raw_data,
-                     size_t raw_data_size, uint8_t ** base64_data,
+                     size_t raw_data_size,
+                     uint8_t ** base64_data,
                      size_t * base64_data_size);
 
 /**
@@ -203,7 +209,8 @@ int encodeBase64Data(uint8_t * raw_data,
  * @return 0 if success, 1 if error
  */
 int decodeBase64Data(unsigned char *base64_data,
-                     size_t base64_data_size, unsigned char **raw_data,
+                     size_t base64_data_size,
+                     unsigned char **raw_data,
                      size_t * raw_data_size);
 
 /**
@@ -221,7 +228,9 @@ int decodeBase64Data(unsigned char *base64_data,
  *
  * @return 0 if success, 1 if error
  */
-int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
+int concat(uint8_t ** dest,
+           size_t * dest_length,
+           uint8_t * input,
            size_t input_length);
 
 

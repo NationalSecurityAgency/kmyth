@@ -21,9 +21,13 @@
 //############################################################################
 // kmyth_sgx_seal_nkl()
 //############################################################################
-int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
-                       uint8_t ** output, size_t *output_len,
-                       uint16_t key_policy, sgx_attributes_t attribute_mask)
+int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid,
+                       uint8_t * input,
+                       size_t input_len,
+                       uint8_t ** output,
+                       size_t *output_len,
+                       uint16_t key_policy,
+                       sgx_attributes_t attribute_mask)
 {
   uint8_t *data = NULL;
   size_t data_size = 0;
@@ -40,7 +44,13 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
     data = (uint8_t *) malloc(data_size);
     if (data == NULL) return 1;
 
-    enc_seal_data(eid, &ret, input, (uint32_t)input_len, data, (uint32_t)data_size, key_policy,
+    enc_seal_data(eid,
+                  &ret,
+                  input,
+                  (uint32_t) input_len,
+                  data,
+                  (uint32_t) data_size,
+                  key_policy,
                   attribute_mask);
     if (ret == 1)
     {
@@ -64,16 +74,22 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid, uint8_t * input, size_t input_len,
 //############################################################################
 // kmyth_sgx_unseal_nkl()
 //############################################################################
-int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid, uint8_t * input,
-                         size_t input_len, uint64_t * handle)
+int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
+                         uint8_t * input,
+                         size_t input_len,
+                         uint64_t * handle)
 {
   uint8_t *block = NULL;
   size_t blocksize = 0;
 
-  if (get_block_bytes
-      ((char **) &input, &input_len, &block, &blocksize,
-       (char *) KMYTH_DELIM_NKL_DATA, strlen(KMYTH_DELIM_NKL_DATA),
-       (char *) KMYTH_DELIM_END_NKL, strlen(KMYTH_DELIM_END_NKL)))
+  if (get_block_bytes ((char **) &input,
+                       &input_len,
+                       &block,
+                       &blocksize,
+                       KMYTH_DELIM_NKL_DATA,
+                       strlen(KMYTH_DELIM_NKL_DATA),
+                       KMYTH_DELIM_END_NKL,
+                       strlen(KMYTH_DELIM_END_NKL)))
   {
     kmyth_log(LOG_ERR, "error getting block bytes ... exiting");
     return 1;
