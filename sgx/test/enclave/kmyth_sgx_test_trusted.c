@@ -9,25 +9,30 @@
 
 #include "kmyth_enclave_trusted.h"
 
-int enc_get_unsealed_size(uint32_t in_size, uint8_t * in_data, uint32_t * size)
+int enc_get_unsealed_size(uint8_t * sealed_data,
+                          uint32_t sealed_size,
+                          uint32_t * unsealed_size)
 {
-  if (size == NULL)
+  if ((sealed_data == NULL) | (sealed_size == 0) | (unsealed_size == NULL))
   {
     return SGX_ERROR_INVALID_PARAMETER;
   }
-  *size = 0;
+  *unsealed_size = 0;
 
-  uint32_t unsealedsz = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) in_data);
+  uint32_t temp = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) sealed_data);
 
-  if (unsealedsz == UINT32_MAX)
+  if (temp == UINT32_MAX)
     return SGX_ERROR_INVALID_PARAMETER;
 
-  *size = unsealedsz;
+  *unsealed_size = temp;
+
   return 0;
 }
 
-int enc_unseal_data(const uint8_t * in_data, uint32_t in_size,
-                    uint8_t * out_data, uint32_t out_size)
+int enc_unseal_data(const uint8_t * in_data,
+                    uint32_t in_size,
+                    uint8_t * out_data,
+                    uint32_t out_size)
 {
   if (in_data == NULL || out_data == NULL)
   {
