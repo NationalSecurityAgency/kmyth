@@ -226,15 +226,6 @@ void set_applog_severity_threshold(int new_severity_threshold);
 int get_applog_severity_threshold();
 
 /**
- * @brief sets "facility" for syslog utility logging
- *
- * @param[in]  new_syslog_facility  
- *
- * @return None
- */
-void set_applog_severity_threshold(int new_syslog_facility);
-
-/**
  * @brief sets "severity threshold" for syslog utility logging
  *
  * @param[in]  new_severity_threshold  the syslog logging severity
