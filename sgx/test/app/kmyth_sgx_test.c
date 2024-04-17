@@ -55,8 +55,8 @@ void test_enclave_seal_unseal(void)
   uint8_t *out_data_decrypted = NULL;
 
   int sgx_ret;
-  size_t in_size = 8;
-  size_t out_size = 0;
+  uint32_t in_size = 8;
+  uint32_t out_size = 0;
 
   uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
   sgx_attributes_t attribute_mask;
@@ -64,7 +64,7 @@ void test_enclave_seal_unseal(void)
   attribute_mask.flags = 0;
   attribute_mask.xfrm = 0;
 
-  enc_get_sealed_size(eid, &sgx_ret, in_size, (uint32_t *) & out_size);
+  enc_get_sealed_size(eid, &sgx_ret, in_size, & out_size);
   CU_ASSERT(sgx_ret == 0);
 
   in_data = (uint8_t *) calloc(in_size, 1);
@@ -78,13 +78,23 @@ void test_enclave_seal_unseal(void)
   // For enc_seal_data we can only check that the call didn't fail
   // because we don't know what key the enclave will use, and so
   // what the ciphertext should look like.
-  enc_seal_data(eid, &sgx_ret, in_data, in_size, out_data, out_size, key_policy,
+  enc_seal_data(eid,
+                &sgx_ret,
+                in_data,
+                in_size,
+                out_data,
+                out_size,
+                key_policy,
                 attribute_mask);
   CU_ASSERT(sgx_ret == 0);
 
   // For enc_unseal_data we test both that the call didn't fail
   // and that the decrypted data matches the original data.
-  enc_unseal_data(eid, &sgx_ret, out_data, out_size, out_data_decrypted,
+  enc_unseal_data(eid,
+                  &sgx_ret,
+                  out_data,
+                  out_size,
+                  out_data_decrypted,
                   in_size);
   CU_ASSERT(sgx_ret == 0);
   CU_ASSERT(memcmp(in_data, out_data_decrypted, in_size) == 0);
@@ -103,8 +113,8 @@ void test_unseal_and_export(void)
 
   uint8_t *cipher_data_decrypted = NULL;
 
-  size_t plain_size = sizeof(size_t);
-  size_t cipher_size = 0;
+  uint32_t plain_size = sizeof(size_t);
+  uint32_t cipher_size = 0;
 
   uint16_t key_policy = SGX_KEYPOLICY_MRSIGNER;
   sgx_attributes_t attribute_mask;
@@ -116,7 +126,9 @@ void test_unseal_and_export(void)
   uint32_t sgx_ret_uint32_t;
   size_t sgx_ret_size_t;
 
-  enc_get_sealed_size(eid, &sgx_ret_int, plain_size,
+  enc_get_sealed_size(eid,
+                      &sgx_ret_int,
+                      plain_size,
                       (uint32_t *) & cipher_size);
   CU_ASSERT(sgx_ret_int == 0);
 
@@ -127,8 +139,14 @@ void test_unseal_and_export(void)
   {
     cipher_data[i] = (uint8_t *) malloc(cipher_size);
     memcpy(plain_data, &i, sizeof(size_t));
-    enc_seal_data(eid, &sgx_ret_int, plain_data, plain_size, cipher_data[i],
-                  cipher_size, key_policy, attribute_mask);
+    enc_seal_data(eid,
+                  &sgx_ret_int,
+                  plain_data,
+                  plain_size,
+                  cipher_data[i],
+                  cipher_size,
+                  key_policy,
+                  attribute_mask);
     CU_ASSERT(sgx_ret_int == 0);
   }
   handles = (uint64_t *) malloc(num_ciphertexts * sizeof(uint64_t));
@@ -143,7 +161,10 @@ void test_unseal_and_export(void)
   {
     bool result = false;
 
-    kmyth_unseal_into_enclave(eid, &result, cipher_size, cipher_data[i],
+    kmyth_unseal_into_enclave(eid,
+                              &result,
+                              cipher_size,
+                              cipher_data[i],
                               handles + i);
     CU_ASSERT(result == true);
 
@@ -191,7 +212,7 @@ void test_unseal_and_export(void)
 void test_seal_unseal_nkl(void)
 {
   const char *data = "Test of the NKL seal and unseal";
-  size_t data_len = 30;
+  uint32_t data_len = (uint32_t) strlen(data) + 1;
   uint8_t *sgx_seal = NULL;
   size_t sgx_seal_len = 0;
   uint64_t handle;
@@ -206,9 +227,16 @@ void test_seal_unseal_nkl(void)
   int sgx_ret_int;
   size_t sgx_ret_size;
 
-  CU_ASSERT(kmyth_sgx_seal_nkl
-            (eid, (uint8_t *) data, data_len, &sgx_seal, &sgx_seal_len,
-             key_policy, attribute_mask) == 0);
+  unsigned char *data_bytes = (unsigned char *) malloc(data_len);
+  memcpy(data_bytes, data, data_len);
+
+  CU_ASSERT(kmyth_sgx_seal_nkl(eid,
+                               (uint8_t *) data_bytes,
+                               data_len,
+                               &sgx_seal,
+                               &sgx_seal_len,
+                               key_policy,
+                               attribute_mask) == 0);
 
   kmyth_unsealed_data_table_initialize(eid, &sgx_ret_int);
   CU_ASSERT(sgx_ret_int == 0);
@@ -219,7 +247,10 @@ void test_seal_unseal_nkl(void)
   CU_ASSERT(sgx_ret_size == 1);
 
   cipher_data_decrypted = (uint8_t *) malloc(data_len);
-  kmyth_sgx_test_export_from_enclave(eid, &sgx_ret_size, handle, data_len,
+  kmyth_sgx_test_export_from_enclave(eid,
+                                     &sgx_ret_size,
+                                     handle,
+                                     data_len,
                                      cipher_data_decrypted);
   CU_ASSERT(sgx_ret_size == data_len);
 
