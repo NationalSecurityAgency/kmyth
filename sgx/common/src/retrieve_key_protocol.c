@@ -133,7 +133,7 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
 
   // convert client's ephemeral public key to DER formatted byte array
   unsigned char *client_eph_pubkey_bytes = NULL;
-  size_t client_eph_pubkey_len = 0;
+  int client_eph_pubkey_len = 0;
 
   client_eph_pubkey_len = i2d_PUBKEY(client_eph_pubkey,
                                      &client_eph_pubkey_bytes);
@@ -150,14 +150,16 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   //  - Client ID value (byte array)
   //  - Client ephemeral public key size (two-byte unsigned integer)
   //  - Client ephemeral public key value (byte array)
-  msg_out->hdr.msg_size  = (uint16_t)(2 + client_id_len + 2 + client_eph_pubkey_len);
+  msg_out->hdr.msg_size  = (uint16_t)(2 + client_id_len + 2 +
+                                      (size_t) client_eph_pubkey_len);
 
   msg_out->body = calloc(msg_out->hdr.msg_size, sizeof(unsigned char));
   if (msg_out->body == NULL)
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message buffer");
     kmyth_clear_and_free(client_id_bytes, client_id_len);
-    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes,
+                         (size_t) client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
@@ -185,8 +187,9 @@ int compose_client_hello_msg(EVP_PKEY * client_sign_key,
   // append client ephemeral public key bytes
   memcpy(msg_out->body+index,
          client_eph_pubkey_bytes,
-         client_eph_pubkey_len);
-  kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+         (size_t) client_eph_pubkey_len);
+  kmyth_clear_and_free(client_eph_pubkey_bytes,
+                       (size_t) client_eph_pubkey_len);
 
   // append signature to tail end of message
   if (EXIT_SUCCESS != append_msg_signature(client_sign_key, msg_out))
@@ -392,28 +395,31 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
 
   // convert client-side ephemeral public key to octet string
   unsigned char *client_eph_pubkey_bytes = NULL;
-  size_t client_eph_pubkey_len = 0;
+  int client_eph_pubkey_len = 0;
   client_eph_pubkey_len = i2d_PUBKEY(client_eph_pubkey,
                                      &client_eph_pubkey_bytes);
   if ((client_eph_pubkey_bytes == NULL) || (client_eph_pubkey_len == 0))
   {
     kmyth_sgx_log(LOG_ERR, "error serializing client ephemeral public key");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
-    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes,
+                         (size_t) client_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
   // convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
-  size_t server_eph_pubkey_len = 0;
+  int server_eph_pubkey_len = 0;
   server_eph_pubkey_len = i2d_PUBKEY(server_eph_pubkey,
                                      &server_eph_pubkey_bytes);
   if ((server_eph_pubkey_bytes == NULL) || (server_eph_pubkey_len == 0))
   {
     kmyth_sgx_log(LOG_ERR, "error serializing server ephemeral public key");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
-    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
-    kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes,
+                         (size_t) client_eph_pubkey_len);
+    kmyth_clear_and_free(server_eph_pubkey_bytes,
+                         (size_t) server_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
@@ -425,13 +431,17 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   //  - Server ephemeral size (two-byte unsigned integer)
   //  - Server ephemeral value (DER formatted EC_KEY byte array)
   // TODO: Check for overflow
-  size_t msg_out_size = 2 + server_id_len + 2 + client_eph_pubkey_len + 2 + server_eph_pubkey_len;
+  size_t msg_out_size = 2 + server_id_len + 2 +
+                        (size_t) client_eph_pubkey_len + 2 +
+                        (size_t) server_eph_pubkey_len;
   if(msg_out_size > UINT16_MAX)
   {
     kmyth_sgx_log(LOG_ERR, "computed output message size too large");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
-    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
-    kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes,
+                         (size_t) client_eph_pubkey_len);
+    kmyth_clear_and_free(server_eph_pubkey_bytes,
+                         (size_t) server_eph_pubkey_len);
     return EXIT_FAILURE;
   }
   msg_out->hdr.msg_size = (uint16_t)msg_out_size;
@@ -441,8 +451,10 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   {
     kmyth_sgx_log(LOG_ERR, "error allocating memory for message body buffer");
     kmyth_clear_and_free(server_id_bytes, server_id_len);
-    kmyth_clear_and_free(client_eph_pubkey_bytes, client_eph_pubkey_len);
-    kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+    kmyth_clear_and_free(client_eph_pubkey_bytes,
+                         (size_t) client_eph_pubkey_len);
+    kmyth_clear_and_free(server_eph_pubkey_bytes,
+                         (size_t) server_eph_pubkey_len);
     return EXIT_FAILURE;
   }
 
@@ -468,7 +480,9 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   buf += 2;
 
   // append client ephemeral public key bytes
-  memcpy(buf, client_eph_pubkey_bytes, client_eph_pubkey_len);
+  memcpy(buf,
+         client_eph_pubkey_bytes,
+         (size_t) client_eph_pubkey_len);
   free(client_eph_pubkey_bytes);
   buf += client_eph_pubkey_len;
 
@@ -478,8 +492,11 @@ int compose_server_hello_msg(EVP_PKEY * server_sign_key,
   buf += 2;
 
   // append server ephemeral bytes
-  memcpy(buf, server_eph_pubkey_bytes, server_eph_pubkey_len);
-  kmyth_clear_and_free(server_eph_pubkey_bytes, server_eph_pubkey_len);
+  memcpy(buf,
+         server_eph_pubkey_bytes,
+         (size_t) server_eph_pubkey_len);
+  kmyth_clear_and_free(server_eph_pubkey_bytes,
+                       (size_t) server_eph_pubkey_len);
 
   // append signature
   if (EXIT_SUCCESS != append_msg_signature(server_sign_key, msg_out))
@@ -729,7 +746,7 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
 
   // convert server's ephemeral public key to octet string
   unsigned char *server_eph_pubkey_bytes = NULL;
-  size_t server_eph_pubkey_len = 0;
+  int server_eph_pubkey_len = 0;
   server_eph_pubkey_len = i2d_PUBKEY(server_eph_pubkey,
                                      &server_eph_pubkey_bytes);
   if ((server_eph_pubkey_bytes == NULL) || (server_eph_pubkey_len == 0))
@@ -746,8 +763,8 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   //  - Server ephemeral value (DER formatted EC public key byte array)
   ECDHMessage pt_msg = { 0 };
   // TODO: Check for overflow
-  pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_key_request_len +
-				   2 + server_eph_pubkey_len);
+  pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_key_request_len + 2 +
+                                   (size_t) server_eph_pubkey_len);
   pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
   if (pt_msg.body == NULL)
   {
@@ -779,7 +796,7 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   buf_ptr += 2;
 
   // append server ephemeral bytes
-  memcpy(buf_ptr, server_eph_pubkey_bytes, server_eph_pubkey_len);
+  memcpy(buf_ptr, server_eph_pubkey_bytes, (size_t) server_eph_pubkey_len);
   free(server_eph_pubkey_bytes);
 
   // append signature
