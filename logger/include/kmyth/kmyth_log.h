@@ -223,7 +223,7 @@ void set_applog_severity_threshold(int new_severity_threshold);
  *
  * @return current application logging severity threshold level value
  */
-int get_applog_severity_threshold();
+int get_applog_severity_threshold(void);
 
 /**
  * @brief sets "severity threshold" for syslog utility logging
