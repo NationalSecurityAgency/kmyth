@@ -74,6 +74,7 @@ else
 	SGX_COMMON_FLAGS += -O2
 endif
 
+SGX_COMMON_FLAGS += -Wall
 SGX_COMMON_FLAGS += -Wextra
 SGX_COMMON_FLAGS += -Winit-self
 SGX_COMMON_FLAGS += -Wpointer-arith
@@ -92,6 +93,27 @@ SGX_COMMON_FLAGS += -Wconversion
 SGX_COMMON_FLAGS += -Wredundant-decls
 
 SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS)
+SGX_COMMON_CFLAGS += -Wjump-misses-init
+SGX_COMMON_CFLAGS += -Wstrict-prototypes
+SGX_COMMON_CFLAGS += -Wunsuffixed-float-constants
+SGX_COMMON_CFLAGS += -Wno-attributes
+SGX_COMMON_CFLAGS += -fPIC
+
+# Three configuration modes - Debug, prerelease, release
+#   Debug - Macro DEBUG enabled.
+#   Prerelease - Macro NDEBUG and EDEBUG enabled.
+#   Release - Macro NDEBUG enabled.
+ifeq ($(SGX_DEBUG), 1)
+	SGX_COMMON_CFLAGS += -DDEBUG -UNDEBUG -UEDEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	SGX_COMMON_CFLAGS += -DNDEBUG -DEDEBUG -UDEBUG
+else
+	SGX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
+endif
+
+SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS)
+SGX_COMMON_CXXFLAGS += -Wnon-virtual-dtor
+SGX_COMMON_CXXFLAGS += -std=c++11
 
 ######## App (untrusted code) Build Settings ########
 
@@ -130,33 +152,21 @@ Demo_App_Include_Paths += -Idemo/include/node
 Demo_App_Include_Paths += -Idemo/include/util
 Demo_App_Include_Paths += $(Common_App_Include_Paths)
 
-Common_App_C_Flags += $(SGX_COMMON_CFLAGS)
-Common_App_C_Flags += -fPIC
-Common_App_C_Flags += -Wno-attributes
-
-Test_App_C_Flags += $(Test_App_Include_Paths)
+Test_App_C_Flags := $(Test_App_Include_Paths)
 Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
+Test_App_C_Flags += $(SGX_COMMON_CFLAGS)
 
-Demo_App_C_Flags += $(Demo_App_Include_Paths)
+Demo_App_C_Flags := $(Demo_App_Include_Paths)
 Demo_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
+Demo_App_C_Flags += $(SGX_COMMON_CFLAGS)
 
-# Three configuration modes - Debug, prerelease, release
-#   Debug - Macro DEBUG enabled.
-#   Prerelease - Macro NDEBUG and EDEBUG enabled.
-#   Release - Macro NDEBUG enabled.
-ifeq ($(SGX_DEBUG), 1)
-	Common_App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
-else ifeq ($(SGX_PRERELEASE), 1)
-	Common_App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
-else
-	Common_App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
-endif
+Test_App_Cpp_Flags := $(Test_App_Include_Paths)
+Test_App_Cpp_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
+Test_App_Cpp_Flags += $(SGX_COMMON_CXXFLAGS)
 
-Test_App_C_Flags += $(Common_App_C_Flags)
-Demo_App_C_Flags += $(Common_App_C_Flags)
-
-Test_App_Cpp_Flags += $(Test_App_C_Flags) -std=c++11
-Demo_App_Cpp_Flags += $(Demo_App_C_Flags) -std=c++11
+Demo_App_Cpp_Flags := $(Demo_App_Include_Paths)
+Demo_App_Cpp_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
+Demo_App_Cpp_Flags += $(SGX_COMMON_CXXFLAGS)
 
 Common_App_Link_Flags := $(SGX_COMMON_CFLAGS)
 Common_App_Link_Flags += -L$(SGX_LIBRARY_PATH)

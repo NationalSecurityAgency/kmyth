@@ -96,7 +96,8 @@ int kmyth_unsealed_data_table_cleanup(void)
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
-bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
+bool kmyth_unseal_into_enclave(size_t data_size,
+                               uint8_t * data,
                                uint64_t * handle)
 {
 
@@ -189,7 +190,7 @@ bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
   return true;
 }
 
-size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
+uint32_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
 {
   if (!kmyth_unsealed_data_table_initialized)
   {
@@ -223,7 +224,7 @@ size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
   *buf = (uint8_t *) malloc(slot->data_size);
   memcpy(*buf, slot->data, slot->data_size);
-  size_t data_size = slot->data_size;
+  uint32_t data_size = slot->data_size;
 
   free(slot->data);
   free(slot);
