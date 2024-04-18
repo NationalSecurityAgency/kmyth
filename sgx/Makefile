@@ -189,6 +189,7 @@ Test_App_Link_Flags := $(Common_App_Link_Flags)
 Test_App_Link_Flags += -Ltest/enclave
 Test_App_Link_Flags += -L../lib
 Test_App_Link_Flags += -lcunit
+Test_App_Link_Flags += -lcrypto
 Test_App_Link_Flags += -Wl,-rpath=../lib
 
 Demo_App_Link_Flags := $(Common_App_Link_Flags)
@@ -230,31 +231,32 @@ Test_Enclave_Include_Paths += -Itest/enclave
 Demo_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
 Demo_Enclave_Include_Paths += -Idemo/enclave
 
-Common_Enclave_C_Flags += -Wall
-Common_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
+Common_Enclave_C_Flags := $(SGX_COMMON_CFLAGS)
 Common_Enclave_C_Flags += -nostdinc
 Common_Enclave_C_Flags += -fvisibility=hidden
 Common_Enclave_C_Flags += -fpie
 Common_Enclave_C_Flags += -fstack-protector
 Common_Enclave_C_Flags += -DKMYTH_SGX
 
+Test_Enclave_C_Flags := $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += $(Common_Enclave_C_Flags)
-Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
+Demo_Enclave_C_Flags := $(Demo_Enclave_Include_Paths)
 Demo_Enclave_C_Flags += $(Common_Enclave_C_Flags)
-Demo_Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
 Demo_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
-Common_Enclave_Cpp_Flags += -std=c++03
+Common_Enclave_Cpp_Flags := $(SGX_COMMON_CXXFLAGS)
 Common_Enclave_Cpp_Flags += -nostdinc++
 Common_Enclave_Cpp_Flags += --include "tsgxsslio.h"
 
-Test_Enclave_Cpp_Flags += $(Test_Enclave_C_Flags)
+Test_Enclave_Cpp_Flags := $(Test_Enclave_Include_Paths)
 Test_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
+Test_Enclave_Cpp_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
-Demo_Enclave_Cpp_Flags += $(Demo_Enclave_C_Flags)
+Demo_Enclave_Cpp_Flags := $(Demo_Enclave_Include_Paths)
 Demo_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
+Demo_Enclave_Cpp_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
 Common_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
 Common_Enclave_Link_Flags += -Wl,--no-undefined
@@ -498,8 +500,7 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
                                            test/enclave/protocol_ocall.o \
                                            test/enclave/memory_ocall.o \
                                            test/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Test_App_Cpp_Flags) $(Test_App_Link_Flags) \
-	                                       -Lenclave -lcrypto -lcunit
+	@$(CC) $^ -o $@ $(Test_App_C_Flags) $(Test_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 
@@ -618,16 +619,16 @@ test/enclave/kmyth_sgx_test_trusted.o: test/enclave/kmyth_sgx_test_trusted.c
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_seal.o: trusted/src/ecall/kmyth_enclave_seal.cpp 
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_unseal.o: trusted/src/ecall/kmyth_enclave_unseal.cpp
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_retrieve_key.o: \
 		trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/aes_gcm.o: ../src/cipher/aes_gcm.c
@@ -681,8 +682,6 @@ test-clean:
 	@rm -f $(Enclave_Signing_Key)
 
 
-
-
 ######## Demo Enclave Objects ########
 
 demo/enclave/$(Demo_Enclave_Name)_t.c: $(SGX_EDGER8R) demo/enclave/$(Demo_Enclave_Name).edl
@@ -706,15 +705,15 @@ demo/enclave/sgx_retrieve_key_impl.o: trusted/src/wrapper/sgx_retrieve_key_impl.
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_seal.o: trusted/src/ecall/kmyth_enclave_seal.cpp 
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_unseal.o: trusted/src/ecall/kmyth_enclave_unseal.cpp
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_retrieve_key.o: trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/aes_gcm.o: ../src/cipher/aes_gcm.c

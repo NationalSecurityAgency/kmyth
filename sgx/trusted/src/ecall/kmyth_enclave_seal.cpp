@@ -7,6 +7,8 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
+#include "kmyth_enclave_trusted.h"
+
 #include ENCLAVE_HEADER_TRUSTED
 
 // EDL checks that `size` is outside the enclave (speculative-safe)
