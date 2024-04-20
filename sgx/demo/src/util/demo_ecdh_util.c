@@ -239,9 +239,6 @@ int demo_ecdh_load_local_sign_cert(ECDHPeer * ecdhconn,
 int demo_ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn,
                                     char * remote_sign_cert_path)
 {
-  // read remote certificate (X509) from file (.pem formatted)
-  X509 *client_cert = NULL;
-
   BIO *pub_cert_bio = BIO_new_file(remote_sign_cert_path, "r");
 
   if (pub_cert_bio == NULL)

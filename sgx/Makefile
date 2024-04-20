@@ -108,7 +108,7 @@ ifeq ($(SGX_DEBUG), 1)
 else ifeq ($(SGX_PRERELEASE), 1)
 	SGX_COMMON_CFLAGS += -DNDEBUG -DEDEBUG -UDEBUG
 else
-	SGX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
+	 GX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS)
@@ -132,8 +132,8 @@ Test_App_Source_Files := test/app/kmyth_sgx_test.c \
 Demo_App_Source_files := demo/src/app/kmyth_sgx_retrieve_key_demo.c
 
 
-Common_App_Include_Paths := -Iuntrusted/include/ocall
 Common_App_Include_Paths += -Iuntrusted/include/util
+Common_App_Include_Paths += -Iuntrusted/include
 Common_App_Include_Paths += -Iuntrusted/include/wrapper
 Common_App_Include_Paths += -Icommon/include
 Common_App_Include_Paths += -I$(SGX_SDK)/include
@@ -216,7 +216,6 @@ Common_Enclave_Include_Paths += -Itrusted/include/wrapper
 Common_Enclave_Include_Paths += -Icommon/include
 Common_Enclave_Include_Paths += -I$(SGX_SDK)/include
 Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
-Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Common_Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
 Common_Enclave_Include_Paths += -I/usr/local/include
 Common_Enclave_Include_Paths += -I../include
@@ -444,19 +443,27 @@ test/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
 
 ######## Demo Common Objects ########
 
-demo/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c
+demo/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c \
+                                    demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                    demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c
+demo/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c \
+                                      demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                      demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/ecdh_util.o: common/src/ecdh_util.c
+demo/enclave/ecdh_util.o: common/src/ecdh_util.c \
+                          demo/enclave/$(Demo_Enclave_Name)_u.o \
+                          demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
+demo/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c \
+                                      demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                      demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -467,7 +474,7 @@ test/enclave/log_ocall.o: untrusted/src/ocall/log_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
+test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c 
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 

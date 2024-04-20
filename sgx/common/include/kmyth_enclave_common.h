@@ -71,10 +71,7 @@ extern "C"
 
 #else
 
-#include "msg_util.h"
-#include "log_ocall.h"
-#include "memory_ocall.h"
-#include "protocol_ocall.h"
+#include "kmyth_enclave_untrusted.h"
 
 #endif
 

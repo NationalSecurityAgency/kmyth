@@ -25,8 +25,10 @@
  * @return 0 on success, 1 on error
  */
 int build_kmip_get_request(KMIP * ctx,
-                           unsigned char *id, size_t id_len,
-                           unsigned char **request, size_t *request_len);
+                           unsigned char *id,
+                           size_t id_len,
+                           unsigned char **request,
+                           size_t *request_len);
 
 /**
  * <pre>
@@ -46,8 +48,10 @@ int build_kmip_get_request(KMIP * ctx,
  * @return 0 on success, 1 on error
  */
 int parse_kmip_get_request(KMIP * ctx,
-                           unsigned char *request, size_t request_len,
-                           unsigned char **id, size_t *id_len);
+                           unsigned char *request,
+                           size_t request_len,
+                           unsigned char **id,
+                           size_t *id_len);
 
 /**
  * <pre>
@@ -71,9 +75,12 @@ int parse_kmip_get_request(KMIP * ctx,
  * @return 0 on success, 1 on error
  */
 int build_kmip_get_response(KMIP * ctx,
-                            unsigned char *id, size_t id_len,
-                            unsigned char *key, size_t key_len,
-                            unsigned char **response, size_t *response_len);
+                            unsigned char *id,
+                            size_t id_len,
+                            unsigned char *key,
+                            size_t key_len,
+                            unsigned char **response,
+                            size_t *response_len);
 
 /**
  * <pre>
@@ -97,8 +104,11 @@ int build_kmip_get_response(KMIP * ctx,
  * @return 0 on success, 1 on error
  */
 int parse_kmip_get_response(KMIP * ctx,
-                            unsigned char *response, size_t response_len,
-                            unsigned char **id, size_t *id_len,
-                            unsigned char **key, size_t *key_len);
+                            unsigned char *response,
+                            size_t response_len,
+                            unsigned char **id,
+                            size_t *id_len,
+                            unsigned char **key,
+                            size_t *key_len);
 
 #endif

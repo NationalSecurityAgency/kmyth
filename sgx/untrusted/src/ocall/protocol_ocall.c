@@ -5,7 +5,6 @@
  *        connectivity and peer interaction for kmyth protocols
  */
 
-#include "protocol_ocall.h"
 #include "ecdh_util.h"
 
 #define UNSET_FD -1
@@ -21,7 +20,7 @@ int setup_socket_ocall(const char *server_host,
 {
   *socket_fd = UNSET_FD;
 
-  if ((server_host_len = 0) || (server_port_len = 0))
+  if ((server_host_len <= 0) || (server_port_len <= 0))
   {
     kmyth_log(LOG_ERR, "Invalid server host or server port length.");
     return EXIT_FAILURE;

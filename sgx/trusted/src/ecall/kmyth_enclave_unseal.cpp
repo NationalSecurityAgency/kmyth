@@ -96,8 +96,8 @@ int kmyth_unsealed_data_table_cleanup(void)
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
-bool kmyth_unseal_into_enclave(size_t data_size,
-                               uint8_t * data,
+bool kmyth_unseal_into_enclave(uint8_t * data,
+                               size_t data_size,
                                uint64_t * handle)
 {
 
@@ -106,7 +106,7 @@ bool kmyth_unseal_into_enclave(size_t data_size,
     return false;
   }
 
-  if (data_size == 0 || data == NULL)
+  if (data_size == 0 || data_size == UINT32_MAX || data == NULL)
   {
     return false;
   }
@@ -129,9 +129,10 @@ bool kmyth_unseal_into_enclave(size_t data_size,
 
   uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
 
-  if (sgx_unseal_data
-      ((sgx_sealed_data_t *) data, NULL, &mac_len, plaintext_data,
-       (uint32_t *) & plaintext_data_size) != SGX_SUCCESS)
+  if (sgx_unseal_data((sgx_sealed_data_t *) data,
+                      NULL, &mac_len,
+                      plaintext_data,
+                      &plaintext_data_size) != SGX_SUCCESS)
   {
     free(plaintext_data);
     return false;
@@ -141,7 +142,8 @@ bool kmyth_unseal_into_enclave(size_t data_size,
   return insert_into_unseal_table(plaintext_data, plaintext_data_size, handle);
 }
 
-bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
+bool insert_into_unseal_table(uint8_t * data,
+                              uint32_t data_size,
                               uint64_t * handle)
 {
   if (!kmyth_unsealed_data_table_initialized)

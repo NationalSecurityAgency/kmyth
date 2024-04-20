@@ -729,10 +729,10 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   size_t kmip_key_request_len = 0;
 
   if (EXIT_SUCCESS != build_kmip_get_request(&kmip_context,
-                                            req_key_id->buffer,
-                                            req_key_id->size,
-                                            &kmip_key_request_bytes,
-                                            &kmip_key_request_len))
+                                             req_key_id->buffer,
+                                             req_key_id->size,
+                                             &kmip_key_request_bytes,
+                                             &kmip_key_request_len))
   {
     kmyth_sgx_log(LOG_ERR, "failed to build the 'KMIP Get' request");
     kmip_destroy(&kmip_context);
@@ -763,8 +763,8 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   //  - Server ephemeral value (DER formatted EC public key byte array)
   ECDHMessage pt_msg = { 0 };
   // TODO: Check for overflow
-  pt_msg.hdr.msg_size = (uint16_t)(2 + kmip_key_request_len + 2 +
-                                   (size_t) server_eph_pubkey_len);
+  pt_msg.hdr.msg_size = (uint16_t)(2 + (uint16_t) kmip_key_request_len + 2 +
+                                   (uint16_t) server_eph_pubkey_len);
   pt_msg.body = calloc(pt_msg.hdr.msg_size, sizeof(unsigned char));
   if (pt_msg.body == NULL)
   {
@@ -786,7 +786,7 @@ int compose_key_request_msg(EVP_PKEY * client_sign_key,
   buf_ptr += 2;
 
   // insert KMIP key request bytes
-  memcpy(buf_ptr, kmip_key_request_bytes, kmip_key_request_len);
+  memcpy(buf_ptr, kmip_key_request_bytes, (size_t) kmip_key_request_len);
   free(kmip_key_request_bytes);
   buf_ptr += kmip_key_request_len;
 

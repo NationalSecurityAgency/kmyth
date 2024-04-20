@@ -26,8 +26,10 @@
 // encrypt_with_key_pair()
 //
 int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
-                          const unsigned char *p, size_t p_len,
-                          unsigned char **c, size_t *c_len)
+                          const unsigned char *p,
+                          size_t p_len,
+                          unsigned char **c,
+                          size_t *c_len)
 {
   // Initialize the context for encryption.
   int result = EVP_PKEY_encrypt_init(ctx);
@@ -48,7 +50,7 @@ int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
   }
 
   // Allocate the ciphertext buffer.
-  *c = calloc(*c_len, sizeof(unsigned char));
+  *c = (unsigned char *) calloc(*c_len, sizeof(unsigned char));
   if (*c == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the ciphertext buffer.");
@@ -70,8 +72,10 @@ int encrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 // decrypt_with_key_pair()
 //
 int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
-                          const unsigned char *c, size_t c_len,
-                          unsigned char **p, size_t *p_len)
+                          const unsigned char *c,
+                          size_t c_len,
+                          unsigned char **p,
+                          size_t *p_len)
 {
   // Initialize the context for decryption.
   int result = EVP_PKEY_decrypt_init(ctx);
@@ -114,9 +118,12 @@ int decrypt_with_key_pair(EVP_PKEY_CTX * ctx,
 // build_nonce_request()
 // 
 int build_nonce_request(EVP_PKEY_CTX * ctx,
-                        unsigned char *nonce, size_t nonce_len,
-                        unsigned char *id, size_t id_len,
-                        unsigned char **request, size_t *request_len)
+                        unsigned char *nonce,
+                        size_t nonce_len,
+                        unsigned char *id,
+                        size_t id_len,
+                        unsigned char **request,
+                        size_t *request_len)
 {
   if (NSL_NONCE_LEN != nonce_len)
   {
@@ -170,15 +177,21 @@ int build_nonce_request(EVP_PKEY_CTX * ctx,
 // parse_nonce_request()
 //
 int parse_nonce_request(EVP_PKEY_CTX * ctx,
-                        unsigned char *request, size_t request_len,
-                        unsigned char **nonce, size_t *nonce_len,
-                        unsigned char **id, size_t *id_len)
+                        unsigned char *request,
+                        size_t request_len,
+                        unsigned char **nonce,
+                        size_t *nonce_len,
+                        unsigned char **id,
+                        size_t *id_len)
 {
   // Decrypt the nonce request.
   unsigned char *message = NULL;
   size_t message_len = 0;
-  int result =
-    decrypt_with_key_pair(ctx, request, request_len, &message, &message_len);
+  int result = decrypt_with_key_pair(ctx,
+                                     request,
+                                     request_len,
+                                     &message,
+                                     &message_len);
 
   if (result)
   {
@@ -233,16 +246,22 @@ int parse_nonce_request(EVP_PKEY_CTX * ctx,
 // build_nonce_response()
 //
 int build_nonce_response(EVP_PKEY_CTX * ctx,
-                         unsigned char *nonce_a, size_t nonce_a_len,
-                         unsigned char *nonce_b, size_t nonce_b_len,
-                         unsigned char *id, size_t id_len,
-                         unsigned char **response, size_t *response_len)
+                         unsigned char *nonce_a,
+                         size_t nonce_a_len,
+                         unsigned char *nonce_b,
+                         size_t nonce_b_len,
+                         unsigned char *id,
+                         size_t id_len,
+                         unsigned char **response,
+                         size_t *response_len)
 {
   // Allocate the unencrypted response buffer.
   unsigned char *message = NULL;
-  size_t message_len =
-    id_len + nonce_a_len + nonce_b_len + (3 * sizeof(size_t));
-  message = calloc(message_len, sizeof(unsigned char));
+  size_t message_len = id_len +
+                       nonce_a_len +
+                       nonce_b_len +
+                       (3 * sizeof(size_t));
+  message = (unsigned char *) calloc(message_len, sizeof(unsigned char));
   if (message == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the message buffer.");
@@ -265,8 +284,11 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
   memcpy(index, id, id_len);
 
   // Encrypt the nonce response and then clean up the unencrypted response.
-  int result =
-    encrypt_with_key_pair(ctx, message, message_len, response, response_len);
+  int result = encrypt_with_key_pair(ctx,
+                                     message,
+                                     message_len,
+                                     response,
+                                     response_len);
 
   kmyth_clear_and_free(message, message_len);
 
@@ -284,16 +306,23 @@ int build_nonce_response(EVP_PKEY_CTX * ctx,
 // parse_nonce_response()
 //
 int parse_nonce_response(EVP_PKEY_CTX * ctx,
-                         unsigned char *response, size_t response_len,
-                         unsigned char **nonce_a, size_t *nonce_a_len,
-                         unsigned char **nonce_b, size_t *nonce_b_len,
-                         unsigned char **id, size_t *id_len)
+                         unsigned char *response,
+                         size_t response_len,
+                         unsigned char **nonce_a,
+                         size_t *nonce_a_len,
+                         unsigned char **nonce_b,
+                         size_t *nonce_b_len,
+                         unsigned char **id,
+                         size_t *id_len)
 {
   // Decrypt the nonce response.
   unsigned char *message = NULL;
   size_t message_len = 0;
-  int result =
-    decrypt_with_key_pair(ctx, response, response_len, &message, &message_len);
+  int result = decrypt_with_key_pair(ctx,
+                                     response,
+                                     response_len,
+                                     &message,
+                                     &message_len);
 
   if (result)
   {
@@ -400,7 +429,8 @@ int parse_nonce_response(EVP_PKEY_CTX * ctx,
 // build_nonce_confirmation()
 //
 int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
-                             unsigned char *nonce, size_t nonce_len,
+                             unsigned char *nonce,
+                             size_t nonce_len,
                              unsigned char **confirmation,
                              size_t *confirmation_len)
 {
@@ -432,7 +462,10 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
 
   // Encrypt the nonce confirmation and then clean up the unencrypted
   // confirmation.
-  int result = encrypt_with_key_pair(ctx, message, message_len, confirmation,
+  int result = encrypt_with_key_pair(ctx,
+                                     message,
+                                     message_len,
+                                     confirmation,
                                      confirmation_len);
 
   kmyth_clear_and_free(message, message_len);
@@ -452,14 +485,18 @@ int build_nonce_confirmation(EVP_PKEY_CTX * ctx,
 //
 int parse_nonce_confirmation(EVP_PKEY_CTX * ctx,
                              unsigned char *confirmation,
-                             size_t confirmation_len, unsigned char **nonce,
+                             size_t confirmation_len,
+                             unsigned char **nonce,
                              size_t *nonce_len)
 {
   // Decrypt the nonce confirmation.
   unsigned char *message = NULL;
   size_t message_len = 0;
   int result =
-    decrypt_with_key_pair(ctx, confirmation, confirmation_len, &message,
+    decrypt_with_key_pair(ctx,
+                          confirmation,
+                          confirmation_len,
+                          &message,
                           &message_len);
 
   if (result)
@@ -586,9 +623,12 @@ EVP_PKEY_CTX *setup_private_evp_context(const char *filepath)
 //
 // generate_session_key()
 //
-int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
-                         unsigned char *nonce_b, size_t nonce_b_len,
-                         unsigned char **key, size_t *key_len)
+int generate_session_key(unsigned char *nonce_a,
+                         size_t nonce_a_len,
+                         unsigned char *nonce_b,
+                         size_t nonce_b_len,
+                         unsigned char **key,
+                         size_t *key_len)
 {
   if (NSL_NONCE_LEN != nonce_a_len)
   {
@@ -698,7 +738,8 @@ int generate_session_key(unsigned char *nonce_a, size_t nonce_a_len,
 //
 // generate_nonce()
 //
-int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
+int generate_nonce(size_t desired_min_nonce_len,
+                   unsigned char **nonce,
                    size_t *nonce_len)
 {
   size_t size = 1;
@@ -734,7 +775,8 @@ int generate_nonce(size_t desired_min_nonce_len, unsigned char **nonce,
 int negotiate_client_session_key(int socket_fd,
                                  EVP_PKEY_CTX * public_key_ctx,
                                  EVP_PKEY_CTX * private_key_ctx,
-                                 unsigned char *id, size_t id_len,
+                                 unsigned char *id,
+                                 size_t id_len,
                                  unsigned char *expected_id,
                                  size_t expected_id_len,
                                  unsigned char **session_key,
@@ -924,7 +966,8 @@ int negotiate_client_session_key(int socket_fd,
 int negotiate_server_session_key(int socket_fd,
                                  EVP_PKEY_CTX * public_key_ctx,
                                  EVP_PKEY_CTX * private_key_ctx,
-                                 unsigned char *id, size_t id_len,
+                                 unsigned char *id,
+                                 size_t id_len,
                                  unsigned char **session_key,
                                  size_t *session_key_len)
 {
@@ -1034,8 +1077,10 @@ int negotiate_server_session_key(int socket_fd,
   // read_result can safely be cast to a size_t because we've already
   // dealt with the case it's negative.
   result = parse_nonce_confirmation(private_key_ctx,
-                                    response, (size_t)read_result,
-                                    &received_nonce_b, &received_nonce_b_len);
+                                    response,
+                                    (size_t) read_result,
+                                    &received_nonce_b,
+                                    &received_nonce_b_len);
   kmyth_clear_and_free(response, response_len);
   if (result)
   {
@@ -1067,9 +1112,12 @@ int negotiate_server_session_key(int socket_fd,
   kmyth_log(LOG_DEBUG, "Received nonce B: %zd bytes", nonce_b_len);
 
   // Use nonces to generate shared session key S
-  result = generate_session_key(received_nonce_a, received_nonce_a_len,
-                                nonce_b, nonce_b_len,
-                                session_key, session_key_len);
+  result = generate_session_key(received_nonce_a,
+                                received_nonce_a_len,
+                                nonce_b,
+                                nonce_b_len,
+                                session_key,
+                                session_key_len);
   kmyth_clear_and_free(nonce_b, nonce_b_len);
   kmyth_clear_and_free(received_nonce_a, received_nonce_a_len);
   if (result)

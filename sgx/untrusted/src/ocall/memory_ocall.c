@@ -6,7 +6,7 @@
  *        trusted SGX enclave.
  */
 
-#include "memory_ocall.h"
+#include <stdlib.h>
 
 /*****************************************************************************
  * free_ocall

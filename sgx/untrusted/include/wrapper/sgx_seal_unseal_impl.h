@@ -3,9 +3,11 @@
 
 #include "sgx_urts.h"
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <kmyth/kmyth_log.h>
 #include <kmyth/formatting_tools.h>

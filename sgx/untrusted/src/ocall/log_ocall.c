@@ -5,7 +5,7 @@
  *        logging features
  */
 
-#include "log_ocall.h"
+#include <kmyth/kmyth_log.h>
 
 /*****************************************************************************
  * log_event_ocall

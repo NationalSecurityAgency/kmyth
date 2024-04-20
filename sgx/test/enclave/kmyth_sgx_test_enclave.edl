@@ -1,17 +1,17 @@
 enclave {
   from "kmyth_enclave.edl" import *;
-  
+
   trusted
   {
     /**
      * @brief Computes the output buffer size required to unseal input data
      *        of size in_size.
      *
-     * @param[in]  sealed_data The encrypted blob to be unsealed.
+     * @param[in]  sealed_data    The encrypted blob to be unsealed.
      * 
-     * @param[in]  sealed_size The size of the data blob to be unsealed.
+     * @param[in]  sealed_size    The size of the data blob to be unsealed.
      * 
-     * @param[out] unsealed_size    The size of the plaintext.
+     * @param[out] unsealed_size  The size of the plaintext.
      *
      * @return 0 in success, SGX_ERROR_INVALID_PARAMETER on error
      */

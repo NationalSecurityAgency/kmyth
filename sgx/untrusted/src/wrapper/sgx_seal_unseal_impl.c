@@ -5,18 +5,7 @@
  *        along with the other sgx_seal/sgx_unseal functions
  */
 
-#include "sgx_urts.h"
-
 #include "sgx_seal_unseal_impl.h"
-
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-
-#include <kmyth/kmyth_log.h>
-#include <kmyth/formatting_tools.h>
-
-#include ENCLAVE_HEADER_UNTRUSTED
 
 //############################################################################
 // kmyth_sgx_seal_nkl()
@@ -79,6 +68,8 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
                          size_t input_len,
                          uint64_t * handle)
 {
+  kmyth_log(LOG_ERR, "inside kmyth_sgx_unseal_nkl");
+
   uint8_t *block = NULL;
   size_t blocksize = 0;
 
@@ -95,19 +86,26 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
     return 1;
   }
 
+  kmyth_log(LOG_ERR, "before base64 decode");
+
   uint8_t *data = NULL;
   size_t data_size = 0;
   bool ret;
 
-  if (decodeBase64Data(block, blocksize, (unsigned char **) &data, &data_size))
+  if (decodeBase64Data(block,
+                       blocksize,
+                       (unsigned char **) &data,
+                       &data_size))
   {
     kmyth_log(LOG_ERR, "error Base64 decode of block bytes ... exiting");
     free(block);
     return 1;
   }
 
+  kmyth_log(LOG_ERR, "before unseal into enclave");
+
   free(block);
-  kmyth_unseal_into_enclave(eid, &ret, data_size, data, handle);
+  kmyth_unseal_into_enclave(eid, &ret, data, data_size, handle);
   if (ret == false)
   {
     kmyth_log(LOG_ERR, "error to unseal block bytes ... exiting");

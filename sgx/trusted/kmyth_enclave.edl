@@ -38,8 +38,8 @@ enclave {
                              uint32_t in_size,
                              [user_check] uint8_t *out_data,
                              uint32_t out_size,
-    		                     uint16_t key_policy,
-    		                     sgx_attributes_t attribute_mask);
+    		                 uint16_t key_policy,
+    		                 sgx_attributes_t attribute_mask);
     
     /**
      * @brief Computes the output buffer size required to seal input data
@@ -68,8 +68,8 @@ enclave {
      * @return true on success, false on failure. The return value MUST be checked.
      *
      */
-    public bool kmyth_unseal_into_enclave(size_t data_size,
-                                          [in, count=data_size] uint8_t* data,
+    public bool kmyth_unseal_into_enclave([in, count=data_size] uint8_t* data,
+                                          size_t data_size,
                                           [out] uint64_t* handle);
     
     /**

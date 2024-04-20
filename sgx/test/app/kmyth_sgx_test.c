@@ -9,7 +9,6 @@
 #include "sgx_urts.h"
 #include "sgx_attributes.h"
 
-#include "log_ocall.h"
 #include "sgx_seal_unseal_impl.h"
 
 #include "kmyth_sgx_test_enclave_u.h"
@@ -163,8 +162,8 @@ void test_unseal_and_export(void)
 
     kmyth_unseal_into_enclave(eid,
                               &result,
-                              cipher_size,
                               cipher_data[i],
+                              cipher_size,
                               handles + i);
     CU_ASSERT(result == true);
 
