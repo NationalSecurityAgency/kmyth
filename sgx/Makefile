@@ -474,7 +474,7 @@ test/enclave/log_ocall.o: untrusted/src/ocall/log_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c 
+test/enclave/memory_ocall.o: untrusted/src/ocall/memory_ocall.c
 	@$(CC) $(Test_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 

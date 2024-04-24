@@ -38,8 +38,8 @@ enclave {
                              uint32_t in_size,
                              [user_check] uint8_t *out_data,
                              uint32_t out_size,
-    		                 uint16_t key_policy,
-    		                 sgx_attributes_t attribute_mask);
+                             uint16_t key_policy,
+                             sgx_attributes_t attribute_mask);
     
     /**
      * @brief Computes the output buffer size required to seal input data

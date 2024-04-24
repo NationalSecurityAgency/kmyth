@@ -18,7 +18,7 @@ enclave {
     public int enc_get_unsealed_size([in, size=sealed_size]
                                        uint8_t* sealed_data,
                                      uint32_t sealed_size,
-                                     [out, count=1] uint32_t* size);
+                                     [out, count=1] uint32_t* unsealed_size);
 
     /**
      * @brief Unseals data sealed with enc_seal_data.
