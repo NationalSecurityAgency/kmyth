@@ -9,7 +9,6 @@
 #include "sgx_thread.h"
 
 #include "kmyth_enclave_trusted.h"
-#include ENCLAVE_HEADER_TRUSTED
 
 unseal_data_t *kmyth_unsealed_data_table = NULL;
 static bool kmyth_unsealed_data_table_initialized = false;
@@ -230,5 +229,6 @@ uint32_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
 
   free(slot->data);
   free(slot);
+
   return data_size;
 }

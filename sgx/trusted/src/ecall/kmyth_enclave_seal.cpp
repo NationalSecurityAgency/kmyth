@@ -9,8 +9,6 @@
 
 #include "kmyth_enclave_trusted.h"
 
-#include ENCLAVE_HEADER_TRUSTED
-
 // EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
 {
