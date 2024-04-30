@@ -298,15 +298,17 @@ FILE *get_stddest(int severity_val_in)
 //############################################################################
 void log_event(const char *src_file,
                const char *src_func,
-               const int src_line, int severity, const char *message, ...)
+               const int src_line,
+               int severity,
+               const char *message,
+               ...)
 {
 
   // format log message (vsnprintf() count parameter includes null terminator)
   char out[log_settings.applog_max_msg_len + 1];
   va_list args;
-
   va_start(args, message);
-  vsnprintf(out, (size_t)log_settings.applog_max_msg_len + 1, message, args);
+  vsnprintf(out, (size_t) log_settings.applog_max_msg_len, message, args);
   va_end(args);
 
   // force severity to a valid value by masking (only use three lowest bits)

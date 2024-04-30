@@ -462,8 +462,7 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 
   // create cipher suite struct
   raw_cipher_str_data[raw_cipher_str_size - 1] = '\0';
-  temp_ski.cipher =
-    kmyth_get_cipher_t_from_string((char *) raw_cipher_str_data);
+  temp_ski.cipher = kmyth_get_cipher_t_from_string((char *)raw_cipher_str_data);
   if (temp_ski.cipher.cipher_name == NULL)
   {
     kmyth_log(LOG_ERR, "cipher_t init error");
@@ -530,7 +529,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
 
   if (get_block_bytes((char **) &position,
                       &remaining,
-                      &raw_enc_data, &raw_enc_size,
+                      &raw_enc_data,
+                      &raw_enc_size,
                       KMYTH_DELIM_ENC_DATA,
                       strlen(KMYTH_DELIM_ENC_DATA),
                       KMYTH_DELIM_END_FILE, strlen(KMYTH_DELIM_END_FILE)))
@@ -644,8 +644,8 @@ int parse_ski_bytes(uint8_t * input, size_t input_length, Ski * output)
   // decode the encrypted data block
   retval |= decodeBase64Data(raw_enc_data,
                              raw_enc_size,
-                             &temp_ski.enc_data,
-                             &temp_ski.enc_data_size);
+                             &(temp_ski.enc_data),
+                             &(temp_ski.enc_data_size));
   free(raw_enc_data);
   raw_enc_data = NULL;
 

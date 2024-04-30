@@ -74,7 +74,7 @@ int create_ski_bytes(Ski input, uint8_t ** output, size_t *output_length);
 /**
  * @brief Frees the contents of a ski struct
  *
- * @param[in] ski				Ski struct to be freed
+ * @param[in] ski  pointer to Ski struct with contents to be freed
  */
 void free_ski(Ski * ski);
 

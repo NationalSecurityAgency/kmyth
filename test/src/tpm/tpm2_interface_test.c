@@ -25,11 +25,10 @@ int tpm2_interface_add_tests(CU_pSuite suite)
 {
   //We don't want to do any of the tpm2_interface tests if on hardware
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
   init_tpm2_connection(&sapi_ctx);
   bool emulator = true;
-
   get_tpm2_impl_type(sapi_ctx, &emulator);
+  free_tpm2_resources(&sapi_ctx);
   if (!emulator)
   {
     return (0);
@@ -193,8 +192,10 @@ void test_init_tcti_abrmd(void)
   CU_ASSERT(init_tcti_abrmd(&tcti_ctx) == 0);
   CU_ASSERT(tcti_ctx != NULL);
 
-  //Must have null sapi_ctx to init
+  //Must have null TCTI context to init
   CU_ASSERT(init_tcti_abrmd(&tcti_ctx) != 0);
+
+  Tss2_TctiLdr_Finalize(&tcti_ctx);
   free(tcti_ctx);
 }
 
@@ -208,19 +209,19 @@ void test_init_sapi(void)
 
   //Valid test
   init_tcti_abrmd(&tcti_ctx);
+  CU_ASSERT(tcti_ctx != NULL);
   CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) == 0);
   CU_ASSERT(sapi_ctx != NULL);
 
-  //Must have null sapi_ctx
+  //Should fail because input SAPI context is not null
+  CU_ASSERT(tcti_ctx != NULL);
   CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) != 0);
-
-  free(tcti_ctx);
-  free(sapi_ctx);
-  sapi_ctx = NULL;
+  free_tpm2_resources(&sapi_ctx);
   tcti_ctx = NULL;
 
-  //tcti_ctx must be initialized
+  //Should fail because input TCTI context must be initialized
   CU_ASSERT(init_sapi(&sapi_ctx, tcti_ctx) != 0);
+  CU_ASSERT(tcti_ctx == NULL);
   CU_ASSERT(sapi_ctx == NULL);
 }
 
@@ -582,42 +583,31 @@ void test_check_response_auth(void)
   size_t cmdParams_size = 0;
 
   init_tpm2_connection(&sapi_ctx);
-  session.nonceOlder.size = KMYTH_DIGEST_SIZE;
-  session.nonceNewer.size = KMYTH_DIGEST_SIZE;
-  res_out.auths[0].nonce.size = KMYTH_DIGEST_SIZE;
-
-  //Valid failure before hashes are set
-  CU_ASSERT(check_response_auth(&session,
-                                cc,
-                                cmdParams,
-                                cmdParams_size,
-                                &auth,
-                                &res_out) != 0);
 
   //Specify empty nonces for hash comparisons
-  //Calculate the expected hash
+  session.nonceOlder.size = KMYTH_DIGEST_SIZE;
   memset(session.nonceOlder.buffer, 0x00, KMYTH_DIGEST_SIZE);
+  session.nonceNewer.size = KMYTH_DIGEST_SIZE;
   memset(session.nonceNewer.buffer, 0x00, KMYTH_DIGEST_SIZE);
+  res_out.auths[0].nonce.size = KMYTH_DIGEST_SIZE;
   memset(res_out.auths[0].nonce.buffer, 0x00, KMYTH_DIGEST_SIZE);
 
-  TPM2B_DIGEST rpHash;
-
+  //Calculate the expected hash (using empty authVal)
+  TPM2B_DIGEST rpHash = { .size = 0, };
   compute_rpHash(TPM2_RC_SUCCESS, cc, cmdParams, cmdParams_size, &rpHash);
-  TPM2B_DIGEST checkHMAC;
-
-  checkHMAC.size = 0;
+  TPM2B_DIGEST checkHMAC = { .size = 0, };
   compute_authHMAC(session,
                    rpHash,
                    &auth,
                    res_out.auths[0].sessionAttributes,
                    &checkHMAC);
+
+  //successful test when matching expected hash is set
   res_out.auths[0].hmac.size = checkHMAC.size;
   for (int i = 0; i < checkHMAC.size; i++)
   {
     res_out.auths[0].hmac.buffer[i] = checkHMAC.buffer[i];
   }
-
-  //Valid test
   CU_ASSERT(check_response_auth(&session,
                                 cc,
                                 cmdParams,
@@ -625,8 +615,8 @@ void test_check_response_auth(void)
                                 &auth,
                                 &res_out) == 0);
 
-  session.nonceNewer.size = 1;
-  //Valid failure
+  //check should fail with invalid nonce size (bad param example)
+  session.nonceNewer.size -= 1;
   CU_ASSERT(check_response_auth(&session,
                                 cc,
                                 cmdParams,
@@ -634,7 +624,7 @@ void test_check_response_auth(void)
                                 &auth,
                                 &res_out) != 0);
 
-  //NULL session
+  //NULL session should result in failed check
   CU_ASSERT(check_response_auth(NULL,
                                 cc,
                                 cmdParams,

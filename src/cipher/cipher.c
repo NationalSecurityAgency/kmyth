@@ -138,7 +138,8 @@ int kmyth_encrypt_data(unsigned char *data,
                        cipher_t cipher_spec,
                        unsigned char **enc_data,
                        size_t * enc_data_size,
-                       unsigned char **enc_key, size_t * enc_key_size)
+                       unsigned char **enc_key,
+                       size_t * enc_key_size)
 {
   if (cipher_spec.cipher_name == NULL)
   {
@@ -148,11 +149,11 @@ int kmyth_encrypt_data(unsigned char *data,
   {
     return 1;
   }
-  if (enc_data == NULL)
+  if (*enc_data == NULL)
   {
     return 1;
   }
-  if (enc_key == NULL)
+  if (*enc_key == NULL)
   {
     return 1;
   }
@@ -171,9 +172,8 @@ int kmyth_encrypt_data(unsigned char *data,
   }
 
   *enc_data_size = 0;
-  if (cipher_spec.encrypt_fn(*enc_key,
-                             *enc_key_size,
-                             data, data_size, enc_data, enc_data_size))
+  if (cipher_spec.encrypt_fn(*enc_key, *enc_key_size, data,
+                             data_size, enc_data, enc_data_size))
   {
     return 1;
   }
@@ -189,7 +189,8 @@ int kmyth_decrypt_data(unsigned char *enc_data,
                        cipher_t cipher_spec,
                        unsigned char *key,
                        size_t key_size,
-                       unsigned char **result, size_t * result_size)
+                       unsigned char **result,
+                       size_t * result_size)
 {
   if (enc_data == NULL || enc_data_size == 0)
   {
@@ -203,7 +204,7 @@ int kmyth_decrypt_data(unsigned char *enc_data,
   {
     return 1;
   }
-  if (result == NULL)
+  if (*result == NULL)
   {
     return 1;
   }

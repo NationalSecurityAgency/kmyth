@@ -26,6 +26,13 @@
 //############################################################################
 int verifyInputFilePath(char *path)
 {
+  // make sure file path is non-NULL
+  if (path == NULL)
+  {
+    kmyth_log(LOG_ERR, "input path is NULL");
+    return 1;
+  }
+
   // check that file exists
   if (access(path, F_OK) == -1)
   {
@@ -120,10 +127,17 @@ int verifyOutputFilePath(char *path)
 //############################################################################
 // read_bytes_from_file()
 //############################################################################
-int read_bytes_from_file(char *input_path, uint8_t ** data,
+int read_bytes_from_file(char *input_path,
+                         uint8_t ** data,
                          size_t * data_length)
 {
-  
+  //  check for non-NULL input path
+  if (input_path == NULL)
+  {
+    kmyth_log(LOG_ERR, "NULL output path");
+    return 1;
+  }
+ 
   // Create a BIO for the input file
   BIO *bio = NULL;
 
@@ -251,9 +265,14 @@ int write_bytes_to_file(char *output_path, uint8_t * bytes, size_t bytes_length)
 //############################################################################
 int print_to_stdout(unsigned char *data, size_t data_size)
 {
-  if(data_size > INT_MAX)
+  if (data == NULL)
   {
-    kmyth_log(LOG_ERR, "data size exceeds INT_MAX");
+    kmyth_log(LOG_ERR, "data to print is NULL");
+    return 1;
+  }
+  if (data_size > INT_MAX)
+  {
+    kmyth_log(LOG_ERR, "size of data to print exceeds INT_MAX");
     return 1;
   }
   BIO *bdata;

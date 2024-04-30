@@ -250,6 +250,7 @@ TEST_INCLUDE_FLAGS += -I$(TEST_TPM_INC_DIR)
 LDLIBS = -ltss2-tcti-device#             TCTI for hardware TPM 2.0
 LDLIBS += -ltss2-tcti-mssim#             TCTI for TPM 2.0 simulator
 LDLIBS += -ltss2-tcti-tabrmd#            TPM 2.0 Access Broker/Resource Mgr.
+LDLIBS += -ltss2-tctildr#                TCTI Loader
 LDLIBS += -ltss2-mu#                     TPM 2.0 marshal/unmarshal
 LDLIBS += -ltss2-sys#                    TPM 2.0 SAPI
 LDLIBS += -ltss2-rc#                     TPM 2.0 Return Code Utilities

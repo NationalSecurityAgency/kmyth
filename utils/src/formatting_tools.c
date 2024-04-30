@@ -272,6 +272,7 @@ int decodeBase64Data(uint8_t * base64_data,
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
     kmyth_log(LOG_ERR, "create base64 filter BIO error");
+    free(*raw_data);
     return 1;
   }
 
@@ -281,6 +282,7 @@ int decodeBase64Data(uint8_t * base64_data,
   if ((bio_mem = BIO_new_mem_buf(base64_data, (int)base64_data_size)) == NULL)
   {
     kmyth_log(LOG_ERR, "create source BIO error");
+    free(*raw_data);
     BIO_free_all(bio64);
     return 1;
   }
@@ -294,14 +296,17 @@ int decodeBase64Data(uint8_t * base64_data,
   if (bytes_read < 0)
   {
     kmyth_log(LOG_ERR, "error reading bytes from BIO chain");
+    free(*raw_data);
     BIO_free_all(bio64);
     return 1;
   }
 
   (*raw_data)[bytes_read] = '\0';
-  *raw_data_size = (size_t)bytes_read;
+  *raw_data_size = (size_t) bytes_read;
+
   // clean-up
   BIO_free_all(bio64);
+
   return 0;
 }
 

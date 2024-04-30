@@ -14,10 +14,9 @@
 //############################################################################
 // aes_gcm_encrypt()
 //############################################################################
-int aes_gcm_encrypt(unsigned char *key,
-                    size_t key_len,
+int aes_gcm_encrypt(unsigned char *key, size_t key_len,
                     unsigned char *inData, size_t inData_len,
-                    unsigned char **outData, size_t * outData_len)
+                    unsigned char **outData, size_t *outData_len)
 {
 
   // validate non-NULL and non-empty encryption key specified
@@ -42,7 +41,7 @@ int aes_gcm_encrypt(unsigned char *key,
   //   - resultant ciphertext (same length as the input plaintext)
   //   - GCM_TAG_LEN (16) byte tag
   *outData_len = GCM_IV_LEN + inData_len + GCM_TAG_LEN;
-  if (*outData == NULL) free( *outData );
+  if (*outData != NULL) free( *outData );
   *outData = malloc(*outData_len);
   if (*outData == NULL) // failed malloc
   {
@@ -186,8 +185,9 @@ int aes_gcm_decrypt(unsigned char *key,
   }
   
   // Setting here to save some cleanup on error conditions.
-  *outData_len = 0;
+  if (*outData != NULL) free( *outData );
   *outData = NULL;
+  *outData_len = 0;
   
   size_t expected_out_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
   // output data buffer (outData) will contain only the plaintext, which
@@ -211,7 +211,6 @@ int aes_gcm_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
     return 1;
   }
   int init_result = 0;

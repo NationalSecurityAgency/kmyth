@@ -59,8 +59,9 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     // If SAPI initialization fails: 
     //   - sapi_ctx is freed by init_sapi()
     //   - tcti_ctx must still be cleaned up
-    Tss2_Tcti_Finalize(tcti_ctx);
-    free(tcti_ctx);
+    Tss2_TctiLdr_Finalize(&tcti_ctx);
+    if (tcti_ctx != NULL) free(tcti_ctx);
+    tcti_ctx = NULL;
     kmyth_log(LOG_ERR, "unable to initialize SAPI context");
     return 1;
   }
@@ -74,8 +75,10 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     // On failure, clean up initialization remnants to this point
     Tss2_Sys_Finalize(*sapi_ctx);
     free(*sapi_ctx);
-    Tss2_Tcti_Finalize(tcti_ctx);
-    free(tcti_ctx);
+    *sapi_ctx = NULL;
+    Tss2_TctiLdr_Finalize(&tcti_ctx);
+    if (tcti_ctx != NULL) free(tcti_ctx);
+    tcti_ctx = NULL;
     kmyth_log(LOG_ERR, "cannot determine TPM impl type (HW/emul)");
     return 1;
   }
@@ -88,8 +91,9 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
         // On failure, clean up initialization remnants to this point
         Tss2_Sys_Finalize(*sapi_ctx);
         free(*sapi_ctx);
-        Tss2_Tcti_Finalize(tcti_ctx);
-        free(tcti_ctx);
+        Tss2_TctiLdr_Finalize(&tcti_ctx);
+        if(tcti_ctx != NULL) free(tcti_ctx);
+        tcti_ctx = NULL;
         kmyth_log(LOG_ERR, "unable to start TPM 2.0");
         return 1;
       }
@@ -119,34 +123,13 @@ int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
     return 1;
   }
 
-  // We are using the default TCTI bus. Initial Tss2_Tcti_Tabrmd_Init() call
-  // returns memory space needed for TCTI context.
-  size_t size;
+  // We are using the default TCTI bus. Initial Tss2_TctiLdr_Initialize() call
   TSS2_RC rc;
-
-  rc = Tss2_Tcti_Tabrmd_Init(NULL, &size, NULL);
+  rc = Tss2_TctiLdr_Initialize(NULL, tcti_ctx);
   if (rc != TSS2_RC_SUCCESS)
   {
-    kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
+    kmyth_log(LOG_ERR, "Tss2_TctiLdr_Initialize(): rc = 0x%08X, %s", rc,
               getErrorString(rc));
-    return 1;
-  }
-
-  // Now that we know how much space we need, allocate memory for TCTI context
-  *tcti_ctx = (TSS2_TCTI_CONTEXT *) calloc(1, size);
-  if (*tcti_ctx == NULL)
-  {
-    kmyth_log(LOG_ERR, "calloc for res mgr TCTI context failed");
-    return 1;
-  }
-
-  // Second Tss2_Tcti_Tabrmd_Init() call actually initializes the TCTI context
-  rc = Tss2_Tcti_Tabrmd_Init(*tcti_ctx, &size, NULL);
-  if (rc != TSS2_RC_SUCCESS)
-  {
-    kmyth_log(LOG_ERR, "Tss2_Tcti_Tabrmd_Init(): rc = 0x%08X, %s", rc,
-              getErrorString(rc));
-    free(*tcti_ctx);
     return 1;
   }
 
@@ -205,9 +188,10 @@ int init_sapi(TSS2_SYS_CONTEXT ** sapi_ctx, TSS2_TCTI_CONTEXT * tcti_ctx)
   {
     kmyth_log(LOG_ERR, "Tss2_Sys_Initialize(): rc = 0x%08X, %s", rc,
               getErrorString(rc));
-    free(sapi_ctx);
+    free(*sapi_ctx);
     return 1;
   }
+
   kmyth_log(LOG_DEBUG, "initialized SAPI context");
 
   return 0;
@@ -297,8 +281,9 @@ int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
   kmyth_log(LOG_DEBUG, "cleaned up SAPI context");
 
   // Clean up TCTI context
-  Tss2_Tcti_Finalize(tcti_ctx);
-  free(tcti_ctx);
+  Tss2_TctiLdr_Finalize(&tcti_ctx);
+  if (tcti_ctx != NULL) free(tcti_ctx);
+  tcti_ctx = NULL;
   kmyth_log(LOG_DEBUG, "cleaned up TCTI context");
 
   return retval;
@@ -984,20 +969,36 @@ int compute_authHMAC(SESSION auth_session,
     return 1;
   }
 
-  // initialize authHMAC (authValue is key for computing the keyed hash)
+  // fetch EVP_MAC
   EVP_MAC *hmac = EVP_MAC_fetch(NULL,
                                 KMYTH_OPENSSL_EVP_MAC_ALG,
                                 NULL);
-  EVP_MAC_CTX *hmac_ctx = NULL;
-  hmac_ctx = EVP_MAC_CTX_new(hmac);
+  if (hmac == NULL)
+  {
+    kmyth_log(LOG_ERR, "error fetching EVP_MAC");
+    return 1;
+  }
+
+  // create context
+  EVP_MAC_CTX *hmac_ctx = EVP_MAC_CTX_new(hmac);
+  if (hmac_ctx == NULL)
+  {
+    kmyth_log(LOG_ERR, "error creating context");
+    return 1;
+  }
   EVP_MAC_free(hmac);
 
-  OSSL_PARAM params[2] = { 0 };
-  params[0] = OSSL_PARAM_construct_utf8_string("digest",
+  // setup parameters
+  OSSL_PARAM params[3] = { 0 };
+  params[0] = OSSL_PARAM_construct_utf8_string("cipher",
+                                               KMYTH_OPENSSL_EVP_MAC_ALG,
+                                               0);
+  params[1] = OSSL_PARAM_construct_utf8_string("digest",
                                                KMYTH_OPENSSL_EVP_MAC_DIGEST,
                                                0);
-  params[1] = OSSL_PARAM_construct_end();
+  params[2] = OSSL_PARAM_construct_end();
 
+  // initialize authHMAC (authValue is key for computing the keyed hash)
   if (!EVP_MAC_init(hmac_ctx,
                     auth_authValue->buffer,
                     auth_authValue->size,
@@ -1046,27 +1047,42 @@ int compute_authHMAC(SESSION auth_session,
   }
 
   // finalize hash
-  uint8_t authHMAC_result[KMYTH_DIGEST_SIZE];
-  size_t authHMAC_result_size = KMYTH_DIGEST_SIZE;
+  unsigned char out_buf[128] = { 0 };
   size_t hmac_final_size = 0;
-
-  if (!EVP_MAC_final(hmac_ctx, authHMAC_result,
-                     &hmac_final_size, authHMAC_result_size) ||
-      (hmac_final_size != authHMAC_result_size))
+  int ret = EVP_MAC_final(hmac_ctx, out_buf, &hmac_final_size, sizeof(out_buf));
+  if (ret != 1)
   {
-    kmyth_log(LOG_ERR, "error finalizing HMAC");
+    kmyth_log(LOG_ERR, "EVP_MAC_final() returned error");
+    EVP_MAC_CTX_free(hmac_ctx);
+    return 1;
+  }
+  if (hmac_final_size != KMYTH_DIGEST_SIZE)
+  {
+    kmyth_log(LOG_ERR, "unexpected size digest");
     EVP_MAC_CTX_free(hmac_ctx);
     return 1;
   }
 
+  // Valgrind generates 'unintialized value' warnings for the returned
+  // finalized HMAC buffer. Using the "--track-origins=yes" option indicates
+  // that the unitialized values are created by a stack allocation in
+  // OpenSSL (libcrypto). I don't fully understand why, but, because
+  // OpenSSL uses the stack as a source of entopy,this may be expected
+  // behavior (i.e., to valgrind they appear unitialized, but are really
+  // not). For now, I have been unable to "address" these warnings within
+  // the kmyth code.
+  //
+  // If using valgrind, you can uncomment the following line to manually
+  // mark this buffer as "defined" and eliminate these warnings.
+  //VALGRIND_MAKE_MEM_DEFINED(out_buf, hmac_final_size);
+
+  memcpy(auth_HMAC->buffer, out_buf, hmac_final_size);
+  auth_HMAC->size = (uint16_t) hmac_final_size;
+
+  kmyth_log(LOG_DEBUG, "authHMAC: 0x%02X..%02X", auth_HMAC->buffer[0],
+                       auth_HMAC->buffer[auth_HMAC->size - 1]);
+
   EVP_MAC_CTX_free(hmac_ctx);
-
-  kmyth_log(LOG_DEBUG, "authHMAC: 0x%02X..%02X", authHMAC_result[0],
-            authHMAC_result[authHMAC_result_size - 1]);
-
-  // return result in TPM2B_AUTH struct passed in
-  auth_HMAC->size = (uint16_t)authHMAC_result_size;
-  memcpy(auth_HMAC->buffer, authHMAC_result, auth_HMAC->size);
 
   return 0;
 }

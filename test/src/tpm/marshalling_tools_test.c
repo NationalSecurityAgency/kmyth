@@ -1637,6 +1637,8 @@ void test_unpack_uint32_to_str(void)
   ret_val = unpack_uint32_to_str(0, &test_str);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(strncmp(test_str, "", 4) == 0);
+  free(test_str);
+  test_str = NULL;
 
   // check uint input with four valid ASCII chars produces expected string
   // (output string passed in with empty string value)
@@ -1644,16 +1646,18 @@ void test_unpack_uint32_to_str(void)
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(strlen(test_str) == 4);
   CU_ASSERT(strncmp(test_str, "T3$t", 4) == 0);
-
+  free(test_str);
+  test_str = NULL;
+  
   // check uint input with four non-ASCII chars produces expected string
   // (output string passed in with previous 4-character string result value)
   ret_val = unpack_uint32_to_str(0xfcfdfeff, &test_str);
   CU_ASSERT(ret_val == 0);
   CU_ASSERT(strlen(test_str) == 4);
   CU_ASSERT(strncmp(test_str, "\xfc\xfd\xfe\xff", 4) == 0);
-
-// check when output variable passed in as unallocated, non-NULL pointer
   free(test_str);
+  
+// check when output variable passed in as unallocated, non-NULL pointer
   CU_ASSERT(test_str != NULL);
   ret_val = unpack_uint32_to_str(0x54504D32, &test_str);
   CU_ASSERT(ret_val == 0);
@@ -1678,6 +1682,8 @@ void test_parse_ski_bytes(void)
 
   //Valid ski test  
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   //NULL or invalid input
   CU_ASSERT(parse_ski_bytes(NULL, ski_bytes_len, &output) == 1);
@@ -1693,54 +1699,71 @@ void test_parse_ski_bytes(void)
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[0] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
-
+  free_ski(&output);
+  output = get_default_ski();
+  
   // "-----POLICY OR-----\n", indices 42-61
   ski_bytes[53] = 'N';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[53] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----STORAGE KEY PUBLIC-----\n", indices 115-143
   ski_bytes[138] = '*';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[138] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----STORAGE KEY ENC PRIVATE-----\n", indices 575-608
   ski_bytes[580] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[580] = 'S';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----CIPHER_SUITE-----\n", indices 1649-1671
   ski_bytes[1660] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[1660] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----SYM_KEY_PUBLIC-----\n", indices 1694-1718
   ski_bytes[1701] = 'N';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[1701] = 'M';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----SYM KEY ENC PRIVATE-----\n", indices 1829-1858
   ski_bytes[1857] = '!';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[1857] = '-';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----ENC_DATA-----\n", indices 2079-2097
   ski_bytes[2087] = '#';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[2087] = ' ';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
+  output = get_default_ski();
 
   // "-----FILE END-----\n", indices 2155-2173
   ski_bytes[2165] = 'A';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 1);
   ski_bytes[2165] = 'E';
   CU_ASSERT(parse_ski_bytes(ski_bytes, ski_bytes_len, &output) == 0);
+  free_ski(&output);
 
   free(ski_bytes);
 }
@@ -1750,22 +1773,19 @@ void test_parse_ski_bytes(void)
 //----------------------------------------------------------------------------
 void test_create_ski_bytes(void)
 {
-  size_t ski_bytes_len = strlen(CONST_SKI_BYTES);
-  uint8_t * ski_bytes = malloc(ski_bytes_len * sizeof(uint8_t));
-
-  strncpy((char *) ski_bytes, CONST_SKI_BYTES, ski_bytes_len);
-
-  Ski ski = get_default_ski();
 
   // Get valid ski struct
-  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES, ski_bytes_len, &ski);
+  Ski ski = get_default_ski();
+  parse_ski_bytes((uint8_t *) CONST_SKI_BYTES,
+                  strlen(CONST_SKI_BYTES),
+                  &ski);
 
   // Valid ski struct test
   uint8_t *sb = NULL;
   size_t sb_len = 0;
 
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 0);
-  CU_ASSERT(sb_len == ski_bytes_len);
+  CU_ASSERT(sb_len == strlen(CONST_SKI_BYTES));
   CU_ASSERT(memcmp(sb, CONST_SKI_BYTES, sb_len) == 0);
   free(sb);
   sb = NULL;
@@ -1831,6 +1851,7 @@ void test_create_ski_bytes(void)
   uint8_t *data = malloc(ski.enc_data_size);
 
   memcpy(data, ski.enc_data, ski.enc_data_size);
+  free(ski.enc_data);
   ski.enc_data = NULL;
   CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
@@ -1840,14 +1861,15 @@ void test_create_ski_bytes(void)
   free(sb);
   sb = NULL;
   sb_len = 0;
+
   free_ski(&ski);
+  ski = get_default_ski();
 
   // Valid ski that has empty/NULL cannot be used
-  CU_ASSERT(create_ski_bytes(get_default_ski(), &sb, &sb_len) == 1);
+  CU_ASSERT(create_ski_bytes(ski, &sb, &sb_len) == 1);
   CU_ASSERT(sb == NULL);
   CU_ASSERT(sb_len == 0);
-
-  free(ski_bytes);
+  free_ski(&ski);
 }
 
 //----------------------------------------------------------------------------
@@ -1899,8 +1921,8 @@ void test_verifyPackUnpackDigestList(void)
 {
   int i = 0;
 
-  TPML_DIGEST digest_list_in = {.count = 2, };
-  TPML_DIGEST digest_list_out = {.count = 0, };
+  TPML_DIGEST digest_list_in = { .count = 2, };
+  TPML_DIGEST digest_list_out = { 0 };
 
   // test value digest1 = 0x555555...555555
   TPM2B_DIGEST digest1;
@@ -1916,7 +1938,7 @@ void test_verifyPackUnpackDigestList(void)
   digest2.size = 32;
   for (i = 0; i < digest2.size; i++)
   {
-    digest1.buffer[i] = 0xaa;
+    digest2.buffer[i] = 0xaa;
   }
   digest_list_in.digests[1] = digest2;
   
@@ -1939,12 +1961,12 @@ void test_verifyPackUnpackDigestList(void)
   CU_ASSERT(digest_list_out.count != 0);
   CU_ASSERT(digest_list_out.count == digest_list_in.count);
   CU_ASSERT(digest_list_out.digests[0].size == digest_list_in.digests[0].size);
+  CU_ASSERT(digest_list_out.digests[1].size == digest_list_in.digests[1].size);
   for (i = 0; i < digest_list_out.digests[0].size; i++)
   {
     CU_ASSERT(digest_list_out.digests[0].buffer[i] ==
                                          digest_list_in.digests[0].buffer[i]);
   }
-  CU_ASSERT(digest_list_out.digests[1].size == digest_list_in.digests[1].size);
   for (i = 0; i < digest_list_out.digests[1].size; i++)
   {
     CU_ASSERT(digest_list_out.digests[1].buffer[i] ==

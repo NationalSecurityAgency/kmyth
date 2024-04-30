@@ -15,7 +15,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <valgrind/memcheck.h>
+
 #include <tss2/tss2_sys.h>
+#include <tss2/tss2_tctildr.h>
 
 /**
  * @brief Array of manufacturer strings known to identify software TPM simulators.
