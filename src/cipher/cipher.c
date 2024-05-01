@@ -149,10 +149,6 @@ int kmyth_encrypt_data(unsigned char *data,
   {
     return 1;
   }
-  if (*enc_data == NULL)
-  {
-    return 1;
-  }
   if (*enc_key == NULL)
   {
     return 1;
@@ -204,9 +200,10 @@ int kmyth_decrypt_data(unsigned char *enc_data,
   {
     return 1;
   }
-  if (*result == NULL)
+  if (*result != NULL)
   {
-    return 1;
+    free(*result);
+    *result = NULL;
   }
 
   *result_size = 0;

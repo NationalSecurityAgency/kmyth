@@ -211,7 +211,7 @@ void test_kmyth_encrypt_data(void)
   free(enc_data_c);
   free(enc_key_c);
 
-  // A null encrypted data pointer should return an error value of 1.
+  // A null encrypted data pointer should succeed (allocated by call)
   size_t data_size_d = 32;
   unsigned char *data_d = (unsigned char *) calloc(data_size_d,
                                                    sizeof(unsigned char));
@@ -229,7 +229,10 @@ void test_kmyth_encrypt_data(void)
 
   CU_ASSERT(kmyth_encrypt_data(data_d, data_size_d, cipher_spec_d,
                                &enc_data_d, &enc_data_size_d, &enc_key_d,
-                               &enc_key_size_d) == 1);
+                               &enc_key_size_d) == 0);
+
+  CU_ASSERT(enc_data_d != NULL);
+  CU_ASSERT(enc_data_size_d > 0);
   free(data_d);
   free(enc_key_d);
 
@@ -246,7 +249,7 @@ void test_kmyth_encrypt_data(void)
   size_t enc_data_size_e = 8;
   unsigned char *enc_data_e = (unsigned char *) calloc(enc_data_size_e,
                                                        sizeof(unsigned char));
-  size_t enc_key_size_e = 0;
+  size_t enc_key_size_e = 32;
   unsigned char *enc_key_e = NULL;
 
   CU_ASSERT(kmyth_encrypt_data(data_e, data_size_e, cipher_spec_e,
@@ -280,7 +283,9 @@ void test_kmyth_encrypt_data(void)
   free(enc_data_f);
   free(enc_key_f);
 
-  // A set of valid parameters should return a success value of 0.
+  // A set of valid parameters should return a success value of 0,
+  // including an allocated encrypted data buffer (even if too small)
+  // should succeed (encrypted data buffer reallocated by call)..
   size_t data_size_g = 32;
   unsigned char *data_g = (unsigned char *) calloc(data_size_g,
                                                    sizeof(unsigned char));
@@ -290,7 +295,7 @@ void test_kmyth_encrypt_data(void)
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  size_t enc_data_size_g = 32;
+  size_t enc_data_size_g = 1;
   unsigned char *enc_data_g = (unsigned char *) calloc(enc_data_size_g,
                                                        sizeof(unsigned char));
   size_t enc_key_size_g = 32;
@@ -300,6 +305,7 @@ void test_kmyth_encrypt_data(void)
   CU_ASSERT(kmyth_encrypt_data(data_g, data_size_g, cipher_spec_g,
                                &enc_data_g, &enc_data_size_g, &enc_key_g,
                                &enc_key_size_g) == 0);
+  CU_ASSERT(enc_data_size_g > 1);
   free(data_g);
   free(enc_data_g);
   free(enc_key_g);

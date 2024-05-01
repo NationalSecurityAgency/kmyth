@@ -41,12 +41,9 @@ int aes_gcm_encrypt(unsigned char *key, size_t key_len,
   //   - resultant ciphertext (same length as the input plaintext)
   //   - GCM_TAG_LEN (16) byte tag
   *outData_len = GCM_IV_LEN + inData_len + GCM_TAG_LEN;
-  if (*outData != NULL) free( *outData );
+  if (*outData == NULL) free(*outData);
   *outData = malloc(*outData_len);
-  if (*outData == NULL) // failed malloc
-  {
-    return 1;
-  }
+  if (*outData == NULL) return 1;
   unsigned char *iv = *outData;
   unsigned char *ciphertext = iv + GCM_IV_LEN;
   unsigned char *tag = ciphertext + inData_len;
