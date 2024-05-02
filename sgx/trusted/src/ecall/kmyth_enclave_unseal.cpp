@@ -105,13 +105,12 @@ bool kmyth_unseal_into_enclave(uint8_t * data,
     return false;
   }
 
-  if (data_size == 0 || data_size == UINT32_MAX || data == NULL)
+  if ((data == NULL) || (data_size == 0))
   {
     return false;
   }
 
-  uint32_t plaintext_data_size =
-    sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
+  uint32_t plaintext_data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
 
   // UINT32_MAX is the error return value of sgx_get_encrypt_txt_len.
   if (plaintext_data_size == UINT32_MAX)
@@ -120,13 +119,17 @@ bool kmyth_unseal_into_enclave(uint8_t * data,
   }
 
   uint8_t *plaintext_data = (uint8_t *) malloc(plaintext_data_size);
-
   if (plaintext_data == NULL)
   {
     return false;
   }
 
+  // UINT32_MAX is the error return value of sgx_get_add_mac_txt_len.
   uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
+  if (mac_len == UINT32_MAX)
+  {
+    return false;
+  }
 
   if (sgx_unseal_data((sgx_sealed_data_t *) data,
                       NULL,
