@@ -86,8 +86,6 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
     return 1;
   }
 
-  kmyth_log(LOG_ERR, "before base64 decode");
-
   uint8_t *data = NULL;
   size_t data_size = 0;
   bool ret;
