@@ -129,7 +129,8 @@ bool kmyth_unseal_into_enclave(uint8_t * data,
   uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
 
   if (sgx_unseal_data((sgx_sealed_data_t *) data,
-                      NULL, &mac_len,
+                      NULL,
+                      &mac_len,
                       plaintext_data,
                       &plaintext_data_size) != SGX_SUCCESS)
   {
