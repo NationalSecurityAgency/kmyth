@@ -15,8 +15,7 @@ enclave {
      *
      * @return 0 in success, SGX_ERROR_INVALID_PARAMETER on error
      */
-    public int enc_get_unsealed_size([in, size=sealed_size]
-                                       uint8_t* sealed_data,
+    public int enc_get_unsealed_size([in, size=sealed_size] uint8_t* sealed_data,
                                      uint32_t sealed_size,
                                      [out, count=1] uint32_t* unsealed_size);
 
@@ -64,8 +63,7 @@ enclave {
      */
     public size_t kmyth_sgx_test_export_from_enclave(uint64_t handle,
                                                      uint32_t data_size,
-                                                     [out,size=data_size]
-                                                       uint8_t* data);
+                                                     [out,size=data_size] uint8_t* data);
     
     /**
      * @brief Gives the current number of entries in the unsealed_data_table.
