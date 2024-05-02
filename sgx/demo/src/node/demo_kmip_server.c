@@ -243,6 +243,11 @@ static int demo_kmip_server_receive_get_key_request(DemoServer *demo_server,
                                                     unsigned char **req_bytes,
                                                     size_t *req_len)
 {
+  if (demo_server == NULL)
+  {
+    kmyth_log(LOG_ERR, "invalid (NULL pointer) DemoServer struct parameter");
+    return EXIT_FAILURE;
+  }
   kmyth_log(LOG_DEBUG, "waiting to accept TLS connection with client");
   if (demo_tls_server_accept(&(demo_server->tlsconn)) != 0)
   {
@@ -271,8 +276,18 @@ static int demo_kmip_server_receive_get_key_request(DemoServer *demo_server,
   }
 
   // allocate buffer to hold received KMIP 'get key' request bytes
+  if ((req_bytes == NULL) || (req_len == NULL))
+  {
+    kmyth_log(LOG_ERR, "invalid (NULL) request byte buffer parameter");
+    return EXIT_FAILURE;
+  }
   *req_len = (size_t) bytes_read;
   *req_bytes = (unsigned char *) malloc(*req_len);
+  if (*req_bytes == NULL)
+  {
+    kmyth_log(LOG_ERR, "error allocating buffer to hold request bytes");
+    return EXIT_FAILURE;
+  }
 
   // copy received KMIP request from temporary buffer to newly allocated one
   memcpy(*req_bytes, buf, (size_t) bytes_read);
