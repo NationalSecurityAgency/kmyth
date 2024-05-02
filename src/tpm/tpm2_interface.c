@@ -1070,11 +1070,9 @@ int compute_authHMAC(SESSION auth_session,
   // OpenSSL uses the stack as a source of entopy,this may be expected
   // behavior (i.e., to valgrind they appear unitialized, but are really
   // not). For now, I have been unable to "address" these warnings within
-  // the kmyth code.
-  //
-  // If using valgrind, you can uncomment the following line to manually
-  // mark this buffer as "defined" and eliminate these warnings.
-  //VALGRIND_MAKE_MEM_DEFINED(out_buf, hmac_final_size);
+  // the kmyth code. The following line manually marks this buffer as
+  // "defined" for valgrind and eliminates these warnings.
+  VALGRIND_MAKE_MEM_DEFINED(out_buf, hmac_final_size);
 
   memcpy(auth_HMAC->buffer, out_buf, hmac_final_size);
   auth_HMAC->size = (uint16_t) hmac_final_size;
