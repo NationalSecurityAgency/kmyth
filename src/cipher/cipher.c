@@ -149,15 +149,15 @@ int kmyth_encrypt_data(unsigned char *data,
   {
     return 1;
   }
-  if (*enc_key == NULL)
+  if ((enc_key == NULL) || (*enc_key == NULL))
   {
     return 1;
   }
-  if (*enc_key_size == 0)
+  if ((enc_key_size == NULL) || (*enc_key_size == 0))
   {
     return 1;
   }
-  if(*enc_key_size * sizeof(unsigned char) > INT_MAX)
+  if (*enc_key_size * sizeof(unsigned char) > INT_MAX)
   {
     return 1;
   }
