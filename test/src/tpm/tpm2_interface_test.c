@@ -196,7 +196,6 @@ void test_init_tcti_abrmd(void)
   CU_ASSERT(init_tcti_abrmd(&tcti_ctx) != 0);
 
   Tss2_TctiLdr_Finalize(&tcti_ctx);
-  free(tcti_ctx);
 }
 
 //----------------------------------------------------------------------------

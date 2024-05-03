@@ -60,8 +60,6 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     //   - sapi_ctx is freed by init_sapi()
     //   - tcti_ctx must still be cleaned up
     Tss2_TctiLdr_Finalize(&tcti_ctx);
-    if (tcti_ctx != NULL) free(tcti_ctx);
-    tcti_ctx = NULL;
     kmyth_log(LOG_ERR, "unable to initialize SAPI context");
     return 1;
   }
@@ -77,8 +75,6 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
     free(*sapi_ctx);
     *sapi_ctx = NULL;
     Tss2_TctiLdr_Finalize(&tcti_ctx);
-    if (tcti_ctx != NULL) free(tcti_ctx);
-    tcti_ctx = NULL;
     kmyth_log(LOG_ERR, "cannot determine TPM impl type (HW/emul)");
     return 1;
   }
@@ -92,8 +88,6 @@ int init_tpm2_connection(TSS2_SYS_CONTEXT ** sapi_ctx)
         Tss2_Sys_Finalize(*sapi_ctx);
         free(*sapi_ctx);
         Tss2_TctiLdr_Finalize(&tcti_ctx);
-        if(tcti_ctx != NULL) free(tcti_ctx);
-        tcti_ctx = NULL;
         kmyth_log(LOG_ERR, "unable to start TPM 2.0");
         return 1;
       }
@@ -123,8 +117,9 @@ int init_tcti_abrmd(TSS2_TCTI_CONTEXT ** tcti_ctx)
     return 1;
   }
 
-  // We are using the default TCTI bus. Initial Tss2_TctiLdr_Initialize() call
   TSS2_RC rc;
+
+  // We are using the default TCTI bus ('name:conf' string parameter is NULL)
   rc = Tss2_TctiLdr_Initialize(NULL, tcti_ctx);
   if (rc != TSS2_RC_SUCCESS)
   {
@@ -265,25 +260,22 @@ int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
     retval = 1;
   }
 
-  // If TCTI context is NULL, no need to "finalize"
-  if (tcti_ctx == NULL)
-  {
-    free(*sapi_ctx);
-    free(tcti_ctx);
-    kmyth_log(LOG_ERR, "NULL TCTI context - can't finalize");
-    retval = 1;
-  }
-
-  // Clean up higher-level SAPI context, first
+  // Clean up higher-level SAPI context first -
+  //   Tss2_Sys_Finalize() will not free caller's pre-allocated memory.
   Tss2_Sys_Finalize(*sapi_ctx);
   free(*sapi_ctx);
   *sapi_ctx = NULL;
   kmyth_log(LOG_DEBUG, "cleaned up SAPI context");
 
-  // Clean up TCTI context
+  // Clean up TCTI context -
+  //   Tss2_TctiLdr_Finalize() function destroys an instance of a
+  //   TCTI context instantiated by the Tss2_TctLdr_Initialize()
+  //   function. It also frees any resources associated with loading
+  //   the required TCTI library. The input parameter is a double pointer
+  //   to a TCTI context. When successfully finalized, the provided
+  //   reference will be set to NULL by the function. Passing a potentially
+  //   NULL pointer parameter as input seems safe (param is checked).
   Tss2_TctiLdr_Finalize(&tcti_ctx);
-  if (tcti_ctx != NULL) free(tcti_ctx);
-  tcti_ctx = NULL;
   kmyth_log(LOG_DEBUG, "cleaned up TCTI context");
 
   return retval;
