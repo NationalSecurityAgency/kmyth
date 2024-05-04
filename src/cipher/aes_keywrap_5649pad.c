@@ -62,7 +62,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     return 1;
   }
@@ -72,23 +72,32 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   switch (key_len)
   {
   case 16:
-    init_result =
-      EVP_EncryptInit_ex(ctx, EVP_aes_128_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_EncryptInit_ex(ctx,
+                                     EVP_aes_128_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   case 24:
-    init_result =
-      EVP_EncryptInit_ex(ctx, EVP_aes_192_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_EncryptInit_ex(ctx,
+                                     EVP_aes_192_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   case 32:
-    init_result =
-      EVP_EncryptInit_ex(ctx, EVP_aes_256_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_EncryptInit_ex(ctx,
+                                     EVP_aes_256_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   default:
     break;
   }
   if (!init_result)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -97,7 +106,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // set the encryption key in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -114,7 +123,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // encrypt (wrap) the input PT, put result in the output CT buffer
   if (!EVP_EncryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -124,7 +133,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // OpenSSL requires a "finalize" operation
   if (!EVP_EncryptFinal_ex(ctx, (*outData) + ciphertext_len, &tmp_len))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -135,7 +144,7 @@ int aes_keywrap_5649pad_encrypt(unsigned char *key,
   // plus 4-byte IV plus 4-byte counter + any necessary padding)
   if (ciphertext_len != *outData_len)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -204,7 +213,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     return 1;
   }
@@ -215,16 +224,25 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   switch (key_len)
   {
   case 16:
-    init_result =
-      EVP_DecryptInit_ex(ctx, EVP_aes_128_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_DecryptInit_ex(ctx,
+                                     EVP_aes_128_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   case 24:
-    init_result =
-      EVP_DecryptInit_ex(ctx, EVP_aes_192_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_DecryptInit_ex(ctx,
+                                     EVP_aes_192_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   case 32:
-    init_result =
-      EVP_DecryptInit_ex(ctx, EVP_aes_256_wrap_pad(), NULL, NULL, NULL);
+    init_result = EVP_DecryptInit_ex(ctx,
+                                     EVP_aes_256_wrap_pad(),
+                                     NULL,
+                                     NULL,
+                                     NULL);
     break;
   default:
     break;
@@ -232,7 +250,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!init_result)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -240,7 +258,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -250,7 +268,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
 
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len) || tmp_len < 0)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -259,7 +277,7 @@ int aes_keywrap_5649pad_decrypt(unsigned char *key,
   *outData_len = (size_t)tmp_len;
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len) || tmp_len < 0)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;

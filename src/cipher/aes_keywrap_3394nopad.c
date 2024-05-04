@@ -47,7 +47,10 @@ int aes_keywrap_3394nopad_encrypt(unsigned char *key,
   if (*outData == NULL)
   {
     *outData = malloc(*outData_len);
-    if (*outData == NULL) return 1;
+  }
+  if (*outData == NULL)
+  {
+    return 1;
   }
   // initialize the cipher context to match cipher suite being used
   //   - OpenSSL requires the WRAP_ALLOW flag be explicitly set to use key
@@ -181,7 +184,10 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   if (*outData == NULL)
   {
     *outData = malloc(inData_len);
-    if (*outData == NULL) return 1;
+  }
+  if (*outData == NULL)
+  {
+    return 1;
   }
 
   // initialize the cipher context to match cipher suite being used
@@ -191,7 +197,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     return 1;
   }
@@ -214,7 +220,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -223,7 +229,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // set the decryption key in the cipher context
   if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, NULL))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -238,7 +244,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // check value validated and removed) in the output plaintext buffer
   if (!EVP_DecryptUpdate(ctx, *outData, &tmp_len, inData, (int)inData_len) || tmp_len < 0)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -248,7 +254,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // "finalize" decryption
   if (!EVP_DecryptFinal_ex(ctx, *outData + *outData_len, &tmp_len) || tmp_len < 0)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -259,7 +265,7 @@ int aes_keywrap_3394nopad_decrypt(unsigned char *key,
   // the length of the 8-byte integrity check value
   if (*outData_len != inData_len - 8)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;

@@ -151,7 +151,7 @@ bool insert_into_unseal_table(uint8_t * data,
 {
   if (!kmyth_unsealed_data_table_initialized)
   {
-    if( data != NULL) free(data);
+    free(data);
     return false;
   }
 
@@ -159,7 +159,7 @@ bool insert_into_unseal_table(uint8_t * data,
   // SGX-sealed blob.
   if (data_size == 0 || data_size == UINT32_MAX || data == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     return false;
   }
 
@@ -167,13 +167,13 @@ bool insert_into_unseal_table(uint8_t * data,
 
   if (new_slot == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     return false;
   }
 
   if (!derive_handle(data_size, data, &new_slot->handle))
   {
-    if (data != NULL) free(data);
+    free(data);
     free(new_slot);
     return false;
   }
@@ -182,7 +182,7 @@ bool insert_into_unseal_table(uint8_t * data,
   new_slot->data = data;
   if (new_slot->data == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     free(new_slot);
     return false;
   }

@@ -31,7 +31,10 @@ int kmyth_sgx_seal_nkl(sgx_enclave_id_t eid,
   if (ret == 0)
   {
     data = (uint8_t *) malloc(data_size);
-    if (data == NULL) return 1;
+    if (data == NULL)
+    {
+      return 1;
+    }
 
     enc_seal_data(eid,
                   &ret,

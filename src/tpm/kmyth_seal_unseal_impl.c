@@ -647,10 +647,7 @@ int tpm2_kmyth_seal_file(char * input_path,
     if (read_bytes_from_file(input_path, &data, &data_len))
     {
       kmyth_log(LOG_ERR, "seal input data file read error");
-      if (data != NULL)
-      {
-        free(data);
-      }
+      free(data);
       return 1;
     }
     kmyth_log(LOG_DEBUG, "read in %d bytes of data to be wrapped", data_len);
@@ -659,7 +656,7 @@ int tpm2_kmyth_seal_file(char * input_path,
     if (data_len == 0 || data == NULL)
     {
       kmyth_log(LOG_ERR, "no input data");
-      if (data != NULL) free(data);
+      free(data);
       return 1;
     }
   }
@@ -676,16 +673,11 @@ int tpm2_kmyth_seal_file(char * input_path,
                       bool_trial_only))
   {
     kmyth_log(LOG_ERR, "Failed to kmyth-seal data");
-    if (data != NULL)
-    {
-      free(data);
-    }
+    free(data);
     return (1);
   }
-  if (data != NULL)
-  {
-    free(data);
-  }
+  free(data);
+  
   return 0;
 }
 
@@ -725,7 +717,8 @@ int tpm2_kmyth_unseal_file(char *input_path,
     return (1);
   }
 
-  if (data != NULL) free(data);
+  free(data);
+
   return 0;
 }
 

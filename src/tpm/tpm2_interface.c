@@ -269,7 +269,7 @@ int free_tpm2_resources(TSS2_SYS_CONTEXT ** sapi_ctx)
 
   // Clean up TCTI context -
   //   Tss2_TctiLdr_Finalize() function destroys an instance of a
-  //   TCTI context instantiated by the Tss2_TctLdr_Initialize()
+  //   TCTI context instantiated by the Tss2_TctiLdr_Initialize()
   //   function. It also frees any resources associated with loading
   //   the required TCTI library. The input parameter is a double pointer
   //   to a TCTI context. When successfully finalized, the provided
