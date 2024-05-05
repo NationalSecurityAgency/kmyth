@@ -235,6 +235,7 @@ void test_kmyth_encrypt_data(void)
   CU_ASSERT(enc_data_size_d > 0);
   free(data_d);
   free(enc_key_d);
+  free(enc_data_d);
 
   // A null encryption key pointer should return an error value of 1.
   size_t data_size_e = 32;
