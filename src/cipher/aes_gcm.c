@@ -14,10 +14,9 @@
 //############################################################################
 // aes_gcm_encrypt()
 //############################################################################
-int aes_gcm_encrypt(unsigned char *key,
-                    size_t key_len,
+int aes_gcm_encrypt(unsigned char *key, size_t key_len,
                     unsigned char *inData, size_t inData_len,
-                    unsigned char **outData, size_t * outData_len)
+                    unsigned char **outData, size_t *outData_len)
 {
 
   // validate non-NULL and non-empty encryption key specified
@@ -41,10 +40,11 @@ int aes_gcm_encrypt(unsigned char *key,
   //   - GCM_IV_LEN (12) byte IV
   //   - resultant ciphertext (same length as the input plaintext)
   //   - GCM_TAG_LEN (16) byte tag
+  free(*outData);
+  *outData = NULL;
   *outData_len = GCM_IV_LEN + inData_len + GCM_TAG_LEN;
-  if (*outData == NULL) free( *outData );
   *outData = malloc(*outData_len);
-  if (*outData == NULL) // failed malloc
+  if (*outData == NULL)
   {
     return 1;
   }
@@ -60,7 +60,7 @@ int aes_gcm_encrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     return 1;
   }
@@ -82,7 +82,7 @@ int aes_gcm_encrypt(unsigned char *key,
   }
   if (!init_result)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -91,7 +91,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // create the IV
   if (RAND_bytes(iv, GCM_IV_LEN) != 1)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -100,7 +100,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // set the IV length in the cipher context
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, GCM_IV_LEN, NULL))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -109,7 +109,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // set the key and IV in the cipher context
   if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -118,7 +118,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // encrypt the input plaintext, put result in the output ciphertext buffer
   if (!EVP_EncryptUpdate(ctx, ciphertext, &ciphertext_len, inData, (int)inData_len))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -127,7 +127,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // verify that the resultant CT length matches the input PT length
   if ((size_t) ciphertext_len != inData_len)
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -136,7 +136,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // OpenSSL requires a "finalize" operation. For AES/GCM no data is written.
   if (!EVP_EncryptFinal_ex(ctx, tag, &ciphertext_len))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -145,7 +145,7 @@ int aes_gcm_encrypt(unsigned char *key,
   // get the AES/GCM tag value, appending it to the output ciphertext
   if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_LEN, tag))
   {
-    if (*outData != NULL) free(*outData);
+    free(*outData);
     *outData = NULL;
     EVP_CIPHER_CTX_free(ctx);
     return 1;
@@ -186,8 +186,9 @@ int aes_gcm_decrypt(unsigned char *key,
   }
   
   // Setting here to save some cleanup on error conditions.
-  *outData_len = 0;
+  free(*outData);
   *outData = NULL;
+  *outData_len = 0;
   
   size_t expected_out_len = inData_len - (GCM_IV_LEN + GCM_TAG_LEN);
   // output data buffer (outData) will contain only the plaintext, which
@@ -211,7 +212,6 @@ int aes_gcm_decrypt(unsigned char *key,
 
   if (!(ctx = EVP_CIPHER_CTX_new()))
   {
-    free(*outData);
     return 1;
   }
   int init_result = 0;

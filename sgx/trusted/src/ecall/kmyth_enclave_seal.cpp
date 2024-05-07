@@ -7,7 +7,7 @@
 #include "sgx_utils.h"
 #include "sgx_attributes.h"
 
-#include ENCLAVE_HEADER_TRUSTED
+#include "kmyth_enclave_trusted.h"
 
 // EDL checks that `size` is outside the enclave (speculative-safe)
 int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
@@ -29,8 +29,11 @@ int enc_get_sealed_size(uint32_t in_size, uint32_t * size)
 
 // EDL checks that `in_data` is outside the enclave (speculative-safe)
 // `out_data` is user_check
-int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
-                  uint32_t out_size, uint16_t key_policy,
+int enc_seal_data(const uint8_t * in_data,
+                  uint32_t in_size,
+                  uint8_t * out_data,
+                  uint32_t out_size,
+                  uint16_t key_policy,
                   sgx_attributes_t attribute_mask)
 {
   if (in_data == NULL || out_data == NULL)
@@ -72,9 +75,9 @@ int enc_seal_data(const uint8_t * in_data, uint32_t in_size, uint8_t * out_data,
 
   if (report->body.attributes.flags & SGX_FLAGS_KSS)
   {
-    key_policy |=
-      (SGX_KEYPOLICY_CONFIGID | SGX_KEYPOLICY_ISVFAMILYID |
-       SGX_KEYPOLICY_ISVEXTPRODID);
+    key_policy |= (SGX_KEYPOLICY_CONFIGID |
+                   SGX_KEYPOLICY_ISVFAMILYID |
+                   SGX_KEYPOLICY_ISVEXTPRODID);
   }
 
   // This 0 value is currently unused by SGX.

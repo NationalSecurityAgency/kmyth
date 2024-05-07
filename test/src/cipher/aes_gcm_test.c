@@ -456,7 +456,7 @@ void test_aes_gcm_decrypt_vectors(void)
           // clean-up output_data byte array
           if (rc == 0)
           {
-            if (output_data != NULL) free(output_data);
+            free(output_data);
             output_data = NULL;
           }
         }
@@ -690,46 +690,69 @@ void test_gcm_parameter_limits(void)
 {
 
   unsigned char *key = NULL;
-  unsigned char *inData = NULL;
-  unsigned char *outData = NULL;
-
-  // check that null keys produce an error
   size_t key_len = 16;
-  size_t inData_len = 16;
+  key = (unsigned char *) calloc(key_len, sizeof(unsigned char));
+  CU_ASSERT(key != NULL);
+
+  unsigned char *inData = NULL;
+  size_t inData_len = GCM_IV_LEN + GCM_TAG_LEN;
+  inData = (unsigned char *) calloc(inData_len, sizeof(unsigned char));
+  CU_ASSERT(inData != NULL);
+
+  unsigned char *outData = NULL;
   size_t outData_len = 0;
 
-  inData = malloc(inData_len);
+  // check that null keys produce an error
   CU_ASSERT(inData != NULL);
-  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key_len > 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_encrypt(NULL, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData != NULL);
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key_len > 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_decrypt(NULL, key_len, inData, inData_len,
                             &outData, &outData_len) == 1);
 
   // check that zero length keys produce an error
-  key = malloc(key_len);
-  key_len = 0;
+  CU_ASSERT(inData != NULL);
+  CU_ASSERT(inData_len > 0);
   CU_ASSERT(key != NULL);
-  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_encrypt(key, 0, inData, inData_len,
                             &outData, &outData_len) == 1);
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData != NULL);
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_decrypt(key, 0, inData, inData_len,
                             &outData, &outData_len) == 1);
 
   // check that null input data produces an error
-  free(inData);
-  key_len = 16;
-  inData = NULL;
-  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(key_len > 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_encrypt(key, key_len, NULL, inData_len,
                             &outData, &outData_len) == 1);
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(key_len > 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_decrypt(key, key_len, NULL, inData_len,
                             &outData, &outData_len) == 1);
 
   // check that an empty (zero length) PT data input to encrypt succeeds
   // output data should be concatenation of IV and tag
-  inData = malloc(GCM_IV_LEN + GCM_TAG_LEN);
-  inData_len = 0;
   CU_ASSERT(inData != NULL);
-  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(key_len != 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, 0,
                             &outData, &outData_len) == 0);
+  CU_ASSERT(outData != NULL);
   CU_ASSERT(outData_len == (GCM_IV_LEN + GCM_TAG_LEN));
 
   // check decryption of empty (zero length) CT result succeeds and
@@ -740,21 +763,25 @@ void test_gcm_parameter_limits(void)
   outData = NULL;
   CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
                             &outData, &outData_len) == 0);
+  CU_ASSERT(outData != NULL);
   CU_ASSERT(outData_len == 0);
   free(outData);
   outData = NULL;
 
   // check that a completely empty (but non-NULL) data input to decrypt errors
-  inData_len = 0;
   CU_ASSERT(inData != NULL);
-  CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(key_len > 0);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_decrypt(key, key_len, inData, 0,
                             &outData, &outData_len) == 1);
 
   // check that a key of a non-zero but unacceptable length errors
-  inData_len += 1;
-  key_len = 12;
   CU_ASSERT(inData != NULL);
-  CU_ASSERT(aes_gcm_encrypt(key, key_len, inData, inData_len,
+  CU_ASSERT(inData_len > 0);
+  CU_ASSERT(key != NULL);
+  CU_ASSERT(outData == NULL);
+  CU_ASSERT(aes_gcm_encrypt(key, 12, inData, inData_len,
                             &outData, &outData_len) == 1);
   free(inData);
   free(outData);

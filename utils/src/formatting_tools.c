@@ -24,9 +24,12 @@
 //############################################################################
 int get_block_bytes(char **contents,
                     size_t * remaining,
-                    uint8_t ** block, size_t * blocksize,
-                    char *delim, size_t delim_len,
-                    char *next_delim, size_t next_delim_len)
+                    uint8_t ** block,
+                    size_t * blocksize,
+                    const char *delim,
+                    size_t delim_len,
+                    const char *next_delim,
+                    size_t next_delim_len)
 {
   // check that next (current) block begins with expected delimiter
   if (strncmp(*contents, delim, delim_len))
@@ -64,9 +67,11 @@ int get_block_bytes(char **contents,
 
   else
   {
-    if (*block != NULL) free(*block); // since looping, should free previous block allocation
-                                      // (inefficient, yes, but easy-to-code, otherwise must
-                                      //  calculate size and re-allocate)
+    // since looping, should free previous block allocation
+    //   (inefficient, yes, but easy-to-code, otherwise must
+    //   calculate size and re-allocate)
+    free(*block);
+    *block = NULL;
 
     // allocate enough memory for output parameter to hold parsed block data
     //   - must be allocated here because size is calculated here
@@ -95,8 +100,10 @@ int get_block_bytes(char **contents,
 //############################################################################
 // create_nkl_bytes()
 //############################################################################
-int create_nkl_bytes(uint8_t * input, size_t input_length,
-                     uint8_t ** output, size_t * output_length)
+int create_nkl_bytes(uint8_t * input,
+                     size_t input_length,
+                     uint8_t ** output,
+                     size_t * output_length)
 {
   // validate that all data to be written is non-NULL and non-empty
   if (input == NULL || input_length == 0)
@@ -267,6 +274,7 @@ int decodeBase64Data(uint8_t * base64_data,
   if ((bio64 = BIO_new(BIO_f_base64())) == NULL)
   {
     kmyth_log(LOG_ERR, "create base64 filter BIO error");
+    free(*raw_data);
     return 1;
   }
 
@@ -276,6 +284,7 @@ int decodeBase64Data(uint8_t * base64_data,
   if ((bio_mem = BIO_new_mem_buf(base64_data, (int)base64_data_size)) == NULL)
   {
     kmyth_log(LOG_ERR, "create source BIO error");
+    free(*raw_data);
     BIO_free_all(bio64);
     return 1;
   }
@@ -289,21 +298,26 @@ int decodeBase64Data(uint8_t * base64_data,
   if (bytes_read < 0)
   {
     kmyth_log(LOG_ERR, "error reading bytes from BIO chain");
+    free(*raw_data);
     BIO_free_all(bio64);
     return 1;
   }
 
   (*raw_data)[bytes_read] = '\0';
-  *raw_data_size = (size_t)bytes_read;
+  *raw_data_size = (size_t) bytes_read;
+
   // clean-up
   BIO_free_all(bio64);
+
   return 0;
 }
 
 //############################################################################
 // concat()
 //############################################################################
-int concat(uint8_t ** dest, size_t * dest_length, uint8_t * input,
+int concat(uint8_t ** dest,
+           size_t * dest_length,
+           uint8_t * input,
            size_t input_length)
 {
   if (input == NULL || input_length == 0) //nothing to concat

@@ -73,7 +73,7 @@ static sgx_status_t initialize_enclave(const char *enclave_fn,
   return ret;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
   // setup default logging parameters
   set_app_name("enclave             ");
@@ -215,18 +215,18 @@ int main(int argc, char **argv)
   int retval = -1;
 
   const char *server_host = SERVER_HOST;
-  int server_host_len = strlen(server_host) + 1;
+  size_t server_host_len = strlen(server_host) + 1;
   const char *server_port = SERVER_PORT;
-  int server_port_len = strlen(server_port) + 1;
+  size_t server_port_len = strlen(server_port) + 1;
 
   sgx_ret = kmyth_enclave_retrieve_key_from_server(eid,
                                                    &retval,
                                                    client_ec_sign_key_bytes,
-                                                   client_ec_sign_key_bytes_len,
+                                                   (size_t) client_ec_sign_key_bytes_len,
                                                    client_ec_cert_bytes,
-                                                   client_ec_cert_bytes_len,
+                                                   (size_t) client_ec_cert_bytes_len,
                                                    server_ec_cert_bytes,
-                                                   server_ec_cert_bytes_len,
+                                                   (size_t) server_ec_cert_bytes_len,
                                                    server_host,
                                                    server_host_len,
                                                    server_port,

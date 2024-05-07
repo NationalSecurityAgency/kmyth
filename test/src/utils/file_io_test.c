@@ -180,21 +180,24 @@ void test_write_bytes_to_file(void)
 
   // Writing a new file, with permission, should produce expected file
   CU_ASSERT(write_bytes_to_file("testfile", testdata1, testdata1_len) == 0);
+
   uint8_t *filedata = NULL;
   size_t filedata_len = 0;
-
   read_bytes_from_file("testfile", &filedata, &filedata_len);
   CU_ASSERT(filedata_len == testdata1_len);
   CU_ASSERT(strncmp((char *) testdata1, (char *) filedata, filedata_len) == 0);
+  free(filedata);
+  filedata = NULL;
+  filedata_len = 0;
 
   // Writing to an existing file should correctly overwrite it
   CU_ASSERT(write_bytes_to_file("testfile", testdata2, testdata2_len) == 0);
   read_bytes_from_file("testfile", &filedata, &filedata_len);
   CU_ASSERT(filedata_len == testdata2_len);
   CU_ASSERT(strncmp((char *) testdata2, (char *) filedata, filedata_len) == 0);
+  free(filedata);
 
   // Test cleanup
-  free(filedata);
   remove("testfile");
 }
 

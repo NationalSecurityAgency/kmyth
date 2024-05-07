@@ -109,7 +109,8 @@ void test_kmyth_get_cipher_t_from_string(void)
 void test_get_key_len_from_cipher(void)
 {
   // A null cipher name should return a length of 0.
-  cipher_t cipher_a = {.cipher_name = NULL,
+  cipher_t cipher_a = {
+    .cipher_name = NULL,
     .encrypt_fn = NULL,
     .decrypt_fn = NULL
   };
@@ -117,7 +118,8 @@ void test_get_key_len_from_cipher(void)
   CU_ASSERT(get_key_len_from_cipher(cipher_a) == 0);
 
   // A cipher name without a trailer length value should return a length of 0.
-  cipher_t cipher_b = {.cipher_name = "AES/GCM/NoPadding/",
+  cipher_t cipher_b = {
+    .cipher_name = "AES/GCM/NoPadding/",
     .encrypt_fn = NULL,
     .decrypt_fn = NULL
   };
@@ -125,7 +127,8 @@ void test_get_key_len_from_cipher(void)
   CU_ASSERT(get_key_len_from_cipher(cipher_b) == 0);
 
   // A cipher name with a non-integer length should return a length of 0.
-  cipher_t cipher_c = {.cipher_name = "AES/GCM/NoPadding/invalid",
+  cipher_t cipher_c = {
+    .cipher_name = "AES/GCM/NoPadding/invalid",
     .encrypt_fn = NULL,
     .decrypt_fn = NULL
   };
@@ -133,7 +136,8 @@ void test_get_key_len_from_cipher(void)
   CU_ASSERT(get_key_len_from_cipher(cipher_c) == 0);
 
   // A cipher name with a valid length should return that length.
-  cipher_t cipher_d = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_d = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = NULL,
     .decrypt_fn = NULL
   };
@@ -150,7 +154,8 @@ void test_kmyth_encrypt_data(void)
   unsigned char *data_a = NULL;
   size_t data_size_a = 0;
 
-  cipher_t cipher_spec_a = {.cipher_name = NULL,
+  cipher_t cipher_spec_a = {
+    .cipher_name = NULL,
     .encrypt_fn = NULL,
     .decrypt_fn = NULL
   };
@@ -167,7 +172,8 @@ void test_kmyth_encrypt_data(void)
   unsigned char *data_b = NULL;
   size_t data_size_b = 0;
 
-  cipher_t cipher_spec_b = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_b = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
@@ -181,54 +187,71 @@ void test_kmyth_encrypt_data(void)
                                &enc_key_size_b) == 1);
 
   // A data size of 0 should return an error value of 1.
-  unsigned char *data_c = (unsigned char *) calloc(32, sizeof(unsigned char));
-  size_t data_size_c = 0;
+  size_t data_size_c = 32;
+  unsigned char *data_c = (unsigned char *) calloc(data_size_c,
+                                                   sizeof(unsigned char));
+  data_size_c = 0;
 
-  cipher_t cipher_spec_c = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_c = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *enc_data_c = NULL;
-  size_t enc_data_size_c = 0;
-  unsigned char *enc_key_c = NULL;
-  size_t enc_key_size_c = 0;
+  size_t enc_data_size_c = 1;
+  unsigned char *enc_data_c = (unsigned char *) calloc(enc_data_size_c,
+                                                       sizeof(unsigned char));
+  size_t enc_key_size_c = 32;
+  unsigned char *enc_key_c = (unsigned char *) calloc(enc_key_size_c,
+                                                      sizeof(unsigned char));
 
   CU_ASSERT(kmyth_encrypt_data(data_c, data_size_c, cipher_spec_c,
                                &enc_data_c, &enc_data_size_c, &enc_key_c,
                                &enc_key_size_c) == 1);
   free(data_c);
+  free(enc_data_c);
+  free(enc_key_c);
 
-  // A null encrypted data pointer should return an error value of 1.
-  unsigned char *data_d = (unsigned char *) calloc(32, sizeof(unsigned char));
+  // A null encrypted data pointer should succeed (allocated by call)
   size_t data_size_d = 32;
+  unsigned char *data_d = (unsigned char *) calloc(data_size_d,
+                                                   sizeof(unsigned char));
 
-  cipher_t cipher_spec_d = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_d = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *enc_data_d = NULL;
   size_t enc_data_size_d = 0;
-  unsigned char *enc_key_d = NULL;
-  size_t enc_key_size_d = 0;
+  unsigned char *enc_data_d = NULL;
+  size_t enc_key_size_d = 32;
+  unsigned char *enc_key_d = (unsigned char *) calloc(enc_key_size_d,
+                                                      sizeof(unsigned char));
 
   CU_ASSERT(kmyth_encrypt_data(data_d, data_size_d, cipher_spec_d,
                                &enc_data_d, &enc_data_size_d, &enc_key_d,
-                               &enc_key_size_d) == 1);
+                               &enc_key_size_d) == 0);
+
+  CU_ASSERT(enc_data_d != NULL);
+  CU_ASSERT(enc_data_size_d > 0);
   free(data_d);
+  free(enc_key_d);
+  free(enc_data_d);
 
   // A null encryption key pointer should return an error value of 1.
-  unsigned char *data_e = (unsigned char *) calloc(32, sizeof(unsigned char));
   size_t data_size_e = 32;
+  unsigned char *data_e = (unsigned char *) calloc(data_size_e,
+                                                   sizeof(unsigned char));
 
-  cipher_t cipher_spec_e = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_e = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *enc_data_e =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
-  size_t enc_data_size_e = 0;
+  size_t enc_data_size_e = 8;
+  unsigned char *enc_data_e = (unsigned char *) calloc(enc_data_size_e,
+                                                       sizeof(unsigned char));
+  size_t enc_key_size_e = 32;
   unsigned char *enc_key_e = NULL;
-  size_t enc_key_size_e = 0;
 
   CU_ASSERT(kmyth_encrypt_data(data_e, data_size_e, cipher_spec_e,
                                &enc_data_e, &enc_data_size_e, &enc_key_e,
@@ -237,19 +260,22 @@ void test_kmyth_encrypt_data(void)
   free(enc_data_e);
 
   // An encryption key size of 0 should return an error value of 1.
-  unsigned char *data_f = (unsigned char *) calloc(32, sizeof(unsigned char));
   size_t data_size_f = 32;
+  unsigned char *data_f = (unsigned char *) calloc(data_size_f,
+                                                   sizeof(unsigned char));
 
-  cipher_t cipher_spec_f = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_f = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *enc_data_f =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
-  size_t enc_data_size_f = 0;
-  unsigned char *enc_key_f =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
-  size_t enc_key_size_f = 0;
+  size_t enc_data_size_f = 32;
+  unsigned char *enc_data_f = (unsigned char *) calloc(enc_data_size_f,
+                                                       sizeof(unsigned char));
+  size_t enc_key_size_f = 32;
+  unsigned char *enc_key_f = (unsigned char *) calloc(enc_key_size_f,
+                                                      sizeof(unsigned char));
+  enc_key_size_f = 0;
 
   CU_ASSERT(kmyth_encrypt_data(data_f, data_size_f, cipher_spec_f,
                                &enc_data_f, &enc_data_size_f, &enc_key_f,
@@ -258,24 +284,29 @@ void test_kmyth_encrypt_data(void)
   free(enc_data_f);
   free(enc_key_f);
 
-  // A set of valid parameters should return a success value of 0.
-  unsigned char *data_g = (unsigned char *) calloc(32, sizeof(unsigned char));
+  // A set of valid parameters should return a success value of 0,
+  // including an allocated encrypted data buffer (even if too small)
+  // should succeed (encrypted data buffer reallocated by call)..
   size_t data_size_g = 32;
+  unsigned char *data_g = (unsigned char *) calloc(data_size_g,
+                                                   sizeof(unsigned char));
 
-  cipher_t cipher_spec_g = {.cipher_name = "AES/GCM/NoPadding/256",
+  cipher_t cipher_spec_g = {
+    .cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *enc_data_g =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
-  size_t enc_data_size_g = 32;
-  unsigned char *enc_key_g =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
+  size_t enc_data_size_g = 1;
+  unsigned char *enc_data_g = (unsigned char *) calloc(enc_data_size_g,
+                                                       sizeof(unsigned char));
   size_t enc_key_size_g = 32;
+  unsigned char *enc_key_g = (unsigned char *) calloc(enc_key_size_g,
+                                                      sizeof(unsigned char));
 
   CU_ASSERT(kmyth_encrypt_data(data_g, data_size_g, cipher_spec_g,
                                &enc_data_g, &enc_data_size_g, &enc_key_g,
                                &enc_key_size_g) == 0);
+  CU_ASSERT(enc_data_size_g > 1);
   free(data_g);
   free(enc_data_g);
   free(enc_key_g);
@@ -401,21 +432,23 @@ void test_kmyth_decrypt_data(void)
   free(key_f);
 
   // A set of valid parameters should return a success value of 0.
-  unsigned char *data_g = (unsigned char *) calloc(32, sizeof(unsigned char));
   size_t data_size_g = 32;
-  unsigned char *enc_data_g =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
+  unsigned char *data_g = (unsigned char *) calloc(data_size_g,
+                                                   sizeof(unsigned char));
   size_t enc_data_size_g = 32;
+  unsigned char *enc_data_g = (unsigned char *) calloc(enc_data_size_g,
+                                                       sizeof(unsigned char));
 
   cipher_t cipher_spec_g = {.cipher_name = "AES/GCM/NoPadding/256",
     .encrypt_fn = aes_gcm_encrypt,
     .decrypt_fn = aes_gcm_decrypt
   };
-  unsigned char *key_g = (unsigned char *) calloc(32, sizeof(unsigned char));
   size_t key_size_g = 32;
-  unsigned char *results_g =
-    (unsigned char *) calloc(32, sizeof(unsigned char));
+  unsigned char *key_g = (unsigned char *) calloc(key_size_g,
+                                                  sizeof(unsigned char));
   size_t result_size_g = 32;
+  unsigned char *results_g = (unsigned char *) calloc(result_size_g,
+                                                      sizeof(unsigned char));
 
   CU_ASSERT(kmyth_encrypt_data(data_g, data_size_g, cipher_spec_g, &enc_data_g,
                                &enc_data_size_g, &key_g, &key_size_g) == 0);
@@ -423,7 +456,11 @@ void test_kmyth_decrypt_data(void)
                                key_g, key_size_g, &results_g,
                                &result_size_g) == 0);
   free(data_g);
+  data_g = NULL;
   free(enc_data_g);
+  enc_data_g = NULL;
   free(key_g);
+  key_g = NULL;
   free(results_g);
+  results_g = NULL;
 }

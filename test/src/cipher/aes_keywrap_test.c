@@ -409,7 +409,15 @@ void test_aes_keywrap_vectors(void)
                                              &ct_data_len, &result_bool) == 0)
         {
           // Create a new buffer to hold the result for each vector applied
-          if (out == NULL) out = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+          if (out == NULL)
+          {
+            out = calloc(MAX_TEST_VECTOR_COMPONENT_LENGTH, 1);
+          }
+          if (out == NULL)
+          {
+            CU_FAIL("AES Key Wrap Test Vector result buffer allocation failed");
+            return;
+          }
           out_len = 0;
 
           // increment count of test vectors applied and test if limit reached
@@ -520,7 +528,7 @@ void test_aes_keywrap_vectors(void)
             // clean-up output_data byte array
             if (rc == 0)
             {
-              if( out != NULL ) free(out);
+              free(out);
               out = NULL;
             }
           }
@@ -555,10 +563,9 @@ void test_aes_keywrap_vectors(void)
   }
 
   // clean-up allocated test vector memory
-  //if (out != NULL) free(out);
   free(key_data);
   free(pt_data);
   free(ct_data);
 
-  if (out != NULL) free(out);
+  free(out);
 }

@@ -51,8 +51,10 @@ const char *PREFERRED_CIPHERS = "ECDHE-ECDSA-AES256-GCM-SHA384:"
  *
  * @return 0 on success, 1 on error
  */
-static int tls_ctx_connect(char *server_ip, char *server_port,
-                           SSL_CTX * ctx, BIO ** ssl_bio)
+static int tls_ctx_connect(char *server_ip,
+                           char *server_port,
+                           SSL_CTX * ctx,
+                           BIO ** ssl_bio)
 {
   if (server_ip == NULL)
   {
@@ -149,8 +151,10 @@ static int tls_ctx_connect(char *server_ip, char *server_port,
 int create_tls_connection(char **server_ip,
                           unsigned char *client_private_key,
                           size_t client_private_key_len,
-                          char *client_cert_path, char *ca_cert_path,
-                          BIO ** tls_bio, SSL_CTX ** tls_ctx)
+                          char *client_cert_path,
+                          char *ca_cert_path,
+                          BIO ** tls_bio,
+                          SSL_CTX ** tls_ctx)
 {
   if (server_ip == NULL)
   {
@@ -238,7 +242,9 @@ int tls_cleanup(void)
 //############################################################################
 int tls_set_context(unsigned char *client_private_key,
                     size_t client_private_key_len,
-                    char *client_cert_path, char *ca_cert_path, SSL_CTX ** ctx)
+                    char *client_cert_path,
+                    char *ca_cert_path,
+                    SSL_CTX ** ctx)
 {
   if (client_private_key == NULL || client_private_key_len == 0)
   {
@@ -390,8 +396,10 @@ int tls_set_context(unsigned char *client_private_key,
 // get_key_from_tls_server()
 //############################################################################
 int get_resp_from_tls_server(BIO * bio,
-                             char *req, size_t req_size,
-                             unsigned char **resp, size_t * resp_size)
+                             char *req,
+                             size_t req_size,
+                             unsigned char **resp,
+                             size_t * resp_size)
 {
   // validate input
   if (bio == NULL)
@@ -465,8 +473,10 @@ int get_resp_from_tls_server(BIO * bio,
 //############################################################################
 
 int get_key_from_kmip_server(BIO * bio,
-                             char *message, size_t message_length,
-                             unsigned char **key, size_t * key_size)
+                             char *message,
+                             size_t message_length,
+                             unsigned char **key,
+                             size_t * key_size)
 {
   // validate input
   if (bio == NULL)

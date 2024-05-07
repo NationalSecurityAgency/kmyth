@@ -38,8 +38,8 @@ enclave {
                              uint32_t in_size,
                              [user_check] uint8_t *out_data,
                              uint32_t out_size,
-    		                     uint16_t key_policy,
-    		                     sgx_attributes_t attribute_mask);
+                             uint16_t key_policy,
+                             sgx_attributes_t attribute_mask);
     
     /**
      * @brief Computes the output buffer size required to seal input data
@@ -59,17 +59,17 @@ enclave {
      * @brief SGX unseals the provided data and places it into the
      *        kmyth_unsealed_data_table.
      *
-     * @param[in] data_size The size of the ciphertext
-     *
      * @param[in] data      The ciphertext
+     *
+     * @param[in] data_size The size of the ciphertext
      *
      * @param[out] handle   A pointer to a uint64_t to hold the handle.
      *
      * @return true on success, false on failure. The return value MUST be checked.
      *
      */
-    public bool kmyth_unseal_into_enclave(size_t data_size,
-                                          [in, count=data_size] uint8_t* data,
+    public bool kmyth_unseal_into_enclave([in, count=data_size] uint8_t* data,
+                                          size_t data_size,
                                           [out] uint64_t* handle);
     
     /**
@@ -114,7 +114,10 @@ enclave {
      * @param[in]  server_host_len           Length of hostname/IP string for
      *                                       the key server
      *
-     * @param[in]  server_port               TCP port for key server 
+     * @param[in]  server_port               TCP port for key server
+     *
+     * @param[in]  server_port_len           Length of TCP port string for
+     *                                       the key server
      *
      * @param[in]  key_id                    ID string used to specify the key
      *                                       to be retrieved from the server
@@ -125,23 +128,17 @@ enclave {
      *
      * @return 0 on success, -1 on failure
      */
-    public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len]
-                                                        uint8_t * client_private_bytes,
+    public int kmyth_enclave_retrieve_key_from_server([in, count=client_private_bytes_len] uint8_t * client_private_bytes,
                                                       size_t client_private_bytes_len,
-                                                      [in, count=client_cert_bytes_len]
-                                                        uint8_t * client_cert_bytes,
+                                                      [in, count=client_cert_bytes_len] uint8_t * client_cert_bytes,
                                                       size_t client_cert_bytes_len,                                                                                                              
-                                                      [in, count=server_cert_bytes_len]
-                                                        uint8_t * server_cert_bytes,
+                                                      [in, count=server_cert_bytes_len] uint8_t * server_cert_bytes,
                                                       size_t server_cert_bytes_len,
-                                                      [in, count=server_host_len]
-                                                        const char * server_host,
+                                                      [in, count=server_host_len] const char * server_host,
                                                       size_t server_host_len,
-                                                      [in, count=server_port_len]
-                                                        const char * server_port,
+                                                      [in, count=server_port_len] const char * server_port,
                                                       size_t server_port_len,
-                                                      [in, count=key_id_len]
-                                                        unsigned char * key_id,
+                                                      [in, count=key_id_len] unsigned char * key_id,
                                                       size_t key_id_len);
 
   };
@@ -189,23 +186,25 @@ enclave {
     /**
      * @brief Creates a socket connected to the external key server.
      *
-     * @param[in]  server_host                String IP address or hostname used to
-     *                                        connect to the key server.
+     * @param[in]  server_host             IP address or hostname string used
+     *                                     to connect to the key server.
      *
-     * @param[in]  server_port                TCP port number used to
-     *                                        connect to the key server.
+     * @param[in]  server_host_len         size of "server_host" string
      *
-     * @param[out] socket_fd                  Pointer to the file descriptor
-     *                                        number for a socket connected to
-     *                                        the remote key server.
+     * @param[in]  server_port             TCP port number string used to
+     *                                     connect to the key server.
+     *
+     * @param[in]  server_port_len         size of "server_port" string
+     *
+     * @param[out] socket_fd               Pointer to the file descriptor
+     *                                     number for a socket connected to
+     *                                     the remote key server.
      *
      * @return 0 on success, 1 on failure
      */
-    int setup_socket_ocall([in, count=server_host_len]
-                             const char *server_host,
+    int setup_socket_ocall([in, count=server_host_len] const char *server_host,
                            size_t server_host_len,
-                           [in, count=server_port_len]
-                             const char *server_port,
+                           [in, count=server_port_len] const char *server_port,
                            size_t server_port_len,
                            [out] int *socket_fd);
 
@@ -236,29 +235,8 @@ enclave {
      *        With the exchange of this information, they can independently
      *        generate a common session key.
      *
-     * @param[in]  enclave_ephemeral_public           Pointer to enclave (client)
-     *                                                public ephemeral contribution
-     *                                                to be exchanged with remote
-     *                                                peer (server)
-     *
-     * @param[in]  enclave_ephemeral_public_len       Length (in bytes)
-     *                                                of enclave (client) public
-     *                                                ephemeral contribution
-     *
-     * @param[out] server_hello       Pointer to byte array containing the
-     *                                'Server Hello' message received from
-     *                                the remote peer (TLS proxy) in
-     *                                response to the 'Client Hello' sent
-     *                                by the enclave (client)
-     *
-     * @param[out] server_hello_len   Pointer to length (in bytes) of the
-     *                                'Server Hello' message received from
-     *                                the remote peer (TLS proxy for server)
-     *
-     * @param[out] remote_ephemeral_public            Pointer to remote (server)
-     *                                                public ephemeral contribution
-     *                                                to be exchanged with enclave
-     *                                                (client)
+     * @param[out] client_hello       Byte array containing the enclave's
+     *                                'Client Hello' message
      *
      * @param[in]  client_hello_len   Length (in bytes) of enclave's
      *                                'Client Hello' message
@@ -277,8 +255,7 @@ enclave {
      *                                connected to the remote peer (TLS proxy
      *                                for key server)
      */
-    int ecdh_exchange_ocall([in, count=client_hello_len]
-                               unsigned char *client_hello,
+    int ecdh_exchange_ocall([in, count=client_hello_len] unsigned char *client_hello,
                              size_t client_hello_len,
                              [out] unsigned char **server_hello,
                              [out] size_t *server_hello_len,
@@ -289,7 +266,7 @@ enclave {
      *
      * @param[in]  encrypted_msg              Pointer to the encrypted message.
      *
-     * @param[in] encrypted_response_len     Length (in bytes)
+     * @param[in] encrypted_response_len      Length (in bytes)
      *                                        of the encrypted message.
      *
      * @param[in] socket_fd                   File descriptor number for
@@ -298,10 +275,9 @@ enclave {
      *
      * @return 0 on success, 1 on failure
      */
-    int ecdh_send_msg_ocall([in, count=encrypted_msg_len]
-                             unsigned char *encrypted_msg,
-                             size_t encrypted_msg_len,
-                             int socket_fd);
+    int ecdh_send_msg_ocall([in, count=encrypted_msg_len] unsigned char *encrypted_msg,
+                            size_t encrypted_msg_len,
+                            int socket_fd);
 
     /**
      * @brief Receive a message over the ECDH network connection.

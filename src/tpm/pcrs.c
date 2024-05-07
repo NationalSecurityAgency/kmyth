@@ -102,12 +102,14 @@ int init_pcr_selection(char * pcrs_string_in,
   if (get_pcr_count(sapi_ctx, &numPCRs) || numPCRs > UINT8_MAX)
   {
     kmyth_log(LOG_ERR, "unable to retrieve PCR count");
+    free_tpm2_resources(&sapi_ctx);
     return 1;
   }
   uint32_t maskSize = (numPCRs + (8 - 1)) / 8;  // always round up
   if (maskSize > 255)
   {
     kmyth_log(LOG_ERR, "invalid PCRs mask byte count (%u)", maskSize);
+    free_tpm2_resources(&sapi_ctx);
     return 1;
   }
   uint8_t selSize = (uint8_t) maskSize;
@@ -116,6 +118,7 @@ int init_pcr_selection(char * pcrs_string_in,
   if (pcrs_struct_out->count >= MAX_POLICY_OR_CNT)
   {
     kmyth_log(LOG_ERR, "attempting to initialize PCR selection in full list");
+    free_tpm2_resources(&sapi_ctx);
     return 1;
   }
   size_t list_index = pcrs_struct_out->count;
@@ -189,10 +192,10 @@ int init_pcr_selection(char * pcrs_string_in,
       }
       pcrs_struct_out->pcrs[list_index].pcrSelections[0].pcrSelect[pcr / 8] |= (uint8_t)(1 << (pcr % 8));
     }
-
-    // done with PCR selection integer array
-    free(pcrs);
   }
+
+  // done with PCR selection integer array
+  free(pcrs);
 
   // support debug logging of resultant mask value
   if (get_applog_severity_threshold() >= LOG_DEBUG)
@@ -202,6 +205,7 @@ int init_pcr_selection(char * pcrs_string_in,
                  hexStr) != 0)
     {
       kmyth_log(LOG_ERR, "convert PCR selections mask to hexstring failed");
+      free_tpm2_resources(&sapi_ctx);
       return 1;
     }
     kmyth_log(LOG_DEBUG,

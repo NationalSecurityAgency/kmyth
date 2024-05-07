@@ -51,12 +51,12 @@ else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
 endif
 
 ifeq ($(SGX_ARCH), x86)
-	SGX_COMMON_CFLAGS := -m32
+	SGX_COMMON_FLAGS := -m32
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
-	SGX_COMMON_CFLAGS := -m64
+	SGX_COMMON_FLAGS := -m64
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
@@ -69,10 +69,51 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-	SGX_COMMON_CFLAGS += -O0 -g
+	SGX_COMMON_FLAGS += -O0 -g
 else
-	SGX_COMMON_CFLAGS += -O2
+	SGX_COMMON_FLAGS += -O2
 endif
+
+SGX_COMMON_FLAGS += -Wall
+SGX_COMMON_FLAGS += -Wextra
+SGX_COMMON_FLAGS += -Winit-self
+SGX_COMMON_FLAGS += -Wpointer-arith
+SGX_COMMON_FLAGS += -Wreturn-type
+SGX_COMMON_FLAGS += -Waddress
+SGX_COMMON_FLAGS += -Wsequence-point
+SGX_COMMON_FLAGS += -Wformat
+SGX_COMMON_FLAGS += -Wformat-security
+SGX_COMMON_FLAGS += -Wmissing-include-dirs
+SGX_COMMON_FLAGS += -Wfloat-equal
+SGX_COMMON_FLAGS += -Wundef
+SGX_COMMON_FLAGS += -Wshadow
+SGX_COMMON_FLAGS += -Wcast-align
+SGX_COMMON_FLAGS += -Wcast-qual
+SGX_COMMON_FLAGS += -Wconversion
+SGX_COMMON_FLAGS += -Wredundant-decls
+
+SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS)
+SGX_COMMON_CFLAGS += -Wjump-misses-init
+SGX_COMMON_CFLAGS += -Wstrict-prototypes
+SGX_COMMON_CFLAGS += -Wunsuffixed-float-constants
+SGX_COMMON_CFLAGS += -Wno-attributes
+SGX_COMMON_CFLAGS += -fPIC
+
+# Three configuration modes - Debug, prerelease, release
+#   Debug - Macro DEBUG enabled.
+#   Prerelease - Macro NDEBUG and EDEBUG enabled.
+#   Release - Macro NDEBUG enabled.
+ifeq ($(SGX_DEBUG), 1)
+	SGX_COMMON_CFLAGS += -DDEBUG -UNDEBUG -UEDEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	SGX_COMMON_CFLAGS += -DNDEBUG -DEDEBUG -UDEBUG
+else
+	 GX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
+endif
+
+SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS)
+SGX_COMMON_CXXFLAGS += -Wnon-virtual-dtor
+SGX_COMMON_CXXFLAGS += -std=c++11
 
 ######## App (untrusted code) Build Settings ########
 
@@ -91,8 +132,8 @@ Test_App_Source_Files := test/app/kmyth_sgx_test.c \
 Demo_App_Source_files := demo/src/app/kmyth_sgx_retrieve_key_demo.c
 
 
-Common_App_Include_Paths := -Iuntrusted/include/ocall
 Common_App_Include_Paths += -Iuntrusted/include/util
+Common_App_Include_Paths += -Iuntrusted/include
 Common_App_Include_Paths += -Iuntrusted/include/wrapper
 Common_App_Include_Paths += -Icommon/include
 Common_App_Include_Paths += -I$(SGX_SDK)/include
@@ -111,33 +152,21 @@ Demo_App_Include_Paths += -Idemo/include/node
 Demo_App_Include_Paths += -Idemo/include/util
 Demo_App_Include_Paths += $(Common_App_Include_Paths)
 
-Common_App_C_Flags += $(SGX_COMMON_CFLAGS)
-Common_App_C_Flags += -fPIC
-Common_App_C_Flags += -Wno-attributes
-
-Test_App_C_Flags += $(Test_App_Include_Paths)
+Test_App_C_Flags := $(Test_App_Include_Paths)
 Test_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
+Test_App_C_Flags += $(SGX_COMMON_CFLAGS)
 
-Demo_App_C_Flags += $(Demo_App_Include_Paths)
+Demo_App_C_Flags := $(Demo_App_Include_Paths)
 Demo_App_C_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
+Demo_App_C_Flags += $(SGX_COMMON_CFLAGS)
 
-# Three configuration modes - Debug, prerelease, release
-#   Debug - Macro DEBUG enabled.
-#   Prerelease - Macro NDEBUG and EDEBUG enabled.
-#   Release - Macro NDEBUG enabled.
-ifeq ($(SGX_DEBUG), 1)
-	Common_App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
-else ifeq ($(SGX_PRERELEASE), 1)
-	Common_App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
-else
-	Common_App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
-endif
+Test_App_Cpp_Flags := $(Test_App_Include_Paths)
+Test_App_Cpp_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(TEST_ENCLAVE_HEADER_UNTRUSTED)
+Test_App_Cpp_Flags += $(SGX_COMMON_CXXFLAGS)
 
-Test_App_C_Flags += $(Common_App_C_Flags)
-Demo_App_C_Flags += $(Common_App_C_Flags)
-
-Test_App_Cpp_Flags += $(Test_App_C_Flags) -std=c++11
-Demo_App_Cpp_Flags += $(Demo_App_C_Flags) -std=c++11
+Demo_App_Cpp_Flags := $(Demo_App_Include_Paths)
+Demo_App_Cpp_Flags += -DENCLAVE_HEADER_UNTRUSTED=$(DEMO_ENCLAVE_HEADER_UNTRUSTED)
+Demo_App_Cpp_Flags += $(SGX_COMMON_CXXFLAGS)
 
 Common_App_Link_Flags := $(SGX_COMMON_CFLAGS)
 Common_App_Link_Flags += -L$(SGX_LIBRARY_PATH)
@@ -160,6 +189,7 @@ Test_App_Link_Flags := $(Common_App_Link_Flags)
 Test_App_Link_Flags += -Ltest/enclave
 Test_App_Link_Flags += -L../lib
 Test_App_Link_Flags += -lcunit
+Test_App_Link_Flags += -lcrypto
 Test_App_Link_Flags += -Wl,-rpath=../lib
 
 Demo_App_Link_Flags := $(Common_App_Link_Flags)
@@ -186,7 +216,6 @@ Common_Enclave_Include_Paths += -Itrusted/include/wrapper
 Common_Enclave_Include_Paths += -Icommon/include
 Common_Enclave_Include_Paths += -I$(SGX_SDK)/include
 Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/tlibc
-Common_Enclave_Include_Paths += -I$(SGX_SDK)/include/stlport
 Common_Enclave_Include_Paths += -I$(SGX_SSL_INCLUDE_PATH)
 Common_Enclave_Include_Paths += -I/usr/local/include
 Common_Enclave_Include_Paths += -I../include
@@ -201,31 +230,32 @@ Test_Enclave_Include_Paths += -Itest/enclave
 Demo_Enclave_Include_Paths := $(Common_Enclave_Include_Paths)
 Demo_Enclave_Include_Paths += -Idemo/enclave
 
-Common_Enclave_C_Flags += -Wall
-Common_Enclave_C_Flags += $(SGX_COMMON_CFLAGS)
+Common_Enclave_C_Flags := $(SGX_COMMON_CFLAGS)
 Common_Enclave_C_Flags += -nostdinc
 Common_Enclave_C_Flags += -fvisibility=hidden
 Common_Enclave_C_Flags += -fpie
 Common_Enclave_C_Flags += -fstack-protector
 Common_Enclave_C_Flags += -DKMYTH_SGX
 
+Test_Enclave_C_Flags := $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += $(Common_Enclave_C_Flags)
-Test_Enclave_C_Flags += $(Test_Enclave_Include_Paths)
 Test_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
+Demo_Enclave_C_Flags := $(Demo_Enclave_Include_Paths)
 Demo_Enclave_C_Flags += $(Common_Enclave_C_Flags)
-Demo_Enclave_C_Flags += $(Demo_Enclave_Include_Paths)
 Demo_Enclave_C_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
-Common_Enclave_Cpp_Flags += -std=c++03
+Common_Enclave_Cpp_Flags := $(SGX_COMMON_CXXFLAGS)
 Common_Enclave_Cpp_Flags += -nostdinc++
 Common_Enclave_Cpp_Flags += --include "tsgxsslio.h"
 
-Test_Enclave_Cpp_Flags += $(Test_Enclave_C_Flags)
+Test_Enclave_Cpp_Flags := $(Test_Enclave_Include_Paths)
 Test_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
+Test_Enclave_Cpp_Flags += -DENCLAVE_HEADER_TRUSTED=$(TEST_ENCLAVE_HEADER_TRUSTED)
 
-Demo_Enclave_Cpp_Flags += $(Demo_Enclave_C_Flags)
+Demo_Enclave_Cpp_Flags := $(Demo_Enclave_Include_Paths)
 Demo_Enclave_Cpp_Flags += $(Common_Enclave_Cpp_Flags)
+Demo_Enclave_Cpp_Flags += -DENCLAVE_HEADER_TRUSTED=$(DEMO_ENCLAVE_HEADER_TRUSTED)
 
 Common_Enclave_Link_Flags := $(SGX_COMMON_CFLAGS)
 Common_Enclave_Link_Flags += -Wl,--no-undefined
@@ -413,19 +443,27 @@ test/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
 
 ######## Demo Common Objects ########
 
-demo/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c
+demo/enclave/ec_key_cert_marshal.o: common/src/ec_key_cert_marshal.c \
+                                    demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                    demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c
+demo/enclave/ec_key_cert_unmarshal.o: common/src/ec_key_cert_unmarshal.c \
+                                      demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                      demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/ecdh_util.o: common/src/ecdh_util.c
+demo/enclave/ecdh_util.o: common/src/ecdh_util.c \
+                          demo/enclave/$(Demo_Enclave_Name)_u.o \
+                          demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-demo/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c
+demo/enclave/retrieve_key_protocol.o: common/src/retrieve_key_protocol.c \
+                                      demo/enclave/$(Demo_Enclave_Name)_u.o \
+                                      demo/enclave/$(Demo_Enclave_Name)_t.o
 	@$(CC) $(Demo_App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -469,8 +507,7 @@ $(Test_App_Name): $(Test_App_Source_Files) test/enclave/$(Test_Enclave_Name)_u.o
                                            test/enclave/protocol_ocall.o \
                                            test/enclave/memory_ocall.o \
                                            test/enclave/log_ocall.o
-	@$(CXX) $^ -o $@ $(Test_App_Cpp_Flags) $(Test_App_Link_Flags) \
-	                                       -Lenclave -lcrypto -lcunit
+	@$(CC) $^ -o $@ $(Test_App_C_Flags) $(Test_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 
@@ -589,16 +626,16 @@ test/enclave/kmyth_sgx_test_trusted.o: test/enclave/kmyth_sgx_test_trusted.c
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_seal.o: trusted/src/ecall/kmyth_enclave_seal.cpp 
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_unseal.o: trusted/src/ecall/kmyth_enclave_unseal.cpp
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/kmyth_enclave_retrieve_key.o: \
 		trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
-	@$(CC) $(Test_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Test_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 test/enclave/aes_gcm.o: ../src/cipher/aes_gcm.c
@@ -652,8 +689,6 @@ test-clean:
 	@rm -f $(Enclave_Signing_Key)
 
 
-
-
 ######## Demo Enclave Objects ########
 
 demo/enclave/$(Demo_Enclave_Name)_t.c: $(SGX_EDGER8R) demo/enclave/$(Demo_Enclave_Name).edl
@@ -677,15 +712,15 @@ demo/enclave/sgx_retrieve_key_impl.o: trusted/src/wrapper/sgx_retrieve_key_impl.
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_seal.o: trusted/src/ecall/kmyth_enclave_seal.cpp 
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_unseal.o: trusted/src/ecall/kmyth_enclave_unseal.cpp
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/kmyth_enclave_retrieve_key.o: trusted/src/ecall/kmyth_enclave_retrieve_key.cpp
-	@$(CC) $(Demo_Enclave_C_Flags) -c $< -o $@
+	@$(CXX) $(Demo_Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 demo/enclave/aes_gcm.o: ../src/cipher/aes_gcm.c

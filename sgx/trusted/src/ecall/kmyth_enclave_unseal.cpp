@@ -9,7 +9,6 @@
 #include "sgx_thread.h"
 
 #include "kmyth_enclave_trusted.h"
-#include ENCLAVE_HEADER_TRUSTED
 
 unseal_data_t *kmyth_unsealed_data_table = NULL;
 static bool kmyth_unsealed_data_table_initialized = false;
@@ -96,7 +95,8 @@ int kmyth_unsealed_data_table_cleanup(void)
   return sgx_thread_mutex_destroy(&kmyth_unsealed_data_table_lock);
 }
 
-bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
+bool kmyth_unseal_into_enclave(uint8_t * data,
+                               size_t data_size,
                                uint64_t * handle)
 {
 
@@ -105,13 +105,12 @@ bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
     return false;
   }
 
-  if (data_size == 0 || data == NULL)
+  if ((data == NULL) || (data_size == 0))
   {
     return false;
   }
 
-  uint32_t plaintext_data_size =
-    sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
+  uint32_t plaintext_data_size = sgx_get_encrypt_txt_len((sgx_sealed_data_t *) data);
 
   // UINT32_MAX is the error return value of sgx_get_encrypt_txt_len.
   if (plaintext_data_size == UINT32_MAX)
@@ -120,17 +119,23 @@ bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
   }
 
   uint8_t *plaintext_data = (uint8_t *) malloc(plaintext_data_size);
-
   if (plaintext_data == NULL)
   {
     return false;
   }
 
+  // UINT32_MAX is the error return value of sgx_get_add_mac_txt_len.
   uint32_t mac_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t *) data);
+  if (mac_len == UINT32_MAX)
+  {
+    return false;
+  }
 
-  if (sgx_unseal_data
-      ((sgx_sealed_data_t *) data, NULL, &mac_len, plaintext_data,
-       (uint32_t *) & plaintext_data_size) != SGX_SUCCESS)
+  if (sgx_unseal_data((sgx_sealed_data_t *) data,
+                      NULL,
+                      &mac_len,
+                      plaintext_data,
+                      &plaintext_data_size) != SGX_SUCCESS)
   {
     free(plaintext_data);
     return false;
@@ -140,12 +145,13 @@ bool kmyth_unseal_into_enclave(size_t data_size, uint8_t * data,
   return insert_into_unseal_table(plaintext_data, plaintext_data_size, handle);
 }
 
-bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
+bool insert_into_unseal_table(uint8_t * data,
+                              uint32_t data_size,
                               uint64_t * handle)
 {
   if (!kmyth_unsealed_data_table_initialized)
   {
-    if( data != NULL) free(data);
+    free(data);
     return false;
   }
 
@@ -153,7 +159,7 @@ bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
   // SGX-sealed blob.
   if (data_size == 0 || data_size == UINT32_MAX || data == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     return false;
   }
 
@@ -161,13 +167,13 @@ bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
 
   if (new_slot == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     return false;
   }
 
   if (!derive_handle(data_size, data, &new_slot->handle))
   {
-    if (data != NULL) free(data);
+    free(data);
     free(new_slot);
     return false;
   }
@@ -176,7 +182,7 @@ bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
   new_slot->data = data;
   if (new_slot->data == NULL)
   {
-    if (data != NULL) free(data);
+    free(data);
     free(new_slot);
     return false;
   }
@@ -189,7 +195,7 @@ bool insert_into_unseal_table(uint8_t * data, uint32_t data_size,
   return true;
 }
 
-size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
+uint32_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
 {
   if (!kmyth_unsealed_data_table_initialized)
   {
@@ -223,9 +229,10 @@ size_t retrieve_from_unseal_table(uint64_t handle, uint8_t ** buf)
   sgx_thread_mutex_unlock(&kmyth_unsealed_data_table_lock);
   *buf = (uint8_t *) malloc(slot->data_size);
   memcpy(*buf, slot->data, slot->data_size);
-  size_t data_size = slot->data_size;
+  uint32_t data_size = slot->data_size;
 
   free(slot->data);
   free(slot);
+
   return data_size;
 }

@@ -240,17 +240,13 @@ int demo_ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn,
                                     char * remote_sign_cert_path)
 {
   // read remote certificate (X509) from file (.pem formatted)
-  X509 *client_cert = NULL;
-
   BIO *pub_cert_bio = BIO_new_file(remote_sign_cert_path, "r");
-
   if (pub_cert_bio == NULL)
   {
     kmyth_log(LOG_ERR, "BIO association with file (%s) failed",
                        remote_sign_cert_path);
     return EXIT_FAILURE;
   }
-
   ecdhconn->config.remote_sign_cert = PEM_read_bio_X509(pub_cert_bio,
                                                         NULL, 0, NULL);
   BIO_free(pub_cert_bio);
@@ -261,7 +257,6 @@ int demo_ecdh_load_remote_sign_cert(ECDHPeer * ecdhconn,
                        remote_sign_cert_path);
     return EXIT_FAILURE;
   }
-
   kmyth_log(LOG_DEBUG, "loaded remote certificate from file (%s)",
                        remote_sign_cert_path);
 

@@ -41,17 +41,6 @@ int pcrs_add_tests(CU_pSuite suite)
 //----------------------------------------------------------------------------
 void test_init_pcr_selection(void)
 {
-  TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
-  init_tpm2_connection(&sapi_ctx);
-  bool emulator = true;
-
-  get_tpm2_impl_type(sapi_ctx, &emulator);
-  if (!emulator)
-  {
-    return;
-  }
-
   PCR_SELECTIONS pcrs_struct = {.count = 0, };
 
   //No PCRs selected - NULL PCRs selection string
@@ -101,14 +90,14 @@ void test_init_pcr_selection(void)
 //----------------------------------------------------------------------------
 void test_get_pcr_count(void)
 {
+  //We don't want to do the TPM2 get_pcr_count() tests if on hardware
   TSS2_SYS_CONTEXT *sapi_ctx = NULL;
-
   init_tpm2_connection(&sapi_ctx);
   bool emulator = true;
-
   get_tpm2_impl_type(sapi_ctx, &emulator);
   if (!emulator)
   {
+    free_tpm2_resources(&sapi_ctx);
     return;
   }
 
@@ -120,6 +109,8 @@ void test_get_pcr_count(void)
 
   //Test NULL context
   CU_ASSERT(get_pcr_count(NULL, &count) == 1);
+
+  free_tpm2_resources(&sapi_ctx);
 }
 
 //----------------------------------------------------------------------------

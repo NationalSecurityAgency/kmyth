@@ -320,13 +320,9 @@ static int proxy_setup_ecdh_session(TLSProxy * proxy)
  ****************************************************************************/
 static int proxy_get_client_key_request(TLSProxy * proxy)
 {
-  int ret = -1;
-
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
 
   // receive key request message from ECDH client
-  ByteBuffer *kmip_req = &(ecdh_svr->session.proto.kmip_request);
-
   demo_ecdh_recv_key_request_msg(ecdh_svr);
 
   return EXIT_SUCCESS;
@@ -352,7 +348,7 @@ static int proxy_get_kmip_response(TLSProxy * proxy)
   ByteBuffer *kmip_resp = &(ecdh_svr->session.proto.kmip_response);
 
   if (get_resp_from_tls_server(tls_clnt->bio,
-                               kmip_req->buffer,
+                               (char *) kmip_req->buffer,
                                kmip_req->size,
                                &(kmip_resp->buffer),
                                &(kmip_resp->size)))
@@ -416,7 +412,7 @@ static int proxy_send_key_response_message(TLSProxy * proxy)
 /*****************************************************************************
  * proxy_cleanup_defunct()
  ****************************************************************************/
-static void proxy_cleanup_defunct()
+static void proxy_cleanup_defunct(void)
 {
   /* Clean up all defunct child processes. */
   while (waitpid(-1, NULL, WNOHANG) > 0);
@@ -430,12 +426,8 @@ static void proxy_handle_session(TLSProxy * proxy)
   struct pollfd pfds[NUM_POLL_FDS];
 
   int bytes_read = 0;
-  int bytes_written = 0;
-
   unsigned char tls_msg_buf[KMYTH_TLS_MAX_MSG_SIZE];
-  unsigned char ecdh_msg_buf[KMYTH_ECDH_MAX_MSG_SIZE];
 
-  size_t ecdh_msg_len = 0;
   ECDHPeer *ecdh_svr = &(proxy->ecdhconn);
   BIO *tls_bio = proxy->tlsconn.bio;
 
@@ -445,7 +437,7 @@ static void proxy_handle_session(TLSProxy * proxy)
   pfds[0].fd = ecdh_svr->session.session_socket_fd;
   pfds[0].events = POLLIN;
 
-  pfds[1].fd = BIO_get_fd(tls_bio, NULL);
+  pfds[1].fd = (int) BIO_get_fd(tls_bio, NULL);
   pfds[1].events = POLLIN;
 
   // wait to receive data with no timeout
@@ -530,7 +522,7 @@ static int proxy_manage_ecdh_client_connections(TLSProxy * proxy)
   int session_count = 0;
 
   // Register handler to automatically reap defunct child processes
-  signal(SIGCHLD, proxy_cleanup_defunct);
+  signal(SIGCHLD, (__sighandler_t) proxy_cleanup_defunct);
 
   while (true)
   {

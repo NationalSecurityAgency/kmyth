@@ -44,8 +44,10 @@
 int create_tls_connection(char **server_ip,
                           unsigned char *client_private_key,
                           size_t client_private_key_len,
-                          char *client_cert_path, char *ca_cert_path,
-                          BIO ** tls_bio, SSL_CTX ** tls_ctx);
+                          char *client_cert_path,
+                          char *ca_cert_path,
+                          BIO ** tls_bio,
+                          SSL_CTX ** tls_ctx);
 
 /**
  * <pre>
@@ -74,7 +76,9 @@ int create_tls_connection(char **server_ip,
  */
 int tls_set_context(unsigned char *client_private_key,
                     size_t client_private_key_len,
-                    char *client_cert_path, char *ca_cert_path, SSL_CTX ** ctx);
+                    char *client_cert_path,
+                    char *ca_cert_path,
+                    SSL_CTX ** ctx);
 
 /**
  * <pre>
@@ -133,6 +137,8 @@ int get_resp_from_tls_server(BIO * bio,
  * @return 0 if success, non-zero otherwise
  */
 int get_key_from_kmip_server(BIO * bio,
-                             char *message, size_t message_length,
-                             unsigned char **key, size_t * key_size);
+                             char *message,
+                             size_t message_length,
+                             unsigned char **key,
+                             size_t * key_size);
 #endif

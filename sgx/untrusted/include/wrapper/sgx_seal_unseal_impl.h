@@ -3,14 +3,16 @@
 
 #include "sgx_urts.h"
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <kmyth/kmyth_log.h>
 #include <kmyth/formatting_tools.h>
 
-#include ENCLAVE_HEADER_UNTRUSTED
+#include "kmyth_enclave_untrusted.h"
 
 #ifdef __cplusplus
 extern "C"

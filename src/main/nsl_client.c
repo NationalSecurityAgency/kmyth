@@ -30,8 +30,10 @@ static void usage(const char *prog)
           "Misc --\n" "  -h or --help  Help (displays this usage).\n\n", prog);
 }
 
-int check_string_arg(const char *arg, size_t arg_len,
-                     const char *value, size_t value_len)
+int check_string_arg(const char *arg,
+                     size_t arg_len,
+                     const char *value,
+                     size_t value_len)
 {
   if ((arg_len != value_len) || strncmp(arg, value, value_len))
   {
@@ -54,8 +56,10 @@ const struct option longopts[] = {
 
 int retrieve_key_with_session_key(int socket_fd,
                                   unsigned char *session_key,
-                                  size_t session_key_len, unsigned char *key_id,
-                                  size_t key_id_len, unsigned char **key,
+                                  size_t session_key_len,
+                                  unsigned char *key_id,
+                                  size_t key_id_len,
+                                  unsigned char **key,
                                   size_t *key_len)
 {
   KMIP kmip_context = { 0 };
@@ -65,8 +69,10 @@ int retrieve_key_with_session_key(int socket_fd,
   size_t key_request_len = 0;
 
   int result = build_kmip_get_request(&kmip_context,
-                                      key_id, key_id_len,
-                                      &key_request, &key_request_len);
+                                      key_id,
+                                      key_id_len,
+                                      &key_request,
+                                      &key_request_len);
 
   if (result)
   {
@@ -78,9 +84,12 @@ int retrieve_key_with_session_key(int socket_fd,
   unsigned char *encrypted_request = NULL;
   size_t encrypted_request_len = 0;
 
-  result = aes_gcm_encrypt(session_key, session_key_len,
-                           key_request, key_request_len,
-                           &encrypted_request, &encrypted_request_len);
+  result = aes_gcm_encrypt(session_key,
+                           session_key_len,
+                           key_request,
+                           key_request_len,
+                           &encrypted_request,
+                           &encrypted_request_len);
   kmyth_clear_and_free(key_request, key_request_len);
   key_request = NULL;
   if (result)
@@ -92,8 +101,9 @@ int retrieve_key_with_session_key(int socket_fd,
 
   kmyth_log(LOG_DEBUG, "Sending request for a key with ID: %.*s", key_id_len,
             key_id);
-  ssize_t write_result =
-    write(socket_fd, encrypted_request, encrypted_request_len);
+  ssize_t write_result = write(socket_fd,
+                               encrypted_request,
+                               encrypted_request_len);
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
   encrypted_request = NULL;
 
@@ -135,9 +145,12 @@ int retrieve_key_with_session_key(int socket_fd,
 
   // We've already dealt with the possibility that read_result is negative,
   // so the type conversion here is safe.
-  result = aes_gcm_decrypt(session_key, session_key_len,
-                           encrypted_response, (size_t)read_result,
-                           &response, &response_len);
+  result = aes_gcm_decrypt(session_key,
+                           session_key_len,
+                           encrypted_response,
+                           (size_t) read_result,
+                           &response,
+                           &response_len);
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   encrypted_response = NULL;
   if (result)
@@ -152,9 +165,12 @@ int retrieve_key_with_session_key(int socket_fd,
 
   // Parse the key response
   result = parse_kmip_get_response(&kmip_context,
-                                   response, response_len,
-                                   &received_key_id, &received_key_id_len,
-                                   key, key_len);
+                                   response,
+                                   response_len,
+                                   &received_key_id,
+                                   &received_key_id_len,
+                                   key,
+                                   key_len);
   kmyth_clear_and_free(response, response_len);
   response = NULL;
   if (result)
@@ -166,7 +182,7 @@ int retrieve_key_with_session_key(int socket_fd,
   kmyth_log(LOG_DEBUG, "Received a KMIP object with ID: %.*s",
             received_key_id_len, received_key_id);
 
-  kmyth_clear_and_free(received_key_id, received_key_id_len);
+  kmyth_clear_and_free(received_key_id, (size_t) received_key_id_len);
   kmip_destroy(&kmip_context);
 
   return 0;
@@ -189,8 +205,11 @@ int main(int argc, char **argv)
   int options;
   int option_index;
 
-  while ((options =
-          getopt_long(argc, argv, "r:i:p:u:h", longopts, &option_index)) != -1)
+  while ((options = getopt_long(argc,
+                                argv,
+                                "r:i:p:u:h",
+                                longopts,
+                                &option_index)) != -1)
   {
     switch (options)
     {
@@ -261,9 +280,12 @@ int main(int argc, char **argv)
   result = negotiate_client_session_key(socket_fd,
                                         public_key_ctx,
                                         private_key_ctx,
-                                        id, id_len,
-                                        remote_id, remote_id_len,
-                                        &session_key, &session_key_len);
+                                        id,
+                                        id_len,
+                                        remote_id,
+                                        remote_id_len,
+                                        &session_key,
+                                        &session_key_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to negotiate the client session key.");
@@ -282,9 +304,12 @@ int main(int argc, char **argv)
   size_t retrieved_key_len = 0;
 
   result = retrieve_key_with_session_key(socket_fd,
-                                         session_key, session_key_len,
-                                         key_id, key_id_len,
-                                         &retrieved_key, &retrieved_key_len);
+                                         session_key,
+                                         session_key_len,
+                                         key_id,
+                                         key_id_len,
+                                         &retrieved_key,
+                                         &retrieved_key_len);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to retrieve key: %.*s", key_id_len, key_id);
@@ -294,7 +319,7 @@ int main(int argc, char **argv)
   kmyth_log(LOG_INFO, "Received symmetric key: 0x%02X..%02X",
             retrieved_key[0], retrieved_key[retrieved_key_len - 1]);
 
-  kmyth_clear_and_free(retrieved_key, retrieved_key_len);
+  kmyth_clear_and_free(retrieved_key, (size_t) retrieved_key_len);
   close(socket_fd);
 
   return 0;

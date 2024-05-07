@@ -25,6 +25,7 @@ int storage_key_tools_add_tests(CU_pSuite suite)
   bool emulator = true;
 
   get_tpm2_impl_type(sapi_ctx, &emulator);
+  free_tpm2_resources(&sapi_ctx);
   if (!emulator)
   {
     return 0;
@@ -53,6 +54,7 @@ int storage_key_tools_add_tests(CU_pSuite suite)
   {
     return 1;
   }
+
   return 0;
 }
 

@@ -198,7 +198,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
 
   // compose 'Key Request' message (client to server request to retrieve key)
   ECDHMessage key_request_msg = { { 0 }, NULL };
-  ByteBuffer kmip_key_id = { req_key_id_len, req_key_id };
+  ByteBuffer kmip_key_id = { (size_t) req_key_id_len, req_key_id };
 
   ret_val = compose_key_request_msg(client_sign_privkey,
                                     &(request_session_key),
@@ -316,12 +316,12 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   kmyth_enclave_clear_and_free(kmip_response.buffer, kmip_response.size);
 
   snprintf(lmsg, MAX_LOG_MSG_LEN, "received KMIP object with ID: %.*s "
-                                  "(length=%ld)", (int) *retrieved_key_id_len,
+                                  "(length=%zu)", (int) *retrieved_key_id_len,
                                   *retrieved_key_id, *retrieved_key_id_len);
   kmyth_sgx_log(LOG_DEBUG, lmsg);
 
   if (*retrieved_key_id_len != req_key_id_len
-      || memcmp(*retrieved_key_id, req_key_id, req_key_id_len))
+      || memcmp(*retrieved_key_id, req_key_id, (size_t) req_key_id_len))
   {
     snprintf(lmsg, MAX_LOG_MSG_LEN, "retrieved key ID size (%ld) mismatches "
                                     "requested (%ld)",
@@ -331,7 +331,7 @@ int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
   }
 
   snprintf(lmsg, MAX_LOG_MSG_LEN,
-           "Received KMIP object with key: 0x%02X%02X..%02X%02X (%ld bytes)",
+           "Received KMIP object with key: 0x%02X%02X..%02X%02X (%zu bytes)",
            (*retrieved_key)[0], (*retrieved_key)[1],
            (*retrieved_key)[*retrieved_key_len - 2],
            (*retrieved_key)[*retrieved_key_len - 1],

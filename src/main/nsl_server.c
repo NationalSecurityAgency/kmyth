@@ -26,8 +26,10 @@ static void usage(const char *prog)
           "Misc --\n" "  -h or --help  Help (displays this usage).\n\n", prog);
 }
 
-int check_string_arg(const char *arg, size_t arg_len,
-                     const char *value, size_t value_len)
+int check_string_arg(const char *arg,
+                     size_t arg_len,
+                     const char *value,
+                     size_t value_len)
 {
   if ((arg_len != value_len) || strncmp(arg, value, value_len))
   {
@@ -49,7 +51,8 @@ const struct option longopts[] = {
 
 int send_key_with_session_key(int socket_fd,
                               unsigned char *session_key,
-                              size_t session_key_len, unsigned char *key,
+                              size_t session_key_len,
+                              unsigned char *key,
                               size_t key_len)
 {
   unsigned char *encrypted_request = calloc(8192, sizeof(unsigned char));
@@ -63,7 +66,8 @@ int send_key_with_session_key(int socket_fd,
   size_t encrypted_request_len = 8192 * sizeof(unsigned char);
 
   ssize_t read_result = read(socket_fd,
-                             encrypted_request, encrypted_request_len);
+                             encrypted_request,
+                             encrypted_request_len);
 
   if (read_result <= 0)
   {
@@ -77,9 +81,12 @@ int send_key_with_session_key(int socket_fd,
 
   // We've already dealt with the possibility that read_result is
   // negative, so the cast here is safe.
-  int result = aes_gcm_decrypt(session_key, session_key_len,
-                               encrypted_request, (size_t)read_result,
-                               &request, &request_len);
+  int result = aes_gcm_decrypt(session_key,
+                               session_key_len,
+                               encrypted_request,
+                               (size_t) read_result,
+                               &request,
+                               &request_len);
 
   kmyth_clear_and_free(encrypted_request, encrypted_request_len);
   encrypted_request = NULL;
@@ -104,7 +111,10 @@ int send_key_with_session_key(int socket_fd,
   size_t key_id_len = 0;
 
   result = parse_kmip_get_request(&kmip_context,
-                                  request, request_len, &key_id, &key_id_len);
+                                  request,
+                                  request_len,
+                                  &key_id,
+                                  &key_id_len);
   kmyth_clear_and_free(request, request_len);
   request = NULL;
   if (result)
@@ -120,8 +130,12 @@ int send_key_with_session_key(int socket_fd,
   size_t response_len = 0;
 
   result = build_kmip_get_response(&kmip_context,
-                                   key_id, key_id_len,
-                                   key, key_len, &response, &response_len);
+                                   key_id,
+                                   key_id_len,
+                                   key,
+                                   key_len,
+                                   &response,
+                                   &response_len);
   kmyth_clear_and_free(key_id, key_id_len);
   key_id = NULL;
   kmip_destroy(&kmip_context);
@@ -134,10 +148,13 @@ int send_key_with_session_key(int socket_fd,
   unsigned char *encrypted_response = NULL;
   size_t encrypted_response_len = 0;
 
-  result = aes_gcm_encrypt(session_key, session_key_len,
-                           response, response_len,
-                           &encrypted_response, &encrypted_response_len);
-  kmyth_clear_and_free(response, response_len);
+  result = aes_gcm_encrypt(session_key,
+                           session_key_len,
+                           response,
+                           response_len,
+                           &encrypted_response,
+                           &encrypted_response_len);
+  kmyth_clear_and_free(response, (size_t) response_len);
   response = NULL;
   if (result)
   {
@@ -146,7 +163,8 @@ int send_key_with_session_key(int socket_fd,
   }
 
   ssize_t send_result = write(socket_fd,
-                              encrypted_response, encrypted_response_len);
+                              encrypted_response,
+                              encrypted_response_len);
 
   kmyth_clear_and_free(encrypted_response, encrypted_response_len);
   encrypted_response = NULL;
@@ -176,8 +194,11 @@ int main(int argc, char **argv)
   int options;
   int option_index;
 
-  while ((options =
-          getopt_long(argc, argv, "r:p:u:h", longopts, &option_index)) != -1)
+  while ((options = getopt_long(argc,
+                                argv,
+                                "r:p:u:h",
+                                longopts,
+                                &option_index)) != -1)
   {
     switch (options)
     {
@@ -261,8 +282,10 @@ int main(int argc, char **argv)
   result = negotiate_server_session_key(socket_fd,
                                         public_key_ctx,
                                         private_key_ctx,
-                                        id, id_len,
-                                        &session_key, &session_key_len);
+                                        id,
+                                        (size_t) id_len,
+                                        &session_key,
+                                        (size_t *) &session_key_len);
 
   if (result)
   {
@@ -283,8 +306,10 @@ int main(int argc, char **argv)
             static_key[15]);
 
   result = send_key_with_session_key(socket_fd,
-                                     session_key, session_key_len,
-                                     static_key, 16);
+                                     session_key,
+                                     session_key_len,
+                                     static_key,
+                                     16);
   if (result)
   {
     kmyth_log(LOG_ERR, "Failed to send the static key.");

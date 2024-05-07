@@ -28,8 +28,10 @@
 // build_kmip_get_request()
 //
 int build_kmip_get_request(KMIP * ctx,
-                           unsigned char *id, size_t id_len,
-                           unsigned char **request, size_t *request_len)
+                           unsigned char *id,
+                           size_t id_len,
+                           unsigned char **request,
+                           size_t *request_len)
 {
   // Set up the encoding buffer.
   size_t buffer_blocks = 1;
@@ -58,9 +60,14 @@ int build_kmip_get_request(KMIP * ctx,
   header.time_stamp = time(NULL);
   header.batch_count = 1;
 
+  if ((id == NULL) || (id_len <= 0))
+  {
+    kmyth_log(LOG_ERR, "invalid key ID");
+    return 1;
+  }
   TextString key_id = { 0 };
   key_id.value = (char *) id;
-  key_id.size = id_len;
+  key_id.size = (size_t) id_len;
 
   GetRequestPayload payload = { 0 };
   payload.unique_identifier = &key_id;
@@ -88,8 +95,8 @@ int build_kmip_get_request(KMIP * ctx,
   // Set up the official request buffer and clean up.
   // This type conversion should be safe assuming libkmip hasn't done
   // something odd.
-  *request_len = (size_t)(ctx->index - ctx->buffer);
-  *request = calloc(*request_len, sizeof(unsigned char));
+  *request_len = (size_t) (ctx->index - ctx->buffer);
+  *request = (uint8_t *) calloc(*request_len, sizeof(unsigned char));
   if (request == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the KMIP request buffer.");
@@ -97,7 +104,7 @@ int build_kmip_get_request(KMIP * ctx,
     kmip_set_buffer(ctx, NULL, 0);
     return 1;
   }
-  memcpy(*request, encoding, *request_len);
+  memcpy(*request, encoding, (size_t) *request_len);
 
   kmyth_clear_and_free(encoding, buffer_total_size);
   kmip_set_buffer(ctx, NULL, 0);
@@ -109,9 +116,16 @@ int build_kmip_get_request(KMIP * ctx,
 // parse_kmip_get_request()
 //
 int parse_kmip_get_request(KMIP * ctx,
-                           unsigned char *request, size_t request_len,
-                           unsigned char **id, size_t *id_len)
+                           unsigned char *request,
+                           size_t request_len,
+                           unsigned char **id,
+                           size_t *id_len)
 {
+  if ((request == NULL) || (request_len <= 0))
+  {
+    kmyth_log(LOG_ERR, "invalid input request buffer");
+    return 1;
+  }
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
   kmip_set_buffer(ctx, request, request_len);
@@ -170,9 +184,12 @@ int parse_kmip_get_request(KMIP * ctx,
 // build_kmip_get_response()
 //
 int build_kmip_get_response(KMIP * ctx,
-                            unsigned char *id, size_t id_len,
-                            unsigned char *key, size_t key_len,
-                            unsigned char **response, size_t *response_len)
+                            unsigned char *id,
+                            size_t id_len,
+                            unsigned char *key,
+                            size_t key_len,
+                            unsigned char **response,
+                            size_t *response_len)
 {
   // Set up the encoding buffer
   size_t buffer_blocks = 1;
@@ -246,8 +263,8 @@ int build_kmip_get_response(KMIP * ctx,
   // Set up the official response buffer and clean up.
   // This type conversion should be safe unless libkmip has done
   // something odd.
-  *response_len = (size_t)(ctx->index - ctx->buffer);
-  *response = calloc(*response_len, sizeof(unsigned char));
+  *response_len = (size_t) (ctx->index - ctx->buffer);
+  *response = (uint8_t *) calloc(*response_len, sizeof(unsigned char));
   if (response == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the KMIP response buffer.");
@@ -267,9 +284,12 @@ int build_kmip_get_response(KMIP * ctx,
 // parse_kmip_get_response()
 //
 int parse_kmip_get_response(KMIP * ctx,
-                            unsigned char *response, size_t response_len,
-                            unsigned char **id, size_t *id_len,
-                            unsigned char **key, size_t *key_len)
+                            unsigned char *response,
+                            size_t response_len,
+                            unsigned char **id,
+                            size_t *id_len,
+                            unsigned char **key,
+                            size_t *key_len)
 {
   // Set up the decoding buffer and data structures.
   kmip_reset(ctx);
@@ -338,13 +358,15 @@ int parse_kmip_get_response(KMIP * ctx,
   }
   *id_len = payload->unique_identifier->size;
 
-  memcpy(*id, payload->unique_identifier->value, *id_len);
+  memcpy(*id,
+         payload->unique_identifier->value,
+         payload->unique_identifier->size);
 
   *key = calloc(key_material->size, sizeof(unsigned char));
   if (*key == NULL)
   {
     kmyth_log(LOG_ERR, "Failed to allocate the key buffer.");
-    kmyth_clear_and_free(*id, *id_len);
+    kmyth_clear_and_free(*id, (size_t) *id_len);
     *id = NULL;
     *id_len = 0;
     kmip_free_response_message(ctx, &message);
@@ -352,7 +374,7 @@ int parse_kmip_get_response(KMIP * ctx,
     return 1;
   }
   *key_len = key_material->size;
-  memcpy(*key, key_material->value, *key_len);
+  memcpy(*key, key_material->value, (size_t) *key_len);
 
   kmip_free_response_message(ctx, &message);
   kmip_set_buffer(ctx, NULL, 0);

@@ -89,11 +89,16 @@ extern "C"
   int enclave_retrieve_key(EVP_PKEY * client_sign_privkey,
                            X509 * client_sign_cert,
                            X509 * server_sign_cert,
-                           const char *server_host, size_t server_host_len,
-                           const char *server_port, size_t server_port_len,
-                           unsigned char *req_key_id, size_t req_key_id_len,
-                           uint8_t **retrieved_key_id, size_t *retrieved_key_id_len,
-                           uint8_t **retrieved_key, size_t *retrieved_key_len);
+                           const char *server_host,
+                           size_t server_host_len,
+                           const char *server_port,
+                           size_t server_port_len,
+                           unsigned char *req_key_id,
+                           size_t req_key_id_len,
+                           uint8_t **retrieved_key_id,
+                           size_t *retrieved_key_id_len,
+                           uint8_t **retrieved_key,
+                           size_t *retrieved_key_len);
 
 #ifdef __cplusplus
 }

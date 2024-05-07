@@ -88,7 +88,7 @@ void tls_get_verify_error(TLSPeer * tlsconn)
     return;
   }
 
-  int verify_result = SSL_get_verify_result(ssl);
+  long verify_result = SSL_get_verify_result(ssl);
   if (verify_result != X509_V_OK)
   {
     kmyth_log(LOG_ERR, "SSL_get_verify_result: %s",
@@ -267,7 +267,7 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
   //   - expected to be <IP address or hostname string>.<name string>
   //     (e.g., localhost.demoServer, 127.0.0.1.server, ...)
   char * server_name = NULL;
-  unsigned int server_name_size = strlen(tls_clnt->remote_server) + 1;
+  size_t server_name_size = strlen(tls_clnt->remote_server) + 1;
   if (tls_clnt->remote_server_func != NULL)
   {
     server_name_size += (strlen(tls_clnt->remote_server_func) + 1);
@@ -295,7 +295,7 @@ int demo_tls_config_client_connect(TLSPeer * tls_clnt)
     free(server_name);
     return -1;
   }
-  if (bytes_needed > server_name_size)
+  if ((size_t) bytes_needed > server_name_size)
   {
     kmyth_log(LOG_ERR, "truncated server certificate verification name");
     free(server_name);

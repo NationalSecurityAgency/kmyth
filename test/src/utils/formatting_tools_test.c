@@ -244,23 +244,24 @@ void test_create_nkl_bytes(void)
 //----------------------------------------------------------------------------
 void test_encodeBase64Data(void)
 {
-const char *RAW_PCR64 =
-  "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+const char *RAW_PCR64 =  "AAAAAQALAwAAAAAAAAAAAAAAAAAAAAAAA"
+                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
+                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
+                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                         "AAAAAAAAAAAAAAA\n";
 
 const size_t RAW_PCR_LEN = 132;
 
 uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0
-};
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0 };
 
   uint8_t *pcr64 = NULL;
   size_t pcr64_len = 0;
@@ -282,15 +283,14 @@ uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   //Test different inputs don't produce the same base64 output
   //First entry has a bit flipped
   uint8_t wrong_pcr[] = { 1, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0
-  };
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0 };
   CU_ASSERT(encodeBase64Data(wrong_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
   CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
   CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len) != 0);
@@ -300,17 +300,20 @@ uint8_t RAW_PCR[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   //Test that different length raw data results in different length base64
   uint8_t short_pcr[] = { 0, 0, 0, 1, 0, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0
-  };
-  CU_ASSERT(encodeBase64Data(short_pcr, RAW_PCR_LEN, &pcr64, &pcr64_len) == 0);
-  CU_ASSERT(pcr64_len == strlen(RAW_PCR64));
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                          0, 0, 0, 0 };
+  CU_ASSERT(encodeBase64Data(short_pcr,
+                             RAW_PCR_LEN - 16,
+                             &pcr64,
+                             &pcr64_len) == 0);
+  CU_ASSERT(pcr64_len < strlen(RAW_PCR64));
   CU_ASSERT(memcmp(pcr64, RAW_PCR64, pcr64_len) != 0);
+  free(pcr64);
 }
 
 //----------------------------------------------------------------------------
@@ -479,11 +482,17 @@ void test_parse_exp_policy_string_pairs(void)
 
   // valid, simple expected policy string should parse correctly
   snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN, "%d:%#064x", 23, 0);
-  size_t policyPairCount = 1;
+  size_t policyPairCount = 0;
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
                                           &policyPairCount,
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) == 0);
+  CU_ASSERT(policyPairCount == 1);
+  free(pcrSelStrings[0]);
+  pcrSelStrings[0] = NULL;
+  free(digestStrings[0]);
+  digestStrings[0] = NULL;
+
 
   // NULL PCR selection string list output parameter should error
   CU_ASSERT(parse_exp_policy_string_pairs((char *) expPolicyString,
@@ -505,6 +514,8 @@ void test_parse_exp_policy_string_pairs(void)
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) == 0);
   CU_ASSERT(policyPairCount == 0);
+  CU_ASSERT(pcrSelStrings[0] == NULL);
+  CU_ASSERT(digestStrings[0] == NULL);
 
   // Empty input string should also return a zero pair count without error
   policyPairCount = 7;
@@ -513,6 +524,8 @@ void test_parse_exp_policy_string_pairs(void)
                                           (char **) pcrSelStrings,
                                           (char **) digestStrings) == 0);
   CU_ASSERT(policyPairCount == 0);
+  CU_ASSERT(pcrSelStrings[0] == NULL);
+  CU_ASSERT(digestStrings[0] == NULL);
   
   // Passing expected policy string exceding length restriction should fail
   snprintf(expPolicyString, MAX_TEST_POLICY_STRLEN,

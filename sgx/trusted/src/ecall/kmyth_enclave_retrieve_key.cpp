@@ -8,8 +8,6 @@
 
 #include "kmyth_enclave_trusted.h"
 
-#include ENCLAVE_HEADER_TRUSTED
-
 // This is the function that gets converted into the ecall.
 int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
                                            size_t client_private_bytes_len,
@@ -81,20 +79,19 @@ int kmyth_enclave_retrieve_key_from_server(uint8_t * client_private_bytes,
   unsigned char *retrieve_key_result_id = NULL;
   size_t retrieve_key_result_id_len = 0;
 
-  ret_val =
-    enclave_retrieve_key(client_sign_privkey,
-                         client_cert,
-                         server_cert,
-                         server_host,
-                         server_host_len,
-                         server_port,
-                         server_port_len,
-                         key_id,
-                         key_id_len,
-                         &retrieve_key_result_id,
-                         &retrieve_key_result_id_len,
-                         &retrieve_key_result,
-                         &retrieve_key_result_len);
+  ret_val = enclave_retrieve_key(client_sign_privkey,
+                                 client_cert,
+                                 server_cert,
+                                 server_host,
+                                 server_host_len,
+                                 server_port,
+                                 server_port_len,
+                                 key_id,
+                                 key_id_len,
+                                 &retrieve_key_result_id,
+                                 &retrieve_key_result_id_len,
+                                 &retrieve_key_result,
+                                 &retrieve_key_result_len);
   if (ret_val != EXIT_SUCCESS)
   {
     kmyth_sgx_log(LOG_ERR,
