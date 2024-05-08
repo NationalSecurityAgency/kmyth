@@ -108,7 +108,7 @@ ifeq ($(SGX_DEBUG), 1)
 else ifeq ($(SGX_PRERELEASE), 1)
 	SGX_COMMON_CFLAGS += -DNDEBUG -DEDEBUG -UDEBUG
 else
-	 GX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
+	GX_COMMON_CFLAGS += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS)
@@ -558,7 +558,7 @@ $(Demo_App_Name): demo/obj/kmyth_sgx_retrieve_key_demo.o \
                   demo/enclave/protocol_ocall.o \
                   demo/enclave/memory_ocall.o \
                   demo/enclave/log_ocall.o 
-	$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
+	@$(CXX) $^ -o $@ $(Demo_App_Cpp_Flags) $(Demo_App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Test Server ########
