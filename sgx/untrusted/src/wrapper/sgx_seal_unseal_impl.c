@@ -71,8 +71,6 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
                          size_t input_len,
                          uint64_t * handle)
 {
-  kmyth_log(LOG_ERR, "inside kmyth_sgx_unseal_nkl");
-
   uint8_t *block = NULL;
   size_t blocksize = 0;
 
@@ -102,8 +100,6 @@ int kmyth_sgx_unseal_nkl(sgx_enclave_id_t eid,
     free(block);
     return 1;
   }
-
-  kmyth_log(LOG_ERR, "before unseal into enclave");
 
   free(block);
   kmyth_unseal_into_enclave(eid, &ret, data, data_size, handle);
