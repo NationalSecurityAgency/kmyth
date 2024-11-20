@@ -1,0 +1,79 @@
+##############################################################################
+#        X509 configuration for kmyth ECDH demo TLS keys and certificates     #
+##############################################################################
+
+[ req_ca ]
+prompt                  = no
+default_md              = sha512
+distinguished_name      = dn_ca
+x509_extensions         = v3_ext_ca
+
+[ req_client]
+prompt                  = no
+default_md              = sha512
+distinguished_name      = dn_client
+x509_extensions         = v3_ext_client
+
+[ req_proxy ]
+prompt                  = no
+default_md              = sha512
+distinguished_name      = dn_proxy
+x509_extensions         = v3_ext_proxy
+
+[ req_server ]
+prompt                  = no
+default_md              = sha512
+distinguished_name      = dn_server
+x509_extensions         = v3_ext_server
+
+[ dn_ca ]
+C                       = "US"
+O                       = "kmyth"
+CN                      = "TestCA"
+
+[ dn_client ]
+C                       = "US"
+O                       = "kmyth"
+CN                      = "TestEnclaveAppClient"
+
+[ dn_proxy ]
+C                       = "US"
+O                       = "kmyth"
+CN                      = "TestProxy"
+
+[ dn_server ]
+C                       = "US"
+O                       = "kmyth"
+CN                      = "TestServer"
+
+[ v3_ext_ca ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer
+basicConstraints        = CA:true
+
+[ v3_ext_client ]
+extendedKeyUsage        = clientAuth
+subjectAltName          = @alt_names_client
+basicConstraints        = CA:false
+
+[ v3_ext_proxy ]
+extendedKeyUsage        = clientAuth,serverAuth
+subjectAltName          = @alt_names_proxy
+basicConstraints        = CA:false
+
+[ v3_ext_server ]
+extendedKeyUsage        = serverAuth
+subjectAltName          = @alt_names_server
+basicConstraints        = CA:false
+
+[ alt_names_client ]
+IP.0                    = 127.0.0.1
+DNS.0                   = localhost.enclaveAppClient
+
+[ alt_names_proxy ]
+IP.0                    = 127.0.0.1
+DNS.0                   = localhost.proxy
+
+[ alt_names_server ]
+IP.0                    = 127.0.0.1
+DNS.0                   = localhost.demoServer 

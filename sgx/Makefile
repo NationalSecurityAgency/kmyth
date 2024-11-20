@@ -114,6 +114,7 @@ endif
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS)
 SGX_COMMON_CXXFLAGS += -Wnon-virtual-dtor
 SGX_COMMON_CXXFLAGS += -std=c++11
+SGX_COMMON_CXXFLAGS += -fPIE
 
 ######## App (untrusted code) Build Settings ########
 
@@ -391,10 +392,11 @@ demo-test-keys-certs: demo/data/ca_priv.pem \
 
 demo: demo-all demo-test-keys-certs
 ifneq ($(Build_Mode), HW_RELEASE)
-	@echo "\n"
+	@echo ""
 	@echo "==================================================================================================="
 	@echo "  DEMONSTRATION LOG:  Enclave (client) =>> - <<= TLS Proxy =>> - <<= KMIP Key Server (simplified)"
-	@echo "===================================================================================================\n"
+	@echo "==================================================================================================="
+	@echo ""
 	@$(CURDIR)/$(Server_Name) -k demo/data/server_priv.pem \
 	                          -c demo/data/server_cert.pem \
 	                          -C demo/data/ca_cert.pem \
@@ -414,7 +416,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@sleep 1
 	@$(CURDIR)/$(Demo_App_Name)
 	@sleep 1
-	@echo "\nRUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
+	@echo ""
+	@echo "RUN  =>  $(Demo_App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
+	@echo ""
 endif
 
 test-run: test-all
@@ -774,7 +778,7 @@ demo/data/server_cert.pem: demo/data/gen_test_keys_certs.bash
 demo-clean:
 	@rm -f demo/enclave/*_u.h demo/enclave/*_t.h demo/enclave/*_u.c demo/enclave/*_t.c
 	@rm -f demo/enclave/*.o demo/enclave/*.so
-	@rm -f demo/data/*.pem demo/data/*.csr demo/data/*.srl
+	@rm -f demo/data/*.pem
 	@rm -rf demo/obj
 	@rm -rf demo/bin
 	@rm -f *.log
