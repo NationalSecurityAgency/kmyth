@@ -49,7 +49,7 @@ installed from source.
 
 ##### CentOS 8 (Red Hat 8) Commands
 
-```yum install openssl openssl-devel glibc gcc libffi-devel valgrind```
+```yum install openssl openssl-devel glibc gcc libffi-devel valgrind valgrind-devel```
 
 ```yum install tpm2-abrmd tpm2-tss tpm2-tss-devel tpm2-abrmd-devel```
 
