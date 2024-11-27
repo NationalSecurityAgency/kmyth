@@ -47,7 +47,7 @@ these dependencies can likely be met using your package
 manager. [libkmip](https://github.com/OpenKMIP/libkmip) must be
 installed from source.
 
-##### CentOS 8 (Red Hat 8) Commands
+##### CentOS 8 (Red Hat 8/9) Commands
 
 ```yum install openssl openssl-devel glibc gcc libffi-devel valgrind valgrind-devel```
 
@@ -66,7 +66,7 @@ installed from source.
 
 Some unit tests may also assume the use of a TPM 2.0 emulator.
 
-##### CentOS 8 (Red Hat 8) Commands
+##### CentOS 8 (Red Hat 8/9) Commands
 
 ```yum install CUnit CUnit-devel```
 
@@ -78,7 +78,7 @@ Some unit tests may also assume the use of a TPM 2.0 emulator.
 
 * tpm2-tools (command line tools for TPM 2.0 based on tpm2-tss)
 
-##### CentOS 8 (Red Hat 8) Commands
+##### CentOS 8 (Red Hat 8/9) Commands
 
 ```yum install tpm2-tools```
 
@@ -97,7 +97,7 @@ Once the dependencies are installed:
 2. The documentation is built using *make docs*. The doxygen generated
    documentation is put in ./doc.
 
-3. In the `tpm2` directory run *make* or  *make all* to create:
+3. In the base directory run *make* or  *make all* to create:
   * ./lib/libkmyth-utils.so
   * ./lib/libkmyth-logger.so
   * ./lib/libkmyth-tpm.so
@@ -170,7 +170,7 @@ Any installed files can be uninstalled by running *sudo make uninstall*.
 
 ##### Running Kmyth Unit Tests
 
-1. In the `tpm2` directory run *make* and then *make test* to build and run the tests.
+1. In the base directory run *make* and then *make test* to build and run the tests.
 
 #### Building the Dependencies
 
@@ -251,7 +251,15 @@ $ sudo dnf builddep tpm2-tools
 $ sudo yum -y install automake libtool autoconf autoconf-archive libstdc++-devel gcc pkg-config uriparser-devel libgcrypt-devel dbus-devel glib2-devel libcurl-devel libuuid-devel
 ```
 
-4. Run the ```bootstrap``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
+4. Run the ```bootstrg
+e
+m
+m
+m
+s
+s
+s
+map``` and ```configure``` scripts. You may need to change the ```PKG_CONFIG_PATH``` configuration value for your system.
 
 ```
 $ ./bootstrap
