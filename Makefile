@@ -290,8 +290,6 @@ all: clean-backups \
      $(BIN_DIR)/kmyth-reseal \
      $(BIN_DIR)/kmyth-unseal \
      $(BIN_DIR)/kmyth-getkey \
-     $(BIN_DIR)/nsl-client \
-     $(BIN_DIR)/nsl-server \
      $(LIB_DIR)/libkmyth-utils.so \
      $(LIB_DIR)/libkmyth-logger.so \
      $(LIB_DIR)/libkmyth-tpm.so
@@ -301,6 +299,11 @@ libs: clean-backups \
       $(LIB_DIR)/libkmyth-utils.so \
       $(LIB_DIR)/libkmyth-logger.so \
       $(LIB_DIR)/libkmyth-tpm.so
+
+.PHONY: nsl
+nsl:	clean-backups \
+	$(BIN_DIR)/nsl-client \
+	$(BIN_DIR)/nsl-server
 
 .PHONY: utils-lib
 utils-lib: clean-backups $(LIB_DIR)/libkmyth-utils.so
